@@ -1,5 +1,7 @@
 """Application factory."""
 
+import asyncio
+import contextlib
 import logging
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
@@ -7,16 +9,18 @@ from datetime import UTC, datetime
 
 import structlog
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 from redis.asyncio import Redis
-from sqlalchemy import text
 from starlette.middleware.cors import CORSMiddleware
 
 from baghchal_server.accounts.routes import router as accounts_router
 from baghchal_server.config import Settings
 from baghchal_server.db import create_engine, session_factory
-from baghchal_server.deps import AppState, State
+from baghchal_server.deps import AppState
 from baghchal_server.errors import install_handlers
+from baghchal_server.games import models as _game_models  # noqa: F401  (registers tables)
+from baghchal_server.games.routes import router as games_router
+from baghchal_server.games.sweeper import run as run_sweeper
+from baghchal_server.health import router as health_router
 from baghchal_server.lobby import models as _lobby_models  # noqa: F401  (registers tables)
 from baghchal_server.lobby.routes import router as lobby_router
 from baghchal_server.mail import Mailer, make_mailer
@@ -77,10 +81,15 @@ def create_app(
             hub=hub,
             presence=RedisPresence(redis) if redis else MemoryPresence(),
         )
+        sweeper = asyncio.create_task(run_sweeper(app.state.ctx)) if settings.game_sweeper else None
         log.info("startup", environment=settings.environment)
         try:
             yield
         finally:
+            if sweeper is not None:
+                sweeper.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await sweeper
             await hub.stop()
             await engine.dispose()
             if redis is not None:
@@ -97,33 +106,9 @@ def create_app(
     install_handlers(app)
     app.include_router(accounts_router)
     app.include_router(lobby_router)
+    app.include_router(games_router)
+    app.include_router(health_router)
     app.include_router(ws_router)
-
-    @app.get("/health/live", include_in_schema=False)
-    async def live() -> dict[str, str]:
-        return {"status": "ok"}
-
-    @app.get("/health/ready", include_in_schema=False)
-    async def ready(state: State) -> JSONResponse:
-        checks: dict[str, str] = {}
-        try:
-            async with state.engine.connect() as conn:
-                await conn.execute(text("SELECT 1"))
-            checks["database"] = "ok"
-        except Exception:
-            log.exception("health.database")
-            checks["database"] = "failing"
-        if state.redis is not None:
-            try:
-                await state.redis.ping()
-                checks["redis"] = "ok"
-            except Exception:
-                log.exception("health.redis")
-                checks["redis"] = "failing"
-        healthy = all(v == "ok" for v in checks.values())
-        return JSONResponse(
-            {"status": "ok" if healthy else "failing", **checks}, 200 if healthy else 503
-        )
 
     # Added innermost first: requests pass RequestContext → … → BodyLimit → routes.
     app.add_middleware(BodyLimit, max_bytes=settings.max_request_bytes)

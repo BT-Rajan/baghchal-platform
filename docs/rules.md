@@ -52,6 +52,21 @@ move; the sources that do award the game to the tigers
 side unable to move loses. Threefold-repetition draws found in some online versions are a
 modern variant and are not used here.
 
+## Live play (platform rules)
+These rules belong to the platform, not the board; the server enforces them.
+
+- **Time controls**: 3+2, 5+3, 10+5 and 15+10 (minutes per side + seconds added after each
+  move). The server keeps both clocks; only server time counts.
+- **First moves**: clocks start after each side's first move. Each side has 30 seconds to make
+  its first move; if either does not, the game is **aborted** (no result).
+- **Time out**: a side whose clock reaches zero on its turn loses.
+- **Resign**: either player, at any time; the opponent wins.
+- **Abort**: either player, before both sides have moved; no result.
+- **Abandonment**: if a player has been offline for 60 seconds on their own turn, the
+  opponent may claim the win.
+- **One live game per player** at a time.
+- No draws by agreement, matching the board rules.
+
 ## Notation
 - Moves: placement `c3`, step `a1-b2`, capture `a1xc3`.
 - Positions (BFEN): ranks 5→1 separated by `/`, `T` tiger, `G` goat, digits for empty runs,

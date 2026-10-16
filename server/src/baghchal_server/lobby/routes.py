@@ -5,6 +5,8 @@ from fastapi import APIRouter, Query, status
 
 from baghchal_server.deps import DB, AppState, CurrentUser, State, enforce_limit
 from baghchal_server.errors import AppError
+from baghchal_server.games import service as games
+from baghchal_server.games.events import notify as notify_game
 from baghchal_server.lobby import service
 from baghchal_server.lobby.models import Challenge
 from baghchal_server.lobby.schemas import (
@@ -24,11 +26,15 @@ SEARCH_PER_USER: Final = Limit("player-search", 60, 60)
 CHALLENGES_PER_USER: Final = Limit("challenge-create", 30, 3600)
 
 
-async def _with_presence(
-    state: AppState, users: list[tuple[uuid.UUID, str]]
+async def _with_status(
+    state: AppState, db: DB, users: list[tuple[uuid.UUID, str]]
 ) -> list[PlayerStatusOut]:
     online = await state.presence.online(uid for uid, _ in users)
-    return [PlayerStatusOut(id=uid, username=name, online=uid in online) for uid, name in users]
+    playing = await games.busy(db, [uid for uid, _ in users])
+    return [
+        PlayerStatusOut(id=uid, username=name, online=uid in online, playing=uid in playing)
+        for uid, name in users
+    ]
 
 
 async def _notify(state: AppState, db: DB, challenge: Challenge) -> ChallengeOut:
@@ -51,7 +57,7 @@ async def search_players(
     """Players whose username starts with ``prefix`` (case-insensitive)."""
     await enforce_limit(state, SEARCH_PER_USER, str(user.id))
     found = await service.search_players(db, prefix, limit)
-    return await _with_presence(state, [(u.id, u.username) for u in found])
+    return await _with_status(state, db, [(u.id, u.username) for u in found])
 
 
 @router.get("/players/online")
@@ -60,11 +66,9 @@ async def online_players(
 ) -> list[PlayerStatusOut]:
     ids = await state.presence.list_online(limit)
     users = await service.users_by_id(db, ids)
-    return [
-        PlayerStatusOut(id=uid, username=users[uid].username, online=True)
-        for uid in ids
-        if uid in users
-    ]
+    return await _with_status(
+        state, db, [(uid, users[uid].username) for uid in ids if uid in users]
+    )
 
 
 @router.get("/players/{username}")
@@ -74,13 +78,8 @@ async def player_profile(
     player = await service.find_player(db, username)
     if player is None:
         raise AppError(404, "player_not_found", "No such player.")
-    online = await state.presence.online([player.id])
-    return ProfileOut(
-        id=player.id,
-        username=player.username,
-        online=player.id in online,
-        created_at=player.created_at,
-    )
+    (status,) = await _with_status(state, db, [(player.id, player.username)])
+    return ProfileOut(**status.model_dump(), created_at=player.created_at)
 
 
 @router.get("/challenges")
@@ -105,15 +104,18 @@ async def create_challenge(
 async def _respond(
     challenge_id: uuid.UUID, response: service.Response, user: CurrentUser, state: State, db: DB
 ) -> ChallengeOut:
-    challenge = await service.respond(db, state.clock(), user.id, challenge_id, response)
-    return await _notify(state, db, challenge)
+    challenge, game = await service.respond(db, state.clock(), user.id, challenge_id, response)
+    out = await _notify(state, db, challenge)
+    if game is not None:
+        await notify_game(state, db, game)
+    return out
 
 
 @router.post("/challenges/{challenge_id}/accept")
 async def accept_challenge(
     challenge_id: uuid.UUID, user: CurrentUser, state: State, db: DB
 ) -> ChallengeOut:
-    """Accept. (Starting the game itself arrives with live play.)"""
+    """Accept and start the game (its id is in ``game_id``; both players get a ``game`` event)."""
     return await _respond(challenge_id, "accept", user, state, db)
 
 

@@ -84,6 +84,7 @@ def settings(database_url: str) -> Settings:
         database_pool_size=2,
         mail_backend="memory",
         allowed_origins=(ORIGIN,),
+        game_sweeper=False,  # tests call the sweeper directly
     )
 
 
@@ -94,7 +95,15 @@ async def app(settings: Settings, mailer: MemoryMailer, clock: Clock) -> AsyncIt
         yield app
         state: AppState = app.state.ctx
         async with state.engine.begin() as conn:
-            for table in ("challenges", "sessions", "email_tokens", "users"):
+            for table in (
+                "active_games",
+                "game_moves",
+                "games",
+                "challenges",
+                "sessions",
+                "email_tokens",
+                "users",
+            ):
                 await conn.execute(text(f"DELETE FROM {table}"))  # noqa: S608 - fixed names
 
 

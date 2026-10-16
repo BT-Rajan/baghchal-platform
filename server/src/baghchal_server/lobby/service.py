@@ -11,6 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from baghchal_server.accounts.models import User
 from baghchal_server.errors import AppError
+from baghchal_server.games import service as games
+from baghchal_server.games.models import Game
 from baghchal_server.lobby.models import Challenge, ChallengeStatus
 from baghchal_server.lobby.schemas import ChallengeIn, ChallengeOut, PlayerOut
 from baghchal_server.lobby.time_controls import TIME_CONTROLS
@@ -76,6 +78,8 @@ async def create_challenge(
         raise AppError(422, "cannot_challenge_self", "You cannot challenge yourself.")
     if not await presence.online([opponent.id]):
         raise AppError(409, "player_offline", f"{opponent.username} is not online.")
+    if await games.busy(db, [challenger.id, opponent.id]):
+        raise _busy()
     outgoing = await db.scalar(
         select(func.count())
         .select_from(Challenge)
@@ -124,10 +128,11 @@ async def create_challenge(
 
 async def respond(
     db: AsyncSession, now: datetime, user_id: uuid.UUID, challenge_id: uuid.UUID, response: Response
-) -> Challenge:
+) -> tuple[Challenge, Game | None]:
     """Accept or decline (the opponent) or cancel (the challenger) a pending challenge.
 
-    One conditional UPDATE decides, so of two racing responses exactly one wins.
+    One conditional UPDATE decides, so of two racing responses exactly one wins. Accepting
+    starts the game in the same transaction: there is never an accepted challenge without one.
     """
     actor = Challenge.challenger_id if response == "cancel" else Challenge.opponent_id
     result = await db.execute(
@@ -141,10 +146,20 @@ async def respond(
         .values(status=_RESULT[response], pair_key=None, responded_at=now)
     )
     if result.rowcount == 1:  # type: ignore[attr-defined]
-        await db.commit()
         challenge = await db.get(Challenge, challenge_id, populate_existing=True)
         assert challenge is not None  # noqa: S101 - just updated
-        return challenge
+        game = None
+        if response == "accept":
+            players = [challenge.challenger_id, challenge.opponent_id]
+            try:
+                game = await games.start_game(db, challenge, now)
+            except IntegrityError:
+                await db.rollback()
+                if await games.busy(db, players):
+                    raise _busy() from None
+                raise
+        await db.commit()
+        return challenge, game
     await db.rollback()
     challenge = await db.get(Challenge, challenge_id)
     if challenge is None or user_id not in (challenge.challenger_id, challenge.opponent_id):
@@ -152,6 +167,10 @@ async def respond(
     if (response == "cancel") != (user_id == challenge.challenger_id):
         raise AppError(403, "not_allowed", f"You cannot {response} this challenge.")
     raise AppError(409, "challenge_closed", "This challenge is no longer open.")
+
+
+def _busy() -> AppError:
+    return AppError(409, "player_busy", "One of you is already playing a game.")
 
 
 async def open_challenges(db: AsyncSession, now: datetime, user: User) -> Sequence[Challenge]:
@@ -172,6 +191,15 @@ async def describe(db: AsyncSession, challenges: Sequence[Challenge]) -> list[Ch
     ids = {c.challenger_id for c in challenges} | {c.opponent_id for c in challenges}
     rows = await db.execute(select(User.id, User.username).where(User.id.in_(ids)))
     names = dict(rows.all())
+    game_ids = dict(
+        (
+            await db.execute(
+                select(Game.challenge_id, Game.id).where(
+                    Game.challenge_id.in_([c.id for c in challenges])
+                )
+            )
+        ).all()
+    )
     return [
         ChallengeOut(
             id=c.id,
@@ -183,6 +211,7 @@ async def describe(db: AsyncSession, challenges: Sequence[Challenge]) -> list[Ch
             status=ChallengeStatus(c.status),
             created_at=c.created_at,
             expires_at=c.expires_at,
+            game_id=game_ids.get(c.id),
         )
         for c in challenges
     ]

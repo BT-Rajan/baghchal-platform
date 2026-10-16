@@ -18,6 +18,8 @@ class PlayerOut(BaseModel):
 
 class PlayerStatusOut(PlayerOut):
     online: bool
+    playing: bool
+    """In a live game right now."""
 
 
 class ProfileOut(PlayerStatusOut):
@@ -52,6 +54,8 @@ class ChallengeOut(BaseModel):
     status: ChallengeStatus
     created_at: datetime
     expires_at: datetime
+    game_id: uuid.UUID | None = None
+    """The game started by accepting this challenge."""
 
 
 class ChallengeList(BaseModel):
