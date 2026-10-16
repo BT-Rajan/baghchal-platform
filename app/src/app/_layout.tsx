@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -20,11 +20,13 @@ export default function RootLayout() {
   const [queryClient] = useState(
     () => new QueryClient({ defaultOptions: { queries: { retry: shouldRetry } } }),
   );
+  // Clearing also cancels the cache's clean-up timers (the root only unmounts in tests).
+  useEffect(() => () => queryClient.clear(), [queryClient]);
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <SessionProvider baseUrl={API_URL} queryClient={queryClient}>
-          <RealtimeProvider url={socketUrl(API_URL)}>
+          <RealtimeProvider url={socketUrl(API_URL)} onGameStarted={openGame}>
             <StatusBar style="auto" />
             <Routes />
           </RealtimeProvider>
@@ -32,6 +34,11 @@ export default function RootLayout() {
       </QueryClientProvider>
     </SafeAreaProvider>
   );
+}
+
+/** A game of mine just started (accepted elsewhere, or game 2 of a match): open it. */
+function openGame(game: { id: string }) {
+  router.push(`/game/${game.id}`);
 }
 
 function Routes() {
@@ -55,7 +62,10 @@ function Routes() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={signedIn}>
-        <Stack.Screen name="index" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="player/[username]" options={{ headerShown: true, title: '' }} />
+        <Stack.Screen name="challenge/[username]" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="game/[id]" options={{ headerShown: true, title: 'Game' }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" />

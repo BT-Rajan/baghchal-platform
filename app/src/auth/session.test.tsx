@@ -6,7 +6,7 @@ import { Text } from 'react-native';
 import { ME, fakeServer } from '../../tests/support/fakeServer';
 import { memoryTokenStore } from '../../tests/support/memoryTokenStore';
 
-import { SessionProvider, useApi, useSession } from './session';
+import { SessionProvider, useApi, useMe, useSession } from './session';
 
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(async () => null),
@@ -68,4 +68,31 @@ test('the hooks need the provider', async () => {
   jest.spyOn(console, 'error').mockImplementation(() => {});
   await expect(renderHook(() => useSession())).rejects.toThrow(/inside <SessionProvider>/);
   jest.mocked(console.error).mockRestore();
+});
+
+test('useMe gives the signed-in user, and refuses otherwise', async () => {
+  const server = fakeServer({ 'GET /api/v1/me': { status: 200, body: ME } });
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <SessionProvider
+      baseUrl="https://api.example"
+      queryClient={new QueryClient()}
+      transport="cookie"
+      fetch={server.fetch}
+    >
+      {children}
+    </SessionProvider>
+  );
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  await expect(renderHook(() => useMe(), { wrapper })).rejects.toThrow(/signed-in session/);
+  jest.mocked(console.error).mockRestore();
+
+  function Name() {
+    const { state } = useSession();
+    return state.status === 'signedIn' ? <Me /> : null;
+  }
+  function Me() {
+    return <Text>{useMe().username}</Text>;
+  }
+  await render(<Name />, { wrapper });
+  expect(await screen.findByText('alice')).toBeOnTheScreen();
 });

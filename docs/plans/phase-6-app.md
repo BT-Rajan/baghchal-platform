@@ -1,6 +1,6 @@
 # Phase 6 plan: the app
 
-Status: in progress (steps 1–4 done).
+Status: in progress (steps 1–5 done).
 
 One Expo / React Native client for web, iOS, Android and tablets, in `app/`. It talks only
 to our own server (Phases 2–5). Per [ADR 0002](../adr/0002-no-dependency-on-expo-cloud.md),
@@ -135,7 +135,8 @@ phones it sits above it. The board is square and as large as fits.
 ## Testing
 - **Unit**: BFEN parsing, board geometry, move-input state machine, clock maths,
   "newer game" ordering, error mapping, realtime reconnect and backoff, and event-to-cache
-  wiring. 100% coverage is enforced on `src/game`, `src/api`, `src/realtime` and `src/auth`.
+  wiring. 100% coverage is enforced on `src/game`, `src/api`, `src/realtime`, `src/auth` and
+  `src/lobby`.
 - **Components**: board taps produce the right move; lobby challenge flow; sign-in form
   errors.
 - **Contract**: CI regenerates the OpenAPI schema from the server and the TypeScript types
@@ -163,7 +164,9 @@ Jest with coverage thresholds → `expo export --platform web` (the production b
    server: sign up, the emailed link, reload, sign out, sign in.
 4. ✅ Realtime client and cache wiring. Checked in Chromium against a real server: the
    socket authenticates with the cookie, and a challenge made elsewhere arrives live.
-5. Lobby, profiles, leaderboard.
+5. ✅ Lobby, profiles, leaderboard. Checked with two browsers (desktop and phone width) against
+   a real server: a challenge sent from one arrives live in the other, and accepting it opens
+   the game for both. The game screen is a summary until step 6.
 6. Board, move input, clocks, game screen, matches.
 7. Responsive layout, accessibility pass, empty and error states.
 8. Docs (README, app README), local end-to-end smoke, PR.

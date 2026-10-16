@@ -16,6 +16,13 @@ jest.mock('expo-secure-store', () => ({
   }),
 }));
 
+/** What a quiet lobby answers: no games, no challenges, nobody else online. */
+export const QUIET_LOBBY: Record<string, Route> = {
+  'GET /api/v1/games': { status: 200, body: [] },
+  'GET /api/v1/challenges': { status: 200, body: { incoming: [], outgoing: [] } },
+  'GET /api/v1/players/online': { status: 200, body: [] },
+};
+
 export const savedToken = () => mockSecure.get('session-token') ?? null;
 
 export async function renderApp(
@@ -24,7 +31,7 @@ export async function renderApp(
 ) {
   mockSecure.clear();
   if (token !== null) mockSecure.set('session-token', token);
-  const server = fakeServer(routes);
+  const server = fakeServer({ ...QUIET_LOBBY, ...routes });
   globalThis.fetch = server.fetch;
   FakeSocket.reset();
   globalThis.WebSocket = FakeSocket as unknown as typeof WebSocket;

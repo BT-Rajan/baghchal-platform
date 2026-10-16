@@ -1,0 +1,98 @@
+import { ME } from '../../tests/support/fakeServer';
+import { BOB, challenge } from '../../tests/support/games';
+
+import {
+  CATEGORIES,
+  TIME_CONTROLS,
+  canChallenge,
+  challengeSecondsLeft,
+  categoryOf,
+  challengeTerms,
+  isOpen,
+  joinedText,
+  presenceText,
+  ratingText,
+  searchPrefix,
+  secondsLeft,
+} from './format';
+
+test('time controls and categories', () => {
+  expect(TIME_CONTROLS.map((tc) => tc.label)).toEqual(['3+2', '5+3', '10+5', '15+10']);
+  expect(CATEGORIES.map((c) => c.value)).toEqual(['blitz', 'rapid']);
+  expect(categoryOf('5+3')).toBe('blitz');
+  expect(categoryOf('15+10')).toBe('rapid');
+  expect(categoryOf('1+0')).toBeUndefined();
+});
+
+test('ratingText marks provisional ratings', () => {
+  expect(ratingText({ rating: 1500, provisional: true })).toBe('1500?');
+  expect(ratingText({ rating: 1712, provisional: false })).toBe('1712');
+});
+
+test('presence', () => {
+  expect(presenceText({ online: true, playing: true })).toBe('Playing');
+  expect(presenceText({ online: true, playing: false })).toBe('Online');
+  expect(presenceText({ online: false, playing: false })).toBe('Offline');
+  expect(canChallenge({ online: true, playing: false })).toBe(true);
+  expect(canChallenge({ online: true, playing: true })).toBe(false);
+  expect(canChallenge({ online: false, playing: false })).toBe(false);
+});
+
+test('secondsLeft and isOpen', () => {
+  const now = Date.parse('2026-01-01T12:00:00Z');
+  expect(secondsLeft('2026-01-01T12:00:59.200Z', now)).toBe(60);
+  expect(secondsLeft('2026-01-01T11:59:00Z', now)).toBe(0);
+  expect(isOpen(challenge({ expires_at: '2026-01-01T12:00:30Z' }), now)).toBe(true);
+  expect(isOpen(challenge({ expires_at: '2026-01-01T12:00:00Z' }), now)).toBe(false);
+  expect(isOpen(challenge({ status: 'declined', expires_at: '2026-01-01T12:01:00Z' }), now)).toBe(
+    false,
+  );
+});
+
+test('challengeSecondsLeft never exceeds the challenge lifetime', () => {
+  const c = challenge({ created_at: '2026-01-01T12:00:00Z', expires_at: '2026-01-01T12:01:00Z' });
+  // This device's clock is two seconds behind the server's.
+  expect(challengeSecondsLeft(c, Date.parse('2026-01-01T11:59:58Z'))).toBe(60);
+  expect(challengeSecondsLeft(c, Date.parse('2026-01-01T12:00:30Z'))).toBe(30);
+  expect(challengeSecondsLeft(c, Date.parse('2026-01-01T12:02:00Z'))).toBe(0);
+});
+
+describe('challengeTerms', () => {
+  const me = { id: ME.id, username: ME.username };
+
+  test('rated matches', () => {
+    expect(challengeTerms(challenge({ rated: true, side: null }), ME.id)).toBe(
+      '5+3 · rated match (2 games)',
+    );
+  });
+
+  test('casual games, from either side', () => {
+    expect(challengeTerms(challenge({ side: 'random' }), ME.id)).toBe(
+      '5+3 · casual · random sides',
+    );
+    expect(challengeTerms(challenge({ side: null }), ME.id)).toBe('5+3 · casual · random sides');
+    // Bob challenged me and plays goats, so I play tigers.
+    expect(challengeTerms(challenge({ side: 'goat' }), ME.id)).toBe(
+      '5+3 · casual · you play tigers',
+    );
+    expect(challengeTerms(challenge({ side: 'tiger' }), ME.id)).toBe(
+      '5+3 · casual · you play goats',
+    );
+    // I challenged Bob and chose goats.
+    const mine = challenge({ challenger: me, opponent: BOB, side: 'goat' });
+    expect(challengeTerms(mine, ME.id)).toBe('5+3 · casual · you play goats');
+  });
+});
+
+test('joinedText', () => {
+  expect(joinedText('2026-03-31T23:59:00Z')).toBe('Joined March 2026');
+});
+
+test('searchPrefix', () => {
+  expect(searchPrefix('  al ')).toBe('al');
+  expect(searchPrefix('a_b-1')).toBe('a_b-1');
+  expect(searchPrefix('')).toBeNull();
+  expect(searchPrefix('a b')).toBeNull();
+  expect(searchPrefix('%')).toBeNull();
+  expect(searchPrefix('a'.repeat(21))).toBeNull();
+});

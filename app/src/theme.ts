@@ -10,6 +10,8 @@ export const colors = {
   dangerSurface: '#fbe9e7',
   success: '#2e6b34',
   successSurface: '#e6f2e6',
+  online: '#2e8b3d',
+  offline: '#9a9187',
 } as const;
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;

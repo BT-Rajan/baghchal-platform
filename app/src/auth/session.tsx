@@ -9,7 +9,7 @@ import {
 } from 'react';
 
 import type { Transport } from '@/api/client';
-import type { Api } from '@/api/endpoints';
+import type { Api, Me } from '@/api/endpoints';
 
 import { SessionStore, type SessionState } from './sessionStore';
 import { tokenStoreFor, transportFor, type TokenStore } from './tokenStore';
@@ -58,4 +58,11 @@ export function useSession(): { state: SessionState; session: SessionStore } {
 
 export function useApi(): Api {
   return useSessionStore().api;
+}
+
+/** The signed-in user. Only for screens behind the signed-in route guard. */
+export function useMe(): Me {
+  const { state } = useSession();
+  if (state.status !== 'signedIn') throw new Error('useMe needs a signed-in session');
+  return state.user;
 }

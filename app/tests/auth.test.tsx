@@ -10,6 +10,11 @@ async function press(name: string) {
   await fireEvent.press(screen.getByRole('button', { name }));
 }
 
+async function signOut() {
+  await fireEvent.press(screen.getByRole('button', { name: /^Me, tab/ }));
+  await press('Sign out');
+}
+
 async function type(label: string, text: string) {
   await fireEvent.changeText(screen.getByLabelText(label), text);
 }
@@ -22,7 +27,7 @@ test('someone signed out is sent to sign-in', async () => {
 
 test('a saved session opens the signed-in home', async () => {
   await renderApp('/', { token: 'tok', routes: SIGNED_IN });
-  expect(await screen.findByText('Signed in as alice.')).toBeOnTheScreen();
+  expect(await screen.findByRole('heading', { name: 'Play' })).toBeOnTheScreen();
 });
 
 describe('sign in', () => {
@@ -63,15 +68,15 @@ describe('sign in', () => {
     await type('Username or email', 'alice');
     await type('Password', 'correct horse');
     await press('Sign in');
-    expect(await screen.findByText('Signed in as alice.')).toBeOnTheScreen();
-    expect(server.last().body).toEqual({
+    expect(await screen.findByRole('heading', { name: 'Play' })).toBeOnTheScreen();
+    expect(server.lastTo('POST /api/v1/auth/login').body).toEqual({
       login: 'alice',
       password: 'correct horse',
       transport: 'bearer',
     });
     expect(savedToken()).toBe('new-token');
 
-    await press('Sign out');
+    await signOut();
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeOnTheScreen();
     expect(app.getPathname()).toBe('/sign-in');
     expect(savedToken()).toBeNull();
@@ -112,7 +117,7 @@ describe('sign up', () => {
     });
     await fill('alice', ' alice@example.com ', 'correct horse');
     expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeOnTheScreen();
-    expect(server.last().body).toEqual({
+    expect(server.lastTo('POST /api/v1/auth/register').body).toEqual({
       username: 'alice',
       email: 'alice@example.com',
       password: 'correct horse',
@@ -152,7 +157,7 @@ describe('verify email', () => {
         'POST /api/v1/auth/verify-email': { status: 200, body: { user: ME, token: 'fresh' } },
       },
     });
-    expect(await screen.findByText('Signed in as alice.')).toBeOnTheScreen();
+    expect(await screen.findByRole('heading', { name: 'Play' })).toBeOnTheScreen();
     expect(app.getPathname()).toBe('/');
     const verifications = server.requests.filter((r) => r.path === '/api/v1/auth/verify-email');
     expect(verifications).toEqual([
@@ -230,7 +235,10 @@ describe('reset password', () => {
     await type('Repeat the new password', 'correct horse');
     await press('Change password');
     expect(await screen.findByRole('heading', { name: 'Password changed' })).toBeOnTheScreen();
-    expect(server.last().body).toEqual({ token: LINK_TOKEN, password: 'correct horse' });
+    expect(server.lastTo('POST /api/v1/auth/password-reset/confirm').body).toEqual({
+      token: LINK_TOKEN,
+      password: 'correct horse',
+    });
     await waitFor(() => expect(savedToken()).toBeNull());
   });
 
@@ -254,7 +262,7 @@ test('an unreachable server can be retried', async () => {
   expect(await screen.findByText('Down.')).toBeOnTheScreen();
   server.on('GET /api/v1/me', { status: 200, body: ME });
   await press('Try again');
-  expect(await screen.findByText('Signed in as alice.')).toBeOnTheScreen();
+  expect(await screen.findByRole('heading', { name: 'Play' })).toBeOnTheScreen();
 });
 
 test('signing in opens the live connection; signing out closes it', async () => {
@@ -262,10 +270,10 @@ test('signing in opens the live connection; signing out closes it', async () => 
     token: 'tok',
     routes: { ...SIGNED_IN, 'POST /api/v1/auth/logout': { status: 204 } },
   });
-  await screen.findByText('Signed in as alice.');
+  await screen.findByRole('heading', { name: 'Play' });
   expect(FakeSocket.all).toHaveLength(1);
   expect(FakeSocket.latest().url).toBe('ws://localhost:8000/api/v1/ws');
-  await press('Sign out');
+  await signOut();
   await screen.findByRole('heading', { name: 'Sign in' });
   expect(FakeSocket.latest().closed).toBe(true);
 });

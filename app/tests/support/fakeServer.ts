@@ -59,6 +59,12 @@ export function fakeServer(routes: Record<string, Route> = {}) {
     on(key: string, route: Route) {
       table.set(key, route);
     },
+    /** The last request to `"METHOD /path"`. */
+    lastTo(key: string): FakeRequest {
+      const request = requests.findLast((r) => `${r.method} ${r.path}` === key);
+      if (request === undefined) throw new Error(`no request to ${key}`);
+      return request;
+    },
     last(): FakeRequest {
       const request = requests.at(-1);
       if (request === undefined) throw new Error('no requests yet');

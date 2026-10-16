@@ -3,7 +3,12 @@ import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import { colors, radius, spacing } from '@/theme';
 
 export interface ButtonProps {
+  /** The accessible name; also the visible text unless `label` is given. */
   title: string;
+  /** Shorter visible text, when the accessible name needs more context ("Challenge bob"). */
+  label?: string;
+  /** Smaller, for buttons inside list rows. */
+  compact?: boolean;
   onPress: () => void;
   busy?: boolean;
   disabled?: boolean;
@@ -12,6 +17,8 @@ export interface ButtonProps {
 
 export function Button({
   title,
+  label = title,
+  compact = false,
   onPress,
   busy = false,
   disabled = false,
@@ -29,6 +36,7 @@ export function Button({
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
+        compact && styles.compact,
         primary ? styles.primary : styles.secondary,
         (pressed || inactive) && styles.dim,
       ]}
@@ -37,7 +45,7 @@ export function Button({
         <ActivityIndicator color={primary ? colors.accentText : colors.accent} />
       ) : (
         <Text style={[styles.text, primary ? styles.primaryText : styles.secondaryText]}>
-          {title}
+          {label}
         </Text>
       )}
     </Pressable>
@@ -52,6 +60,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
   },
+  compact: { minHeight: 36, paddingHorizontal: spacing.md },
   primary: { backgroundColor: colors.accent },
   secondary: { borderWidth: 1, borderColor: colors.accent, backgroundColor: 'transparent' },
   dim: { opacity: 0.6 },
