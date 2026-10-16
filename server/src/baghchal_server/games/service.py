@@ -31,10 +31,30 @@ from baghchal_engine import (
 )
 from baghchal_server.accounts.models import User
 from baghchal_server.errors import AppError
-from baghchal_server.games.models import ActiveGame, EndReason, Game, GameMove, GameStatus
-from baghchal_server.games.schemas import ClocksOut, GameOut, MoveIn, ResultOut, SideName
+from baghchal_server.games.models import (
+    ActiveGame,
+    EndReason,
+    Game,
+    GameMove,
+    GameStatus,
+    Match,
+    MatchStatus,
+)
+from baghchal_server.games.schemas import (
+    ClocksOut,
+    GameOut,
+    MatchOut,
+    MatchScoreOut,
+    MoveIn,
+    RatingsOut,
+    ResultOut,
+    SideName,
+    SideRatingOut,
+)
 from baghchal_server.lobby.models import Challenge
 from baghchal_server.lobby.schemas import PlayerOut
+from baghchal_server.lobby.time_controls import category_of
+from baghchal_server.ratings import service as ratings
 from baghchal_server.realtime.presence import Presence
 
 FIRST_MOVE_GRACE: Final = timedelta(seconds=30)
@@ -94,7 +114,8 @@ def _deadline(ply: int, turn_started_at: datetime, clock_ms: int) -> datetime:
 
 
 async def start_game(db: AsyncSession, challenge: Challenge, now: datetime) -> Game:
-    """Create the game for an accepted challenge (caller commits).
+    """Create the game for an accepted challenge (caller commits). A rated challenge starts a
+    two-game match; this is its first game.
 
     Raises IntegrityError if either player is already in a live game.
     """
@@ -106,15 +127,52 @@ async def start_game(db: AsyncSession, challenge: Challenge, now: datetime) -> G
         if side == "goat"
         else (challenge.opponent_id, challenge.challenger_id)
     )
-    initial_ms = challenge.initial_seconds * 1000
-    game = Game(
-        id=uuid.uuid4(),
-        challenge_id=challenge.id,
+    match_id = None
+    if challenge.rated:
+        match_id = uuid.uuid4()
+        db.add(
+            Match(id=match_id, challenge_id=challenge.id, status=MatchStatus.ACTIVE, created_at=now)
+        )
+        await db.flush()
+    return await _create_game(
+        db,
+        now,
         goat_id=goat_id,
         tiger_id=tiger_id,
         rated=challenge.rated,
-        initial_ms=initial_ms,
+        initial_ms=challenge.initial_seconds * 1000,
         increment_ms=challenge.increment_seconds * 1000,
+        challenge_id=challenge.id,
+        match_id=match_id,
+        match_game=1 if challenge.rated else None,
+    )
+
+
+async def _create_game(  # noqa: PLR0913 - every field of a new game
+    db: AsyncSession,
+    now: datetime,
+    *,
+    goat_id: uuid.UUID,
+    tiger_id: uuid.UUID,
+    rated: bool,
+    initial_ms: int,
+    increment_ms: int,
+    challenge_id: uuid.UUID | None,
+    match_id: uuid.UUID | None,
+    match_game: int | None,
+) -> Game:
+    category = category_of(initial_ms // 1000, increment_ms // 1000)
+    current = await ratings.current(db, [goat_id, tiger_id], category, now)
+    game = Game(
+        id=uuid.uuid4(),
+        challenge_id=challenge_id,
+        match_id=match_id,
+        match_game=match_game,
+        goat_id=goat_id,
+        tiger_id=tiger_id,
+        rated=rated,
+        initial_ms=initial_ms,
+        increment_ms=increment_ms,
         status=GameStatus.ACTIVE,
         ply=0,
         position=_INITIAL,
@@ -122,6 +180,8 @@ async def start_game(db: AsyncSession, challenge: Challenge, now: datetime) -> G
         tiger_ms=initial_ms,
         turn_started_at=now,
         deadline_at=now + FIRST_MOVE_GRACE,
+        goat_rating=round(current[goat_id].rating),
+        tiger_rating=round(current[tiger_id].rating),
         created_at=now,
     )
     db.add(game)
@@ -134,6 +194,55 @@ async def start_game(db: AsyncSession, challenge: Challenge, now: datetime) -> G
     )
     await db.flush()
     return game
+
+
+async def _after_finish(db: AsyncSession, game_id: uuid.UUID, now: datetime) -> None:
+    """Consequences of a game ending, in the same transaction: rate it, and in a match start
+    the second game (sides swapped) or close the match."""
+    game = await get_game(db, game_id)
+    if game.rated and game.winner is not None:
+        category = category_of(game.initial_ms // 1000, game.increment_ms // 1000)
+        winner_id, loser_id = (
+            (game.goat_id, game.tiger_id)
+            if game.winner == "goat"
+            else (game.tiger_id, game.goat_id)
+        )
+        w_before, w_after, l_before, l_after = await ratings.record_game(
+            db, category, winner_id, loser_id, now
+        )
+        changes = {
+            winner_id: round(w_after.rating) - round(w_before.rating),
+            loser_id: round(l_after.rating) - round(l_before.rating),
+        }
+        game.goat_rating_change = changes[game.goat_id]
+        game.tiger_rating_change = changes[game.tiger_id]
+    if game.match_id is None:
+        return
+    if game.match_game == 1 and game.end_reason != EndReason.ABORTED:
+        await _create_game(
+            db,
+            now,
+            goat_id=game.tiger_id,
+            tiger_id=game.goat_id,
+            rated=game.rated,
+            initial_ms=game.initial_ms,
+            increment_ms=game.increment_ms,
+            challenge_id=None,
+            match_id=game.match_id,
+            match_game=2,
+        )
+    else:
+        await db.execute(
+            update(Match)
+            .where(Match.id == game.match_id)
+            .values(status=MatchStatus.FINISHED, finished_at=now)
+        )
+
+
+async def match_games(db: AsyncSession, match_id: uuid.UUID) -> Sequence[Game]:
+    return (
+        await db.scalars(select(Game).where(Game.match_id == match_id).order_by(Game.match_game))
+    ).all()
 
 
 # ── Reading ───────────────────────────────────────────────────────────────
@@ -227,10 +336,36 @@ async def describe(db: AsyncSession, game: Game, now: datetime) -> GameOut:
             tiger_ms=tiger_ms,
             running=_side_to_move(game) if _clocks_running(game) else None,
         ),
+        ratings=RatingsOut(
+            goat=SideRatingOut(rating=game.goat_rating, change=game.goat_rating_change),
+            tiger=SideRatingOut(rating=game.tiger_rating, change=game.tiger_rating_change),
+        ),
+        match=await _describe_match(db, game, names),
         deadline_at=game.deadline_at,
         server_time=now,
         created_at=game.created_at,
         finished_at=game.finished_at,
+    )
+
+
+async def _describe_match(
+    db: AsyncSession, game: Game, names: dict[uuid.UUID, str]
+) -> MatchOut | None:
+    if game.match_id is None or game.match_game is None:
+        return None
+    games = await match_games(db, game.match_id)
+    points = dict.fromkeys((game.goat_id, game.tiger_id), 0)
+    for g in games:
+        if g.winner is not None:
+            points[g.goat_id if g.winner == "goat" else g.tiger_id] += 1
+    return MatchOut(
+        id=game.match_id,
+        game=game.match_game,
+        games=[g.id for g in games],
+        score=[
+            MatchScoreOut(player=PlayerOut(id=uid, username=names[uid]), points=p)
+            for uid, p in points.items()
+        ],
     )
 
 
@@ -306,6 +441,7 @@ async def play(
             raise _Stale
         if outcome is not None:
             await db.execute(delete(ActiveGame).where(ActiveGame.game_id == game.id))
+            await _after_finish(db, game.id, now)
         await db.commit()
     except (IntegrityError, _Stale):
         await db.rollback()  # the engine game holds a move that did not happen; drop it
@@ -347,6 +483,7 @@ async def _finish(
         await db.rollback()
         return False
     await db.execute(delete(ActiveGame).where(ActiveGame.game_id == game.id))
+    await _after_finish(db, game.id, now)
     await db.commit()
     return True
 

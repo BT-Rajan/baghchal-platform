@@ -15,6 +15,7 @@ from baghchal_server.accounts import models  # noqa: F401  (registers tables)
 from baghchal_server.db import Base, create_engine
 from baghchal_server.games import models as game_models  # noqa: F401
 from baghchal_server.lobby import models as lobby_models  # noqa: F401
+from baghchal_server.ratings import models as rating_models  # noqa: F401
 
 config = context.config
 if config.config_file_name and config.attributes.get("configure_logger", True):

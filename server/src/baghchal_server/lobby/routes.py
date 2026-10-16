@@ -15,9 +15,12 @@ from baghchal_server.lobby.schemas import (
     ChallengeOut,
     PlayerStatusOut,
     ProfileOut,
+    RatingOut,
     UsernameQuery,
 )
+from baghchal_server.lobby.time_controls import Category
 from baghchal_server.ratelimit import Limit
+from baghchal_server.ratings import service as ratings
 from baghchal_server.realtime.protocol import ChallengeEvent
 
 router = APIRouter(prefix="/api/v1")
@@ -79,7 +82,20 @@ async def player_profile(
     if player is None:
         raise AppError(404, "player_not_found", "No such player.")
     (status,) = await _with_status(state, db, [(player.id, player.username)])
-    return ProfileOut(**status.model_dump(), created_at=player.created_at)
+    now = state.clock()
+    rows = await ratings.rows_of(db, player.id)
+    profile_ratings = {}
+    for category in Category:
+        row = rows.get(category)
+        current = ratings.as_of(row, now)
+        profile_ratings[category.value] = RatingOut(
+            rating=round(current.rating),
+            deviation=round(current.deviation),
+            games=row.games if row else 0,
+            provisional=ratings.is_provisional(current),
+            rank=await ratings.rank_of(db, row, now) if row else None,
+        )
+    return ProfileOut(**status.model_dump(), created_at=player.created_at, ratings=profile_ratings)
 
 
 @router.get("/challenges")

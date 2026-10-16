@@ -67,6 +67,18 @@ These rules belong to the platform, not the board; the server enforces them.
 - **One live game per player** at a time.
 - No draws by agreement, matching the board rules.
 
+## Ratings
+- **Glicko-2**, separately for **blitz** (3+2, 5+3) and **rapid** (10+5, 15+10). Everyone
+  starts at 1500 with deviation 350. Only rated games count; casual games never do.
+- **Rated games are two-game matches with sides swapped**: game 2 starts automatically when
+  game 1 ends, so nobody's rating depends on which side they drew. Each game is rated on its
+  own. If game 1 is aborted the match ends; an aborted game is never rated.
+- Ratings change after every rated game with a result; the deviation (uncertainty) grows
+  while a player is away (one Glicko-2 period per day) and shrinks as they play.
+- A rating is **provisional** while its deviation is above 110.
+- **Leaderboards** list players who are not provisional and played a rated game in that
+  time control within the last 30 days.
+
 ## Notation
 - Moves: placement `c3`, step `a1-b2`, capture `a1xc3`.
 - Positions (BFEN): ranks 5→1 separated by `/`, `T` tiger, `G` goat, digits for empty runs,
