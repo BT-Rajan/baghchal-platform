@@ -23,6 +23,32 @@ class ClocksOut(BaseModel):
     """The side whose clock is counting down at ``server_time``."""
 
 
+class SideRatingOut(BaseModel):
+    rating: int
+    """The player's rating in this time control when the game started."""
+    change: int | None
+    """How much the game moved it; None until a rated game ends with a result."""
+
+
+class RatingsOut(BaseModel):
+    goat: SideRatingOut
+    tiger: SideRatingOut
+
+
+class MatchScoreOut(BaseModel):
+    player: PlayerOut
+    points: int
+
+
+class MatchOut(BaseModel):
+    id: uuid.UUID
+    game: int
+    """Which game of the match this is: 1, or 2 (sides swapped)."""
+    games: list[uuid.UUID]
+    """The match's games so far, in order."""
+    score: list[MatchScoreOut]
+
+
 class GameOut(BaseModel):
     id: uuid.UUID
     goat: PlayerOut
@@ -39,6 +65,9 @@ class GameOut(BaseModel):
     legal_moves: list[str]
     """Empty once the game is over. Excludes moves that would repeat a position."""
     clocks: ClocksOut
+    ratings: RatingsOut
+    match: MatchOut | None
+    """Rated games are played as two-game matches."""
     deadline_at: datetime | None
     server_time: datetime
     created_at: datetime

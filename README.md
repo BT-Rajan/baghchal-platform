@@ -7,7 +7,7 @@ live with clocks, and climb rated leaderboards — on web, phones and tablets.
 | Path | What | Status |
 |---|---|---|
 | `engine/` | Pure-Python rules engine (no dependencies) | Phase 1 ✅ |
-| `server/` | FastAPI backend: accounts, lobby, live games, ratings | Phases 2–4 ✅ |
+| `server/` | FastAPI backend: accounts, lobby, live games, ratings | Phases 2–5 ✅ |
 | `app/` | Expo / React Native client for web, iOS, Android | Planned |
 | `docs/` | Rules canon and architecture decision records | |
 
@@ -26,7 +26,7 @@ Each phase ships complete — tested, documented and reviewed — before the nex
 3. **Lobby** ✅ — WebSocket gateway, presence across servers, player search, challenges.
 4. **Live play** ✅ — authoritative games, server clocks, reconnection, resignation, aborts
    and abandonment.
-5. **Ratings** — Glicko-2 per time control, side-swapped rated matches, leaderboards.
+5. **Ratings** ✅ — Glicko-2 per time control, side-swapped rated matches, leaderboards.
 6. **App** — Expo client: lobby, board, profile, leaderboard; no Expo-cloud dependency.
 7. **More to play** — computer opponent, game archive and replay, fair-play checks.
 8. **Production hardening** — load tests, security review, backups, deployment.
@@ -80,7 +80,7 @@ MariaDB 11.4; both packages must keep 100% branch coverage.
 | GET | `/api/v1/me` | The signed-in account |
 | GET | `/api/v1/players?prefix=al` | Find players by username prefix (with online status) |
 | GET | `/api/v1/players/online` | Players online now |
-| GET | `/api/v1/players/{username}` | A player's profile |
+| GET | `/api/v1/players/{username}` | A player's profile, with ratings and leaderboard rank |
 | GET | `/api/v1/challenges` | Your open challenges, incoming and outgoing |
 | POST | `/api/v1/challenges` | Challenge an online player (`time_control` 3+2, 5+3, 10+5, 15+10; `rated`; `side`) |
 | POST | `/api/v1/challenges/{id}/accept`, `/decline`, `/cancel` | Answer or withdraw a challenge; accepting starts the game |
@@ -88,6 +88,7 @@ MariaDB 11.4; both packages must keep 100% branch coverage.
 | GET | `/api/v1/games/{id}` | A game: position, moves, legal moves, clocks, result |
 | POST | `/api/v1/games/{id}/moves` | Play `{"ply": n, "move": "a1-b2"}` (`ply` = moves you have seen) |
 | POST | `/api/v1/games/{id}/resign`, `/abort`, `/claim-abandonment` | End the game (see [rules](docs/rules.md#live-play-platform-rules)) |
+| GET | `/api/v1/leaderboards/{blitz\|rapid}` | Top established players |
 | WS | `/api/v1/ws` | Live events — see [`docs/realtime.md`](docs/realtime.md) |
 | GET | `/health/live`, `/health/ready` | Liveness; readiness (database, Redis) |
 

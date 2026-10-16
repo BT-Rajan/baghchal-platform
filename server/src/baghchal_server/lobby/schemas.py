@@ -22,8 +22,21 @@ class PlayerStatusOut(PlayerOut):
     """In a live game right now."""
 
 
+class RatingOut(BaseModel):
+    rating: int
+    deviation: int
+    """Uncertainty; it grows while a player is away and shrinks as they play."""
+    games: int
+    provisional: bool
+    """Still settling: shown with a "?" and kept off the leaderboard."""
+    rank: int | None
+    """Place on the leaderboard, if listed."""
+
+
 class ProfileOut(PlayerStatusOut):
     created_at: datetime
+    ratings: dict[str, RatingOut]
+    """By time-control category (``blitz``, ``rapid``)."""
 
 
 class ChallengeIn(BaseModel):

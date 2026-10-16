@@ -36,9 +36,15 @@ class Game(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    challenge_id: Mapped[uuid.UUID] = mapped_column(
+    challenge_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("challenges.id", ondelete="CASCADE"), unique=True
     )
+    """The accepted challenge; None for the second game of a match."""
+    match_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("matches.id", ondelete="CASCADE"), index=True
+    )
+    match_game: Mapped[int | None] = mapped_column(Integer)
+    """1 or 2 within a rated match."""
     goat_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
@@ -60,6 +66,33 @@ class Game(Base):
     turn_started_at: Mapped[datetime] = mapped_column(UTCDateTime)
     deadline_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     """When the side to move runs out of time (or of first-move grace); None once finished."""
+    goat_rating: Mapped[int] = mapped_column(Integer)
+    tiger_rating: Mapped[int] = mapped_column(Integer)
+    """Each player's rating in this time control when the game started (shown to players)."""
+    goat_rating_change: Mapped[int | None] = mapped_column(Integer)
+    tiger_rating_change: Mapped[int | None] = mapped_column(Integer)
+    """Set when a rated game ends with a result."""
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+
+
+class MatchStatus(StrEnum):
+    ACTIVE = "active"
+    FINISHED = "finished"
+
+
+class Match(Base):
+    """A rated match: two games between the same players with sides swapped, so neither
+    player's rating depends on which side they happened to get."""
+
+    __tablename__ = "matches"
+    __table_args__ = MYSQL_TABLE_ARGS
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    challenge_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("challenges.id", ondelete="CASCADE"), unique=True
+    )
+    status: Mapped[str] = mapped_column(String(16))
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
     finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 

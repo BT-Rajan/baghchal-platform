@@ -31,3 +31,7 @@ TIME_CONTROLS: Final = {
         TimeControl(900, 10, Category.RAPID),
     )
 }
+
+
+def category_of(initial_seconds: int, increment_seconds: int) -> Category:
+    return TIME_CONTROLS[f"{initial_seconds // 60}+{increment_seconds}"].category

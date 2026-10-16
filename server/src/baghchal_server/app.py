@@ -26,6 +26,8 @@ from baghchal_server.lobby.routes import router as lobby_router
 from baghchal_server.mail import Mailer, make_mailer
 from baghchal_server.middleware import BodyLimit, CrossSiteGuard, RequestContext, SecurityHeaders
 from baghchal_server.ratelimit import MemoryRateLimiter, RateLimiter, RedisRateLimiter
+from baghchal_server.ratings import models as _rating_models  # noqa: F401  (registers tables)
+from baghchal_server.ratings.routes import router as ratings_router
 from baghchal_server.realtime.hub import Hub, MemoryBroker, RedisBroker
 from baghchal_server.realtime.presence import MemoryPresence, RedisPresence
 from baghchal_server.realtime.ws import router as ws_router
@@ -107,6 +109,7 @@ def create_app(
     app.include_router(accounts_router)
     app.include_router(lobby_router)
     app.include_router(games_router)
+    app.include_router(ratings_router)
     app.include_router(health_router)
     app.include_router(ws_router)
 
