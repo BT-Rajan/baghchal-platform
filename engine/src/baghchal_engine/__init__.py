@@ -7,7 +7,7 @@ from baghchal_engine.errors import (
     InvalidPosition,
     NotationError,
 )
-from baghchal_engine.game import DEFAULT_RULES, Game, Outcome, Reason, Rules, board_outcome
+from baghchal_engine.game import Game, Outcome, Reason
 from baghchal_engine.moves import Move, apply_unchecked, has_legal_move, legal_moves, perft, play
 from baghchal_engine.notation import (
     format_move,
@@ -21,7 +21,6 @@ from baghchal_engine.position import CAPTURES_TO_WIN, NUM_TIGERS, TOTAL_GOATS, P
 
 __all__ = [
     "CAPTURES_TO_WIN",
-    "DEFAULT_RULES",
     "NUM_TIGERS",
     "TOTAL_GOATS",
     "EngineError",
@@ -34,10 +33,8 @@ __all__ = [
     "Outcome",
     "Position",
     "Reason",
-    "Rules",
     "Side",
     "apply_unchecked",
-    "board_outcome",
     "format_move",
     "format_point",
     "format_position",

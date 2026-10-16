@@ -1,82 +1,61 @@
-"""Game records: a start position, the moves played, and how the game ended."""
+"""Game records: a start position, the moves played, and how the game ended.
+
+The traditional rules have no drawn outcome on the board:
+
+- Tigers win by capturing five goats.
+- The side to move loses if it has no legal move (goats win by trapping the tigers; tigers
+  win in the rare case that the goats are blocked).
+- Once all goats are placed, no move may return the board to an arrangement that has
+  already occurred in the game. Such a move is illegal, which can leave a side with no
+  legal move. Because arrangements are finite and never repeat, every game ends.
+"""
 
 from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import StrEnum
 
-from baghchal_engine.errors import GameOver
-from baghchal_engine.moves import Move, has_legal_move, legal_moves, play
+from baghchal_engine.errors import GameOver, IllegalMove
+from baghchal_engine.moves import Move, apply_unchecked, legal_moves, play
 from baghchal_engine.position import CAPTURES_TO_WIN, Position, Side
 
 
 class Reason(StrEnum):
-    """Why a game ended on the board. Resignation, time and agreement are platform concerns."""
+    """Why a game ended on the board. Resignation and timeouts are platform concerns."""
 
     FIVE_CAPTURED = "five_captured"
     TIGERS_TRAPPED = "tigers_trapped"
-    GOATS_STALEMATED = "goats_stalemated"
-    REPETITION = "repetition"
+    GOATS_BLOCKED = "goats_blocked"
 
 
 @dataclass(frozen=True, slots=True)
 class Outcome:
-    winner: Side | None  # None means a draw
+    winner: Side
     reason: Reason
-
-
-@dataclass(frozen=True, slots=True)
-class Rules:
-    """The tunable parts of the rules. See docs/rules.md for why the defaults are what they are."""
-
-    goat_stalemate_winner: Side | None = None
-    """Result when goats, in the movement phase, have no legal move: None is a draw."""
-    repetition_limit: int = 3
-    """A position occurring this many times (same side to move) ends the game in a draw."""
-
-    def __post_init__(self) -> None:
-        if self.repetition_limit < 2:
-            raise ValueError("repetition_limit must be at least 2")
-
-
-DEFAULT_RULES = Rules()
-
-
-def board_outcome(pos: Position, rules: Rules = DEFAULT_RULES) -> Outcome | None:
-    """The outcome decided by ``pos`` alone (ignores repetition), or None if play continues."""
-    if pos.captured >= CAPTURES_TO_WIN:
-        return Outcome(Side.TIGER, Reason.FIVE_CAPTURED)
-    if has_legal_move(pos):
-        return None
-    if pos.side is Side.TIGER:
-        return Outcome(Side.GOAT, Reason.TIGERS_TRAPPED)
-    return Outcome(rules.goat_stalemate_winner, Reason.GOATS_STALEMATED)
 
 
 class Game:
     """A game in progress or finished. Only legal moves are ever accepted.
 
-    Repetition counts reset after every placement or capture, since neither can be undone
-    and so no earlier position can recur.
+    ``_seen`` holds the board arrangements of the movement phase. It is cleared on every
+    capture: a capture removes a goat for good, so no earlier arrangement can recur.
     """
 
-    __slots__ = ("_moves", "_outcome", "_position", "_rules", "_seen", "_start")
+    __slots__ = ("_moves", "_outcome", "_position", "_seen", "_start")
 
-    def __init__(self, start: Position | None = None, rules: Rules = DEFAULT_RULES) -> None:
+    def __init__(self, start: Position | None = None) -> None:
         start = Position.initial() if start is None else start
         start.validate()
         self._start = start
-        self._rules = rules
         self._position = start
         self._moves: list[Move] = []
-        self._seen: dict[Position, int] = {start: 1}
-        self._outcome = board_outcome(start, rules)
+        self._seen: set[tuple[int, int]] = set()
+        self._remember(start)
+        self._outcome = self._decide()
 
     @classmethod
-    def replay(
-        cls, moves: Iterable[Move], start: Position | None = None, rules: Rules = DEFAULT_RULES
-    ) -> "Game":
+    def replay(cls, moves: Iterable[Move], start: Position | None = None) -> "Game":
         """Rebuild a game from its move list, validating every move."""
-        game = cls(start, rules)
+        game = cls(start)
         for move in moves:
             game.play(move)
         return game
@@ -84,10 +63,6 @@ class Game:
     @property
     def start(self) -> Position:
         return self._start
-
-    @property
-    def rules(self) -> Rules:
-        return self._rules
 
     @property
     def position(self) -> Position:
@@ -110,21 +85,40 @@ class Game:
         return self._outcome is not None
 
     def legal_moves(self) -> list[Move]:
-        return [] if self._outcome is not None else legal_moves(self._position)
+        """Legal moves for the side to move, excluding moves that repeat an arrangement."""
+        if self._outcome is not None:
+            return []
+        pos = self._position
+        return [m for m in legal_moves(pos) if not self._repeats(apply_unchecked(pos, m))]
 
     def play(self, move: Move) -> Outcome | None:
         """Play a legal move and return the outcome if it ended the game."""
         if self._outcome is not None:
             raise GameOver("the game is over")
         pos = play(self._position, move)
-        if move.is_placement or move.is_capture:
+        if self._repeats(pos):
+            raise IllegalMove(f"{move} repeats an earlier board arrangement")
+        if move.is_capture:
             self._seen.clear()
-        count = self._seen.get(pos, 0) + 1
-        self._seen[pos] = count
+        self._remember(pos)
         self._position = pos
         self._moves.append(move)
-        outcome = board_outcome(pos, self._rules)
-        if outcome is None and count >= self._rules.repetition_limit:
-            outcome = Outcome(None, Reason.REPETITION)
-        self._outcome = outcome
-        return outcome
+        self._outcome = self._decide()
+        return self._outcome
+
+    def _remember(self, pos: Position) -> None:
+        if not pos.placement_phase:
+            self._seen.add((pos.tigers, pos.goats))
+
+    def _repeats(self, pos: Position) -> bool:
+        return not pos.placement_phase and (pos.tigers, pos.goats) in self._seen
+
+    def _decide(self) -> Outcome | None:
+        pos = self._position
+        if pos.captured >= CAPTURES_TO_WIN:
+            return Outcome(Side.TIGER, Reason.FIVE_CAPTURED)
+        if any(not self._repeats(apply_unchecked(pos, m)) for m in legal_moves(pos)):
+            return None
+        if pos.side is Side.TIGER:
+            return Outcome(Side.GOAT, Reason.TIGERS_TRAPPED)
+        return Outcome(Side.TIGER, Reason.GOATS_BLOCKED)

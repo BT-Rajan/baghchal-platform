@@ -23,23 +23,34 @@ changing one is a rules change and must update this file, the tests and the pinn
   capture: jump over an adjacent goat, in a straight line, to the empty point directly beyond.
   The goat is removed. One capture per turn (no multi-jumps). Capturing is never compulsory.
 
+## No repeated positions
+Once all 20 goats have been placed, **no move may return the board to an arrangement that has
+already occurred in the game**. Such a move is illegal for either side. Arrangements are
+compared as boards (where every tiger and goat stands), regardless of whose turn it was.
+During placement the rule cannot apply, because the number of goats in hand changes every
+goat turn.
+
 ## End of the game
 | Condition | Result |
 |---|---|
 | Tigers have captured 5 goats | Tigers win |
 | Tigers are to move and have no legal move | Goats win |
-| Goats are to move in the movement phase and have no legal move | **Draw** (see decisions) |
-| The same position (same pieces, same side to move, same goats in hand and captured) occurs a 3rd time | Draw |
+| Goats are to move and have no legal move | Tigers win |
 
-Resignation, timeouts, abandonment and agreed draws are decided by the server, not the engine.
+"No legal move" includes moves forbidden by the repetition rule. There is no drawn result on
+the board: the number of arrangements is finite and none may repeat, so every game ends with
+a winner. Resignation and timeouts are decided by the server, not the engine.
 
-## Decisions that are ours to make
-Traditional sources disagree on these; the defaults below are set in `engine/…/game.py`
-(`Rules`) and can be changed per game mode without touching move generation.
-
-1. **Goat stalemate** — default *draw*. Alternatives: tigers win, or goats lose.
-2. **Repetition limit** — default *3* (automatic, no claim needed). Because the number of
-   positions is finite, automatic repetition guarantees every game ends.
+## Sources
+These are the traditional rules as described by
+[Wikipedia](https://en.wikipedia.org/wiki/Bagh-chal) and Nepali sources such as
+[The Annapurna Express](https://theannapurnaexpress.com/story/60219/). Goats moving first,
+the five-capture and trapped-tiger wins, and the repetition ban after placement are
+consistent across sources. Traditional descriptions rarely address goats being unable to
+move; the sources that do award the game to the tigers
+([baghchal.net](https://www.baghchal.net/rules)), matching the general principle that the
+side unable to move loses. Threefold-repetition draws found in some online versions are a
+modern variant and are not used here.
 
 ## Notation
 - Moves: placement `c3`, step `a1-b2`, capture `a1xc3`.
