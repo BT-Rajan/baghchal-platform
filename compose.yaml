@@ -1,0 +1,45 @@
+# Local development stack: MySQL, Redis and the API. Not for production (fixed passwords).
+#   docker compose up --build        then open http://localhost:8000/docs
+
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: dev-root-password
+      MYSQL_DATABASE: baghchal
+      MYSQL_USER: baghchal
+      MYSQL_PASSWORD: dev-password
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_bin"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pdev-root-password"]
+      interval: 5s
+      retries: 20
+    volumes: ["db-data:/var/lib/mysql"]
+
+  redis:
+    image: redis:7.4-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+
+  migrate:
+    build: .
+    command: ["alembic", "-c", "server/alembic.ini", "upgrade", "head"]
+    environment: &env
+      BAGHCHAL_ENVIRONMENT: development
+      BAGHCHAL_DATABASE_URL: mysql+asyncmy://baghchal:dev-password@db/baghchal
+      BAGHCHAL_REDIS_URL: redis://redis:6379/0
+      BAGHCHAL_LOG_JSON: "false"
+    depends_on:
+      db: { condition: service_healthy }
+
+  api:
+    build: .
+    environment: *env
+    ports: ["8000:8000"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+volumes:
+  db-data:

@@ -15,15 +15,15 @@ One repository, three parts:
 | Part | Technology | Why |
 |---|---|---|
 | `engine/` | Pure Python, no dependencies | Single source of truth for the rules, shared by the server, workers and tooling. Bit-board representation for speed; exhaustively tested. |
-| `server/` | Python 3.12+, FastAPI, native WebSockets, Pydantic, SQLAlchemy 2 + Alembic, PostgreSQL, Redis, arq workers | Async I/O suits many idle WebSocket connections; Postgres is the system of record; Redis carries presence, cross-instance fan-out and leaderboards; CPU-heavy AI search runs in worker processes, never in request handlers. |
+| `server/` | Python 3.12+, FastAPI, native WebSockets, Pydantic, SQLAlchemy 2 + Alembic, MySQL / MariaDB (SQLite for development), Redis, arq workers | Async I/O suits many idle WebSocket connections; the relational database is the system of record and stays swappable (ADR 0003); Redis carries presence, cross-instance fan-out and leaderboards; CPU-heavy AI search runs in worker processes, never in request handlers. |
 | `app/` | TypeScript, Expo / React Native, React Native Web, SVG board | One codebase for iOS, Android, tablets and the browser. |
 
 Principles:
 - **Server-authoritative.** Clients send intents; the server validates every move with the
   engine and owns the clocks. Clients only render what the server says.
 - **Typed wire protocol.** Every WebSocket and HTTP message has a schema validated on both ends.
-- **Stateless app servers.** Any instance can serve any user; all shared state is in Postgres
-  or Redis, so the service scales horizontally.
+- **Stateless app servers.** Any instance can serve any user; all shared state is in the
+  database or Redis, so the service scales horizontally.
 
 ## Performance note
 Python is not a bottleneck for move validation (tens of thousands of checked moves per
