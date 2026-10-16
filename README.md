@@ -8,7 +8,7 @@ live with clocks, and climb rated leaderboards — on web, phones and tablets.
 |---|---|---|
 | `engine/` | Pure-Python rules engine (no dependencies) | Phase 1 ✅ |
 | `server/` | FastAPI backend: accounts, lobby, live games, ratings | Phases 2–5 ✅ |
-| `app/` | Expo / React Native client for web, iOS, Android | Planned |
+| `app/` | Expo / React Native client for web, iOS, Android | Phase 6 (in progress) |
 | `docs/` | Rules canon and architecture decision records | |
 
 Start with [`docs/rules.md`](docs/rules.md), [`docs/realtime.md`](docs/realtime.md) and
@@ -54,6 +54,23 @@ uv run uvicorn baghchal_server.asgi:app --reload
 ```
 
 Or the full stack (MySQL, Redis, API) with Docker: `docker compose up --build`.
+
+The app (Node 22):
+
+```bash
+cd app
+npm ci
+npm run web                                   # dev server at http://localhost:8081
+npm run typecheck && npm run lint && npm run format:check && npm test
+npm run guardrails                            # no Expo-cloud dependencies (ADR 0002)
+```
+
+After changing the API, regenerate the schema and the app's types:
+
+```bash
+(cd server && uv run python -m baghchal_server.openapi ../app/src/api/openapi.json)
+(cd app && npm run api:generate)
+```
 
 Server tests against MySQL / MariaDB and Redis:
 
