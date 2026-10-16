@@ -2,6 +2,7 @@
 import { renderRouter } from 'expo-router/testing-library';
 
 import { fakeServer, type Route } from './fakeServer';
+import { FakeSocket } from './fakeSocket';
 
 const mockSecure = new Map<string, string>();
 
@@ -25,6 +26,8 @@ export async function renderApp(
   if (token !== null) mockSecure.set('session-token', token);
   const server = fakeServer(routes);
   globalThis.fetch = server.fetch;
+  FakeSocket.reset();
+  globalThis.WebSocket = FakeSocket as unknown as typeof WebSocket;
   const app = await renderRouter('./src/app', { initialUrl: url });
   return { server, app };
 }

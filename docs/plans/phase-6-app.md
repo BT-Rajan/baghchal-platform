@@ -1,6 +1,6 @@
 # Phase 6 plan: the app
 
-Status: in progress (steps 1–3 done).
+Status: in progress (steps 1–4 done).
 
 One Expo / React Native client for web, iOS, Android and tablets, in `app/`. It talks only
 to our own server (Phases 2–5). Per [ADR 0002](../adr/0002-no-dependency-on-expo-cloud.md),
@@ -161,7 +161,8 @@ Jest with coverage thresholds → `expo export --platform web` (the production b
    if it is stale; `npm run api:check` fails if `schema.d.ts` is stale.
 3. ✅ API client, errors, session and auth screens. Checked by hand in Chromium against a real
    server: sign up, the emailed link, reload, sign out, sign in.
-4. Realtime client and cache wiring.
+4. ✅ Realtime client and cache wiring. Checked in Chromium against a real server: the
+   socket authenticates with the cookie, and a challenge made elsewhere arrives live.
 5. Lobby, profiles, leaderboard.
 6. Board, move input, clocks, game screen, matches.
 7. Responsive layout, accessibility pass, empty and error states.

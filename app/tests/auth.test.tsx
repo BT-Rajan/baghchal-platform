@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { renderApp, savedToken } from './support/app';
 import { LINK_TOKEN, ME, error } from './support/fakeServer';
+import { FakeSocket } from './support/fakeSocket';
 
 const SIGNED_IN = { 'GET /api/v1/me': { status: 200, body: ME } };
 
@@ -254,4 +255,17 @@ test('an unreachable server can be retried', async () => {
   server.on('GET /api/v1/me', { status: 200, body: ME });
   await press('Try again');
   expect(await screen.findByText('Signed in as alice.')).toBeOnTheScreen();
+});
+
+test('signing in opens the live connection; signing out closes it', async () => {
+  await renderApp('/', {
+    token: 'tok',
+    routes: { ...SIGNED_IN, 'POST /api/v1/auth/logout': { status: 204 } },
+  });
+  await screen.findByText('Signed in as alice.');
+  expect(FakeSocket.all).toHaveLength(1);
+  expect(FakeSocket.latest().url).toBe('ws://localhost:8000/api/v1/ws');
+  await press('Sign out');
+  await screen.findByRole('heading', { name: 'Sign in' });
+  expect(FakeSocket.latest().closed).toBe(true);
 });

@@ -12,6 +12,8 @@ import { Button } from '@/components/Button';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { API_URL } from '@/config';
+import { socketUrl } from '@/realtime/connection';
+import { RealtimeProvider } from '@/realtime/RealtimeProvider';
 import { colors } from '@/theme';
 
 export default function RootLayout() {
@@ -22,8 +24,10 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <SessionProvider baseUrl={API_URL} queryClient={queryClient}>
-          <StatusBar style="auto" />
-          <Routes />
+          <RealtimeProvider url={socketUrl(API_URL)}>
+            <StatusBar style="auto" />
+            <Routes />
+          </RealtimeProvider>
         </SessionProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
