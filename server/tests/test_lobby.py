@@ -1,4 +1,5 @@
 import asyncio
+import uuid
 from contextlib import AsyncExitStack
 from typing import Any
 
@@ -7,8 +8,11 @@ import pytest
 from fastapi import FastAPI
 from httpx_ws import AsyncWebSocketSession
 from sqlalchemy import update
+from sqlalchemy.exc import IntegrityError
 
 from baghchal_server.accounts.models import User
+from baghchal_server.games import service as game_service
+from baghchal_server.lobby import service as lobby_service
 from baghchal_server.mail import MemoryMailer
 
 from .conftest import PASSWORD, Clock, Player, PlayerFactory, open_socket
@@ -94,7 +98,7 @@ async def test_online_list_and_profile_follow_connections(
         assert r.json()["online"] is True
         assert r.json()["username"] == "bob"
         online = (await alice.http.get("/api/v1/players/online")).json()
-        assert online == [{"id": bob.id, "username": "bob", "online": True}]
+        assert online == [{"id": bob.id, "username": "bob", "online": True, "playing": False}]
 
     assert (await alice.http.get("/api/v1/players/bob")).json()["online"] is False
     assert (await alice.http.get("/api/v1/players/nobody")).status_code == 404
@@ -299,3 +303,23 @@ async def test_challenge_rate_limit(app: FastAPI, players: PlayerFactory) -> Non
         r = await _challenge(alice, bob)
         assert r.status_code == 429
         assert r.json()["error"]["code"] == "rate_limited"
+
+
+async def test_unexpected_integrity_errors_are_not_reported_as_busy(
+    app: FastAPI, players: PlayerFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    alice, bob = await players("alice"), await players("bob")
+    async with AsyncExitStack() as stack:
+        await _online(app, stack, bob)
+        challenge_id = (await _challenge(alice, bob)).json()["id"]
+
+    async def broken(*args: object) -> None:
+        raise IntegrityError("INSERT", {}, Exception("some other constraint"))
+
+    monkeypatch.setattr(game_service, "start_game", broken)
+    state = app.state.ctx
+    async with state.sessions() as db:
+        with pytest.raises(IntegrityError):
+            await lobby_service.respond(
+                db, state.clock(), uuid.UUID(bob.id), uuid.UUID(challenge_id), "accept"
+            )

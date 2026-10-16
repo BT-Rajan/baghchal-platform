@@ -17,10 +17,15 @@ Every message is a JSON text frame with a `type`.
 | client → server | `ping` | — |
 | server → client | `pong` | — |
 | server → client | `challenge` | `challenge: {...}` — a challenge involving you was created or changed (any status); match on `challenge.id` |
+| server → client | `game` | `game: {...}` — a game you play in started or changed: the full state (position, legal moves, clocks, result); match on `game.id` and keep the highest `game.ply` |
 | server → client | `error` | `code`, `message` — e.g. `invalid_message`; the socket stays open |
 
-Commands (creating or answering challenges) go over HTTP; the socket carries the resulting
+Commands (challenges, moves, resigning) go over HTTP; the socket carries the resulting
 events, to every tab and device of both players.
+
+Clocks in a `game` event are as of its `server_time`; `clocks.running` names the side whose
+clock is counting down. Count down locally from there, but the server decides: a move that
+arrives after the deadline is refused, and the game ends on time even if nobody moves.
 
 ## Limits and close codes
 | Code | Meaning |

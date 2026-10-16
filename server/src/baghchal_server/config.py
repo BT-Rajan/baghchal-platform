@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     smtp_password: SecretStr = SecretStr("")
     smtp_starttls: bool = True
 
+    game_sweeper: bool = True
+    """End games whose clock ran out in the background (tests drive it by hand)."""
+
     log_json: bool = False
 
     @property

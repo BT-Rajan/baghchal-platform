@@ -2,13 +2,15 @@
 
 Client to server: ``ping``.
 Server to client: ``hello`` (once, on connect), ``pong``, ``challenge`` (a challenge involving
-you was created or changed; match on ``challenge.id``), ``error``.
+you was created or changed; match on ``challenge.id``), ``game`` (a game you play in started or
+changed: the full state; match on ``game.id`` and keep the highest ``game.ply``), ``error``.
 """
 
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 
+from baghchal_server.games.schemas import GameOut
 from baghchal_server.lobby.schemas import ChallengeOut, PlayerOut
 
 
@@ -33,6 +35,11 @@ class Pong(BaseModel):
 class ChallengeEvent(BaseModel):
     type: Literal["challenge"] = "challenge"
     challenge: ChallengeOut
+
+
+class GameEvent(BaseModel):
+    type: Literal["game"] = "game"
+    game: GameOut
 
 
 class ErrorEvent(BaseModel):
