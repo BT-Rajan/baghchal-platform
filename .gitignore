@@ -16,3 +16,4 @@ build/
 !.env.example
 node_modules/
 .DS_Store
+*.rdb

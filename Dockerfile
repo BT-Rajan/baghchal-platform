@@ -31,4 +31,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=2)"]
 # FORWARDED_ALLOW_IPS: set to your load balancer's address so client IPs (used for rate
 # limits) come from X-Forwarded-For; never "*" unless only the proxy can reach the server.
-CMD ["uvicorn", "baghchal_server.asgi:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--no-server-header"]
+CMD ["uvicorn", "baghchal_server.asgi:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--no-server-header", "--ws-max-size", "16384"]
