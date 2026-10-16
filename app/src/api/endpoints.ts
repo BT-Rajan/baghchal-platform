@@ -1,0 +1,71 @@
+/** Every server endpoint, typed with the schema generated from the server (schema.d.ts). */
+import type { Client, Transport } from './client';
+import type { components } from './schema';
+
+type S = components['schemas'];
+
+export type Me = S['MeOut'];
+export type Session = S['SessionOut'];
+export type Player = S['PlayerOut'];
+export type PlayerStatus = S['PlayerStatusOut'];
+export type Profile = S['ProfileOut'];
+export type Rating = S['RatingOut'];
+export type Challenge = S['ChallengeOut'];
+export type ChallengeList = S['ChallengeList'];
+export type ChallengeRequest = S['ChallengeIn'];
+export type Game = S['GameOut'];
+export type LeaderboardEntry = S['LeaderboardEntry'];
+export type Category = S['Category'];
+export type TimeControl = S['ChallengeIn']['time_control'];
+export type Side = NonNullable<S['ChallengeIn']['side']>;
+
+export type ChallengeAnswer = 'accept' | 'decline' | 'cancel';
+export type GameAction = 'resign' | 'abort' | 'claim-abandonment';
+
+const V1 = '/api/v1';
+const seg = encodeURIComponent;
+
+export function createApi(client: Client, transport: Transport) {
+  return {
+    // Accounts
+    register: (body: S['RegisterIn']) =>
+      client.post<S['Accepted']>(`${V1}/auth/register`, { body }),
+    verifyEmail: (token: string) =>
+      client.post<Session>(`${V1}/auth/verify-email`, { body: { token, transport } }),
+    login: (login: string, password: string) =>
+      client.post<Session>(`${V1}/auth/login`, { body: { login, password, transport } }),
+    logout: () => client.post<void>(`${V1}/auth/logout`),
+    requestPasswordReset: (email: string) =>
+      client.post<S['Accepted']>(`${V1}/auth/password-reset`, { body: { email } }),
+    confirmPasswordReset: (token: string, password: string) =>
+      client.post<void>(`${V1}/auth/password-reset/confirm`, { body: { token, password } }),
+    me: (signal?: AbortSignal) => client.get<Me>(`${V1}/me`, { signal }),
+
+    // Lobby
+    searchPlayers: (prefix: string, signal?: AbortSignal) =>
+      client.get<PlayerStatus[]>(`${V1}/players`, { query: { prefix }, signal }),
+    onlinePlayers: (signal?: AbortSignal) =>
+      client.get<PlayerStatus[]>(`${V1}/players/online`, { signal }),
+    profile: (username: string, signal?: AbortSignal) =>
+      client.get<Profile>(`${V1}/players/${seg(username)}`, { signal }),
+    challenges: (signal?: AbortSignal) => client.get<ChallengeList>(`${V1}/challenges`, { signal }),
+    challenge: (body: ChallengeRequest) => client.post<Challenge>(`${V1}/challenges`, { body }),
+    answerChallenge: (id: string, answer: ChallengeAnswer) =>
+      client.post<Challenge>(`${V1}/challenges/${seg(id)}/${answer}`),
+
+    // Games
+    activeGames: (signal?: AbortSignal) => client.get<Game[]>(`${V1}/games`, { signal }),
+    game: (id: string, signal?: AbortSignal) =>
+      client.get<Game>(`${V1}/games/${seg(id)}`, { signal }),
+    move: (id: string, ply: number, move: string) =>
+      client.post<Game>(`${V1}/games/${seg(id)}/moves`, { body: { ply, move } }),
+    gameAction: (id: string, action: GameAction) =>
+      client.post<Game>(`${V1}/games/${seg(id)}/${action}`),
+
+    // Ratings
+    leaderboard: (category: Category, signal?: AbortSignal) =>
+      client.get<LeaderboardEntry[]>(`${V1}/leaderboards/${category}`, { signal }),
+  };
+}
+
+export type Api = ReturnType<typeof createApi>;

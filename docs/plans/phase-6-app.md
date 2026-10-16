@@ -1,6 +1,6 @@
 # Phase 6 plan: the app
 
-Status: in progress (steps 1–2 done).
+Status: in progress (steps 1–3 done).
 
 One Expo / React Native client for web, iOS, Android and tablets, in `app/`. It talks only
 to our own server (Phases 2–5). Per [ADR 0002](../adr/0002-no-dependency-on-expo-cloud.md),
@@ -159,7 +159,8 @@ Jest with coverage thresholds → `expo export --platform web` (the production b
 2. ✅ OpenAPI export from the server, generated types, sync check. The schema
    (`app/src/api/openapi.json`) also carries the WebSocket server messages. A server test fails
    if it is stale; `npm run api:check` fails if `schema.d.ts` is stale.
-3. API client, errors, session and auth screens.
+3. ✅ API client, errors, session and auth screens. Checked by hand in Chromium against a real
+   server: sign up, the emailed link, reload, sign out, sign in.
 4. Realtime client and cache wiring.
 5. Lobby, profiles, leaderboard.
 6. Board, move input, clocks, game screen, matches.

@@ -1,7 +1,7 @@
 import type { ExpoConfig } from 'expo/config';
 
-// The only configuration the app has is public: where the API lives. No secrets belong here,
-// and no Expo-cloud settings (EAS project ID, updates URL) — see docs/adr/0002.
+// No secrets belong here (the API's address, EXPO_PUBLIC_API_URL, is read in src/config.ts),
+// and no Expo-cloud settings (EAS project ID, updates URL): see docs/adr/0002.
 const config: ExpoConfig = {
   name: 'Bagh Chal',
   slug: 'baghchal',
@@ -13,9 +13,6 @@ const config: ExpoConfig = {
   android: { package: 'com.baghchal.app' },
   web: { bundler: 'metro', output: 'single' },
   plugins: ['expo-router', 'expo-secure-store'],
-  extra: {
-    apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000',
-  },
 };
 
 export default config;

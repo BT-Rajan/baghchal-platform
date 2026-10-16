@@ -1,11 +1,75 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+import { describeError } from '@/api/errors';
+import { shouldRetry } from '@/api/retry';
+import { SessionProvider, useSession } from '@/auth/session';
+import { Button } from '@/components/Button';
+import { Notice } from '@/components/Notice';
+import { Screen } from '@/components/Screen';
+import { API_URL } from '@/config';
+import { colors } from '@/theme';
 
 export default function RootLayout() {
+  const [queryClient] = useState(
+    () => new QueryClient({ defaultOptions: { queries: { retry: shouldRetry } } }),
+  );
   return (
-    <>
-      <StatusBar style="auto" />
-      <Stack screenOptions={{ headerShown: false }} />
-    </>
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <SessionProvider baseUrl={API_URL} queryClient={queryClient}>
+          <StatusBar style="auto" />
+          <Routes />
+        </SessionProvider>
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }
+
+function Routes() {
+  const { state, session } = useSession();
+  if (state.status === 'loading') {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={colors.accent} size="large" />
+      </View>
+    );
+  }
+  if (state.status === 'unreachable') {
+    return (
+      <Screen title="Bagh Chal">
+        <Notice tone="error">{describeError(state.error)}</Notice>
+        <Button title="Try again" onPress={() => void session.retry()} />
+      </Screen>
+    );
+  }
+  const signedIn = state.status === 'signedIn';
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Protected guard={signedIn}>
+        <Stack.Screen name="index" />
+      </Stack.Protected>
+      <Stack.Protected guard={!signedIn}>
+        <Stack.Screen name="sign-in" />
+        <Stack.Screen name="sign-up" />
+        <Stack.Screen name="forgot-password" />
+      </Stack.Protected>
+      {/* Targets of emailed links: they work whether or not someone is signed in. */}
+      <Stack.Screen name="verify-email" />
+      <Stack.Screen name="reset-password" />
+    </Stack>
+  );
+}
+
+const styles = StyleSheet.create({
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+  },
+});
