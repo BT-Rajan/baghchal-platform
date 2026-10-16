@@ -8,6 +8,10 @@ import { queryKeys } from '@/api/queryKeys';
 
 import { applyChallenge, applyGame, applyMessage, isNewer, refetchAfterReconnect } from './cache';
 
+/** Without garbage collection, whose 5-minute timers would outlive the tests. */
+const testQueryClient = () =>
+  new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
+
 describe('isNewer', () => {
   const base = game({ ply: 4, server_time: '2026-01-01T12:00:00Z' });
 
@@ -36,13 +40,13 @@ describe('applyChallenge', () => {
   const lists = (qc: QueryClient) => qc.getQueryData<ChallengeList>(queryKeys.challenges);
 
   test('does nothing until the lists are loaded', () => {
-    const qc = new QueryClient();
+    const qc = testQueryClient();
     applyChallenge(qc, challenge(), ME.id);
     expect(lists(qc)).toBeUndefined();
   });
 
   test('files pending challenges by direction, replacing older copies', () => {
-    const qc = new QueryClient();
+    const qc = testQueryClient();
     qc.setQueryData<ChallengeList>(queryKeys.challenges, {
       incoming: [challenge({ id: 'c1', time_control: '3+2' })],
       outgoing: [],
@@ -58,14 +62,14 @@ describe('applyChallenge', () => {
   });
 
   test('drops challenges that are no longer pending', () => {
-    const qc = new QueryClient();
+    const qc = testQueryClient();
     qc.setQueryData<ChallengeList>(queryKeys.challenges, { incoming: [challenge()], outgoing: [] });
     applyChallenge(qc, challenge({ status: 'accepted', game_id: 'g1' }), ME.id);
     expect(lists(qc)).toEqual({ incoming: [], outgoing: [] });
   });
 
   test('ignores challenges between other players', () => {
-    const qc = new QueryClient();
+    const qc = testQueryClient();
     qc.setQueryData<ChallengeList>(queryKeys.challenges, { incoming: [], outgoing: [] });
     applyChallenge(qc, challenge({ opponent: { id: 'x', username: 'x' } }), ME.id);
     expect(lists(qc)).toEqual({ incoming: [], outgoing: [] });
@@ -77,19 +81,19 @@ describe('applyGame', () => {
   const active = (qc: QueryClient) => qc.getQueryData<Game[]>(queryKeys.activeGames);
 
   test('a game we had not seen, at ply 0, has just started', () => {
-    const qc = new QueryClient();
+    const qc = testQueryClient();
     expect(applyGame(qc, game())).toEqual({ started: true });
     expect(cached(qc)).toEqual(game());
     expect(active(qc)).toBeUndefined(); // the list was never loaded
   });
 
   test('an unseen game already under way is not announced', () => {
-    expect(applyGame(new QueryClient(), game({ ply: 7 }))).toEqual({ started: false });
-    expect(applyGame(new QueryClient(), game({ status: 'finished' }))).toEqual({ started: false });
+    expect(applyGame(testQueryClient(), game({ ply: 7 }))).toEqual({ started: false });
+    expect(applyGame(testQueryClient(), game({ status: 'finished' }))).toEqual({ started: false });
   });
 
   test('keeps the newest state and ignores older ones', () => {
-    const qc = new QueryClient();
+    const qc = testQueryClient();
     applyGame(qc, game({ ply: 3 }));
     expect(applyGame(qc, game({ ply: 2 }))).toEqual({ started: false });
     expect(cached(qc)?.ply).toBe(3);
@@ -98,7 +102,7 @@ describe('applyGame', () => {
   });
 
   test('keeps the list of live games in step', () => {
-    const qc = new QueryClient();
+    const qc = testQueryClient();
     const other = game({ id: 'g2', ply: 9 });
     qc.setQueryData<Game[]>(queryKeys.activeGames, [other]);
     applyGame(qc, game({ ply: 1 }));
@@ -110,7 +114,7 @@ describe('applyGame', () => {
   });
 
   test('does not let an older state replace a newer listed one', () => {
-    const qc = new QueryClient();
+    const qc = testQueryClient();
     qc.setQueryData<Game[]>(queryKeys.activeGames, [game({ ply: 5 })]);
     // The game's own entry is older (it was loaded before the list was).
     qc.setQueryData(queryKeys.game('g1'), game({ ply: 3 }));
@@ -121,7 +125,7 @@ describe('applyGame', () => {
 
 describe('applyMessage', () => {
   test('hello from someone else means another user signed in', () => {
-    const qc = new QueryClient();
+    const qc = testQueryClient();
     expect(
       applyMessage(qc, { type: 'hello', user: { id: ME.id, username: 'alice' } }, ME.id),
     ).toEqual({ startedGame: null, otherUser: false });
@@ -129,7 +133,7 @@ describe('applyMessage', () => {
   });
 
   test('routes challenges and games into the cache', () => {
-    const qc = new QueryClient();
+    const qc = testQueryClient();
     qc.setQueryData<ChallengeList>(queryKeys.challenges, { incoming: [], outgoing: [] });
     applyMessage(qc, { type: 'challenge', challenge: challenge() }, ME.id);
     expect(qc.getQueryData<ChallengeList>(queryKeys.challenges)?.incoming).toHaveLength(1);
@@ -138,7 +142,7 @@ describe('applyMessage', () => {
   });
 
   test('pongs change nothing; errors are logged', () => {
-    const qc = new QueryClient();
+    const qc = testQueryClient();
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     expect(applyMessage(qc, { type: 'pong' }, ME.id)).toEqual({
       startedGame: null,
@@ -151,7 +155,7 @@ describe('applyMessage', () => {
 });
 
 test('after a reconnect, challenges and games are fetched again', async () => {
-  const qc = new QueryClient();
+  const qc = testQueryClient();
   const invalidate = jest.spyOn(qc, 'invalidateQueries');
   await refetchAfterReconnect(qc);
   expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([

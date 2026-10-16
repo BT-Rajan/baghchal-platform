@@ -1,6 +1,6 @@
 # Phase 6 plan: the app
 
-Status: in progress (steps 1–5 done).
+Status: in progress (steps 1–6 done).
 
 One Expo / React Native client for web, iOS, Android and tablets, in `app/`. It talks only
 to our own server (Phases 2–5). Per [ADR 0002](../adr/0002-no-dependency-on-expo-cloud.md),
@@ -167,6 +167,9 @@ Jest with coverage thresholds → `expo export --platform web` (the production b
 5. ✅ Lobby, profiles, leaderboard. Checked with two browsers (desktop and phone width) against
    a real server: a challenge sent from one arrives live in the other, and accepting it opens
    the game for both. The game screen is a summary until step 6.
-6. Board, move input, clocks, game screen, matches.
+6. ✅ Board, move input, clocks, game screen, matches. Checked with two browsers against a real
+   server: a rated match, moves from both sides with the boards in agreement, running clocks,
+   resignation, rating changes, and game 2 opening for both players by itself. Countdowns
+   (game clocks, first moves, challenges) use an estimate of the server's clock.
 7. Responsive layout, accessibility pass, empty and error states.
 8. Docs (README, app README), local end-to-end smoke, PR.

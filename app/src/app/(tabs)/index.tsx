@@ -12,7 +12,7 @@ import { Notice } from '@/components/Notice';
 import { PlayerRow } from '@/components/PlayerRow';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
-import { useNow } from '@/components/useNow';
+import { useServerNow } from '@/components/useNow';
 import { isOpen, searchPrefix } from '@/lobby/format';
 import {
   useActiveGames,
@@ -26,7 +26,7 @@ import { colors } from '@/theme';
 /** The lobby: my live game, my challenges, and players to challenge. */
 export default function Play() {
   const me = useMe();
-  const now = useNow();
+  const now = useServerNow();
   const games = useActiveGames();
   const challenges = useChallenges();
   const answer = useAnswerChallenge();

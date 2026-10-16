@@ -12,6 +12,14 @@ export const colors = {
   successSurface: '#e6f2e6',
   online: '#2e8b3d',
   offline: '#9a9187',
+  board: '#e8cf9f',
+  boardLine: '#7a5a30',
+  tiger: '#c4561b',
+  tigerStripe: '#3b1d0c',
+  goat: '#fbf8ef',
+  goatEdge: '#6f6252',
+  highlight: '#2f7d6d',
+  lastMove: 'rgba(47, 125, 109, 0.22)',
 } as const;
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;

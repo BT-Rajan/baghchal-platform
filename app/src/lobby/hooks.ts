@@ -6,6 +6,7 @@ import type { Category, ChallengeAnswer, ChallengeRequest, Game } from '@/api/en
 import { isApiError } from '@/api/errors';
 import { queryKeys } from '@/api/queryKeys';
 import { useApi, useMe } from '@/auth/session';
+import { serverClock } from '@/game/serverClock';
 import { applyChallenge, applyGame } from '@/realtime/cache';
 
 /** Presence is not pushed over the socket, so lists of players are polled. */
@@ -15,7 +16,11 @@ export function useChallenges() {
   const api = useApi();
   return useQuery({
     queryKey: queryKeys.challenges,
-    queryFn: ({ signal }) => api.challenges(signal),
+    queryFn: async ({ signal }) => {
+      const lists = await api.challenges(signal);
+      for (const c of [...lists.incoming, ...lists.outgoing]) serverClock.observe(c.created_at);
+      return lists;
+    },
   });
 }
 
@@ -47,12 +52,13 @@ export function usePlayerSearch(prefix: string | null) {
   });
 }
 
-export function useProfile(username: string) {
+export function useProfile(username: string, enabled = true) {
   const api = useApi();
   return useQuery({
     queryKey: queryKeys.profile(username),
     queryFn: ({ signal }) => api.profile(username, signal),
     refetchInterval: PRESENCE_REFRESH_MS,
+    enabled,
   });
 }
 

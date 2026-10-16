@@ -12,6 +12,9 @@ const DAVE = { id: '00000000-0000-4000-8000-000000000004', username: 'dave' };
 
 const inSeconds = (s: number) => new Date(Date.now() + s * 1000).toISOString();
 
+/** A challenge made just now, by the test's clock, that expires in `s` seconds. */
+const fresh = (s: number) => ({ created_at: inSeconds(0), expires_at: inSeconds(s) });
+
 function lobby(routes: Record<string, Route> = {}) {
   return renderApp('/', { token: 'tok', routes: { ...SIGNED_IN, ...routes } });
 }
@@ -74,7 +77,7 @@ describe('players', () => {
 
 describe('challenges', () => {
   test('an incoming challenge, with its terms and countdown, can be accepted', async () => {
-    const c = challenge({ expires_at: inSeconds(42), game_id: null });
+    const c = challenge({ ...fresh(42), game_id: null });
     const { app, server } = await lobby({
       'GET /api/v1/challenges': { status: 200, body: { incoming: [c], outgoing: [] } },
       'POST /api/v1/challenges/c1/accept': {
@@ -85,16 +88,16 @@ describe('challenges', () => {
     });
     expect(await screen.findByText('bob challenges you')).toBeOnTheScreen();
     expect(screen.getByText('5+3 · casual · random sides')).toBeOnTheScreen();
-    expect(screen.getByText(/^Expires in (41|42) s$/)).toBeOnTheScreen();
+    expect(screen.getByText(/^Expires in \d+ s$/)).toBeOnTheScreen();
 
     await press("Accept bob's challenge");
-    expect(await screen.findByText(/alice \(goats\) vs bob \(tigers\)/)).toBeOnTheScreen();
+    expect(await screen.findByText('alice (you)')).toBeOnTheScreen();
     expect(app.getPathname()).toBe('/game/g1');
     expect(server.lastTo('POST /api/v1/challenges/c1/accept')).toBeDefined();
   });
 
   test('when the live event wins the race with the answer, the game still opens once', async () => {
-    const c = challenge({ expires_at: inSeconds(42) });
+    const c = challenge({ ...fresh(42) });
     const { app } = await lobby({
       'GET /api/v1/challenges': { status: 200, body: { incoming: [c], outgoing: [] } },
       'POST /api/v1/challenges/c1/accept': () => {
@@ -106,7 +109,7 @@ describe('challenges', () => {
     await screen.findByText('bob challenges you');
     await act(() => FakeSocket.latest().open());
     await press("Accept bob's challenge");
-    expect(await screen.findByText(/alice \(goats\) vs bob \(tigers\)/)).toBeOnTheScreen();
+    expect(await screen.findByText('alice (you)')).toBeOnTheScreen();
     await waitFor(() => expect(app.getPathname()).toBe('/game/g1'));
     // The app's own stack sits under the router's root route.
     const stack = app.getRouterState()?.routes[0]?.state?.routes.map((route) => route.name);
@@ -114,7 +117,7 @@ describe('challenges', () => {
   });
 
   test('other refusals are shown without reloading the list', async () => {
-    const c = challenge({ expires_at: inSeconds(30) });
+    const c = challenge({ ...fresh(30) });
     const { server } = await lobby({
       'GET /api/v1/challenges': { status: 200, body: { incoming: [c], outgoing: [] } },
       'POST /api/v1/challenges/c1/accept': error(
@@ -131,7 +134,7 @@ describe('challenges', () => {
   });
 
   test('declining removes the challenge', async () => {
-    const c = challenge({ expires_at: inSeconds(30) });
+    const c = challenge({ ...fresh(30) });
     await lobby({
       'GET /api/v1/challenges': { status: 200, body: { incoming: [c], outgoing: [] } },
       'POST /api/v1/challenges/c1/decline': { status: 200, body: { ...c, status: 'declined' } },
@@ -142,7 +145,7 @@ describe('challenges', () => {
   });
 
   test('a challenge that closed meanwhile is reported, and the list refreshed', async () => {
-    const c = challenge({ expires_at: inSeconds(30) });
+    const c = challenge({ ...fresh(30) });
     let listed = [c];
     await lobby({
       'GET /api/v1/challenges': () => ({ status: 200, body: { incoming: listed, outgoing: [] } }),
@@ -163,7 +166,7 @@ describe('challenges', () => {
       opponent: BOB,
       rated: true,
       side: null,
-      expires_at: inSeconds(50),
+      ...fresh(50),
     });
     await lobby({
       'GET /api/v1/challenges': { status: 200, body: { incoming: [], outgoing: [mine] } },
@@ -179,7 +182,7 @@ describe('challenges', () => {
     await lobby({
       'GET /api/v1/challenges': {
         status: 200,
-        body: { incoming: [challenge({ expires_at: inSeconds(-1) })], outgoing: [] },
+        body: { incoming: [challenge({ ...fresh(-1) })], outgoing: [] },
       },
     });
     await screen.findByText('Online now');
@@ -199,12 +202,12 @@ describe('live events', () => {
     const socket = FakeSocket.latest();
     await act(() => {
       socket.open();
-      socket.receive({ type: 'challenge', challenge: challenge({ expires_at: inSeconds(55) }) });
+      socket.receive({ type: 'challenge', challenge: challenge({ ...fresh(55) }) });
     });
     expect(await screen.findByText('bob challenges you')).toBeOnTheScreen();
 
     await act(() => socket.receive({ type: 'game', game: game() }));
-    expect(await screen.findByText(/alice \(goats\) vs bob \(tigers\)/)).toBeOnTheScreen();
+    expect(await screen.findByText('alice (you)')).toBeOnTheScreen();
     expect(app.getPathname()).toBe('/game/g1');
   });
 
@@ -216,7 +219,7 @@ describe('live events', () => {
     });
     expect(await screen.findByText('Your game against bob is on.')).toBeOnTheScreen();
     await press('Resume game');
-    expect(await screen.findByText(/move 7/)).toBeOnTheScreen();
+    expect(await screen.findByText('Your move')).toBeOnTheScreen();
     expect(app.getPathname()).toBe('/game/g1');
   });
 });
@@ -233,7 +236,7 @@ describe('challenge form', () => {
           opponent: BOB,
           time_control: '10+5',
           side: 'tiger',
-          expires_at: inSeconds(60),
+          ...fresh(60),
         }),
       },
     });

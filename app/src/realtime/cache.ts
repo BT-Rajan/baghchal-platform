@@ -3,6 +3,7 @@ import type { QueryClient } from '@tanstack/react-query';
 
 import type { Challenge, ChallengeList, Game } from '@/api/endpoints';
 import { queryKeys } from '@/api/queryKeys';
+import { serverClock } from '@/game/serverClock';
 
 import type { ServerMessage } from './protocol';
 
@@ -29,6 +30,7 @@ function upsert<T extends { id: string }>(list: T[], item: T): T[] {
 
 /** File a challenge under incoming or outgoing while it is pending; drop it once it is not. */
 export function applyChallenge(queryClient: QueryClient, challenge: Challenge, myId: string): void {
+  serverClock.observe(challenge.created_at);
   queryClient.setQueryData<ChallengeList>(queryKeys.challenges, (lists) => {
     if (lists === undefined) return undefined; // nobody has loaded the lists yet
     const incoming = without(lists.incoming, challenge.id);
@@ -47,6 +49,7 @@ export function applyChallenge(queryClient: QueryClient, challenge: Challenge, m
  * opens those.
  */
 export function applyGame(queryClient: QueryClient, game: Game): { started: boolean } {
+  serverClock.observe(game.server_time);
   const key = queryKeys.game(game.id);
   const current = queryClient.getQueryData<Game>(key);
   if (!isNewer(game, current)) return { started: false };

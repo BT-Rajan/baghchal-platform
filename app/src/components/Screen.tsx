@@ -8,11 +8,14 @@ import { colors, spacing } from '@/theme';
 export function Screen({
   title,
   align = 'center',
+  wide = false,
   children,
 }: {
   title?: string;
   /** Forms sit in the middle of the screen; lists start at the top. */
   align?: 'center' | 'top';
+  /** Use the full width of large screens (the game screen puts its board beside its panel). */
+  wide?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -21,7 +24,7 @@ export function Screen({
         contentContainerStyle={[styles.scroll, align === 'top' && styles.top]}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.column}>
+        <View style={[styles.column, wide && styles.wide]}>
           {title !== undefined && (
             <Text role="heading" style={styles.title}>
               {title}
@@ -38,6 +41,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: spacing.md },
   top: { justifyContent: 'flex-start' },
+  wide: { maxWidth: 1100 },
   column: { width: '100%', maxWidth: 560, alignSelf: 'center', gap: spacing.md },
   title: { fontSize: 28, fontWeight: '700', color: colors.text, marginBottom: spacing.sm },
 });

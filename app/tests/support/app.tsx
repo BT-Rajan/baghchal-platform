@@ -1,6 +1,8 @@
 /** Renders the whole app (real routes and layout) against a fake server. */
 import { renderRouter } from 'expo-router/testing-library';
 
+import { serverClock } from '@/game/serverClock';
+
 import { fakeServer, type Route } from './fakeServer';
 import { FakeSocket } from './fakeSocket';
 
@@ -30,6 +32,7 @@ export async function renderApp(
   { routes = {}, token = null }: { routes?: Record<string, Route>; token?: string | null } = {},
 ) {
   mockSecure.clear();
+  serverClock.reset();
   if (token !== null) mockSecure.set('session-token', token);
   const server = fakeServer({ ...QUIET_LOBBY, ...routes });
   globalThis.fetch = server.fetch;

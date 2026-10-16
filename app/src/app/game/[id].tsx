@@ -1,36 +1,155 @@
-import { useQuery } from '@tanstack/react-query';
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { Text } from 'react-native';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
+import type { Game } from '@/api/endpoints';
 import { describeError } from '@/api/errors';
-import { queryKeys } from '@/api/queryKeys';
-import { useApi } from '@/auth/session';
-import { Hint } from '@/components/Card';
+import { useMe } from '@/auth/session';
+import { Button } from '@/components/Button';
+import { Card, Hint, SectionTitle } from '@/components/Card';
+import { Board } from '@/components/game/Board';
+import { GameActions } from '@/components/game/GameActions';
+import { MoveList } from '@/components/game/MoveList';
+import { PlayerBar } from '@/components/game/PlayerBar';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
-import { colors } from '@/theme';
+import { useServerNow } from '@/components/useNow';
+import { parseBfen, type Piece } from '@/game/bfen';
+import { firstMoveSecondsLeft } from '@/game/clock';
+import { matchSummary, other, resultText, sideOf, turnText } from '@/game/describe';
+import { useGame, useGameAction, useMove } from '@/game/hooks';
+import { colors, spacing } from '@/theme';
 
-/** A game's state. The board and moves are added with the game screen proper. */
+/** Side by side (board and panel) from this width; stacked below it. */
+const WIDE = 900;
+
 export default function GameScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const api = useApi();
-  const game = useQuery({
-    queryKey: queryKeys.game(id),
-    queryFn: ({ signal }) => api.game(id, signal),
-  });
-  const g = game.data;
-  return (
-    <Screen>
-      <Stack.Screen options={{ title: 'Game' }} />
-      {game.error !== null && <Notice tone="error">{describeError(game.error)}</Notice>}
-      {g === undefined ? (
-        game.error === null && <Hint>Loading…</Hint>
-      ) : (
-        <Text style={{ fontSize: 16, color: colors.text }}>
-          {`${g.goat.username} (goats) vs ${g.tiger.username} (tigers) · ${g.time_control}` +
-            ` · ${g.rated ? 'rated' : 'casual'} · ${g.status === 'active' ? `move ${g.ply + 1}` : 'finished'}`}
+  const me = useMe();
+  const query = useGame(id);
+  const move = useMove(id);
+  const action = useGameAction(id);
+  const { width } = useWindowDimensions();
+  const game = query.data;
+
+  if (game === undefined) {
+    return (
+      <Screen>
+        <Stack.Screen options={{ title: 'Game' }} />
+        {query.error !== null ? (
+          <Notice tone="error">{describeError(query.error)}</Notice>
+        ) : (
+          <Hint>Loading…</Hint>
+        )}
+      </Screen>
+    );
+  }
+
+  const mine = sideOf(game, me.id);
+  const position = parseBfen(game.position);
+  // Bottom of the screen is me; spectators see goats at the bottom.
+  const bottom: Piece = mine ?? 'goat';
+  const myTurn = game.status === 'active' && game.side_to_move === mine && !move.isPending;
+  const error = move.error ?? action.error;
+  const wide = width >= WIDE;
+
+  const board =
+    position === null ? (
+      <Notice tone="error">This position could not be shown.</Notice>
+    ) : (
+      <Board
+        key={game.ply}
+        position={position}
+        legalMoves={myTurn ? game.legal_moves : []}
+        lastMove={game.moves.at(-1)}
+        onMove={(m) => move.mutate({ ply: game.ply, move: m })}
+      />
+    );
+
+  const panel = (
+    <View style={styles.panel}>
+      <Status game={game} mine={mine} />
+      {error !== null && <Notice tone="error">{describeError(error)}</Notice>}
+      {position !== null && (
+        <Text style={styles.counts}>
+          {`Goats to place: ${position.inHand} · Goats captured: ${position.captured} of 5`}
         </Text>
       )}
+      {mine !== null && game.status === 'active' && (
+        <GameActions
+          game={game}
+          me={mine}
+          pending={action.isPending ? action.variables : null}
+          onAction={(a) => action.mutate(a)}
+        />
+      )}
+      {game.status === 'finished' && (
+        <Button
+          title="Back to the lobby"
+          variant="secondary"
+          onPress={() => router.navigate('/')}
+        />
+      )}
+      <SectionTitle>Moves</SectionTitle>
+      <MoveList moves={game.moves} />
+    </View>
+  );
+
+  return (
+    <Screen align="top" wide={wide}>
+      <Stack.Screen options={{ title: `${game.goat.username} vs ${game.tiger.username}` }} />
+      <View style={wide ? styles.row : styles.column}>
+        <View style={wide ? styles.boardWide : styles.boardColumn}>
+          <PlayerBar game={game} side={other(bottom)} isMe={mine === other(bottom)} />
+          {board}
+          <PlayerBar game={game} side={bottom} isMe={mine === bottom} />
+        </View>
+        {panel}
+      </View>
     </Screen>
   );
 }
+
+function Status({ game, mine }: { game: Game; mine: Piece | null }) {
+  const now = useServerNow();
+  const result = resultText(game, mine);
+  const match = matchSummary(game);
+  const firstMove = firstMoveSecondsLeft(game, now);
+  const turn = turnText(game, mine);
+  return (
+    <>
+      {result !== null && (
+        <Notice tone={game.result?.winner === mine ? 'success' : 'info'}>{result}</Notice>
+      )}
+      {turn !== null && (
+        <Text style={styles.turn} aria-live="polite">
+          {firstMove === null ? turn : `${turn} · ${firstMove} s to make a first move`}
+        </Text>
+      )}
+      {match !== null && (
+        <Card>
+          <Text style={styles.matchTitle}>{match.title}</Text>
+          {match.score !== '' && <Text style={styles.matchScore}>{match.score}</Text>}
+          {match.otherGameId !== null && (
+            <Button
+              title={game.match?.game === 1 ? 'Go to game 2' : 'Back to game 1'}
+              variant="secondary"
+              onPress={() => router.replace(`/game/${match.otherGameId}`)}
+            />
+          )}
+        </Card>
+      )}
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  row: { flexDirection: 'row', gap: spacing.lg, alignItems: 'flex-start' },
+  column: { gap: spacing.md },
+  boardWide: { flex: 1, maxWidth: 640, gap: spacing.sm },
+  boardColumn: { gap: spacing.sm },
+  panel: { flex: 1, gap: spacing.md, minWidth: 280 },
+  turn: { fontSize: 18, fontWeight: '700', color: colors.text },
+  counts: { fontSize: 14, color: colors.muted },
+  matchTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
+  matchScore: { fontSize: 20, fontWeight: '700', color: colors.text },
+});

@@ -38,8 +38,9 @@ export function secondsLeft(expiresAt: string, nowMs: number): number {
 }
 
 /**
- * Seconds left to answer a challenge, by this device's clock. Capped at the challenge's whole
- * lifetime, so a clock slightly behind the server's never shows more time than there was.
+ * Seconds left to answer a challenge at `nowMs` (the server's time as best we know it). Capped
+ * at the challenge's whole lifetime, so an estimate slightly behind never shows more time than
+ * there was.
  */
 export function challengeSecondsLeft(challenge: Challenge, nowMs: number): number {
   const lifetime = secondsLeft(challenge.expires_at, Date.parse(challenge.created_at));

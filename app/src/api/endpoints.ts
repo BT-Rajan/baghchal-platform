@@ -18,6 +18,7 @@ export type LeaderboardEntry = S['LeaderboardEntry'];
 export type Category = S['Category'];
 export type TimeControl = S['ChallengeIn']['time_control'];
 export type Side = NonNullable<S['ChallengeIn']['side']>;
+export type EndReason = S['EndReason'];
 
 export type ChallengeAnswer = 'accept' | 'decline' | 'cancel';
 export type GameAction = 'resign' | 'abort' | 'claim-abandonment';
