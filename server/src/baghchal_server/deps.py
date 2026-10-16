@@ -8,6 +8,7 @@ from typing import Annotated, Literal
 from fastapi import Depends, Request
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+from starlette.requests import HTTPConnection
 
 from baghchal_server.accounts.models import User
 from baghchal_server.accounts.service import resolve_session
@@ -15,6 +16,8 @@ from baghchal_server.config import Settings
 from baghchal_server.errors import AppError
 from baghchal_server.mail import Mailer
 from baghchal_server.ratelimit import Limit, RateLimiter
+from baghchal_server.realtime.hub import Hub
+from baghchal_server.realtime.presence import Presence
 from baghchal_server.security import PasswordHasher
 
 
@@ -28,6 +31,8 @@ class AppState:
     mailer: Mailer
     clock: Callable[[], datetime]
     redis: "Redis | None"
+    hub: Hub
+    presence: Presence
 
 
 def get_state(request: Request) -> AppState:
@@ -47,7 +52,7 @@ DB = Annotated[AsyncSession, Depends(get_db)]
 
 
 def session_token(
-    request: Request, settings: Settings
+    request: HTTPConnection, settings: Settings
 ) -> tuple[str | None, Literal["cookie", "bearer"]]:
     """The session token from ``Authorization: Bearer`` (apps) or the session cookie (web)."""
     scheme, _, credentials = request.headers.get("authorization", "").partition(" ")

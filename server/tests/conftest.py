@@ -8,7 +8,8 @@ import os
 import re
 import subprocess
 import sys
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -16,6 +17,8 @@ from pathlib import Path
 import httpx
 import pytest
 from fastapi import FastAPI
+from httpx_ws import AsyncWebSocketSession, aconnect_ws
+from httpx_ws.transport import ASGIWebSocketTransport
 from sqlalchemy import text
 
 from baghchal_server.app import create_app
@@ -91,16 +94,17 @@ async def app(settings: Settings, mailer: MemoryMailer, clock: Clock) -> AsyncIt
         yield app
         state: AppState = app.state.ctx
         async with state.engine.begin() as conn:
-            for table in ("sessions", "email_tokens", "users"):
+            for table in ("challenges", "sessions", "email_tokens", "users"):
                 await conn.execute(text(f"DELETE FROM {table}"))  # noqa: S608 - fixed names
 
 
 @pytest.fixture
 async def client(app: FastAPI) -> AsyncIterator[httpx.AsyncClient]:
     """A browser-like client: sends the allowed Origin and keeps cookies."""
-    transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(
-        transport=transport, base_url="http://testserver", headers={"origin": ORIGIN}
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+        headers={"origin": ORIGIN},
     ) as c:
         yield c
 
@@ -108,9 +112,8 @@ async def client(app: FastAPI) -> AsyncIterator[httpx.AsyncClient]:
 @pytest.fixture
 async def app_client(app: FastAPI) -> AsyncIterator[httpx.AsyncClient]:
     """A native-app-like client: no Origin header, no cookies kept."""
-    transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(
-        transport=transport, base_url="http://testserver", cookies=None
+        transport=httpx.ASGITransport(app=app), base_url="http://testserver"
     ) as c:
         yield c
 
@@ -136,3 +139,61 @@ async def sign_up(
     r = await client.post("/api/v1/auth/verify-email", json={"token": last_token(mailer)})
     assert r.status_code == 200, r.text
     return r
+
+
+@dataclass
+class Player:
+    """A signed-in user of a native app: a client that sends its bearer token."""
+
+    id: str
+    username: str
+    http: httpx.AsyncClient
+
+    @property
+    def auth(self) -> dict[str, str]:
+        return {"authorization": self.http.headers["authorization"]}
+
+
+@asynccontextmanager
+async def open_socket(
+    app: FastAPI, headers: dict[str, str] | None = None, cookies: httpx.Cookies | None = None
+) -> AsyncIterator[AsyncWebSocketSession]:
+    """Open the lobby WebSocket. Must be entered and left in the same task."""
+    async with httpx.AsyncClient(
+        transport=ASGIWebSocketTransport(app), base_url="http://testserver", cookies=cookies
+    ) as http:
+        connect: AbstractAsyncContextManager[AsyncWebSocketSession] = aconnect_ws(
+            "/api/v1/ws", http, headers=headers
+        )
+        async with connect as ws:
+            yield ws
+
+
+PlayerFactory = Callable[[str], Awaitable[Player]]
+
+
+@pytest.fixture
+async def players(app: FastAPI, mailer: MemoryMailer) -> AsyncIterator[PlayerFactory]:
+    clients: list[httpx.AsyncClient] = []
+
+    async def make(username: str) -> Player:
+        http = httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+        )
+        clients.append(http)
+        r = await http.post(
+            "/api/v1/auth/register",
+            json={"username": username, "email": f"{username}@example.com", "password": PASSWORD},
+        )
+        assert r.status_code == 202, r.text
+        r = await http.post(
+            "/api/v1/auth/verify-email", json={"token": last_token(mailer), "transport": "bearer"}
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        http.headers["authorization"] = f"Bearer {body['token']}"
+        return Player(body["user"]["id"], username, http)
+
+    yield make
+    for http in clients:
+        await http.aclose()

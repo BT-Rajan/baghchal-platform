@@ -17,9 +17,14 @@ from baghchal_server.config import Settings
 from baghchal_server.db import create_engine, session_factory
 from baghchal_server.deps import AppState, State
 from baghchal_server.errors import install_handlers
+from baghchal_server.lobby import models as _lobby_models  # noqa: F401  (registers tables)
+from baghchal_server.lobby.routes import router as lobby_router
 from baghchal_server.mail import Mailer, make_mailer
 from baghchal_server.middleware import BodyLimit, CrossSiteGuard, RequestContext, SecurityHeaders
 from baghchal_server.ratelimit import MemoryRateLimiter, RateLimiter, RedisRateLimiter
+from baghchal_server.realtime.hub import Hub, MemoryBroker, RedisBroker
+from baghchal_server.realtime.presence import MemoryPresence, RedisPresence
+from baghchal_server.realtime.ws import router as ws_router
 from baghchal_server.security import PasswordHasher
 
 log = structlog.get_logger(__name__)
@@ -58,6 +63,8 @@ def create_app(
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         engine = create_engine(settings.database_url, settings.database_pool_size)
         redis = Redis.from_url(settings.redis_url) if settings.redis_url else None
+        hub = Hub(RedisBroker(redis) if redis else MemoryBroker())
+        await hub.start()
         app.state.ctx = AppState(
             settings=settings,
             engine=engine,
@@ -67,11 +74,14 @@ def create_app(
             mailer=mailer or make_mailer(settings),
             clock=clock or (lambda: datetime.now(UTC)),
             redis=redis,
+            hub=hub,
+            presence=RedisPresence(redis) if redis else MemoryPresence(),
         )
         log.info("startup", environment=settings.environment)
         try:
             yield
         finally:
+            await hub.stop()
             await engine.dispose()
             if redis is not None:
                 await redis.aclose()
@@ -86,6 +96,8 @@ def create_app(
     )
     install_handlers(app)
     app.include_router(accounts_router)
+    app.include_router(lobby_router)
+    app.include_router(ws_router)
 
     @app.get("/health/live", include_in_schema=False)
     async def live() -> dict[str, str]:

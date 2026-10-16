@@ -11,7 +11,8 @@ live with clocks, and climb rated leaderboards — on web, phones and tablets.
 | `app/` | Expo / React Native client for web, iOS, Android | Planned |
 | `docs/` | Rules canon and architecture decision records | |
 
-Start with [`docs/rules.md`](docs/rules.md) and [`docs/adr/`](docs/adr/).
+Start with [`docs/rules.md`](docs/rules.md), [`docs/realtime.md`](docs/realtime.md) and
+[`docs/adr/`](docs/adr/).
 
 ## Roadmap
 Each phase ships complete — tested, documented and reviewed — before the next begins.
@@ -22,7 +23,7 @@ Each phase ships complete — tested, documented and reviewed — before the nex
 2. **Server foundation** ✅ — FastAPI, SQLAlchemy + Alembic on MySQL / MariaDB / SQLite,
    accounts (argon2id, email verification, sessions, password reset), rate limiting,
    CSRF and size guards, structured logging, health checks, Docker.
-3. **Lobby** — WebSocket gateway, presence, player search, challenges.
+3. **Lobby** ✅ — WebSocket gateway, presence across servers, player search, challenges.
 4. **Live play** — authoritative games, server clocks, reconnection, resignation and
    abandonment.
 5. **Ratings** — Glicko-2 per time control, side-swapped rated matches, leaderboards.
@@ -77,6 +78,13 @@ MariaDB 11.4; both packages must keep 100% branch coverage.
 | POST | `/api/v1/auth/password-reset` | Email a reset link (always 202) |
 | POST | `/api/v1/auth/password-reset/confirm` | Set a new password; signs out everywhere |
 | GET | `/api/v1/me` | The signed-in account |
+| GET | `/api/v1/players?prefix=al` | Find players by username prefix (with online status) |
+| GET | `/api/v1/players/online` | Players online now |
+| GET | `/api/v1/players/{username}` | A player's profile |
+| GET | `/api/v1/challenges` | Your open challenges, incoming and outgoing |
+| POST | `/api/v1/challenges` | Challenge an online player (`time_control` 3+2, 5+3, 10+5, 15+10; `rated`; `side`) |
+| POST | `/api/v1/challenges/{id}/accept`, `/decline`, `/cancel` | Answer or withdraw a challenge |
+| WS | `/api/v1/ws` | Live events — see [`docs/realtime.md`](docs/realtime.md) |
 | GET | `/health/live`, `/health/ready` | Liveness; readiness (database, Redis) |
 
 Browsers authenticate with an HttpOnly session cookie; native apps pass
