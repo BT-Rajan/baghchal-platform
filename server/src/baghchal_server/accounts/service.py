@@ -1,0 +1,314 @@
+"""Account rules: registration, email verification, login, sessions and password reset.
+
+Every function takes the clock as ``now`` so expiry is testable, and leaves committing to the
+caller only where noted. Responses never reveal whether an email address is registered.
+"""
+
+import uuid
+from datetime import datetime, timedelta
+from typing import Final
+
+from sqlalchemy import delete, or_, select, update
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from baghchal_server.accounts.models import EmailToken, Session, User
+from baghchal_server.accounts.schemas import LoginIn, RegisterIn
+from baghchal_server.config import Settings
+from baghchal_server.errors import AppError
+from baghchal_server.mail import Mail
+from baghchal_server.security import PasswordHasher, hash_token, new_token
+
+VERIFY: Final = "verify"
+RESET: Final = "reset"
+SESSION_TOUCH_INTERVAL: Final = timedelta(minutes=5)
+RESERVED_USERNAMES: Final = frozenset(
+    {"admin", "administrator", "anonymous", "api", "baghchal", "guest", "help", "mod",
+     "moderator", "null", "root", "staff", "support", "system", "undefined", "www"}
+)  # fmt: skip
+
+
+def username_key(username: str) -> str:
+    return username.lower()
+
+
+def email_key(email: str) -> str:
+    return email.strip().lower()
+
+
+# ── Registration and verification ─────────────────────────────────────────
+
+
+async def register(
+    db: AsyncSession, hasher: PasswordHasher, settings: Settings, now: datetime, data: RegisterIn
+) -> Mail | None:
+    """Create an unverified account and return the mail to send (None: send nothing).
+
+    Whether or not the email is already registered, the caller answers the same way; the
+    owner of an existing address gets a "you already have an account" mail instead.
+    """
+    ukey, ekey = username_key(data.username), email_key(data.email)
+    if ukey in RESERVED_USERNAMES:
+        raise AppError(409, "username_unavailable", "That username is not available.")
+    if data.password.lower() == ukey:
+        raise AppError(422, "weak_password", "Your password must not be your username.")
+    # Hash first, always: skipping it for known emails would make them measurably faster.
+    password_hash = await hasher.hash(data.password)
+
+    # Free names and addresses held by registrations that were never verified.
+    await db.execute(
+        delete(User).where(
+            User.email_verified_at.is_(None),
+            User.created_at < now - settings.verify_email_ttl,
+            or_(User.username_key == ukey, User.email_key == ekey),
+        )
+    )
+    owner = await db.scalar(select(User).where(User.username_key == ukey))
+    if owner is not None and owner.email_key != ekey:
+        await db.commit()
+        raise AppError(409, "username_taken", "That username is taken.")
+    existing = owner or await db.scalar(select(User).where(User.email_key == ekey))
+    if existing is not None:
+        if existing.email_verified_at is not None:
+            await db.commit()
+            return _account_exists_mail(settings, existing)
+        token = await _issue_token(db, existing.id, VERIFY, now + settings.verify_email_ttl, now)
+        await db.commit()
+        return _verify_mail(settings, existing, token)
+
+    user = User(
+        id=uuid.uuid4(),
+        username=data.username,
+        username_key=ukey,
+        email=data.email,
+        email_key=ekey,
+        password_hash=password_hash,
+        is_active=True,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(user)
+    try:
+        await db.flush()
+    except IntegrityError:
+        # Lost a race with a concurrent registration of the same name or address.
+        await db.rollback()
+        if await db.scalar(select(User.id).where(User.username_key == ukey)):
+            raise AppError(409, "username_taken", "That username is taken.") from None
+        return None
+    token = await _issue_token(db, user.id, VERIFY, now + settings.verify_email_ttl, now)
+    await db.commit()
+    return _verify_mail(settings, user, token)
+
+
+async def verify_email(
+    db: AsyncSession, settings: Settings, now: datetime, token: str
+) -> tuple[User, str]:
+    """Mark the address verified and sign the user in; returns (user, session token)."""
+    user = await _active_user(db, await _consume_token(db, token, VERIFY, now))
+    user.email_verified_at = user.email_verified_at or now
+    user.updated_at = now
+    session_token = await create_session(db, user.id, now, settings.session_ttl)
+    await db.commit()
+    return user, session_token
+
+
+# ── Login and sessions ────────────────────────────────────────────────────
+
+
+async def login(
+    db: AsyncSession,
+    hasher: PasswordHasher,
+    settings: Settings,
+    now: datetime,
+    credentials: LoginIn,
+) -> tuple[User, str]:
+    password = credentials.password
+    key = credentials.login.strip().lower()
+    column = User.email_key if "@" in key else User.username_key
+    user = await db.scalar(select(User).where(column == key))
+    password_ok = await hasher.verify(user.password_hash if user else None, password)
+    if user is None or not password_ok:
+        raise AppError(401, "invalid_credentials", "Wrong username, email or password.")
+    if not user.is_active:
+        raise AppError(403, "account_disabled", "This account has been disabled.")
+    if user.email_verified_at is None:
+        raise AppError(403, "email_not_verified", "Please verify your email address first.")
+    if hasher.needs_rehash(user.password_hash):
+        user.password_hash = await hasher.hash(password)
+        user.updated_at = now
+    session_token = await create_session(db, user.id, now, settings.session_ttl)
+    await db.commit()
+    return user, session_token
+
+
+async def create_session(
+    db: AsyncSession, user_id: uuid.UUID, now: datetime, ttl: timedelta
+) -> str:
+    """Add a session (caller commits) and return its token."""
+    token, token_hash = new_token()
+    db.add(
+        Session(
+            token_hash=token_hash,
+            user_id=user_id,
+            created_at=now,
+            expires_at=now + ttl,
+            last_used_at=now,
+        )
+    )
+    return token
+
+
+async def resolve_session(db: AsyncSession, token: str, now: datetime) -> User | None:
+    """The active user owning an unexpired session, or None."""
+    if len(token) > 64:
+        return None
+    row = (
+        await db.execute(
+            select(Session, User)
+            .join(User, User.id == Session.user_id)
+            .where(
+                Session.token_hash == hash_token(token),
+                Session.expires_at > now,
+                User.is_active.is_(True),
+            )
+        )
+    ).first()
+    if row is None:
+        return None
+    session, user = row
+    if now - session.last_used_at > SESSION_TOUCH_INTERVAL:  # avoid a write on every request
+        session.last_used_at = now
+        await db.commit()
+    return user
+
+
+async def revoke_session(db: AsyncSession, token: str) -> None:
+    await db.execute(delete(Session).where(Session.token_hash == hash_token(token)))
+    await db.commit()
+
+
+# ── Password reset ────────────────────────────────────────────────────────
+
+
+async def request_password_reset(
+    db: AsyncSession, settings: Settings, now: datetime, email: str
+) -> Mail | None:
+    """Return the reset mail to send, or None when there is no eligible account."""
+    user = await db.scalar(select(User).where(User.email_key == email_key(email)))
+    if user is None or not user.is_active or user.email_verified_at is None:
+        return None
+    token = await _issue_token(db, user.id, RESET, now + settings.password_reset_ttl, now)
+    await db.commit()
+    return Mail(
+        user.email,
+        "Reset your Bagh Chal password",
+        f"Hello {user.username},\n\nTo choose a new password, open this link within "
+        f"{_hours(settings.password_reset_ttl)}:\n\n"
+        f"{settings.public_base_url}/reset-password?token={token}\n\n"
+        "If you did not ask for this, ignore this email; your password has not changed.",
+    )
+
+
+async def reset_password(
+    db: AsyncSession, hasher: PasswordHasher, now: datetime, token: str, password: str
+) -> None:
+    """Set a new password and sign the user out everywhere."""
+    user = await _active_user(db, await _consume_token(db, token, RESET, now))
+    if password.lower() == user.username_key:
+        await db.rollback()
+        raise AppError(422, "weak_password", "Your password must not be your username.")
+    user.password_hash = await hasher.hash(password)
+    user.updated_at = now
+    user.email_verified_at = user.email_verified_at or now  # they just proved they read this inbox
+    await db.execute(delete(Session).where(Session.user_id == user.id))
+    await db.commit()
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────
+
+
+async def _issue_token(
+    db: AsyncSession, user_id: uuid.UUID, purpose: str, expires_at: datetime, now: datetime
+) -> str:
+    """Create a token, cancelling any earlier unused token for the same purpose."""
+    await db.execute(
+        update(EmailToken)
+        .where(
+            EmailToken.user_id == user_id,
+            EmailToken.purpose == purpose,
+            EmailToken.used_at.is_(None),
+        )
+        .values(used_at=now)
+    )
+    token, token_hash = new_token()
+    db.add(
+        EmailToken(
+            token_hash=token_hash,
+            user_id=user_id,
+            purpose=purpose,
+            created_at=now,
+            expires_at=expires_at,
+        )
+    )
+    return token
+
+
+async def _consume_token(db: AsyncSession, token: str, purpose: str, now: datetime) -> uuid.UUID:
+    """Mark a token used and return its user. A single atomic UPDATE, so it works only once."""
+    token_hash = hash_token(token)
+    result = await db.execute(
+        update(EmailToken)
+        .where(
+            EmailToken.token_hash == token_hash,
+            EmailToken.purpose == purpose,
+            EmailToken.used_at.is_(None),
+            EmailToken.expires_at > now,
+        )
+        .values(used_at=now)
+    )
+    if result.rowcount != 1:  # type: ignore[attr-defined]
+        await db.rollback()
+        raise _invalid_token()
+    user_id = await db.scalar(select(EmailToken.user_id).where(EmailToken.token_hash == token_hash))
+    assert user_id is not None  # noqa: S101 - the row was just updated
+    return user_id
+
+
+async def _active_user(db: AsyncSession, user_id: uuid.UUID) -> User:
+    user = await db.get(User, user_id)
+    if user is None or not user.is_active:
+        await db.rollback()
+        raise _invalid_token()
+    return user
+
+
+def _invalid_token() -> AppError:
+    return AppError(400, "invalid_token", "This link is invalid or has expired.")
+
+
+def _hours(ttl: timedelta) -> str:
+    hours = round(ttl.total_seconds() / 3600)
+    return "1 hour" if hours == 1 else f"{hours} hours"
+
+
+def _verify_mail(settings: Settings, user: User, token: str) -> Mail:
+    return Mail(
+        user.email,
+        "Confirm your Bagh Chal account",
+        f"Welcome, {user.username}!\n\nConfirm your email address within "
+        f"{_hours(settings.verify_email_ttl)} to finish creating your account:\n\n"
+        f"{settings.public_base_url}/verify-email?token={token}\n\n"
+        "If you did not sign up, ignore this email.",
+    )
+
+
+def _account_exists_mail(settings: Settings, user: User) -> Mail:
+    return Mail(
+        user.email,
+        "You already have a Bagh Chal account",
+        f"Someone tried to sign up with this email address, but it already belongs to the "
+        f"account {user.username}.\n\nIf that was you, sign in at {settings.public_base_url}. "
+        f"Forgot your password? Reset it at {settings.public_base_url}/forgot-password.\n\n"
+        "If it was not you, you can ignore this email.",
+    )
