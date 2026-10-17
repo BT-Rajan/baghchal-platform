@@ -95,9 +95,15 @@ async def has_open_report(db: AsyncSession, open_key: str) -> bool:
 
 async def list_reports(db: AsyncSession, status: ReportStatus, limit: int) -> list[ReportOut]:
     """Open reports oldest first (the queue); closed ones newest first (the history)."""
-    order = Report.created_at.asc() if status == ReportStatus.OPEN else Report.created_at.desc()
+    order = (
+        (Report.created_at.asc(), Report.id)
+        if status == ReportStatus.OPEN
+        else (Report.created_at.desc(), Report.id)
+    )
     reports = (
-        await db.scalars(select(Report).where(Report.status == status).order_by(order).limit(limit))
+        await db.scalars(
+            select(Report).where(Report.status == status).order_by(*order).limit(limit)
+        )
     ).all()
     return await describe(db, reports)
 
@@ -200,7 +206,7 @@ async def record(db: AsyncSession, user: User) -> ModPlayerOut:
         await db.scalars(
             select(Report)
             .where(Report.target_id == user.id)
-            .order_by(Report.created_at.desc())
+            .order_by(Report.created_at.desc(), Report.id)
             .limit(RECORD_REPORTS)
         )
     ).all()
@@ -209,7 +215,7 @@ async def record(db: AsyncSession, user: User) -> ModPlayerOut:
             select(ModerationAction, User.username)
             .outerjoin(User, User.id == ModerationAction.moderator_id)
             .where(ModerationAction.target_id == user.id)
-            .order_by(ModerationAction.created_at.desc())
+            .order_by(ModerationAction.created_at.desc(), ModerationAction.id)
             .limit(RECORD_REPORTS)
         )
     ).all()

@@ -266,12 +266,13 @@ async def test_a_suspended_players_match_is_resigned_game_by_game(
 
 
 async def test_lifting_a_suspension(
-    app: FastAPI, players: PlayerFactory, moderator: Player, mailer: MemoryMailer
+    app: FastAPI, players: PlayerFactory, moderator: Player, mailer: MemoryMailer, clock: Clock
 ) -> None:
     await players("bob")
     r = await moderator.http.post(f"{MOD}/players/bob/unsuspend", json={"reason": "x"})
     assert (r.status_code, r.json()["error"]["code"]) == (409, "not_suspended")
     await _suspend(moderator, "bob", days=None)
+    clock.advance(minutes=1)  # the log lists newest first
     r = await moderator.http.post(
         f"{MOD}/players/bob/unsuspend", json={"reason": "Appeal accepted."}
     )
