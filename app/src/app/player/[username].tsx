@@ -1,11 +1,11 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 
-import { describeError, isApiError } from '@/api/errors';
+import { isApiError } from '@/api/errors';
 import { useMe } from '@/auth/session';
-import { Hint } from '@/components/Card';
 import { Notice } from '@/components/Notice';
 import { ProfileView } from '@/components/ProfileView';
 import { Screen } from '@/components/Screen';
+import { ErrorState, Loading } from '@/components/States';
 import { useProfile } from '@/lobby/hooks';
 
 export default function Player() {
@@ -18,11 +18,11 @@ export default function Player() {
       {isApiError(profile.error, 'player_not_found') ? (
         <Notice tone="error">No such player.</Notice>
       ) : profile.error !== null ? (
-        <Notice tone="error">{describeError(profile.error)}</Notice>
+        <ErrorState error={profile.error} onRetry={() => void profile.refetch()} />
       ) : profile.data ? (
         <ProfileView profile={profile.data} isMe={profile.data.id === me.id} />
       ) : (
-        <Hint>Loading…</Hint>
+        <Loading label="Loading the profile" />
       )}
     </Screen>
   );

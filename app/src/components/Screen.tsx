@@ -24,7 +24,7 @@ export function Screen({
         contentContainerStyle={[styles.scroll, align === 'top' && styles.top]}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={[styles.column, wide && styles.wide]}>
+        <View role="main" style={[styles.column, wide && styles.wide]}>
           {title !== undefined && (
             <Text role="heading" style={styles.title}>
               {title}

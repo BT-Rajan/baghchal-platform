@@ -1,6 +1,6 @@
 # Phase 6 plan: the app
 
-Status: in progress (steps 1–6 done).
+Status: in progress (steps 1–7 done).
 
 One Expo / React Native client for web, iOS, Android and tablets, in `app/`. It talks only
 to our own server (Phases 2–5). Per [ADR 0002](../adr/0002-no-dependency-on-expo-cloud.md),
@@ -171,5 +171,7 @@ Jest with coverage thresholds → `expo export --platform web` (the production b
    server: a rated match, moves from both sides with the boards in agreement, running clocks,
    resignation, rating changes, and game 2 opening for both players by itself. Countdowns
    (game clocks, first moves, challenges) use an estimate of the server's clock.
-7. Responsive layout, accessibility pass, empty and error states.
+7. ✅ Responsive layout, accessibility pass, empty and error states. axe-core reports no WCAG
+   2.1 AA violations on any screen of the web build; the one remaining best-practice note is
+   that the navigation library's header and tab bar sit outside a landmark region.
 8. Docs (README, app README), local end-to-end smoke, PR.

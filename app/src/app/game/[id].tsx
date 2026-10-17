@@ -5,22 +5,21 @@ import type { Game } from '@/api/endpoints';
 import { describeError } from '@/api/errors';
 import { useMe } from '@/auth/session';
 import { Button } from '@/components/Button';
-import { Card, Hint, SectionTitle } from '@/components/Card';
+import { Card, SectionTitle } from '@/components/Card';
 import { Board } from '@/components/game/Board';
 import { GameActions } from '@/components/game/GameActions';
 import { MoveList } from '@/components/game/MoveList';
 import { PlayerBar } from '@/components/game/PlayerBar';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
+import { ErrorState, Loading } from '@/components/States';
 import { useServerNow } from '@/components/useNow';
 import { parseBfen, type Piece } from '@/game/bfen';
 import { firstMoveSecondsLeft } from '@/game/clock';
-import { matchSummary, other, resultText, sideOf, turnText } from '@/game/describe';
+import { lastMoveText, matchSummary, other, resultText, sideOf, turnText } from '@/game/describe';
 import { useGame, useGameAction, useMove } from '@/game/hooks';
+import { boardSize, gameLayout } from '@/game/layout';
 import { colors, spacing } from '@/theme';
-
-/** Side by side (board and panel) from this width; stacked below it. */
-const WIDE = 900;
 
 export default function GameScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,7 +27,7 @@ export default function GameScreen() {
   const query = useGame(id);
   const move = useMove(id);
   const action = useGameAction(id);
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const game = query.data;
 
   if (game === undefined) {
@@ -36,9 +35,9 @@ export default function GameScreen() {
       <Screen>
         <Stack.Screen options={{ title: 'Game' }} />
         {query.error !== null ? (
-          <Notice tone="error">{describeError(query.error)}</Notice>
+          <ErrorState error={query.error} onRetry={() => void query.refetch()} />
         ) : (
-          <Hint>Loading…</Hint>
+          <Loading label="Loading the game" />
         )}
       </Screen>
     );
@@ -50,7 +49,8 @@ export default function GameScreen() {
   const bottom: Piece = mine ?? 'goat';
   const myTurn = game.status === 'active' && game.side_to_move === mine && !move.isPending;
   const error = move.error ?? action.error;
-  const wide = width >= WIDE;
+  const layout = gameLayout(width, height);
+  const wide = layout !== 'stacked';
 
   const board =
     position === null ? (
@@ -65,8 +65,13 @@ export default function GameScreen() {
       />
     );
 
+  const opponentBar = <PlayerBar game={game} side={other(bottom)} isMe={mine === other(bottom)} />;
+  const myBar = <PlayerBar game={game} side={bottom} isMe={mine === bottom} />;
+
   const panel = (
     <View style={styles.panel}>
+      {layout === 'short' && opponentBar}
+      {layout === 'short' && myBar}
       <Status game={game} mine={mine} />
       {error !== null && <Notice tone="error">{describeError(error)}</Notice>}
       {position !== null && (
@@ -99,9 +104,11 @@ export default function GameScreen() {
       <Stack.Screen options={{ title: `${game.goat.username} vs ${game.tiger.username}` }} />
       <View style={wide ? styles.row : styles.column}>
         <View style={wide ? styles.boardWide : styles.boardColumn}>
-          <PlayerBar game={game} side={other(bottom)} isMe={mine === other(bottom)} />
-          {board}
-          <PlayerBar game={game} side={bottom} isMe={mine === bottom} />
+          {layout !== 'short' && opponentBar}
+          <View style={[styles.boardBox, { maxWidth: boardSize(layout, width, height) }]}>
+            {board}
+          </View>
+          {layout !== 'short' && myBar}
         </View>
         {panel}
       </View>
@@ -115,13 +122,19 @@ function Status({ game, mine }: { game: Game; mine: Piece | null }) {
   const match = matchSummary(game);
   const firstMove = firstMoveSecondsLeft(game, now);
   const turn = turnText(game, mine);
+  const last = lastMoveText(game, mine);
   return (
     <>
       {result !== null && (
         <Notice tone={game.result?.winner === mine ? 'success' : 'info'}>{result}</Notice>
       )}
       {turn !== null && (
-        <Text style={styles.turn} aria-live="polite">
+        <Text
+          style={styles.turn}
+          aria-live="polite"
+          // Screen readers hear what just happened, then whose turn it is.
+          aria-label={[last, turn].filter((part) => part !== null).join(' ')}
+        >
           {firstMove === null ? turn : `${turn} · ${firstMove} s to make a first move`}
         </Text>
       )}
@@ -147,6 +160,7 @@ const styles = StyleSheet.create({
   column: { gap: spacing.md },
   boardWide: { flex: 1, maxWidth: 640, gap: spacing.sm },
   boardColumn: { gap: spacing.sm },
+  boardBox: { width: '100%', alignSelf: 'center' },
   panel: { flex: 1, gap: spacing.md, minWidth: 280 },
   turn: { fontSize: 18, fontWeight: '700', color: colors.text },
   counts: { fontSize: 14, color: colors.muted },

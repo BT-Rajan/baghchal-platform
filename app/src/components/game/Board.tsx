@@ -12,6 +12,8 @@ import { EDGES, POINTS, SIZE, type Point } from '@/game/board';
 import { highlights, movePoints, tap } from '@/game/moveInput';
 import { colors } from '@/theme';
 
+import { focusRing } from '../focus';
+
 /** Distance from the edge to the outer lines, and between lines, in % of the board. */
 const MARGIN = 10;
 const GAP = (100 - 2 * MARGIN) / (SIZE - 1);
@@ -66,13 +68,13 @@ export function Board({ position, legalMoves, lastMove, onMove }: BoardProps) {
             key={p.name}
             role="button"
             aria-label={pointLabel(p.name, piece, isSelected, isTarget, canPick)}
-            aria-selected={isSelected}
             aria-disabled={!isTarget && !canPick && selected === null}
             onPress={() => press(p.name)}
-            style={[
+            style={(state) => [
               styles.point,
               { left: `${x(p) - HIT / 2}%`, top: `${y(p) - HIT / 2}%` },
               last.has(p.name) && styles.last,
+              focusRing(state),
             ]}
           >
             <Svg width="100%" height="100%" viewBox="0 0 100 100">

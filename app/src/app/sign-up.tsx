@@ -53,7 +53,7 @@ export default function SignUp() {
         error={fieldError('username')}
         autoCapitalize="none"
         autoCorrect={false}
-        autoComplete="username-new"
+        autoComplete="username"
         textContentType="username"
         maxLength={20}
       />

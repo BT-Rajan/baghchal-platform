@@ -12,5 +12,6 @@ export function TextLink({ href, children }: { href: Href; children: string }) {
 }
 
 const styles = StyleSheet.create({
-  link: { color: colors.accent, fontSize: 15, fontWeight: '600', paddingVertical: 4 },
+  // The padding makes a finger-sized target around the words.
+  link: { color: colors.accent, fontSize: 15, fontWeight: '600', paddingVertical: 10 },
 });

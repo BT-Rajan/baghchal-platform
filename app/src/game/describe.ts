@@ -85,3 +85,19 @@ export function movePairs(moves: readonly string[]): [string, string, string | u
   }
   return pairs;
 }
+
+/**
+ * The last move in words, for screen readers: "bob moved a1 to b2.", "You placed a goat on c3.",
+ * "bob captured a goat, a1 to c3." Goats move first, so even-numbered moves are the goats'.
+ */
+export function lastMoveText(game: Game, me: Piece | null): string | null {
+  const move = game.moves.at(-1);
+  if (move === undefined) return null;
+  const side: Piece = (game.moves.length - 1) % 2 === 0 ? 'goat' : 'tiger';
+  const who = side === me ? 'You' : playerOf(game, side).username;
+  const [from, to] = move.split(/[-x]/);
+  if (to === undefined) return `${who} placed a goat on ${move}.`;
+  return move.includes('x')
+    ? `${who} captured a goat, ${from} to ${to}.`
+    : `${who} moved ${from} to ${to}.`;
+}

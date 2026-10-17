@@ -2,6 +2,8 @@ import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 
 import { colors, radius, spacing } from '@/theme';
 
+import { focusRing } from './focus';
+
 export interface ButtonProps {
   /** The accessible name; also the visible text unless `label` is given. */
   title: string;
@@ -34,11 +36,12 @@ export function Button({
       aria-disabled={inactive}
       disabled={inactive}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={(state) => [
         styles.button,
         compact && styles.compact,
         primary ? styles.primary : styles.secondary,
-        (pressed || inactive) && styles.dim,
+        (state.pressed || inactive) && styles.dim,
+        focusRing(state),
       ]}
     >
       {busy ? (
@@ -60,7 +63,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
   },
-  compact: { minHeight: 36, paddingHorizontal: spacing.md },
+  // 44 points: the smallest comfortable touch target.
+  compact: { minHeight: 44, paddingHorizontal: spacing.md },
   primary: { backgroundColor: colors.accent },
   secondary: { borderWidth: 1, borderColor: colors.accent, backgroundColor: 'transparent' },
   dim: { opacity: 0.6 },

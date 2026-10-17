@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import type { Game } from '@/api/endpoints';
 import { describeError } from '@/api/errors';
@@ -11,6 +11,7 @@ import { ChallengeCard } from '@/components/ChallengeCard';
 import { Notice } from '@/components/Notice';
 import { PlayerRow } from '@/components/PlayerRow';
 import { Screen } from '@/components/Screen';
+import { ErrorState, Loading } from '@/components/States';
 import { TextField } from '@/components/TextField';
 import { useServerNow } from '@/components/useNow';
 import { isOpen, searchPrefix } from '@/lobby/format';
@@ -21,12 +22,16 @@ import {
   useOnlinePlayers,
   usePlayerSearch,
 } from '@/lobby/hooks';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
+
+/** Two columns (challenges | players) from this width. */
+const WIDE = 900;
 
 /** The lobby: my live game, my challenges, and players to challenge. */
 export default function Play() {
   const me = useMe();
   const now = useServerNow();
+  const { width } = useWindowDimensions();
   const games = useActiveGames();
   const challenges = useChallenges();
   const answer = useAnswerChallenge();
@@ -41,14 +46,26 @@ export default function Play() {
   const pendingFor = (id: string) =>
     answer.isPending && answer.variables.id === id ? answer.variables.answer : null;
 
-  return (
-    <Screen title="Play" align="top">
+  const others = players.data?.filter((p) => p.id !== me.id).length ?? 0;
+  const quiet =
+    games.data?.length === 0 &&
+    challenges.data !== undefined &&
+    incoming.length + outgoing.length === 0;
+  const wide = width >= WIDE;
+
+  const gamesAndChallenges = (
+    <View style={styles.column}>
+      {games.error !== null && (
+        <ErrorState error={games.error} onRetry={() => void games.refetch()} />
+      )}
       {games.data?.map((game) => (
         <LiveGame key={game.id} game={game} myId={me.id} />
       ))}
-
       {answer.error !== null && <Notice tone="error">{describeError(answer.error)}</Notice>}
-      {challenges.error !== null && <Notice tone="error">{describeError(challenges.error)}</Notice>}
+      {challenges.error !== null && (
+        <ErrorState error={challenges.error} onRetry={() => void challenges.refetch()} />
+      )}
+      {quiet && <Hint>Challenge someone who is online, or wait here to be challenged.</Hint>}
       {incoming.length > 0 && <SectionTitle>Challenges for you</SectionTitle>}
       {incoming.map((c) => (
         <ChallengeCard
@@ -71,7 +88,11 @@ export default function Play() {
           onAnswer={(a) => answer.mutate({ id: c.id, answer: a })}
         />
       ))}
+    </View>
+  );
 
+  const playerList = (
+    <View style={styles.column}>
       <SectionTitle>
         {prefix === null ? 'Online now' : `Players starting with “${prefix}”`}
       </SectionTitle>
@@ -84,17 +105,37 @@ export default function Play() {
         autoCorrect={false}
         maxLength={20}
       />
-      {players.error !== null && <Notice tone="error">{describeError(players.error)}</Notice>}
-      {players.data === undefined ? (
-        players.error === null && <Hint>Loading…</Hint>
+      {players.error !== null ? (
+        <ErrorState error={players.error} onRetry={() => void players.refetch()} />
+      ) : players.data === undefined ? (
+        <Loading label="Loading players" />
       ) : players.data.length === 0 ? (
         <Hint>{prefix === null ? 'Nobody else is online right now.' : 'No players found.'}</Hint>
       ) : (
-        <Card>
-          {players.data.map((player) => (
-            <PlayerRow key={player.id} player={player} isMe={player.id === me.id} />
-          ))}
-        </Card>
+        <>
+          <Card>
+            {players.data.map((player) => (
+              <PlayerRow key={player.id} player={player} isMe={player.id === me.id} />
+            ))}
+          </Card>
+          {prefix === null && others === 0 && <Hint>Nobody else is online right now.</Hint>}
+        </>
+      )}
+    </View>
+  );
+
+  return (
+    <Screen title="Play" align="top" wide={wide}>
+      {wide ? (
+        <View style={styles.row}>
+          <View style={styles.half}>{gamesAndChallenges}</View>
+          <View style={styles.half}>{playerList}</View>
+        </View>
+      ) : (
+        <>
+          {gamesAndChallenges}
+          {playerList}
+        </>
       )}
     </Screen>
   );
@@ -112,4 +153,7 @@ function LiveGame({ game, myId }: { game: Game; myId: string }) {
 
 const styles = StyleSheet.create({
   live: { fontSize: 16, fontWeight: '600', color: colors.text },
+  row: { flexDirection: 'row', gap: spacing.xl, alignItems: 'flex-start' },
+  half: { flex: 1 },
+  column: { gap: spacing.md },
 });

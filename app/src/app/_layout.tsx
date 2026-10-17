@@ -1,14 +1,16 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { router, Stack } from 'expo-router';
+import { router, Stack, type ErrorBoundaryProps } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { describeError } from '@/api/errors';
+import { followAppFocus } from '@/api/focus';
 import { shouldRetry } from '@/api/retry';
 import { SessionProvider, useSession } from '@/auth/session';
 import { Button } from '@/components/Button';
+import { ConnectionBanner } from '@/components/ConnectionBanner';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { API_URL } from '@/config';
@@ -22,6 +24,7 @@ export default function RootLayout() {
   );
   // Clearing also cancels the cache's clean-up timers (the root only unmounts in tests).
   useEffect(() => () => queryClient.clear(), [queryClient]);
+  useEffect(followAppFocus, []);
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
@@ -60,26 +63,41 @@ function Routes() {
   }
   const signedIn = state.status === 'signedIn';
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={signedIn}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="player/[username]" options={{ headerShown: true, title: '' }} />
-        <Stack.Screen name="challenge/[username]" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="game/[id]" options={{ headerShown: true, title: 'Game' }} />
-      </Stack.Protected>
-      <Stack.Protected guard={!signedIn}>
-        <Stack.Screen name="sign-in" />
-        <Stack.Screen name="sign-up" />
-        <Stack.Screen name="forgot-password" />
-      </Stack.Protected>
-      {/* Targets of emailed links: they work whether or not someone is signed in. */}
-      <Stack.Screen name="verify-email" />
-      <Stack.Screen name="reset-password" />
-    </Stack>
+    <View style={styles.app}>
+      {signedIn && <ConnectionBanner />}
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Protected guard={signedIn}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="player/[username]" options={{ headerShown: true, title: '' }} />
+          <Stack.Screen name="challenge/[username]" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="game/[id]" options={{ headerShown: true, title: 'Game' }} />
+        </Stack.Protected>
+        <Stack.Protected guard={!signedIn}>
+          <Stack.Screen name="sign-in" />
+          <Stack.Screen name="sign-up" />
+          <Stack.Screen name="forgot-password" />
+        </Stack.Protected>
+        {/* Targets of emailed links: they work whether or not someone is signed in. */}
+        <Stack.Screen name="verify-email" />
+        <Stack.Screen name="reset-password" />
+      </Stack>
+    </View>
+  );
+}
+
+/** Shown instead of a screen that crashed while rendering, with a way to try again. */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  console.error('Screen crashed', error);
+  return (
+    <Screen title="Something went wrong">
+      <Notice tone="error">This screen ran into a problem. Trying again usually helps.</Notice>
+      <Button title="Try again" onPress={() => void retry()} />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  app: { flex: 1 },
   center: {
     flex: 1,
     alignItems: 'center',

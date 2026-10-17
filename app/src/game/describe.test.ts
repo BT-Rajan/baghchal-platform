@@ -2,6 +2,7 @@ import { ME } from '../../tests/support/fakeServer';
 import { BOB, game } from '../../tests/support/games';
 
 import {
+  lastMoveText,
   matchSummary,
   movePairs,
   other,
@@ -81,4 +82,16 @@ test('movePairs', () => {
     ['1.', 'c3', 'a1-b2'],
     ['2.', 'd4', undefined],
   ]);
+});
+
+test('lastMoveText', () => {
+  expect(lastMoveText(game(), 'goat')).toBeNull();
+  expect(lastMoveText(game({ moves: ['c3'] }), 'goat')).toBe('You placed a goat on c3.');
+  expect(lastMoveText(game({ moves: ['c3', 'a1-b1'] }), 'goat')).toBe('bob moved a1 to b1.');
+  expect(lastMoveText(game({ moves: ['c3', 'a1xc3'] }), null)).toBe(
+    'bob captured a goat, a1 to c3.',
+  );
+  expect(lastMoveText(game({ moves: ['c3', 'a1-b1', 'c3-c4'] }), 'tiger')).toBe(
+    'alice moved c3 to c4.',
+  );
 });

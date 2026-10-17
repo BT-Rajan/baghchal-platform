@@ -2,11 +2,10 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { Category } from '@/api/endpoints';
-import { describeError } from '@/api/errors';
 import { useMe } from '@/auth/session';
 import { Card, Hint } from '@/components/Card';
-import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
+import { ErrorState, Loading } from '@/components/States';
 import { Segmented } from '@/components/Segmented';
 import { TextLink } from '@/components/TextLink';
 import { CATEGORIES } from '@/lobby/format';
@@ -25,9 +24,10 @@ export default function Leaderboard() {
         value={category}
         onChange={setCategory}
       />
-      {board.error !== null && <Notice tone="error">{describeError(board.error)}</Notice>}
-      {board.data === undefined ? (
-        board.error === null && <Hint>Loading…</Hint>
+      {board.error !== null ? (
+        <ErrorState error={board.error} onRetry={() => void board.refetch()} />
+      ) : board.data === undefined ? (
+        <Loading label="Loading the leaderboard" />
       ) : board.data.length === 0 ? (
         <Hint>
           Nobody is listed yet. Players appear once their rating has settled and they have played a

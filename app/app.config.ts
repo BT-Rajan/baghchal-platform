@@ -8,7 +8,8 @@ const config: ExpoConfig = {
   scheme: 'baghchal',
   version: '0.1.0',
   orientation: 'default',
-  userInterfaceStyle: 'automatic',
+  // Light only until the theme has a dark palette.
+  userInterfaceStyle: 'light',
   ios: { supportsTablet: true, bundleIdentifier: 'com.baghchal.app' },
   android: { package: 'com.baghchal.app' },
   web: { bundler: 'metro', output: 'single' },
