@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { describeError } from '@/api/errors';
@@ -28,6 +29,11 @@ export default function MeScreen() {
         <Loading label="Loading your profile" />
       )}
       <BlockedPlayers />
+      <Button
+        title="Account settings"
+        variant="secondary"
+        onPress={() => router.push('/account')}
+      />
       <Button
         title="Sign out"
         variant="secondary"

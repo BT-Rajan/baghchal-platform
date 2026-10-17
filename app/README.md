@@ -48,8 +48,8 @@ src/
   app/          screens (Expo Router: each file is a route)
     _layout.tsx   providers, signed-in / signed-out route guards, error boundary
     (tabs)/       Play (the lobby), Leaderboard, Me
-    game/[id].tsx  player/[username].tsx  challenge/[username].tsx
-    sign-in, sign-up, forgot-password, verify-email, reset-password
+    game/[id].tsx  player/[username].tsx  challenge/[username].tsx  account.tsx
+    sign-in, sign-up, forgot-password, verify-email, reset-password, confirm-email
   api/          HTTP client, errors, typed endpoints, generated schema types, query keys
   auth/         the session (SessionStore), token storage, form checks
   realtime/     the WebSocket connection, message parsing, events into the query cache
@@ -70,6 +70,9 @@ scripts/        the Expo-cloud guardrail
   for a bearer token and keep it in the Keychain / Keystore (`expo-secure-store`). On start the
   app asks `GET /me`; any `401 not_authenticated` signs out, ignoring late answers that belong
   to an earlier session.
+- **Your account.** Me → Account settings changes the email address (confirmed by a link sent
+  to the new one) or password, downloads your data (a file on the web, the share sheet in
+  apps) and deletes the account.
 - **Errors.** Every failure becomes an `ApiError` with the server's `code`; screens branch on
   the code, never on the message.
 - **Live updates.** One WebSocket per app or tab. It reconnects with jittered backoff, pings
@@ -93,7 +96,7 @@ scripts/        the Expo-cloud guardrail
   `src/game` and `src/lobby` must stay at 100% coverage.
 - **Screen tests** in `tests/` render the real routes against a fake server
   (`tests/support/fakeServer.ts`) and a fake socket (`tests/support/fakeSocket.ts`): signing
-  in, the lobby, challenges, live events, playing, clocks, results, matches and blocking.
+  in, the lobby, challenges, live events, playing, clocks, results, matches, blocking and account settings.
 - **End-to-end smoke** (`npm run e2e:smoke`) runs locally, not in CI. It starts the real server
   on a throwaway SQLite database, builds and serves the web app, and drives two Chromium
   browsers: Alice and Bob sign up, open their emailed links, Alice challenges Bob, Bob accepts,

@@ -103,6 +103,14 @@ export class SessionStore {
     await this.forget();
   }
 
+  /** Ask who we are again, after the account changed (a new email address). */
+  async refresh(): Promise<void> {
+    if (this.state.status !== 'signedIn') return;
+    const epoch = this.epoch;
+    const user = await this.api.me();
+    if (epoch === this.epoch) this.set({ status: 'signedIn', user });
+  }
+
   /** Forget the session locally, without telling the server (it has already ended it). */
   async forget(): Promise<void> {
     this.epoch += 1;

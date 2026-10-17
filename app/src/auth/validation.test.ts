@@ -1,7 +1,10 @@
 import {
   PASSWORD_MAX,
   checkEmail,
+  checkEmailChange,
   checkNewPassword,
+  checkPasswordChange,
+  checkPasswordGiven,
   checkSignIn,
   checkSignUp,
   emailProblem,
@@ -79,4 +82,37 @@ test('isLinkToken', () => {
   expect(isLinkToken('a'.repeat(42) + '!')).toBe(false);
   expect(isLinkToken(['a'.repeat(43)])).toBe(false);
   expect(isLinkToken(undefined)).toBe(false);
+});
+
+test('checkPasswordChange', () => {
+  expect(checkPasswordChange({ current: '', password: 'short', confirm: 'x' }, 'alice')).toEqual({
+    current: 'Enter your current password.',
+    password: 'Use at least 10 characters.',
+    confirm: 'The passwords do not match.',
+  });
+  expect(
+    checkPasswordChange(
+      { current: 'c', password: 'AliceAlice', confirm: 'AliceAlice' },
+      'alicealice',
+    ),
+  ).toEqual({ password: 'Your password must not be your username.' });
+  expect(
+    checkPasswordChange({ current: 'c', password: 'long enough!', confirm: 'long enough!' }, 'a'),
+  ).toEqual({});
+});
+
+test('checkEmailChange', () => {
+  expect(checkEmailChange({ email: '', password: '' }, 'a@example.com')).toEqual({
+    email: 'Enter your email address.',
+    password: 'Enter your password.',
+  });
+  expect(checkEmailChange({ email: ' A@Example.com ', password: 'p' }, 'a@example.com')).toEqual({
+    email: 'That is already your email address.',
+  });
+  expect(checkEmailChange({ email: 'b@example.com', password: 'p' }, 'a@example.com')).toEqual({});
+});
+
+test('checkPasswordGiven', () => {
+  expect(checkPasswordGiven({ password: '' })).toEqual({ password: 'Enter your password.' });
+  expect(checkPasswordGiven({ password: 'x' })).toEqual({});
 });

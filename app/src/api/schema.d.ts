@@ -129,6 +129,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Password
+         * @description Choose a new password. Other devices are signed out; this one stays signed in.
+         */
+        post: operations["change_password_api_v1_me_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Email
+         * @description Email a confirmation link to the new address; the address changes once it is opened.
+         */
+        post: operations["change_email_api_v1_me_email_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/confirm-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Email Change
+         * @description Open the link sent to a new address. Works without signing in, on any device.
+         */
+        post: operations["confirm_email_change_api_v1_auth_confirm_email_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Data
+         * @description Everything the server keeps about you, as one JSON document.
+         */
+        get: operations["export_data_api_v1_me_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete Account
+         * @description Delete your account for good. Every device is signed out.
+         */
+        post: operations["delete_account_api_v1_me_delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/players": {
         parameters: {
             query?: never;
@@ -507,11 +607,175 @@ export interface components {
             /** Running */
             running: ("goat" | "tiger") | null;
         };
+        /** DeleteAccountIn */
+        DeleteAccountIn: {
+            /** Password */
+            password: string;
+        };
+        /** EmailChangeConfirmIn */
+        EmailChangeConfirmIn: {
+            /** Token */
+            token: string;
+        };
+        /** EmailChangeIn */
+        EmailChangeIn: {
+            /** Password */
+            password: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+        };
+        /** EmailChangedOut */
+        EmailChangedOut: {
+            /** Email */
+            email: string;
+        };
         /**
          * EndReason
          * @enum {string}
          */
         EndReason: "five_captured" | "tigers_trapped" | "goats_blocked" | "timeout" | "resigned" | "abandoned" | "aborted";
+        /** ExportAccount */
+        ExportAccount: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Username */
+            username: string;
+            /** Email */
+            email: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Email Verified At */
+            email_verified_at: string | null;
+        };
+        /** ExportChallenge */
+        ExportChallenge: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "sent" | "received";
+            /** Opponent */
+            opponent: string;
+            /** Time Control */
+            time_control: string;
+            /** Rated */
+            rated: boolean;
+            /** Status */
+            status: string;
+        };
+        /** ExportGame */
+        ExportGame: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Finished At */
+            finished_at: string | null;
+            /** Time Control */
+            time_control: string;
+            /** Rated */
+            rated: boolean;
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "goat" | "tiger";
+            /** Opponent */
+            opponent: string;
+            /** Status */
+            status: string;
+            /** Winner */
+            winner: string | null;
+            /** End Reason */
+            end_reason: string | null;
+            /** Rating Change */
+            rating_change: number | null;
+            /** Moves */
+            moves: string[];
+        };
+        /**
+         * ExportOut
+         * @description Everything the server keeps about a player, for them to download.
+         */
+        ExportOut: {
+            /**
+             * Exported At
+             * Format: date-time
+             */
+            exported_at: string;
+            account: components["schemas"]["ExportAccount"];
+            /** Ratings */
+            ratings: components["schemas"]["ExportRating"][];
+            /** Games */
+            games: components["schemas"]["ExportGame"][];
+            /** Challenges */
+            challenges: components["schemas"]["ExportChallenge"][];
+            /** Blocked Players */
+            blocked_players: string[];
+            /** Sessions */
+            sessions: components["schemas"]["ExportSession"][];
+        };
+        /** ExportRating */
+        ExportRating: {
+            /** Category */
+            category: string;
+            /** Rating */
+            rating: number;
+            /** Deviation */
+            deviation: number;
+            /** Volatility */
+            volatility: number;
+            /** Games */
+            games: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ExportSession */
+        ExportSession: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Last Used At
+             * Format: date-time
+             */
+            last_used_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
         /** GameOut */
         GameOut: {
             /**
@@ -634,6 +898,13 @@ export interface components {
             ply: number;
             /** Move */
             move: string;
+        };
+        /** PasswordChangeIn */
+        PasswordChangeIn: {
+            /** Current Password */
+            current_password: string;
+            /** New Password */
+            new_password: string;
         };
         /** PasswordResetConfirmIn */
         PasswordResetConfirmIn: {
@@ -1044,6 +1315,154 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeOut"];
+                };
+            };
+        };
+    };
+    change_password_api_v1_me_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordChangeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_email_api_v1_me_email_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailChangeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Accepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_email_change_api_v1_auth_confirm_email_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailChangeConfirmIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailChangedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_data_api_v1_me_export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportOut"];
+                };
+            };
+        };
+    };
+    delete_account_api_v1_me_delete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteAccountIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

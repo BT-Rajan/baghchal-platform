@@ -50,6 +50,11 @@ test('every endpoint calls the right method, path and body', async () => {
   await api.blocks();
   await api.block('b o');
   await api.unblock('bob');
+  await api.changePassword('old', 'new');
+  await api.changeEmail('pw', 'new@example.com');
+  await api.confirmEmailChange('tok');
+  await api.exportData();
+  await api.deleteAccount('pw');
 
   const V = '/api/v1';
   expect(calls).toEqual([
@@ -78,5 +83,10 @@ test('every endpoint calls the right method, path and body', async () => {
     ['GET', `${V}/blocks`, { signal: undefined }],
     ['PUT', `${V}/blocks/b%20o`, undefined],
     ['DELETE', `${V}/blocks/bob`, undefined],
+    ['POST', `${V}/me/password`, { body: { current_password: 'old', new_password: 'new' } }],
+    ['POST', `${V}/me/email`, { body: { password: 'pw', email: 'new@example.com' } }],
+    ['POST', `${V}/auth/confirm-email`, { body: { token: 'tok' } }],
+    ['GET', `${V}/me/export`, undefined],
+    ['POST', `${V}/me/delete`, { body: { password: 'pw' } }],
   ]);
 });

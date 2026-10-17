@@ -91,6 +91,10 @@ builds the web app.
 | POST | `/api/v1/auth/password-reset` | Email a reset link (always 202) |
 | POST | `/api/v1/auth/password-reset/confirm` | Set a new password; signs out everywhere |
 | GET | `/api/v1/me` | The signed-in account |
+| POST | `/api/v1/me/password` | Change the password (needs the current one); signs out other devices |
+| POST | `/api/v1/me/email`, `/api/v1/auth/confirm-email` | Change the email address; it changes once the link sent to the new address is opened |
+| GET | `/api/v1/me/export` | Download everything the server keeps about you, as JSON |
+| POST | `/api/v1/me/delete` | Delete the account (needs the password; not during a live game) |
 | GET | `/api/v1/players?prefix=al` | Find players by username prefix (with online status) |
 | GET | `/api/v1/players/online` | Players online now |
 | GET | `/api/v1/players/{username}` | A player's profile, with ratings and leaderboard rank |
