@@ -34,7 +34,7 @@ arrives after the deadline is refused, and the game ends on time even if nobody 
 |---|---|
 | 1003 | Binary frame (only JSON text is accepted) |
 | 1009 | Message over 4 KB |
-| 4401 | Session ended (signed out, password reset, account disabled) — checked every minute |
+| 4401 | Session ended (signed out, password changed or reset, account deleted or suspended) — checked every minute |
 | 4408 | Client stopped reading; more than 64 events queued |
 | 4410 | Client went silent: nothing received for 90 s (a phone app suspended in the background) |
 | 4429 | More than 10 messages per second (burst 20) |
@@ -46,5 +46,10 @@ arrives after the deadline is refused, and the game ends on time even if nobody 
 - **Apps in the background** close their connection, so they stop showing as online straight
   away, and reconnect when they return to the foreground (catching up on what they missed).
 - **Delivery**: events are published to a per-user Redis channel; each server subscribes to
-  the channels of users connected to it. Any server can notify any user.
+  the channels of users connected to it. Any server can notify any user. Measured: with
+  opponents on different servers, a move reaches the other player's socket in 330 ms at the
+  95th percentile under heavy load ([operations](operations.md#scaling)).
+- **Ending games on time**: one server at a time holds a 3-second lease in Redis and sweeps for
+  games out of time; if it stops, another takes over within the lease. The database update
+  that ends a game is conditional, so a game is ended exactly once even if two servers overlap.
 - Without Redis (development), presence and delivery are in-process.

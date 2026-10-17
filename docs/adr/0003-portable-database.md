@@ -20,6 +20,7 @@ The team's usual database is MySQL / MariaDB, and we want to keep the freedom to
   - explicit constraint names (naming convention) so migrations behave the same everywhere.
 - Migrations are written to run on every supported database (batch mode for SQLite) and the
   test suite builds its schema by running them, then checks that models and migrations agree.
+  Exception: never batch-copy a table that other tables cascade from on SQLite (see ADR 0004).
 
 ## Consequences
 Adding another database (for example PostgreSQL) means adding it to the CI matrix and fixing
