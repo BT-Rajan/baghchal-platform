@@ -29,6 +29,9 @@ export default function MeScreen() {
         <Loading label="Loading your profile" />
       )}
       <BlockedPlayers />
+      {me.role === 'moderator' && (
+        <Button title="Moderation" variant="secondary" onPress={() => router.push('/moderation')} />
+      )}
       <Button
         title="Account settings"
         variant="secondary"

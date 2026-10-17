@@ -1073,6 +1073,357 @@
           }
         }
       }
+    },
+    "/api/v1/players/{username}/report": {
+      "post": {
+        "summary": "Report Player",
+        "description": "Ask the moderators to look at a player (cheating, abuse, an offensive name…).",
+        "operationId": "report_player_api_v1_players__username__report_post",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,20}$",
+              "title": "Username"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Accepted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mod/reports": {
+      "get": {
+        "summary": "List Reports",
+        "description": "Open reports oldest first (the queue), or closed ones newest first.",
+        "operationId": "list_reports_api_v1_mod_reports_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ReportStatus",
+              "default": "open"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReportOut"
+                  },
+                  "title": "Response List Reports Api V1 Mod Reports Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mod/reports/{report_id}/dismiss": {
+      "post": {
+        "summary": "Dismiss Report",
+        "description": "Close a report without acting on the player.",
+        "operationId": "dismiss_report_api_v1_mod_reports__report_id__dismiss_post",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mod/players/{username}": {
+      "get": {
+        "summary": "Player Record",
+        "description": "A player's state, the reports about them and what moderators did.",
+        "operationId": "player_record_api_v1_mod_players__username__get",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,20}$",
+              "title": "Username"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModPlayerOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mod/players/{username}/suspend": {
+      "post": {
+        "summary": "Suspend Player",
+        "description": "Suspend a player for some days, or ban them (``days: null``).",
+        "operationId": "suspend_player_api_v1_mod_players__username__suspend_post",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,20}$",
+              "title": "Username"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuspendIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModPlayerOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mod/players/{username}/unsuspend": {
+      "post": {
+        "summary": "Unsuspend Player",
+        "operationId": "unsuspend_player_api_v1_mod_players__username__unsuspend_post",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,20}$",
+              "title": "Username"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModPlayerOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mod/players/{username}/rename": {
+      "post": {
+        "summary": "Rename Player",
+        "description": "Give a player a new username, for one that breaks the rules.",
+        "operationId": "rename_player_api_v1_mod_players__username__rename_post",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,20}$",
+              "title": "Username"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModPlayerOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1088,6 +1439,16 @@
         },
         "type": "object",
         "title": "Accepted"
+      },
+      "ActionKind": {
+        "type": "string",
+        "enum": [
+          "suspend",
+          "unsuspend",
+          "rename",
+          "dismiss_report"
+        ],
+        "title": "ActionKind"
       },
       "Category": {
         "type": "string",
@@ -1983,6 +2344,14 @@
           "email": {
             "type": "string",
             "title": "Email"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "player",
+              "moderator"
+            ],
+            "title": "Role"
           }
         },
         "type": "object",
@@ -1990,9 +2359,127 @@
           "id",
           "username",
           "created_at",
-          "email"
+          "email",
+          "role"
         ],
         "title": "MeOut"
+      },
+      "ModActionOut": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/ActionKind"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "moderator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moderator"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "reason",
+          "moderator",
+          "created_at"
+        ],
+        "title": "ModActionOut"
+      },
+      "ModPlayerOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "deleted": {
+            "type": "boolean",
+            "title": "Deleted"
+          },
+          "suspended_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suspended Until"
+          },
+          "banned": {
+            "type": "boolean",
+            "title": "Banned"
+          },
+          "suspension_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suspension Reason"
+          },
+          "reports": {
+            "items": {
+              "$ref": "#/components/schemas/ReportOut"
+            },
+            "type": "array",
+            "title": "Reports"
+          },
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/ModActionOut"
+            },
+            "type": "array",
+            "title": "Actions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "username",
+          "created_at",
+          "role",
+          "deleted",
+          "suspended_until",
+          "banned",
+          "suspension_reason",
+          "reports",
+          "actions"
+        ],
+        "title": "ModPlayerOut",
+        "description": "What a moderator sees about a player."
       },
       "MoveIn": {
         "properties": {
@@ -2230,6 +2717,22 @@
         ],
         "title": "RatingsOut"
       },
+      "ReasonIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "ReasonIn"
+      },
       "RegisterIn": {
         "properties": {
           "username": {
@@ -2258,6 +2761,182 @@
           "password"
         ],
         "title": "RegisterIn"
+      },
+      "RenameIn": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{2,19}$",
+            "title": "Username"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "username",
+          "reason"
+        ],
+        "title": "RenameIn"
+      },
+      "ReportIn": {
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/ReportReason"
+          },
+          "details": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Details",
+            "default": ""
+          },
+          "game_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Game Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "ReportIn"
+      },
+      "ReportOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "reporter": {
+            "$ref": "#/components/schemas/PlayerOut"
+          },
+          "target": {
+            "$ref": "#/components/schemas/ReportTargetOut"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/ReportReason"
+          },
+          "details": {
+            "type": "string",
+            "title": "Details"
+          },
+          "game_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Game Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ReportStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "open_reports_against_target": {
+            "type": "integer",
+            "title": "Open Reports Against Target"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "reporter",
+          "target",
+          "reason",
+          "details",
+          "game_id",
+          "status",
+          "created_at",
+          "resolved_at",
+          "open_reports_against_target"
+        ],
+        "title": "ReportOut"
+      },
+      "ReportReason": {
+        "type": "string",
+        "enum": [
+          "cheating",
+          "abuse",
+          "username",
+          "other"
+        ],
+        "title": "ReportReason"
+      },
+      "ReportStatus": {
+        "type": "string",
+        "enum": [
+          "open",
+          "dismissed",
+          "actioned"
+        ],
+        "title": "ReportStatus"
+      },
+      "ReportTargetOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "suspended_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suspended Until"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "username",
+          "suspended_until"
+        ],
+        "title": "ReportTargetOut"
       },
       "ResultOut": {
         "properties": {
@@ -2334,6 +3013,36 @@
           "change"
         ],
         "title": "SideRatingOut"
+      },
+      "SuspendIn": {
+        "properties": {
+          "days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3650.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "days",
+          "reason"
+        ],
+        "title": "SuspendIn"
       },
       "ValidationError": {
         "properties": {

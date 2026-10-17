@@ -8,4 +8,6 @@ export const queryKeys = {
   profile: (username: string) => ['player', username] as const,
   leaderboard: (category: string) => ['leaderboard', category] as const,
   blocks: ['blocks'] as const,
+  modReports: (status: string) => ['mod', 'reports', status] as const,
+  modPlayer: (username: string) => ['mod', 'player', username] as const,
 };

@@ -20,6 +20,10 @@ export type TimeControl = S['ChallengeIn']['time_control'];
 export type Side = NonNullable<S['ChallengeIn']['side']>;
 export type EndReason = S['EndReason'];
 export type DataExport = S['ExportOut'];
+export type ReportReason = S['ReportIn']['reason'];
+export type Report = S['ReportOut'];
+export type ReportStatus = S['ReportOut']['status'];
+export type ModPlayer = S['ModPlayerOut'];
 
 export type ChallengeAnswer = 'accept' | 'decline' | 'cancel';
 export type GameAction = 'resign' | 'abort' | 'claim-abandonment';
@@ -79,6 +83,26 @@ export function createApi(client: Client, transport: Transport) {
     blocks: (signal?: AbortSignal) => client.get<Player[]>(`${V1}/blocks`, { signal }),
     block: (username: string) => client.put<void>(`${V1}/blocks/${seg(username)}`),
     unblock: (username: string) => client.delete<void>(`${V1}/blocks/${seg(username)}`),
+
+    // Reports and moderation
+    report: (username: string, body: S['ReportIn']) =>
+      client.post<S['Accepted']>(`${V1}/players/${seg(username)}/report`, { body }),
+    modReports: (status: ReportStatus, signal?: AbortSignal) =>
+      client.get<Report[]>(`${V1}/mod/reports`, { query: { status }, signal }),
+    dismissReport: (id: string, reason: string) =>
+      client.post<Report>(`${V1}/mod/reports/${seg(id)}/dismiss`, { body: { reason } }),
+    modPlayer: (username: string, signal?: AbortSignal) =>
+      client.get<ModPlayer>(`${V1}/mod/players/${seg(username)}`, { signal }),
+    suspend: (username: string, days: number | null, reason: string) =>
+      client.post<ModPlayer>(`${V1}/mod/players/${seg(username)}/suspend`, {
+        body: { days, reason },
+      }),
+    unsuspend: (username: string, reason: string) =>
+      client.post<ModPlayer>(`${V1}/mod/players/${seg(username)}/unsuspend`, { body: { reason } }),
+    rename: (username: string, newUsername: string, reason: string) =>
+      client.post<ModPlayer>(`${V1}/mod/players/${seg(username)}/rename`, {
+        body: { username: newUsername, reason },
+      }),
 
     // Ratings
     leaderboard: (category: Category, signal?: AbortSignal) =>

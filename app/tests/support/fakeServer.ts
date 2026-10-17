@@ -78,6 +78,7 @@ export const ME = {
   username: 'alice',
   email: 'alice@example.com',
   created_at: '2026-01-01T12:00:00Z',
+  role: 'player' as const,
 };
 
 /** A well-formed emailed-link token (43 URL-safe characters). */

@@ -522,6 +522,143 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/players/{username}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Report Player
+         * @description Ask the moderators to look at a player (cheating, abuse, an offensive name…).
+         */
+        post: operations["report_player_api_v1_players__username__report_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mod/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Reports
+         * @description Open reports oldest first (the queue), or closed ones newest first.
+         */
+        get: operations["list_reports_api_v1_mod_reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mod/reports/{report_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss Report
+         * @description Close a report without acting on the player.
+         */
+        post: operations["dismiss_report_api_v1_mod_reports__report_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mod/players/{username}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Player Record
+         * @description A player's state, the reports about them and what moderators did.
+         */
+        get: operations["player_record_api_v1_mod_players__username__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mod/players/{username}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suspend Player
+         * @description Suspend a player for some days, or ban them (``days: null``).
+         */
+        post: operations["suspend_player_api_v1_mod_players__username__suspend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mod/players/{username}/unsuspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unsuspend Player */
+        post: operations["unsuspend_player_api_v1_mod_players__username__unsuspend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mod/players/{username}/rename": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rename Player
+         * @description Give a player a new username, for one that breaks the rules.
+         */
+        post: operations["rename_player_api_v1_mod_players__username__rename_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -535,6 +672,11 @@ export interface components {
              */
             status: "accepted";
         };
+        /**
+         * ActionKind
+         * @enum {string}
+         */
+        ActionKind: "suspend" | "unsuspend" | "rename" | "dismiss_report";
         /**
          * Category
          * @enum {string}
@@ -891,6 +1033,56 @@ export interface components {
             created_at: string;
             /** Email */
             email: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "player" | "moderator";
+        };
+        /** ModActionOut */
+        ModActionOut: {
+            action: components["schemas"]["ActionKind"];
+            /** Reason */
+            reason: string;
+            /** Moderator */
+            moderator: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * ModPlayerOut
+         * @description What a moderator sees about a player.
+         */
+        ModPlayerOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Username */
+            username: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Role */
+            role: string;
+            /** Deleted */
+            deleted: boolean;
+            /** Suspended Until */
+            suspended_until: string | null;
+            /** Banned */
+            banned: boolean;
+            /** Suspension Reason */
+            suspension_reason: string | null;
+            /** Reports */
+            reports: components["schemas"]["ReportOut"][];
+            /** Actions */
+            actions: components["schemas"]["ModActionOut"][];
         };
         /** MoveIn */
         MoveIn: {
@@ -988,6 +1180,11 @@ export interface components {
             goat: components["schemas"]["SideRatingOut"];
             tiger: components["schemas"]["SideRatingOut"];
         };
+        /** ReasonIn */
+        ReasonIn: {
+            /** Reason */
+            reason: string;
+        };
         /** RegisterIn */
         RegisterIn: {
             /** Username */
@@ -999,6 +1196,71 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** RenameIn */
+        RenameIn: {
+            /** Username */
+            username: string;
+            /** Reason */
+            reason: string;
+        };
+        /** ReportIn */
+        ReportIn: {
+            reason: components["schemas"]["ReportReason"];
+            /**
+             * Details
+             * @default
+             */
+            details: string;
+            /** Game Id */
+            game_id?: string | null;
+        };
+        /** ReportOut */
+        ReportOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            reporter: components["schemas"]["PlayerOut"];
+            target: components["schemas"]["ReportTargetOut"];
+            reason: components["schemas"]["ReportReason"];
+            /** Details */
+            details: string;
+            /** Game Id */
+            game_id: string | null;
+            status: components["schemas"]["ReportStatus"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Resolved At */
+            resolved_at: string | null;
+            /** Open Reports Against Target */
+            open_reports_against_target: number;
+        };
+        /**
+         * ReportReason
+         * @enum {string}
+         */
+        ReportReason: "cheating" | "abuse" | "username" | "other";
+        /**
+         * ReportStatus
+         * @enum {string}
+         */
+        ReportStatus: "open" | "dismissed" | "actioned";
+        /** ReportTargetOut */
+        ReportTargetOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Username */
+            username: string;
+            /** Suspended Until */
+            suspended_until: string | null;
         };
         /** ResultOut */
         ResultOut: {
@@ -1018,6 +1280,13 @@ export interface components {
             rating: number;
             /** Change */
             change: number | null;
+        };
+        /** SuspendIn */
+        SuspendIn: {
+            /** Days */
+            days: number | null;
+            /** Reason */
+            reason: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -1984,6 +2253,244 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LeaderboardEntry"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_player_api_v1_players__username__report_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Accepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_reports_api_v1_mod_reports_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["ReportStatus"];
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_report_api_v1_mod_reports__report_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    player_record_api_v1_mod_players__username__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModPlayerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suspend_player_api_v1_mod_players__username__suspend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuspendIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModPlayerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unsuspend_player_api_v1_mod_players__username__unsuspend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModPlayerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rename_player_api_v1_mod_players__username__rename_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenameIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModPlayerOut"];
                 };
             };
             /** @description Validation Error */

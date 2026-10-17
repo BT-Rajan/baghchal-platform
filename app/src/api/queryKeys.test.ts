@@ -5,6 +5,8 @@ test('keys are stable and distinct', () => {
   expect(queryKeys.playerSearch('al')).toEqual(['players', 'search', 'al']);
   expect(queryKeys.profile('alice')).toEqual(['player', 'alice']);
   expect(queryKeys.leaderboard('blitz')).toEqual(['leaderboard', 'blitz']);
+  expect(queryKeys.modReports('open')).toEqual(['mod', 'reports', 'open']);
+  expect(queryKeys.modPlayer('bob')).toEqual(['mod', 'player', 'bob']);
   const all = [
     queryKeys.challenges,
     queryKeys.activeGames,
@@ -14,6 +16,8 @@ test('keys are stable and distinct', () => {
     queryKeys.profile('x'),
     queryKeys.leaderboard('x'),
     queryKeys.blocks,
+    queryKeys.modReports('open'),
+    queryKeys.modPlayer('x'),
   ].map((key) => JSON.stringify(key));
   expect(new Set(all).size).toBe(all.length);
 });
