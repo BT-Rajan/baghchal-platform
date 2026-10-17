@@ -61,7 +61,7 @@ async def search_players(
 ) -> list[PlayerStatusOut]:
     """Players whose username starts with ``prefix`` (case-insensitive)."""
     await enforce_limit(state, SEARCH_PER_USER, str(user.id))
-    found = await service.search_players(db, prefix, limit, user.id)
+    found = await service.search_players(db, prefix, limit, user.id, state.clock())
     return await _with_status(state, db, [(u.id, u.username) for u in found])
 
 
@@ -70,7 +70,7 @@ async def online_players(
     user: CurrentUser, state: State, db: DB, limit: Annotated[int, Query(ge=1, le=100)] = 50
 ) -> list[PlayerStatusOut]:
     ids = await state.presence.list_online(limit)
-    users = await service.users_by_id(db, ids)
+    users = await service.users_by_id(db, ids, state.clock())
     hidden = await service.hidden_from(db, user.id)
     return await _with_status(
         state,
@@ -83,7 +83,7 @@ async def online_players(
 async def player_profile(
     username: UsernameQuery, user: CurrentUser, state: State, db: DB
 ) -> ProfileOut:
-    player = await service.find_player(db, username)
+    player = await service.find_player(db, username, state.clock())
     if player is None:
         raise AppError(404, "player_not_found", "No such player.")
     (status,) = await _with_status(state, db, [(player.id, player.username)])
@@ -170,8 +170,8 @@ async def list_blocks(user: CurrentUser, db: DB) -> list[PlayerOut]:
     ]
 
 
-async def _player(db: DB, username: str) -> uuid.UUID:
-    player = await service.find_player(db, username)
+async def _player(state: AppState, db: DB, username: str) -> uuid.UUID:
+    player = await service.find_player(db, username, state.clock())
     if player is None:
         raise AppError(404, "player_not_found", "No such player.")
     return player.id
@@ -182,7 +182,7 @@ async def block_player(username: UsernameQuery, user: CurrentUser, state: State,
     """Block a player: neither of you can challenge the other, and neither sees the other in
     the lobby's player lists. Open challenges between you are closed."""
     await enforce_limit(state, BLOCKS_PER_USER, str(user.id))
-    blocked_id = await _player(db, username)
+    blocked_id = await _player(state, db, username)
     for challenge in await service.block(db, state.clock(), user.id, blocked_id):
         await notify_challenge(state, db, challenge)
 
@@ -190,4 +190,4 @@ async def block_player(username: UsernameQuery, user: CurrentUser, state: State,
 @router.delete("/blocks/{username}", status_code=status.HTTP_204_NO_CONTENT)
 async def unblock_player(username: UsernameQuery, user: CurrentUser, state: State, db: DB) -> None:
     await enforce_limit(state, BLOCKS_PER_USER, str(user.id))
-    await service.unblock(db, user.id, await _player(db, username))
+    await service.unblock(db, user.id, await _player(state, db, username))

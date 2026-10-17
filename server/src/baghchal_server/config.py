@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     smtp_password: SecretStr = SecretStr("")
     smtp_starttls: bool = True
 
+    blocked_username_words: tuple[str, ...] = ()
+    """Usernames containing any of these (ignoring case, digits, ``_`` and ``-``) are refused,
+    e.g. ``BAGHCHAL_BLOCKED_USERNAME_WORDS='["slur1", "slur2"]'``. Moderators can rename
+    anything the list misses."""
+
     game_sweeper: bool = True
     """End games whose clock ran out in the background (tests drive it by hand)."""
 

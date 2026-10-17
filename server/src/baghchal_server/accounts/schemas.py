@@ -76,6 +76,7 @@ class UserOut(BaseModel):
 
 class MeOut(UserOut):
     email: str
+    role: Literal["player", "moderator"]
 
 
 class SessionOut(BaseModel):

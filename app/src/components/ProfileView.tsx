@@ -62,6 +62,13 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
         />
       )}
       {!isMe && <BlockControl username={profile.username} blocked={profile.blocked} />}
+      {!isMe && (
+        <Button
+          title={`Report ${profile.username}`}
+          variant="secondary"
+          onPress={() => router.push(`/report/${profile.username}`)}
+        />
+      )}
     </>
   );
 }

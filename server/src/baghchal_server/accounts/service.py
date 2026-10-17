@@ -6,10 +6,10 @@ caller only where noted. Responses never reveal whether an email address is regi
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Final
 
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import ColumnElement, and_, delete, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,8 +32,45 @@ RESERVED_USERNAMES: Final = frozenset(
 )  # fmt: skip
 
 
+PERMANENT: Final = datetime(9999, 12, 31, tzinfo=UTC)
+"""A suspension that never ends: a ban."""
+MODERATOR: Final = "moderator"
+
+
 def username_key(username: str) -> str:
     return username.lower()
+
+
+def username_allowed(settings: Settings, username: str) -> bool:
+    """False for reserved names and names containing a blocked word."""
+    key = username_key(username)
+    if key in RESERVED_USERNAMES or key.startswith(DELETED_PREFIX):
+        return False
+    letters = "".join(c for c in key if c.isalpha())  # "b_a-d1" hides "bad" too
+    return not any(word.lower() in letters for word in settings.blocked_username_words)
+
+
+def is_suspended(user: User, now: datetime) -> bool:
+    return user.suspended_until is not None and user.suspended_until > now
+
+
+def in_good_standing(now: datetime) -> ColumnElement[bool]:
+    """Condition for an account that exists and is not suspended."""
+    return and_(
+        User.is_active.is_(True),
+        or_(User.suspended_until.is_(None), User.suspended_until <= now),
+    )
+
+
+def suspension_error(user: User) -> AppError:
+    until = user.suspended_until
+    when = (
+        "This account has been banned."
+        if until is None or until >= PERMANENT
+        else f"This account is suspended until {until:%d %B %Y, %H:%M} UTC."
+    )
+    reason = f" Reason: {user.suspension_reason}" if user.suspension_reason else ""
+    return AppError(403, "account_suspended", when + reason)
 
 
 def email_key(email: str) -> str:
@@ -52,7 +89,7 @@ async def register(
     owner of an existing address gets a "you already have an account" mail instead.
     """
     ukey, ekey = username_key(data.username), email_key(data.email)
-    if ukey in RESERVED_USERNAMES or ukey.startswith(DELETED_PREFIX):
+    if not username_allowed(settings, data.username):
         raise AppError(409, "username_unavailable", "That username is not available.")
     if data.password.lower() == ukey:
         raise AppError(422, "weak_password", "Your password must not be your username.")
@@ -136,6 +173,8 @@ async def login(
         raise AppError(401, "invalid_credentials", "Wrong username, email or password.")
     if not user.is_active:
         raise AppError(403, "account_disabled", "This account has been disabled.")
+    if is_suspended(user, now):
+        raise suspension_error(user)
     if user.email_verified_at is None:
         raise AppError(403, "email_not_verified", "Please verify your email address first.")
     if hasher.needs_rehash(user.password_hash):
@@ -174,7 +213,7 @@ async def resolve_session(db: AsyncSession, token: str, now: datetime) -> User |
             .where(
                 Session.token_hash == hash_token(token),
                 Session.expires_at > now,
-                User.is_active.is_(True),
+                in_good_standing(now),
             )
         )
     ).first()

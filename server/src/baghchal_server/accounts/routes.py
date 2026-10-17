@@ -62,10 +62,20 @@ def _send(tasks: BackgroundTasks, state: AppState, mail: Mail | None) -> None:
         tasks.add_task(deliver, state.mailer, mail)
 
 
+def _me(user: User) -> MeOut:
+    return MeOut(
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        created_at=user.created_at,
+        role="moderator" if user.role == service.MODERATOR else "player",
+    )
+
+
 def _session_response(
     response: Response, state: AppState, user: User, token: str, transport: Transport
 ) -> SessionOut:
-    me = MeOut(id=user.id, username=user.username, email=user.email, created_at=user.created_at)
+    me = _me(user)
     if transport == "bearer":
         return SessionOut(user=me, token=token)
     s = state.settings
@@ -165,7 +175,7 @@ async def confirm_password_reset(
 
 @router.get("/me")
 async def me(user: CurrentUser) -> MeOut:
-    return MeOut(id=user.id, username=user.username, email=user.email, created_at=user.created_at)
+    return _me(user)
 
 
 # ── The signed-in player's account ────────────────────────────────────────

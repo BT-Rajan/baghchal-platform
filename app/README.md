@@ -49,6 +49,7 @@ src/
     _layout.tsx   providers, signed-in / signed-out route guards, error boundary
     (tabs)/       Play (the lobby), Leaderboard, Me
     game/[id].tsx  player/[username].tsx  challenge/[username].tsx  account.tsx
+    report/[username].tsx  moderation/ (the report queue and a player's record)
     sign-in, sign-up, forgot-password, verify-email, reset-password, confirm-email
   api/          HTTP client, errors, typed endpoints, generated schema types, query keys
   auth/         the session (SessionStore), token storage, form checks
@@ -73,6 +74,9 @@ scripts/        the Expo-cloud guardrail
 - **Your account.** Me → Account settings changes the email address (confirmed by a link sent
   to the new one) or password, downloads your data (a file on the web, the share sheet in
   apps) and deletes the account.
+- **Reports and moderation.** "Report" on a profile or a finished game sends a report (with
+  the game). Moderators see Me → Moderation: the report queue and each player's record, where
+  they suspend, ban, lift a suspension, rename and dismiss reports, always with a reason.
 - **Errors.** Every failure becomes an `ApiError` with the server's `code`; screens branch on
   the code, never on the message.
 - **Live updates.** One WebSocket per app or tab. It reconnects with jittered backoff, pings
@@ -96,7 +100,7 @@ scripts/        the Expo-cloud guardrail
   `src/game` and `src/lobby` must stay at 100% coverage.
 - **Screen tests** in `tests/` render the real routes against a fake server
   (`tests/support/fakeServer.ts`) and a fake socket (`tests/support/fakeSocket.ts`): signing
-  in, the lobby, challenges, live events, playing, clocks, results, matches, blocking and account settings.
+  in, the lobby, challenges, live events, playing, clocks, results, matches, blocking, account settings, reports and moderation.
 - **End-to-end smoke** (`npm run e2e:smoke`) runs locally, not in CI. It starts the real server
   on a throwaway SQLite database, builds and serves the web app, and drives two Chromium
   browsers: Alice and Bob sign up, open their emailed links, Alice challenges Bob, Bob accepts,

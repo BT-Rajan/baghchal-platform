@@ -78,6 +78,18 @@ These rules belong to the platform, not the board; the server enforces them.
   online list. Only the blocker can see or undo the block.
 - No draws by agreement, matching the board rules.
 
+## Reports and moderation
+- **Reports**: any player can report another for cheating, abuse, an offensive username or
+  something else, optionally pointing at a game between the two. The reported player is not
+  told who reported them. One open report per pair; 20 reports a day per player.
+- **Suspensions**: a moderator can suspend a player for some days or ban them, always with a
+  reason, which the player is emailed and shown when they try to sign in. A suspended player is
+  signed out everywhere, their open challenges close, a live game counts as a resignation
+  (both games of a rated match), and they are hidden from search, profiles, the online list
+  and leaderboards until the suspension ends or is lifted. Their ratings are kept.
+- **Renames**: a moderator can replace an offensive username; the player is emailed the new
+  name and the reason.
+
 ## Ratings
 - **Glicko-2**, separately for **blitz** (3+2, 5+3) and **rapid** (10+5, 15+10). Everyone
   starts at 1500 with deviation 350. Only rated games count; casual games never do.

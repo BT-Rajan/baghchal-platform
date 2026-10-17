@@ -98,6 +98,15 @@ export default function GameScreen() {
         />
       )}
       {game.status === 'finished' && mine !== null && <Rematch game={game} mine={mine} />}
+      {game.status === 'finished' && mine !== null && (
+        <Button
+          title={`Report ${playerOf(game, other(mine)).username}`}
+          variant="secondary"
+          onPress={() =>
+            router.push(`/report/${playerOf(game, other(mine)).username}?game=${game.id}`)
+          }
+        />
+      )}
       {game.status === 'finished' && (
         <Button
           title="Back to the lobby"

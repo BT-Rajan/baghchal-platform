@@ -21,6 +21,11 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     email_verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    role: Mapped[str] = mapped_column(String(16), default="player", server_default="player")
+    """``player`` or ``moderator``. Granted only from the command line, never through the API."""
+    suspended_until: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    """While in the future the player cannot sign in or be found; far future means banned."""
+    suspension_reason: Mapped[str | None] = mapped_column(String(500))
     deleted_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     """When the player deleted the account. The row stays, without personal data, so the
     games of the players they met keep their opponent."""

@@ -100,6 +100,7 @@ builds the web app.
 | GET | `/api/v1/players/{username}` | A player's profile, with ratings and leaderboard rank |
 | GET | `/api/v1/blocks` | Players you have blocked |
 | PUT, DELETE | `/api/v1/blocks/{username}` | Block or unblock a player (see [rules](docs/rules.md#live-play-platform-rules)) |
+| POST | `/api/v1/players/{username}/report` | Report a player to the moderators (`reason`, `details`, optional `game_id`) |
 | GET | `/api/v1/challenges` | Your open challenges, incoming and outgoing |
 | POST | `/api/v1/challenges` | Challenge an online player (`time_control` 3+2, 5+3, 10+5, 15+10; `rated`; `side`) |
 | POST | `/api/v1/challenges/{id}/accept`, `/decline`, `/cancel` | Answer or withdraw a challenge; accepting starts the game |
@@ -108,8 +109,26 @@ builds the web app.
 | POST | `/api/v1/games/{id}/moves` | Play `{"ply": n, "move": "a1-b2"}` (`ply` = moves you have seen) |
 | POST | `/api/v1/games/{id}/resign`, `/abort`, `/claim-abandonment` | End the game (see [rules](docs/rules.md#live-play-platform-rules)) |
 | GET | `/api/v1/leaderboards/{blitz\|rapid}` | Top established players |
+| GET | `/api/v1/mod/reports?status=open` | Moderators: the report queue (or closed reports) |
+| POST | `/api/v1/mod/reports/{id}/dismiss` | Moderators: close a report without acting |
+| GET | `/api/v1/mod/players/{username}` | Moderators: a player's standing, reports and moderation log |
+| POST | `/api/v1/mod/players/{username}/suspend`, `/unsuspend`, `/rename` | Moderators: suspend (`days`, or `null` to ban), lift a suspension, or rename; each needs a `reason` |
 | WS | `/api/v1/ws` | Live events — see [`docs/realtime.md`](docs/realtime.md) |
 | GET | `/health/live`, `/health/ready` | Liveness; readiness (database, Redis) |
 
 Browsers authenticate with an HttpOnly session cookie; native apps pass
 `"transport": "bearer"` when signing in and send `Authorization: Bearer <token>`.
+
+### Moderation
+Moderators are made from the server's command line, never through the API (so a stolen
+session cannot promote itself). It uses the same `BAGHCHAL_*` settings as the server:
+
+```bash
+cd server
+uv run python -m baghchal_server.moderators grant alice     # or: revoke alice, list
+```
+
+Every moderator action is logged with its reason, and moderators cannot act on themselves or
+on other moderators. To refuse usernames containing certain words (ignoring case, digits,
+`_` and `-`), set `BAGHCHAL_BLOCKED_USERNAME_WORDS='["word1", "word2"]'`; moderators can rename
+anything the list misses.
