@@ -446,13 +446,55 @@ async def test_claiming_an_abandoned_game(
             code: str = (await who.http.post(url)).json()["error"]["code"]
             return code
 
-        clock.advance(seconds=ABANDON_AFTER.total_seconds())
+        wait = ABANDON_AFTER.total_seconds()
+        clock.advance(seconds=wait)
         assert await claim(alice) == "cannot_claim"  # bob is still connected
         await bob_socket.aclose()  # bob leaves
         assert await claim(bob) == "cannot_claim"  # it is bob's own turn
+        assert await claim(alice) == "cannot_claim"  # bob only just left; he may be back
+        clock.advance(seconds=wait - 1)
+        assert await claim(alice) == "cannot_claim"
+        clock.advance(seconds=1)  # bob has now been gone for the whole wait
         r = await alice.http.post(url)
         assert r.status_code == 200
         assert r.json()["result"] == {"winner": "goat", "reason": "abandoned"}
+
+
+async def test_a_connection_that_blinks_does_not_count_as_leaving(
+    app: FastAPI, pair: tuple[Player, Player], clock: Clock
+) -> None:
+    """A weak connection drops and comes back; the wait starts again from the last drop."""
+    alice, bob = pair
+    async with AsyncExitStack() as stack:
+        await _online(app, stack, alice)
+        bob_socket = AsyncExitStack()
+        await _online(app, bob_socket, bob)
+        game = await _start(alice, bob, "15+10")
+        game = await _play(alice, bob, game, ["c3", "a1-b2", "c2"])  # bob (tiger) to move
+        url = f"/api/v1/games/{game['id']}/claim-abandonment"
+        await bob_socket.aclose()
+        clock.advance(seconds=40)
+        async with AsyncExitStack() as again:  # bob is back for a moment
+            await _online(app, again, bob)
+            clock.advance(seconds=5)
+        clock.advance(seconds=30)  # 75 s on bob's turn, but only 30 s since he was last seen
+        assert (await alice.http.post(url)).json()["error"]["code"] == "cannot_claim"
+        clock.advance(seconds=30)
+        assert (await alice.http.post(url)).json()["result"]["reason"] == "abandoned"
+
+
+async def test_claiming_against_someone_never_seen_online(
+    app: FastAPI, pair: tuple[Player, Player], clock: Clock
+) -> None:
+    """A challenger need not be connected; with no record of them, only the turn time counts."""
+    alice, bob = pair
+    async with AsyncExitStack() as stack:
+        await _online(app, stack, bob)
+        game = await _start(alice, bob, "15+10")  # alice never opens a socket
+        game = await _play(alice, bob, game, ["c3", "a1-b2"])  # alice (goat) to move
+        clock.advance(seconds=ABANDON_AFTER.total_seconds())
+        r = await bob.http.post(f"/api/v1/games/{game['id']}/claim-abandonment")
+        assert r.json()["result"] == {"winner": "tiger", "reason": "abandoned"}
 
 
 async def test_no_claim_before_the_wait_is_over(

@@ -3,17 +3,24 @@
 Each open connection refreshes its entry every ``HEARTBEAT`` seconds and entries lapse after
 ``TTL`` seconds, so a server that dies without cleaning up stops showing its users as online
 within ``TTL``. A user is online while any of their connections is.
+
+Presence also remembers when each user was last seen connected (``seen`` / ``last_seen``, in
+the application's clock), so the server can tell a player who has been gone for a while from
+one whose connection just blinked.
 """
 
 import time
 import uuid
 from collections.abc import Iterable
+from datetime import UTC, datetime
 from typing import Final, Protocol
 
 from redis.asyncio import Redis
 
 HEARTBEAT: Final = 15.0
 TTL: Final = 45.0
+SEEN_TTL: Final = 7 * 24 * 3600
+"""How long a last-seen time is kept (seconds)."""
 
 
 class Presence(Protocol):
@@ -22,6 +29,8 @@ class Presence(Protocol):
     async def online(self, user_ids: Iterable[uuid.UUID]) -> set[uuid.UUID]: ...
     async def list_online(self, limit: int) -> list[uuid.UUID]: ...
     async def count(self) -> int: ...
+    async def seen(self, user_id: uuid.UUID, at: datetime) -> None: ...
+    async def last_seen(self, user_id: uuid.UUID) -> datetime | None: ...
 
 
 class MemoryPresence:
@@ -29,6 +38,7 @@ class MemoryPresence:
 
     def __init__(self) -> None:
         self._conns: dict[uuid.UUID, dict[str, float]] = {}
+        self._seen: dict[uuid.UUID, datetime] = {}
 
     def _live(self, user_id: uuid.UUID, now: float) -> bool:
         conns = self._conns.get(user_id)
@@ -60,6 +70,12 @@ class MemoryPresence:
     async def count(self) -> int:
         now = time.time()
         return sum(1 for u in list(self._conns) if self._live(u, now))
+
+    async def seen(self, user_id: uuid.UUID, at: datetime) -> None:
+        self._seen[user_id] = at
+
+    async def last_seen(self, user_id: uuid.UUID) -> datetime | None:
+        return self._seen.get(user_id)
 
 
 # Keys: presence:users is a sorted set of user ids scored by when they lapse;
@@ -121,3 +137,10 @@ class RedisPresence:
 
     async def count(self) -> int:
         return int(await self._redis.zcount(_USERS, f"({time.time()}", "+inf"))
+
+    async def seen(self, user_id: uuid.UUID, at: datetime) -> None:
+        await self._redis.set(f"presence:seen:{user_id}", str(at.timestamp()), ex=SEEN_TTL)
+
+    async def last_seen(self, user_id: uuid.UUID) -> datetime | None:
+        raw = await self._redis.get(f"presence:seen:{user_id}")
+        return None if raw is None else datetime.fromtimestamp(float(raw), UTC)

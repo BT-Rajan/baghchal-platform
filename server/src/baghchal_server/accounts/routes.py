@@ -24,19 +24,25 @@ from baghchal_server.deps import (
     enforce_limit,
     session_token,
 )
+from baghchal_server.errors import AppError
 from baghchal_server.mail import Mail, deliver
 from baghchal_server.ratelimit import Limit
 
 router = APIRouter(prefix="/api/v1")
 
-REGISTER_PER_IP: Final = Limit("register-ip", 10, 3600)
+# Per-IP limits allow for many people behind one address (a school, an office, a cafe, a
+# mobile carrier). Guessing is held back by the per-account limits, the per-address mail limit
+# and the cost of argon2id; the per-IP limits stop one address from doing too much of anything.
+REGISTER_PER_IP: Final = Limit("register-ip", 60, 3600)
 MAIL_PER_ADDRESS: Final = Limit("mail-address", 3, 3600)
-LOGIN_PER_IP: Final = Limit("login-ip", 30, 900)
+LOGIN_PER_IP: Final = Limit("login-ip", 300, 900)
+# Only failed sign-ins count here, so a room full of people signing in is never held up.
+LOGIN_FAILURES_PER_IP: Final = Limit("login-fail-ip", 50, 900)
 LOGIN_PER_ACCOUNT_IP: Final = Limit("login-account-ip", 10, 900)
 # Higher, so a stranger cannot lock a player out, yet distributed guessing is still capped.
 LOGIN_PER_ACCOUNT: Final = Limit("login-account", 100, 900)
-RESET_PER_IP: Final = Limit("reset-ip", 10, 3600)
-TOKEN_PER_IP: Final = Limit("token-ip", 30, 3600)
+RESET_PER_IP: Final = Limit("reset-ip", 30, 3600)
+TOKEN_PER_IP: Final = Limit("token-ip", 120, 3600)
 
 
 def _send(tasks: BackgroundTasks, state: AppState, mail: Mail | None) -> None:
@@ -90,10 +96,16 @@ async def login(
     data: LoginIn, request: Request, response: Response, state: State, db: DB
 ) -> SessionOut:
     ip, account = client_ip(request), data.login.strip().lower()
+    await enforce_limit(state, LOGIN_FAILURES_PER_IP, ip, count=False)
     await enforce_limit(state, LOGIN_PER_IP, ip)
     await enforce_limit(state, LOGIN_PER_ACCOUNT_IP, f"{account}|{ip}")
     await enforce_limit(state, LOGIN_PER_ACCOUNT, account)
-    user, token = await service.login(db, state.hasher, state.settings, state.clock(), data)
+    try:
+        user, token = await service.login(db, state.hasher, state.settings, state.clock(), data)
+    except AppError as error:
+        if error.code == "invalid_credentials":
+            await state.limiter.hit(LOGIN_FAILURES_PER_IP, ip)
+        raise
     return _session_response(response, state, user, token, data.transport)
 
 

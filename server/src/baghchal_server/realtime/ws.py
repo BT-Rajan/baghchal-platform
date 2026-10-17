@@ -6,6 +6,8 @@ Security:
 - The session is re-checked periodically, so signing out or a password reset also closes
   sockets that are already open.
 - Messages are size-limited and rate-limited; a client that stops reading is disconnected.
+- A client that goes silent is disconnected too (a phone app suspended in the background
+  keeps its connection open without answering), so it stops counting as online.
 """
 
 import asyncio
@@ -32,12 +34,16 @@ MAX_MESSAGE_CHARS: Final = 4096
 MESSAGES_PER_SECOND: Final = 10.0
 MESSAGE_BURST: Final = 20.0
 SESSION_CHECK_SECONDS = 60.0
+IDLE_SECONDS = 90.0
+"""Clients ping every 25 seconds; one silent this long is gone. Generous, because browsers
+slow down timers in background tabs."""
 
 # Close codes (4000-4999 are ours to define).
 CLOSE_UNSUPPORTED = 1003
 CLOSE_TOO_BIG = 1009
 CLOSE_SIGNED_OUT = 4401
 CLOSE_TOO_SLOW = 4408
+CLOSE_IDLE = 4410
 CLOSE_RATE_LIMITED = 4429
 
 
@@ -82,6 +88,7 @@ async def socket(ws: WebSocket) -> None:
     conn = Connection(user.id)
     await state.hub.attach(conn)
     await state.presence.touch(user.id, conn.id)
+    await state.presence.seen(user.id, state.clock())
     log.info("ws.open", user_id=str(user.id), conn_id=conn.id)
     tasks: set[asyncio.Task[int | None]] = set()
     try:
@@ -104,6 +111,7 @@ async def socket(ws: WebSocket) -> None:
         await asyncio.gather(*tasks, return_exceptions=True)
         await state.hub.detach(conn)
         await state.presence.remove(user.id, conn.id)
+        await state.presence.seen(user.id, state.clock())
         log.info("ws.close", user_id=str(user.id), conn_id=conn.id)
 
 
@@ -114,6 +122,7 @@ async def _read(ws: WebSocket, conn: Connection) -> int | None:
         message = await ws.receive()
         if message["type"] == "websocket.disconnect":
             return None
+        conn.last_heard = time.monotonic()
         text = message.get("text")
         if text is None:
             return CLOSE_UNSUPPORTED
@@ -146,7 +155,10 @@ async def _keep_alive(state: AppState, conn: Connection, token: str) -> int | No
     last_check = time.monotonic()
     while True:
         await asyncio.sleep(presence_module.HEARTBEAT)
+        if time.monotonic() - conn.last_heard > IDLE_SECONDS:
+            return CLOSE_IDLE
         await state.presence.touch(conn.user_id, conn.id)
+        await state.presence.seen(conn.user_id, state.clock())
         if time.monotonic() - last_check >= SESSION_CHECK_SECONDS:
             last_check = time.monotonic()
             async with state.sessions() as db:

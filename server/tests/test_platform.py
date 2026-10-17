@@ -8,6 +8,7 @@ import pytest
 from fastapi import FastAPI
 from pydantic import ValidationError
 
+from baghchal_server.accounts import routes as account_routes
 from baghchal_server.app import create_app
 from baghchal_server.config import Settings
 from baghchal_server.mail import MemoryMailer
@@ -104,6 +105,44 @@ async def test_login_rate_limit(app: FastAPI) -> None:
         # The attacker's failures do not lock the account owner out.
         r = await owner.post(LOGIN, json={"login": "victim", "password": "wrong password"})
         assert r.status_code == 401
+
+
+async def test_one_address_can_sign_in_many_people(
+    app: FastAPI, client: httpx.AsyncClient, mailer: MemoryMailer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A school or office shares one address. Successful sign-ins never use up its allowance;
+    only failed ones count, and too many of them block the address (not the accounts)."""
+    monkeypatch.setattr(account_routes, "LOGIN_FAILURES_PER_IP", Limit("login-fail-ip", 3, 900))
+    for name in ("ana", "ben"):
+        await sign_up(client, mailer, name, f"{name}@example.com")
+    r = await client.post(
+        "/api/v1/auth/register",
+        json={"username": "dan", "email": "dan@example.com", "password": PASSWORD},
+    )
+    assert r.status_code == 202  # dan never confirms his address
+
+    def client_from(ip: str) -> httpx.AsyncClient:
+        transport = httpx.ASGITransport(app=app, client=(ip, 1234))
+        return httpx.AsyncClient(transport=transport, base_url="http://testserver")
+
+    async def sign_in(http: httpx.AsyncClient, name: str, password: str = PASSWORD) -> int:
+        body = {"login": name, "password": password, "transport": "bearer"}
+        return (await http.post(LOGIN, json=body)).status_code
+
+    async with client_from("192.0.2.10") as classroom, client_from("192.0.2.99") as home:
+        for _ in range(5):  # more sign-ins than the failure allowance: all fine
+            assert {await sign_in(classroom, "ana"), await sign_in(classroom, "ben")} == {200}
+        # Refusals other than a wrong password are not failed guesses.
+        assert [await sign_in(classroom, "dan") for _ in range(4)] == [403] * 4
+        assert await sign_in(classroom, "ana") == 200
+        for name in ("ana", "ben", "cara"):  # three wrong passwords use the allowance up
+            assert await sign_in(classroom, name, "wrong password") == 401
+        r = await classroom.post(
+            LOGIN, json={"login": "ana", "password": PASSWORD, "transport": "bearer"}
+        )
+        assert r.status_code == 429
+        assert r.json()["error"]["code"] == "rate_limited"
+        assert await sign_in(home, "ana") == 200  # another address is not affected
 
 
 async def test_memory_rate_limiter_windows_and_capacity() -> None:

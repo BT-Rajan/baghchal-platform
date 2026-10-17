@@ -164,6 +164,21 @@ async def test_memory_limiter_starts_a_new_window(monkeypatch: pytest.MonkeyPatc
     assert await limiter.hit(limit, "k") == 0
 
 
+async def test_memory_limiter_can_check_without_counting(monkeypatch: pytest.MonkeyPatch) -> None:
+    now = 1_000_000.0
+    monkeypatch.setattr(time, "time", lambda: now)
+    limiter = MemoryRateLimiter()
+    limit = Limit("t", 2, 60)
+    assert await limiter.exceeded(limit, "k") == 0  # nothing counted yet
+    await limiter.hit(limit, "k")
+    assert await limiter.exceeded(limit, "k") == 0  # checking counts nothing
+    assert await limiter.exceeded(limit, "k") == 0
+    await limiter.hit(limit, "k")
+    assert await limiter.exceeded(limit, "k") == 20  # used up until 1_000_020
+    now += 60
+    assert await limiter.exceeded(limit, "k") == 0  # a new window
+
+
 @needs_redis
 async def test_redis_limiter() -> None:
     assert REDIS_URL
@@ -175,6 +190,9 @@ async def test_redis_limiter() -> None:
         assert await limiter.hit(limit, "k") == 0
         assert 1 <= await limiter.hit(limit, "k") <= 60
         assert await limiter.hit(limit, "other") == 0
+        assert 1 <= await limiter.exceeded(limit, "k") <= 60
+        assert await limiter.exceeded(limit, "other") == 0  # one of two used
+        assert await limiter.exceeded(limit, "never") == 0
     finally:
         await redis.aclose()
 

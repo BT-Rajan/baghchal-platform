@@ -1,5 +1,6 @@
 """Players and challenges."""
 
+import math
 import uuid
 from collections.abc import Sequence
 from datetime import datetime, timedelta
@@ -20,6 +21,9 @@ from baghchal_server.realtime.presence import Presence
 
 CHALLENGE_TTL: Final = timedelta(seconds=60)
 MAX_OUTGOING_CHALLENGES: Final = 5
+RATED_MATCH_EVERY: Final = timedelta(hours=24)
+"""Two players may start one rated match per this long, so ratings cannot be farmed between
+friends or between someone's own accounts. Casual games are not limited."""
 Response = Literal["accept", "decline", "cancel"]
 
 _RESULT: Final = {
@@ -80,6 +84,10 @@ async def create_challenge(
         raise AppError(409, "player_offline", f"{opponent.username} is not online.")
     if await games.busy(db, [challenger.id, opponent.id]):
         raise _busy()
+    if data.rated:
+        last = await games.last_rated_match(db, challenger.id, opponent.id)
+        if last is not None and now - last < RATED_MATCH_EVERY:
+            raise _rated_limit(opponent.username, last + RATED_MATCH_EVERY - now)
     outgoing = await db.scalar(
         select(func.count())
         .select_from(Challenge)
@@ -167,6 +175,18 @@ async def respond(
     if (response == "cancel") != (user_id == challenge.challenger_id):
         raise AppError(403, "not_allowed", f"You cannot {response} this challenge.")
     raise AppError(409, "challenge_closed", "This challenge is no longer open.")
+
+
+def _rated_limit(opponent: str, wait: timedelta) -> AppError:
+    hours = math.ceil(wait.total_seconds() / 3600)
+    when = "in under an hour" if hours <= 1 else f"in {hours} hours"
+    return AppError(
+        429,
+        "rated_match_limit",
+        f"You have already played a rated match against {opponent} in the last 24 hours. "
+        f"You can play another {when}; casual games are always open.",
+        headers={"Retry-After": str(math.ceil(wait.total_seconds()))},
+    )
 
 
 def _busy() -> AppError:

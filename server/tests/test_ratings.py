@@ -203,22 +203,97 @@ async def test_an_aborted_first_game_ends_the_match(app: FastAPI, players: Playe
     assert (await alice.http.get("/api/v1/games")).json() == []
 
 
-async def test_an_aborted_second_game_keeps_the_first_result(
-    app: FastAPI, players: PlayerFactory
+async def _second_game(alice: Player, game1: dict[str, Any]) -> dict[str, Any]:
+    game2_id = game1["match"]["games"][1] if len(game1["match"]["games"]) > 1 else None
+    if game2_id is None:  # the response was built just before game 2 existed
+        game2_id = (await alice.http.get("/api/v1/games")).json()[0]["id"]
+    game2: dict[str, Any] = (await alice.http.get(f"/api/v1/games/{game2_id}")).json()
+    return game2
+
+
+async def test_the_second_game_cannot_be_aborted(
+    app: FastAPI, players: PlayerFactory, clock: Clock
 ) -> None:
+    """Otherwise the winner of game 1 could skip the side they would rather not play."""
     alice, bob = await players("alice"), await players("bob")
     by_id = {alice.id: alice, bob.id: bob}
     async with AsyncExitStack() as stack:
         await stack.enter_async_context(open_socket(app, bob.auth))
         game1 = await _accepted(alice, bob, rated=True)
     game1 = await _play(by_id, game1, FIVE_CAPTURES)
-    game2_id = game1["match"]["games"][1] if len(game1["match"]["games"]) > 1 else None
-    if game2_id is None:  # the response was built just before game 2 existed
-        game2_id = (await alice.http.get("/api/v1/games")).json()[0]["id"]
-    r = await bob.http.post(f"/api/v1/games/{game2_id}/abort")
-    assert r.json()["result"]["reason"] == "aborted"
+    game2 = await _second_game(alice, game1)
+    for player in (alice, bob):
+        r = await player.http.post(f"/api/v1/games/{game2['id']}/abort")
+        assert r.status_code == 409
+        assert r.json()["error"] == {
+            "code": "cannot_abort",
+            "message": "The second game of a rated match cannot be aborted.",
+        }
+    # Not making a first move loses on time, and the loss is rated.
+    clock.advance(seconds=31)
+    game2 = (await alice.http.get(f"/api/v1/games/{game2['id']}")).json()
+    assert game2["result"] == {"winner": "tiger", "reason": "timeout"}
+    assert game2["ratings"]["goat"]["change"] < 0
     assert (await alice.http.get("/api/v1/games")).json() == []
-    assert (await _profile(alice, "alice"))["ratings"]["blitz"]["games"] == 1
+    assert (await _profile(alice, "alice"))["ratings"]["blitz"]["games"] == 2
+
+
+async def _challenge(challenger: Player, opponent: Player, **options: object) -> httpx.Response:
+    return await challenger.http.post(
+        "/api/v1/challenges",
+        json={"opponent": opponent.username, "time_control": "5+3", **options},
+    )
+
+
+async def test_one_rated_match_per_pair_per_day(
+    app: FastAPI, players: PlayerFactory, clock: Clock
+) -> None:
+    """So ratings cannot be farmed between friends, or between someone's own accounts."""
+    alice, bob, carol = await players("alice"), await players("bob"), await players("carol")
+    async with AsyncExitStack() as stack:
+        for p in (alice, bob, carol):
+            await stack.enter_async_context(open_socket(app, p.auth))
+        game = await _accepted(alice, bob, rated=True)
+        await alice.http.post(f"/api/v1/games/{game['id']}/resign")
+        game2 = await _second_game(
+            alice, (await alice.http.get(f"/api/v1/games/{game['id']}")).json()
+        )
+        await alice.http.post(f"/api/v1/games/{game2['id']}/resign")
+
+        clock.advance(hours=20)
+        for challenger, opponent in ((alice, bob), (bob, alice)):  # either way round
+            r = await _challenge(challenger, opponent, rated=True)
+            assert r.status_code == 429
+            assert r.json()["error"]["code"] == "rated_match_limit"
+            assert r.json()["error"]["message"] == (
+                f"You have already played a rated match against {opponent.username} in the last "
+                "24 hours. You can play another in 4 hours; casual games are always open."
+            )
+            assert int(r.headers["retry-after"]) == 4 * 3600
+        # Other pairs, and casual games, are not limited.
+        r = await _challenge(alice, carol, rated=True)
+        assert r.status_code == 201
+        await carol.http.post(f"/api/v1/challenges/{r.json()['id']}/decline")
+        r = await _challenge(alice, bob)
+        assert r.status_code == 201
+        await bob.http.post(f"/api/v1/challenges/{r.json()['id']}/decline")
+
+        clock.advance(hours=3, minutes=30)
+        r = await _challenge(alice, bob, rated=True)
+        assert "in under an hour" in r.json()["error"]["message"]
+        clock.advance(minutes=30)
+        assert (await _challenge(alice, bob, rated=True)).status_code == 201
+
+
+async def test_a_match_aborted_in_its_first_game_does_not_count(
+    app: FastAPI, players: PlayerFactory
+) -> None:
+    alice, bob = await players("alice"), await players("bob")
+    async with AsyncExitStack() as stack:
+        await stack.enter_async_context(open_socket(app, bob.auth))
+        game = await _accepted(alice, bob, rated=True)
+        await alice.http.post(f"/api/v1/games/{game['id']}/abort")
+        assert (await _challenge(alice, bob, rated=True)).status_code == 201
 
 
 async def test_time_controls_have_separate_ratings(app: FastAPI, players: PlayerFactory) -> None:

@@ -3,6 +3,7 @@ import os
 import time
 import uuid
 from contextlib import AsyncExitStack
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -11,6 +12,7 @@ from fastapi import FastAPI
 from httpx_ws import WebSocketDisconnect, WebSocketUpgradeError
 from redis.asyncio import Redis
 
+from baghchal_server.deps import AppState
 from baghchal_server.mail import MemoryMailer
 from baghchal_server.realtime import hub as hub_module
 from baghchal_server.realtime import presence as presence_module
@@ -18,7 +20,7 @@ from baghchal_server.realtime import ws as ws_module
 from baghchal_server.realtime.hub import OUTBOX_SIZE, Connection, Hub, MemoryBroker, RedisBroker
 from baghchal_server.realtime.presence import MemoryPresence, Presence, RedisPresence
 
-from .conftest import ORIGIN, PlayerFactory, open_socket, sign_up
+from .conftest import ORIGIN, Clock, PlayerFactory, open_socket, sign_up
 
 REDIS_URL = os.environ.get("BAGHCHAL_TEST_REDIS_URL")
 needs_redis = pytest.mark.skipif(not REDIS_URL, reason="set BAGHCHAL_TEST_REDIS_URL")
@@ -153,6 +155,27 @@ async def test_signing_out_closes_open_sockets(
         assert await _closed_with(ws) == ws_module.CLOSE_SIGNED_OUT
 
 
+async def test_a_silent_client_is_disconnected(
+    app: FastAPI, players: PlayerFactory, monkeypatch: pytest.MonkeyPatch, clock: Clock
+) -> None:
+    """A phone app suspended in the background keeps its socket without answering; it must
+    stop counting as online, and its last-seen time is kept for abandonment claims."""
+    monkeypatch.setattr(presence_module, "HEARTBEAT", 0.05)
+    monkeypatch.setattr(ws_module, "IDLE_SECONDS", 0.3)
+    alice = await players("alice")
+    state: AppState = app.state.ctx
+    async with open_socket(app, alice.auth) as ws:
+        await _receive(ws)
+        for _ in range(4):  # pinging keeps it open well past the idle limit
+            await asyncio.sleep(0.1)
+            await ws.send_json({"type": "ping"})
+            assert await _receive(ws) == {"type": "pong"}
+        clock.advance(seconds=5)
+        assert await _closed_with(ws) == ws_module.CLOSE_IDLE
+    assert await state.presence.online([uuid.UUID(alice.id)]) == set()
+    assert await state.presence.last_seen(uuid.UUID(alice.id)) == clock()
+
+
 async def test_a_client_that_stops_reading_is_disconnected() -> None:
     conn = Connection(uuid.uuid4())
     for _ in range(OUTBOX_SIZE):
@@ -197,6 +220,11 @@ async def _presence_contract(presence: Presence, monkeypatch: pytest.MonkeyPatch
     await presence.remove(a, "c2")
     assert await presence.online([a]) == set()
     await presence.remove(a, "never-existed")
+    # Last seen, in the application's clock.
+    assert await presence.last_seen(a) is None
+    seen_at = datetime(2026, 1, 1, 12, 30, 15, 250_000, tzinfo=UTC)
+    await presence.seen(a, seen_at)
+    assert await presence.last_seen(a) == seen_at
     # An entry that is not refreshed lapses (a server that died without cleaning up).
     real_time = time.time
     monkeypatch.setattr(time, "time", lambda: real_time() + presence_module.TTL + 1)

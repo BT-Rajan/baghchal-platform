@@ -10,6 +10,7 @@ allowed to make the server buffer without limit.
 
 import asyncio
 import contextlib
+import time
 import uuid
 from collections.abc import Callable
 from typing import Final, Protocol
@@ -33,6 +34,8 @@ class Connection:
         self.user_id = user_id
         self.outbox: asyncio.Queue[str] = asyncio.Queue(OUTBOX_SIZE)
         self.overflowed = asyncio.Event()
+        self.last_heard = time.monotonic()
+        """When the client last sent anything (clients ping every 25 seconds)."""
 
     def offer(self, message: str) -> None:
         try:

@@ -14,7 +14,7 @@ Every message is a JSON text frame with a `type`.
 | Direction | `type` | Body |
 |---|---|---|
 | server → client | `hello` | `user: {id, username}` — sent once, on connect |
-| client → server | `ping` | — |
+| client → server | `ping` | — send one at least every 30 s; a silent connection is closed (4410) |
 | server → client | `pong` | — |
 | server → client | `challenge` | `challenge: {...}` — a challenge involving you was created or changed (any status); match on `challenge.id` |
 | server → client | `game` | `game: {...}` — a game you play in started or changed: the full state (position, legal moves, clocks, result); match on `game.id` and keep the highest `game.ply` |
@@ -34,12 +34,15 @@ arrives after the deadline is refused, and the game ends on time even if nobody 
 | 1009 | Message over 4 KB |
 | 4401 | Session ended (signed out, password reset, account disabled) — checked every minute |
 | 4408 | Client stopped reading; more than 64 events queued |
+| 4410 | Client went silent: nothing received for 90 s (a phone app suspended in the background) |
 | 4429 | More than 10 messages per second (burst 20) |
 
 ## How it scales
 - **Presence**: each connection refreshes a Redis entry every 15 s; entries lapse after 45 s,
   so users of a crashed server stop showing as online within 45 s. A user is online while any
-  of their connections is.
+  of their connections is. Each user's last-seen time is kept too (for abandonment claims).
+- **Apps in the background** close their connection, so they stop showing as online straight
+  away, and reconnect when they return to the foreground (catching up on what they missed).
 - **Delivery**: events are published to a per-user Redis channel; each server subscribes to
   the channels of users connected to it. Any server can notify any user.
 - Without Redis (development), presence and delivery are in-process.

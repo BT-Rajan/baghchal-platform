@@ -20,6 +20,15 @@ class RateLimiter(Protocol):
         """Count one attempt; return 0 if allowed, else seconds until the window resets."""
         ...
 
+    async def exceeded(self, limit: Limit, key: str) -> int:
+        """Without counting anything: 0 if another attempt is allowed, else seconds until the
+        window resets. For limits that count only some outcomes (such as failed sign-ins)."""
+        ...
+
+
+def _retry_after(limit: Limit, window: int, now: float) -> int:
+    return max(1, math.ceil((window + 1) * limit.seconds - now))
+
 
 class MemoryRateLimiter:
     """For development and tests. Holds at most ``max_keys`` windows, dropping the oldest."""
@@ -41,7 +50,15 @@ class MemoryRateLimiter:
             del self._windows[next(iter(self._windows))]
         if count <= limit.count:
             return 0
-        return max(1, math.ceil((window + 1) * limit.seconds - now))
+        return _retry_after(limit, window, now)
+
+    async def exceeded(self, limit: Limit, key: str) -> int:
+        now = time.time()
+        window = int(now // limit.seconds)
+        start, count = self._windows.get(f"{limit.name}:{key}", (window, 0))
+        if start != window or count < limit.count:
+            return 0
+        return _retry_after(limit, window, now)
 
 
 class RedisRateLimiter:
@@ -58,4 +75,12 @@ class RedisRateLimiter:
             count, _ = await pipe.execute()
         if int(count) <= limit.count:
             return 0
-        return max(1, math.ceil((window + 1) * limit.seconds - now))
+        return _retry_after(limit, window, now)
+
+    async def exceeded(self, limit: Limit, key: str) -> int:
+        now = time.time()
+        window = int(now // limit.seconds)
+        count = await self._redis.get(f"rl:{limit.name}:{window}:{key}")
+        if count is None or int(count) < limit.count:
+            return 0
+        return _retry_after(limit, window, now)

@@ -5,7 +5,9 @@ The server is the only authority. Each move is checked by the engine, recorded o
 tab or two servers can never play twice. Clocks are computed from server time only.
 
 Clocks start after each side's first move: until then a side has ``FIRST_MOVE_GRACE`` to move,
-or the game is aborted without a result.
+or the game is aborted without a result. The second game of a rated match is the exception: it
+cannot be aborted, and a side that does not make its first move loses on time, so nobody can
+skip the side they would rather not play.
 """
 
 import secrets
@@ -15,9 +17,10 @@ from collections.abc import Awaitable, Callable, Sequence
 from datetime import datetime, timedelta
 from typing import Final
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from baghchal_engine import Game as EngineGame
 from baghchal_engine import (
@@ -237,6 +240,24 @@ async def _after_finish(db: AsyncSession, game_id: uuid.UUID, now: datetime) -> 
             .where(Match.id == game.match_id)
             .values(status=MatchStatus.FINISHED, finished_at=now)
         )
+
+
+async def last_rated_match(db: AsyncSession, a: uuid.UUID, b: uuid.UUID) -> datetime | None:
+    """When the latest rated match between two players started. A match whose first game was
+    aborted never had a rated game, so it does not count."""
+    first_game = aliased(Game)
+    return await db.scalar(
+        select(func.max(Match.created_at))
+        .join(Challenge, Challenge.id == Match.challenge_id)
+        .join(first_game, and_(first_game.match_id == Match.id, first_game.match_game == 1))
+        .where(
+            or_(
+                and_(Challenge.challenger_id == a, Challenge.opponent_id == b),
+                and_(Challenge.challenger_id == b, Challenge.opponent_id == a),
+            ),
+            or_(first_game.end_reason.is_(None), first_game.end_reason != EndReason.ABORTED),
+        )
+    )
 
 
 async def match_games(db: AsyncSession, match_id: uuid.UUID) -> Sequence[Game]:
@@ -516,6 +537,10 @@ async def resign(db: AsyncSession, game_id: uuid.UUID, user_id: uuid.UUID, now: 
 
 async def abort(db: AsyncSession, game_id: uuid.UUID, user_id: uuid.UUID, now: datetime) -> Game:
     async def decide(game: Game, side: SideName) -> tuple[SideName | None, EndReason]:
+        if game.match_game == 2:
+            raise AppError(
+                409, "cannot_abort", "The second game of a rated match cannot be aborted."
+            )
         if game.ply >= 2:
             raise AppError(409, "cannot_abort", "Games can only be aborted before both sides move.")
         return None, EndReason.ABORTED
@@ -526,20 +551,24 @@ async def abort(db: AsyncSession, game_id: uuid.UUID, user_id: uuid.UUID, now: d
 async def claim_abandonment(
     db: AsyncSession, presence: Presence, game_id: uuid.UUID, user_id: uuid.UUID, now: datetime
 ) -> Game:
-    """Win a game whose opponent has been away for ABANDON_AFTER on their own turn."""
+    """Win a game whose opponent has been away for ABANDON_AFTER on their own turn: their turn
+    has lasted that long, and they have not been connected at all for that long either (a
+    connection that blinks off and on again does not count as leaving)."""
 
     async def decide(game: Game, side: SideName) -> tuple[SideName | None, EndReason]:
         opponent_id = game.tiger_id if side == "goat" else game.goat_id
+        last_seen = await presence.last_seen(opponent_id)
         if (
             game.ply < 2
             or _side_to_move(game) == side
             or now - game.turn_started_at < ABANDON_AFTER
             or await presence.online([opponent_id])
+            or (last_seen is not None and now - last_seen < ABANDON_AFTER)
         ):
             raise AppError(
                 409,
                 "cannot_claim",
-                "You can claim the game once your opponent has been away for "
+                "You can claim the game once your opponent has been offline for "
                 f"{int(ABANDON_AFTER.total_seconds())} seconds on their turn.",
             )
         return side, EndReason.ABANDONED
@@ -548,8 +577,9 @@ async def claim_abandonment(
 
 
 async def expire(db: AsyncSession, game: Game, now: datetime) -> bool:
-    """End a game whose deadline has passed: aborted before both moved, else a timeout loss."""
-    if game.ply < 2:
+    """End a game whose deadline has passed: aborted before both moved (except in the second
+    game of a match, which cannot be aborted), else a timeout loss."""
+    if game.ply < 2 and game.match_game != 2:
         return await _finish(db, game, now, None, EndReason.ABORTED)
     return await _finish(db, game, now, _other(_side_to_move(game)), EndReason.TIMEOUT)
 
