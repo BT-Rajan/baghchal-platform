@@ -68,10 +68,21 @@ class GameOut(BaseModel):
     ratings: RatingsOut
     match: MatchOut | None
     """Rated games are played as two-game matches."""
+    computer: Literal["easy", "medium", "hard"] | None
+    """Set when one of the players is the computer: its level."""
     deadline_at: datetime | None
     server_time: datetime
     created_at: datetime
     finished_at: datetime | None
+
+
+class ComputerGameIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    level: Literal["easy", "medium", "hard"] = "medium"
+    side: Literal["goat", "tiger", "random"] = "random"
+    """The side you play."""
+    time_control: Literal["3+2", "5+3", "10+5", "15+10"] = "10+5"
 
 
 class MoveIn(BaseModel):

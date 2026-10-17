@@ -20,6 +20,7 @@ from baghchal_server.db import create_engine, session_factory
 from baghchal_server.deps import AppState
 from baghchal_server.errors import install_handlers
 from baghchal_server.games import models as _game_models  # noqa: F401  (registers tables)
+from baghchal_server.games.computer import ComputerPlayers
 from baghchal_server.games.routes import router as games_router
 from baghchal_server.games.sweeper import run as run_sweeper
 from baghchal_server.health import router as health_router
@@ -117,6 +118,7 @@ def create_app(
             hub=hub,
             presence=RedisPresence(redis) if redis else MemoryPresence(),
             metrics=metrics,
+            computer=ComputerPlayers(settings.computer_workers),
         )
         sweeper = asyncio.create_task(run_sweeper(app.state.ctx)) if settings.game_sweeper else None
         log.info("startup", environment=settings.environment)
@@ -127,6 +129,7 @@ def create_app(
                 sweeper.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await sweeper
+            await app.state.ctx.computer.stop()
             await hub.stop()
             await engine.dispose()
             if redis is not None:

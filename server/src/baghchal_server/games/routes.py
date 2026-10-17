@@ -1,19 +1,23 @@
 import uuid
 from typing import Final
 
-from fastapi import APIRouter
+from fastapi import APIRouter, status
 
+from baghchal_engine.ai import Level
 from baghchal_server.deps import DB, AppState, CurrentUser, State, enforce_limit
+from baghchal_server.games import computer as computer_players
 from baghchal_server.games import service
 from baghchal_server.games.events import notify
 from baghchal_server.games.models import GameStatus
-from baghchal_server.games.schemas import GameOut, MoveIn
+from baghchal_server.games.schemas import ComputerGameIn, GameOut, MoveIn
+from baghchal_server.lobby.time_controls import TIME_CONTROLS
 from baghchal_server.ratelimit import Limit
 
 router = APIRouter(prefix="/api/v1")
 
 # Generous: a 3+2 game is fast, but no human needs more than a few moves a second.
 MOVES_PER_USER: Final = Limit("game-move", 300, 60)
+COMPUTER_GAMES_PER_USER: Final = Limit("computer-game", 60, 3600)
 
 
 async def _settle(state: AppState, db: DB, game_id: uuid.UUID) -> None:
@@ -49,7 +53,35 @@ async def play(
     await enforce_limit(state, MOVES_PER_USER, str(user.id))
     await _settle(state, db, game_id)
     game = await service.play(db, game_id, user.id, data, state.clock(), presence=state.presence)
-    return await notify(state, db, game)
+    out = await notify(state, db, game)
+    if game.bot_level is not None and game.status == GameStatus.ACTIVE:
+        state.computer.schedule(state, game_id)  # its reply
+    return out
+
+
+@router.post("/games/computer", status_code=status.HTTP_201_CREATED)
+async def play_the_computer(
+    data: ComputerGameIn, user: CurrentUser, state: State, db: DB
+) -> GameOut:
+    """Start a casual game against the computer. If it plays goats, it moves first."""
+    await enforce_limit(state, COMPUTER_GAMES_PER_USER, str(user.id))
+    now = state.clock()
+    level = Level(data.level)
+    computer = await computer_players.account(db, level, now)
+    tc = TIME_CONTROLS[data.time_control]
+    game = await service.start_computer_game(
+        db,
+        now,
+        player_id=user.id,
+        computer_id=computer.id,
+        level=level.value,
+        side=data.side,
+        initial_seconds=tc.initial_seconds,
+        increment_seconds=tc.increment_seconds,
+    )
+    out = await notify(state, db, game)
+    state.computer.schedule(state, game.id)  # moves first when it has the goats
+    return out
 
 
 @router.post("/games/{game_id}/resign")

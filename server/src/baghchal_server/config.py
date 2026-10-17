@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     e.g. ``BAGHCHAL_BLOCKED_USERNAME_WORDS='["slur1", "slur2"]'``. Moderators can rename
     anything the list misses."""
 
+    computer_workers: int = Field(default=2, ge=0, le=64)
+    """Processes per server that think for the computer opponent. 0 thinks in a thread instead
+    (fine for development and tests)."""
+
     game_sweeper: bool = True
     """End games whose clock ran out in the background (tests drive it by hand)."""
 

@@ -3,7 +3,7 @@
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import TYPE_CHECKING, Annotated, Literal
 
 from fastapi import Depends, Request
 from redis.asyncio import Redis
@@ -21,6 +21,9 @@ from baghchal_server.realtime.hub import Hub
 from baghchal_server.realtime.presence import Presence
 from baghchal_server.security import PasswordHasher
 
+if TYPE_CHECKING:
+    from baghchal_server.games.computer import ComputerPlayers
+
 
 @dataclass(frozen=True, slots=True)
 class AppState:
@@ -35,6 +38,7 @@ class AppState:
     hub: Hub
     presence: Presence
     metrics: Metrics
+    computer: "ComputerPlayers"
 
 
 def get_state(request: Request) -> AppState:

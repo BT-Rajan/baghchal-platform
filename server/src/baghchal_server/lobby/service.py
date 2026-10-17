@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from baghchal_server.accounts.models import User
-from baghchal_server.accounts.service import in_good_standing
+from baghchal_server.accounts.service import BOT_ROLE, in_good_standing
 from baghchal_server.errors import AppError
 from baghchal_server.games import service as games
 from baghchal_server.games.models import Game
@@ -37,7 +37,11 @@ _RESULT: Final = {
 def _playable(now: datetime) -> ColumnElement[bool]:
     """Condition for a user who can be found and challenged: verified, not deleted, not
     suspended."""
-    return and_(in_good_standing(now), User.email_verified_at.is_not(None))
+    return and_(
+        in_good_standing(now),
+        User.email_verified_at.is_not(None),
+        User.role != BOT_ROLE,  # the computer is played from its own menu, not challenged
+    )
 
 
 def pair_key(a: uuid.UUID, b: uuid.UUID) -> str:
