@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from baghchal_server.accounts.models import User
+from baghchal_server.accounts.service import in_good_standing
 from baghchal_server.lobby.time_controls import Category
 from baghchal_server.ratings import glicko2
 from baghchal_server.ratings.models import PlayerRating
@@ -97,7 +98,7 @@ async def leaderboard(
             PlayerRating.category == category,
             PlayerRating.deviation <= PROVISIONAL_DEVIATION,
             PlayerRating.updated_at >= now - LEADERBOARD_ACTIVE,
-            User.is_active.is_(True),
+            in_good_standing(now),
         )
         .order_by(PlayerRating.rating.desc(), User.username_key)
         .limit(limit)
@@ -117,7 +118,7 @@ async def rank_of(db: AsyncSession, row: PlayerRating, now: datetime) -> int | N
             PlayerRating.category == row.category,
             PlayerRating.deviation <= PROVISIONAL_DEVIATION,
             PlayerRating.updated_at >= now - LEADERBOARD_ACTIVE,
-            User.is_active.is_(True),
+            in_good_standing(now),
             PlayerRating.rating > row.rating,
         )
     )

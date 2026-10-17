@@ -25,7 +25,8 @@ from baghchal_server.config import Settings
 from baghchal_server.errors import AppError
 from baghchal_server.games.models import Game, GameMove
 from baghchal_server.games.service import active_games
-from baghchal_server.lobby.models import Block, Challenge, ChallengeStatus
+from baghchal_server.lobby.models import Block, Challenge
+from baghchal_server.lobby.service import close_open_challenges
 from baghchal_server.mail import Mail
 from baghchal_server.ratings.models import PlayerRating
 
@@ -168,22 +169,7 @@ async def delete_account(
             "game_in_progress",
             "Finish or resign your live game before deleting your account.",
         )
-    challenges = (
-        await db.scalars(
-            select(Challenge).where(
-                or_(Challenge.challenger_id == user.id, Challenge.opponent_id == user.id),
-                Challenge.status == ChallengeStatus.PENDING,
-            )
-        )
-    ).all()
-    for challenge in challenges:
-        challenge.status = (
-            ChallengeStatus.CANCELLED
-            if challenge.challenger_id == user.id
-            else ChallengeStatus.DECLINED
-        )
-        challenge.pair_key = None
-        challenge.responded_at = now
+    challenges = await close_open_challenges(db, user.id, now)
     mail = Mail(
         user.email,
         "Your Bagh Chal account was deleted",

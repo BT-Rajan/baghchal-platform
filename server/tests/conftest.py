@@ -103,6 +103,8 @@ async def app(settings: Settings, mailer: MemoryMailer, clock: Clock) -> AsyncIt
                 "ratings",
                 "challenges",
                 "blocks",
+                "reports",
+                "moderation_actions",
                 "sessions",
                 "email_tokens",
                 "users",

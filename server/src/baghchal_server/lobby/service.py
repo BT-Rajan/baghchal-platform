@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from baghchal_server.accounts.models import User
+from baghchal_server.accounts.service import in_good_standing
 from baghchal_server.errors import AppError
 from baghchal_server.games import service as games
 from baghchal_server.games.models import Game
@@ -33,9 +34,10 @@ _RESULT: Final = {
 }
 
 
-def _playable() -> ColumnElement[bool]:
-    """Condition for a user who can be found and challenged."""
-    return and_(User.is_active.is_(True), User.email_verified_at.is_not(None))
+def _playable(now: datetime) -> ColumnElement[bool]:
+    """Condition for a user who can be found and challenged: verified, not deleted, not
+    suspended."""
+    return and_(in_good_standing(now), User.email_verified_at.is_not(None))
 
 
 def pair_key(a: uuid.UUID, b: uuid.UUID) -> str:
@@ -45,12 +47,14 @@ def pair_key(a: uuid.UUID, b: uuid.UUID) -> str:
 # ── Players ───────────────────────────────────────────────────────────────
 
 
-async def find_player(db: AsyncSession, username: str) -> User | None:
-    return await db.scalar(select(User).where(User.username_key == username.lower(), _playable()))
+async def find_player(db: AsyncSession, username: str, now: datetime) -> User | None:
+    return await db.scalar(
+        select(User).where(User.username_key == username.lower(), _playable(now))
+    )
 
 
 async def search_players(
-    db: AsyncSession, prefix: str, limit: int, viewer_id: uuid.UUID
+    db: AsyncSession, prefix: str, limit: int, viewer_id: uuid.UUID, now: datetime
 ) -> Sequence[User]:
     """Players whose username starts with ``prefix``, leaving out anyone the viewer has
     blocked or who has blocked the viewer."""
@@ -61,7 +65,7 @@ async def search_players(
             select(User)
             .where(
                 User.username_key.like(pattern, escape="\\"),
-                _playable(),
+                _playable(now),
                 User.id.not_in(select(Block.blocked_id).where(Block.blocker_id == viewer_id)),
                 User.id.not_in(select(Block.blocker_id).where(Block.blocked_id == viewer_id)),
             )
@@ -133,6 +137,30 @@ async def block(
     return open_challenges
 
 
+async def close_open_challenges(
+    db: AsyncSession, user_id: uuid.UUID, now: datetime
+) -> Sequence[Challenge]:
+    """Close every pending challenge the player sent (cancelled) or received (declined), when
+    their account is deleted or suspended. The caller commits and tells the other players."""
+    challenges = (
+        await db.scalars(
+            select(Challenge).where(
+                or_(Challenge.challenger_id == user_id, Challenge.opponent_id == user_id),
+                Challenge.status == ChallengeStatus.PENDING,
+            )
+        )
+    ).all()
+    for challenge in challenges:
+        challenge.status = (
+            ChallengeStatus.CANCELLED
+            if challenge.challenger_id == user_id
+            else ChallengeStatus.DECLINED
+        )
+        challenge.pair_key = None
+        challenge.responded_at = now
+    return challenges
+
+
 async def unblock(db: AsyncSession, blocker_id: uuid.UUID, blocked_id: uuid.UUID) -> None:
     await db.execute(
         delete(Block).where(Block.blocker_id == blocker_id, Block.blocked_id == blocked_id)
@@ -140,10 +168,12 @@ async def unblock(db: AsyncSession, blocker_id: uuid.UUID, blocked_id: uuid.UUID
     await db.commit()
 
 
-async def users_by_id(db: AsyncSession, ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, User]:
+async def users_by_id(
+    db: AsyncSession, ids: Sequence[uuid.UUID], now: datetime
+) -> dict[uuid.UUID, User]:
     if not ids:
         return {}
-    rows = await db.scalars(select(User).where(User.id.in_(ids), _playable()))
+    rows = await db.scalars(select(User).where(User.id.in_(ids), _playable(now)))
     return {u.id: u for u in rows}
 
 
@@ -153,7 +183,7 @@ async def users_by_id(db: AsyncSession, ids: Sequence[uuid.UUID]) -> dict[uuid.U
 async def create_challenge(
     db: AsyncSession, presence: Presence, now: datetime, challenger: User, data: ChallengeIn
 ) -> Challenge:
-    opponent = await find_player(db, data.opponent)
+    opponent = await find_player(db, data.opponent, now)
     if opponent is None:
         raise AppError(404, "player_not_found", "No such player.")
     if opponent.id == challenger.id:
