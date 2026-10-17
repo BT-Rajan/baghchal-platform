@@ -1,4 +1,5 @@
-"""Account rules: registration, email verification, login, sessions and password reset.
+"""Account rules: registration, email verification, login, sessions, password reset, and
+changing a password or email address.
 
 Every function takes the clock as ``now`` so expiry is testable, and leaves committing to the
 caller only where noted. Responses never reveal whether an email address is registered.
@@ -21,6 +22,9 @@ from baghchal_server.security import PasswordHasher, hash_token, new_token
 
 VERIFY: Final = "verify"
 RESET: Final = "reset"
+EMAIL_CHANGE: Final = "email-change"
+DELETED_PREFIX: Final = "deleted-"
+"""Usernames of deleted accounts start with this, so nobody can register one."""
 SESSION_TOUCH_INTERVAL: Final = timedelta(minutes=5)
 RESERVED_USERNAMES: Final = frozenset(
     {"admin", "administrator", "anonymous", "api", "baghchal", "guest", "help", "mod",
@@ -48,7 +52,7 @@ async def register(
     owner of an existing address gets a "you already have an account" mail instead.
     """
     ukey, ekey = username_key(data.username), email_key(data.email)
-    if ukey in RESERVED_USERNAMES:
+    if ukey in RESERVED_USERNAMES or ukey.startswith(DELETED_PREFIX):
         raise AppError(409, "username_unavailable", "That username is not available.")
     if data.password.lower() == ukey:
         raise AppError(422, "weak_password", "Your password must not be your username.")
@@ -225,13 +229,117 @@ async def reset_password(
     await db.commit()
 
 
+# ── Changes while signed in ───────────────────────────────────────────────
+
+
+async def check_password(hasher: PasswordHasher, user: User, password: str) -> None:
+    """Make sure the signed-in player typed their password, before a sensitive change."""
+    if not await hasher.verify(user.password_hash, password):
+        raise AppError(403, "wrong_password", "That is not your current password.")
+
+
+async def change_password(  # noqa: PLR0913 - who, which session stays, and the new password
+    db: AsyncSession,
+    hasher: PasswordHasher,
+    settings: Settings,
+    now: datetime,
+    user: User,
+    *,
+    current_session: str,
+    new_password: str,
+) -> Mail:
+    """Set a new password and sign out every other device; returns the notice to send."""
+    if new_password.lower() == user.username_key:
+        raise AppError(422, "weak_password", "Your password must not be your username.")
+    user.password_hash = await hasher.hash(new_password)
+    user.updated_at = now
+    await db.execute(
+        delete(Session).where(
+            Session.user_id == user.id, Session.token_hash != hash_token(current_session)
+        )
+    )
+    await _cancel_tokens(db, user.id, RESET, now)
+    await db.commit()
+    return Mail(
+        user.email,
+        "Your Bagh Chal password was changed",
+        f"Hello {user.username},\n\nThe password of your account was just changed, and any "
+        "other devices were signed out.\n\nIf you did not do this, reset your password now at "
+        f"{settings.public_base_url}/forgot-password.",
+    )
+
+
+async def request_email_change(
+    db: AsyncSession, settings: Settings, now: datetime, user: User, new_email: str
+) -> Mail | None:
+    """Send a confirmation link to the new address (None: send nothing).
+
+    The address only changes once the link is opened, so a typo cannot lock anyone out. If the
+    address already belongs to someone, its owner is told instead, and the answer is the same.
+    """
+    key = email_key(new_email)
+    if key == user.email_key:
+        raise AppError(422, "same_email", "That is already your email address.")
+    owner = await db.scalar(select(User).where(User.email_key == key))
+    if owner is not None and owner.email_verified_at is not None:
+        await db.commit()
+        return _account_exists_mail(settings, owner)
+    token = await _issue_token(
+        db, user.id, EMAIL_CHANGE, now + settings.verify_email_ttl, now, new_email=new_email
+    )
+    await db.commit()
+    return Mail(
+        new_email,
+        "Confirm your new Bagh Chal email address",
+        f"Hello {user.username},\n\nTo use this address for your Bagh Chal account, open this "
+        f"link within {_hours(settings.verify_email_ttl)}:\n\n"
+        f"{settings.public_base_url}/confirm-email?token={token}\n\n"
+        "If you did not ask for this, ignore this email; nothing will change.",
+    )
+
+
+async def confirm_email_change(
+    db: AsyncSession, settings: Settings, now: datetime, token: str
+) -> tuple[User, Mail]:
+    """Switch to the confirmed address; returns the user and a notice for the old address."""
+    token_hash = hash_token(token)
+    user = await _active_user(db, await _consume_token(db, token, EMAIL_CHANGE, now))
+    new_email = await db.scalar(
+        select(EmailToken.new_email).where(EmailToken.token_hash == token_hash)
+    )
+    assert new_email is not None  # noqa: S101 - every email-change token has one
+    key = email_key(new_email)
+    # An abandoned sign-up may still hold the address; a real account keeps it.
+    await db.execute(
+        delete(User).where(
+            User.email_key == key,
+            User.email_verified_at.is_(None),
+            User.created_at < now - settings.verify_email_ttl,
+        )
+    )
+    if await db.scalar(select(User.id).where(User.email_key == key, User.id != user.id)):
+        await db.rollback()
+        raise AppError(409, "email_taken", "That email address now belongs to another account.")
+    old_email = user.email
+    user.email, user.email_key = new_email, key
+    user.email_verified_at = now
+    user.updated_at = now
+    # Reset links already sent to the old address must not work any more.
+    await _cancel_tokens(db, user.id, RESET, now)
+    await db.commit()
+    return user, Mail(
+        old_email,
+        "Your Bagh Chal email address was changed",
+        f"Hello {user.username},\n\nYour account now uses {new_email}; emails will no longer "
+        "come to this address.\n\nIf you did not do this, reply to this email so we can help "
+        "you get your account back.",
+    )
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────
 
 
-async def _issue_token(
-    db: AsyncSession, user_id: uuid.UUID, purpose: str, expires_at: datetime, now: datetime
-) -> str:
-    """Create a token, cancelling any earlier unused token for the same purpose."""
+async def _cancel_tokens(db: AsyncSession, user_id: uuid.UUID, purpose: str, now: datetime) -> None:
     await db.execute(
         update(EmailToken)
         .where(
@@ -241,12 +349,26 @@ async def _issue_token(
         )
         .values(used_at=now)
     )
+
+
+async def _issue_token(  # noqa: PLR0913 - what the token is for, and until when
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    purpose: str,
+    expires_at: datetime,
+    now: datetime,
+    *,
+    new_email: str | None = None,
+) -> str:
+    """Create a token, cancelling any earlier unused token for the same purpose."""
+    await _cancel_tokens(db, user_id, purpose, now)
     token, token_hash = new_token()
     db.add(
         EmailToken(
             token_hash=token_hash,
             user_id=user_id,
             purpose=purpose,
+            new_email=new_email,
             created_at=now,
             expires_at=expires_at,
         )

@@ -61,6 +61,33 @@ export function checkNewPassword(form: { password: string; confirm: string }) {
   });
 }
 
+export function checkPasswordChange(
+  form: { current: string; password: string; confirm: string },
+  username: string,
+) {
+  return only({
+    current: form.current === '' ? 'Enter your current password.' : undefined,
+    password: passwordProblem(form.password, username),
+    confirm: form.confirm !== form.password ? 'The passwords do not match.' : undefined,
+  });
+}
+
+export function checkEmailChange(form: { email: string; password: string }, current: string) {
+  const email = form.email.trim();
+  return only({
+    email:
+      emailProblem(email) ??
+      (email.toLowerCase() === current.toLowerCase()
+        ? 'That is already your email address.'
+        : undefined),
+    password: form.password === '' ? 'Enter your password.' : undefined,
+  });
+}
+
+export function checkPasswordGiven(form: { password: string }) {
+  return only({ password: form.password === '' ? 'Enter your password.' : undefined });
+}
+
 export function checkEmail(form: { email: string }) {
   return only({ email: emailProblem(form.email.trim()) });
 }

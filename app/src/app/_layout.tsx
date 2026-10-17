@@ -73,6 +73,7 @@ function Routes() {
           <Stack.Screen name="player/[username]" options={{ headerShown: true, title: '' }} />
           <Stack.Screen name="challenge/[username]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="game/[id]" options={{ headerShown: true, title: 'Game' }} />
+          <Stack.Screen name="account" options={{ headerShown: true, title: 'Account' }} />
         </Stack.Protected>
         <Stack.Protected guard={!signedIn}>
           <Stack.Screen name="sign-in" />
@@ -82,6 +83,7 @@ function Routes() {
         {/* Targets of emailed links: they work whether or not someone is signed in. */}
         <Stack.Screen name="verify-email" />
         <Stack.Screen name="reset-password" />
+        <Stack.Screen name="confirm-email" />
       </Stack>
     </View>
   );

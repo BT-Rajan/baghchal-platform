@@ -219,6 +219,167 @@
         }
       }
     },
+    "/api/v1/me/password": {
+      "post": {
+        "summary": "Change Password",
+        "description": "Choose a new password. Other devices are signed out; this one stays signed in.",
+        "operationId": "change_password_api_v1_me_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChangeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/email": {
+      "post": {
+        "summary": "Change Email",
+        "description": "Email a confirmation link to the new address; the address changes once it is opened.",
+        "operationId": "change_email_api_v1_me_email_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailChangeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Accepted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/confirm-email": {
+      "post": {
+        "summary": "Confirm Email Change",
+        "description": "Open the link sent to a new address. Works without signing in, on any device.",
+        "operationId": "confirm_email_change_api_v1_auth_confirm_email_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailChangeConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailChangedOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/export": {
+      "get": {
+        "summary": "Export Data",
+        "description": "Everything the server keeps about you, as one JSON document.",
+        "operationId": "export_data_api_v1_me_export_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/delete": {
+      "post": {
+        "summary": "Delete Account",
+        "description": "Delete your account for good. Every device is signed out.",
+        "operationId": "delete_account_api_v1_me_delete_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteAccountIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/players": {
       "get": {
         "summary": "Search Players",
@@ -1129,6 +1290,73 @@
         ],
         "title": "ClocksOut"
       },
+      "DeleteAccountIn": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "DeleteAccountIn"
+      },
+      "EmailChangeConfirmIn": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$",
+            "title": "Token"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "EmailChangeConfirmIn"
+      },
+      "EmailChangeIn": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email",
+            "title": "Email"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "password",
+          "email"
+        ],
+        "title": "EmailChangeIn"
+      },
+      "EmailChangedOut": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "EmailChangedOut"
+      },
       "EndReason": {
         "type": "string",
         "enum": [
@@ -1141,6 +1369,328 @@
           "aborted"
         ],
         "title": "EndReason"
+      },
+      "ExportAccount": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "email_verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Verified At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "username",
+          "email",
+          "created_at",
+          "email_verified_at"
+        ],
+        "title": "ExportAccount"
+      },
+      "ExportChallenge": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "sent",
+              "received"
+            ],
+            "title": "Direction"
+          },
+          "opponent": {
+            "type": "string",
+            "title": "Opponent"
+          },
+          "time_control": {
+            "type": "string",
+            "title": "Time Control"
+          },
+          "rated": {
+            "type": "boolean",
+            "title": "Rated"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "direction",
+          "opponent",
+          "time_control",
+          "rated",
+          "status"
+        ],
+        "title": "ExportChallenge"
+      },
+      "ExportGame": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "time_control": {
+            "type": "string",
+            "title": "Time Control"
+          },
+          "rated": {
+            "type": "boolean",
+            "title": "Rated"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "goat",
+              "tiger"
+            ],
+            "title": "Side"
+          },
+          "opponent": {
+            "type": "string",
+            "title": "Opponent"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "winner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Winner"
+          },
+          "end_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Reason"
+          },
+          "rating_change": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating Change"
+          },
+          "moves": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Moves"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "finished_at",
+          "time_control",
+          "rated",
+          "side",
+          "opponent",
+          "status",
+          "winner",
+          "end_reason",
+          "rating_change",
+          "moves"
+        ],
+        "title": "ExportGame"
+      },
+      "ExportOut": {
+        "properties": {
+          "exported_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Exported At"
+          },
+          "account": {
+            "$ref": "#/components/schemas/ExportAccount"
+          },
+          "ratings": {
+            "items": {
+              "$ref": "#/components/schemas/ExportRating"
+            },
+            "type": "array",
+            "title": "Ratings"
+          },
+          "games": {
+            "items": {
+              "$ref": "#/components/schemas/ExportGame"
+            },
+            "type": "array",
+            "title": "Games"
+          },
+          "challenges": {
+            "items": {
+              "$ref": "#/components/schemas/ExportChallenge"
+            },
+            "type": "array",
+            "title": "Challenges"
+          },
+          "blocked_players": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Blocked Players"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/ExportSession"
+            },
+            "type": "array",
+            "title": "Sessions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exported_at",
+          "account",
+          "ratings",
+          "games",
+          "challenges",
+          "blocked_players",
+          "sessions"
+        ],
+        "title": "ExportOut",
+        "description": "Everything the server keeps about a player, for them to download."
+      },
+      "ExportRating": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "rating": {
+            "type": "number",
+            "title": "Rating"
+          },
+          "deviation": {
+            "type": "number",
+            "title": "Deviation"
+          },
+          "volatility": {
+            "type": "number",
+            "title": "Volatility"
+          },
+          "games": {
+            "type": "integer",
+            "title": "Games"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "rating",
+          "deviation",
+          "volatility",
+          "games",
+          "updated_at"
+        ],
+        "title": "ExportRating"
+      },
+      "ExportSession": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_used_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Used At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_at",
+          "last_used_at",
+          "expires_at"
+        ],
+        "title": "ExportSession"
       },
       "GameOut": {
         "properties": {
@@ -1466,6 +2016,29 @@
           "move"
         ],
         "title": "MoveIn"
+      },
+      "PasswordChangeIn": {
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Current Password"
+          },
+          "new_password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 10,
+            "title": "New Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "PasswordChangeIn"
       },
       "PasswordResetConfirmIn": {
         "properties": {

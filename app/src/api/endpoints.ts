@@ -19,6 +19,7 @@ export type Category = S['Category'];
 export type TimeControl = S['ChallengeIn']['time_control'];
 export type Side = NonNullable<S['ChallengeIn']['side']>;
 export type EndReason = S['EndReason'];
+export type DataExport = S['ExportOut'];
 
 export type ChallengeAnswer = 'accept' | 'decline' | 'cancel';
 export type GameAction = 'resign' | 'abort' | 'claim-abandonment';
@@ -41,6 +42,17 @@ export function createApi(client: Client, transport: Transport) {
     confirmPasswordReset: (token: string, password: string) =>
       client.post<void>(`${V1}/auth/password-reset/confirm`, { body: { token, password } }),
     me: (signal?: AbortSignal) => client.get<Me>(`${V1}/me`, { signal }),
+    changePassword: (currentPassword: string, newPassword: string) =>
+      client.post<void>(`${V1}/me/password`, {
+        body: { current_password: currentPassword, new_password: newPassword },
+      }),
+    changeEmail: (password: string, email: string) =>
+      client.post<S['Accepted']>(`${V1}/me/email`, { body: { password, email } }),
+    confirmEmailChange: (token: string) =>
+      client.post<S['EmailChangedOut']>(`${V1}/auth/confirm-email`, { body: { token } }),
+    exportData: () => client.get<DataExport>(`${V1}/me/export`),
+    deleteAccount: (password: string) =>
+      client.post<void>(`${V1}/me/delete`, { body: { password } }),
 
     // Lobby
     searchPlayers: (prefix: string, signal?: AbortSignal) =>

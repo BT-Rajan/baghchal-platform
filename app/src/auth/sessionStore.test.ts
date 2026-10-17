@@ -153,6 +153,43 @@ describe('restore', () => {
   });
 });
 
+describe('refresh', () => {
+  test('reads the user again while signed in', async () => {
+    const { store, server } = setup({
+      saved: 'tok',
+      routes: { 'GET /api/v1/me': { status: 200, body: ME } },
+    });
+    await store.restore();
+    const changed = { ...ME, email: 'new@example.com' };
+    server.on('GET /api/v1/me', { status: 200, body: changed });
+    await store.refresh();
+    expect(store.getState()).toEqual({ status: 'signedIn', user: changed });
+  });
+
+  test('does nothing when signed out', async () => {
+    const { store, server } = setup();
+    await store.restore();
+    await store.refresh();
+    expect(server.requests).toEqual([]);
+    expect(store.getState()).toEqual({ status: 'signedOut' });
+  });
+
+  test('a late answer for an earlier session is ignored', async () => {
+    const { store, server } = setup({
+      saved: 'tok',
+      routes: { 'GET /api/v1/me': { status: 200, body: ME } },
+    });
+    await store.restore();
+    const answer = deferred<Reply>();
+    server.on('GET /api/v1/me', () => answer.promise);
+    const refreshing = store.refresh();
+    await store.start({ user: BOB, token: 'bob' });
+    answer.resolve({ status: 200, body: ME });
+    await refreshing;
+    expect(store.getState()).toEqual({ status: 'signedIn', user: BOB });
+  });
+});
+
 describe('signing in and out', () => {
   test('signIn trims the login, keeps the token and starts afresh', async () => {
     const { store, server, tokens, clear } = setup({
