@@ -9,10 +9,13 @@ live with clocks, and climb rated leaderboards — on web, phones and tablets.
 | `engine/` | Pure-Python rules engine (no dependencies) | Phase 1 ✅ |
 | `server/` | FastAPI backend: accounts, lobby, live games, ratings | Phases 2–5 ✅ |
 | `app/` | Expo / React Native client for web, iOS, Android ([README](app/README.md)) | Phase 6 ✅ |
-| `docs/` | Rules canon and architecture decision records | |
+| `docs/` | Rules canon, architecture decision records, [operations runbook](docs/operations.md) | |
+| `deploy/` | Production stack: Compose, Caddy, backups, Prometheus alerts | |
+| `tools/` | The load test (`tools/loadtest.py`) | |
 
 Start with [`docs/rules.md`](docs/rules.md), [`docs/realtime.md`](docs/realtime.md) and
-[`docs/adr/`](docs/adr/).
+[`docs/adr/`](docs/adr/). Running it in production (deployment, monitoring, backups, capacity):
+[`docs/operations.md`](docs/operations.md).
 
 ## Roadmap
 Each phase ships complete — tested, documented and reviewed — before the next begins.
@@ -30,7 +33,9 @@ Each phase ships complete — tested, documented and reviewed — before the nex
 6. **App** ✅ — Expo client for web, iOS and Android: sign-up, lobby and challenges, live
    games with clocks, rated matches, profiles and leaderboards; no Expo-cloud dependency.
 7. **More to play** — computer opponent, game archive and replay, fair-play checks.
-8. **Production hardening** — load tests, security review, backups, deployment.
+8. **Production hardening** — load tests, security review, backups, deployment, monitoring
+   (in place: see [`docs/operations.md`](docs/operations.md)); store builds and push
+   notifications for the apps still to come.
 
 ## Development
 Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).

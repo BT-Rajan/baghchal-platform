@@ -17,3 +17,6 @@ build/
 node_modules/
 .DS_Store
 *.rdb
+
+# The Prometheus scrape token (same value as METRICS_TOKEN in deploy/.env)
+deploy/monitoring/metrics-token

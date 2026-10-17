@@ -1,0 +1,48 @@
+# The front door: HTTPS (certificates from Let's Encrypt), the web app, and /api to the API
+# servers. Settings come from the environment: DOMAIN (e.g. play.example.com) and ACME_EMAIL.
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# The API and its WebSocket. "api" resolves to every API replica; requests go to the one
+	# with the fewest in flight, and replicas failing their readiness check are skipped.
+	handle /api/* {
+		reverse_proxy {
+			dynamic a api 8000 {
+				refresh 10s
+			}
+			lb_policy least_conn
+			health_uri /health/ready
+			health_interval 10s
+		}
+	}
+
+	# Health checks and metrics are for the orchestrator and Prometheus inside the network,
+	# never for the internet.
+	handle /health/* {
+		respond 404
+	}
+	handle /metrics {
+		respond 404
+	}
+
+	# The single-page app: unknown paths load index.html, and the router takes over. Built
+	# files carry content hashes, so they can be cached for good.
+	handle {
+		root * /srv/app
+		@hashed path /_expo/static/*
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		header -Server
+		header {
+			Strict-Transport-Security "max-age=31536000; includeSubDomains"
+			X-Content-Type-Options nosniff
+			Referrer-Policy strict-origin-when-cross-origin
+			X-Frame-Options DENY
+		}
+		try_files {path} /index.html
+		file_server
+	}
+}

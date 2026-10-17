@@ -1,0 +1,143 @@
+# Production stack on one machine: Caddy (HTTPS, the web app, /api), API replicas, MariaDB,
+# Redis, migrations and nightly backups. Optional monitoring (Prometheus, Alertmanager) with
+# `--profile monitoring`. See docs/operations.md.
+#
+#   cp deploy/.env.example deploy/.env      # then fill it in
+#   docker compose -f deploy/compose.prod.yaml --env-file deploy/.env up -d --build
+
+name: baghchal
+
+x-api-env: &api-env
+  BAGHCHAL_ENVIRONMENT: production
+  BAGHCHAL_DATABASE_URL: mysql+asyncmy://baghchal:${DB_PASSWORD:?set DB_PASSWORD}@db/baghchal
+  BAGHCHAL_REDIS_URL: redis://redis:6379/0
+  BAGHCHAL_PUBLIC_BASE_URL: https://${DOMAIN:?set DOMAIN}
+  BAGHCHAL_ALLOWED_ORIGINS: '["https://${DOMAIN}"]'
+  BAGHCHAL_MAIL_BACKEND: smtp
+  BAGHCHAL_MAIL_FROM: ${MAIL_FROM:?set MAIL_FROM}
+  BAGHCHAL_SMTP_HOST: ${SMTP_HOST:?set SMTP_HOST}
+  BAGHCHAL_SMTP_PORT: ${SMTP_PORT:-587}
+  BAGHCHAL_SMTP_USERNAME: ${SMTP_USERNAME:-}
+  BAGHCHAL_SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  BAGHCHAL_METRICS_TOKEN: ${METRICS_TOKEN:?set METRICS_TOKEN}
+  BAGHCHAL_SENTRY_DSN: ${SENTRY_DSN:-}
+  BAGHCHAL_BLOCKED_USERNAME_WORDS: ${BLOCKED_USERNAME_WORDS:-[]}
+  # Only Caddy can reach the API (it publishes no port), so trusting forwarded headers from
+  # any address in this network is safe, and rate limits see real client addresses.
+  FORWARDED_ALLOW_IPS: "*"
+
+services:
+  web:
+    image: baghchal-web
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile
+      args:
+        PUBLIC_URL: https://${DOMAIN}
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL}
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes: ["caddy-data:/data", "caddy-config:/config"]
+    depends_on:
+      api: { condition: service_healthy }
+    restart: unless-stopped
+
+  api:
+    image: baghchal-server
+    build: ..
+    environment: *api-env
+    deploy:
+      replicas: ${API_REPLICAS:-2}
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=2)"
+      interval: 10s
+      timeout: 3s
+      start_period: 20s
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  migrate:
+    image: baghchal-server  # built by the api service
+    pull_policy: never
+    command: ["alembic", "-c", "server/alembic.ini", "upgrade", "head"]
+    environment: *api-env
+    depends_on:
+      db: { condition: service_healthy }
+    restart: "no"
+
+  db:
+    image: mariadb:11.4
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_bin"]
+    environment:
+      MARIADB_DATABASE: baghchal
+      MARIADB_USER: baghchal
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set DB_ROOT_PASSWORD}
+    volumes: ["db-data:/var/lib/mysql"]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      retries: 30
+    restart: unless-stopped
+
+  # Presence, rate limits and live events. Nothing in it needs to survive a restart.
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory-policy", "noeviction"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+    restart: unless-stopped
+
+  # A consistent dump of the database every night, kept for BACKUP_KEEP_DAYS days in the
+  # backups volume. Copy that volume off this machine (see docs/operations.md).
+  backup:
+    image: mariadb:11.4
+    entrypoint: ["/bin/bash", "/scripts/backup-loop.sh"]
+    environment:
+      DB_HOST: db
+      DB_NAME: baghchal
+      DB_USER: baghchal
+      DB_PASSWORD: ${DB_PASSWORD}
+      BACKUP_DIR: /backups
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_AT: ${BACKUP_AT:-03:15}
+    volumes: ["./backup:/scripts:ro", "backups:/backups"]
+    depends_on:
+      db: { condition: service_healthy }
+    restart: unless-stopped
+
+  prometheus:
+    profiles: [monitoring]
+    image: prom/prometheus:v3.5.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=30d
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ./monitoring/metrics-token:/etc/prometheus/metrics-token:ro
+      - prometheus-data:/prometheus
+    ports: ["127.0.0.1:9090:9090"]
+    restart: unless-stopped
+
+  alertmanager:
+    profiles: [monitoring]
+    image: prom/alertmanager:v0.28.1
+    volumes: ["./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro"]
+    ports: ["127.0.0.1:9093:9093"]
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:
+  db-data:
+  backups:
+  prometheus-data:

@@ -1,0 +1,55 @@
+# Unit tests for alerts.yml: `promtool test rules alerts.test.yml` (from this directory).
+rule_files: [alerts.yml]
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'baghchal_http_requests_total{status="200"}'
+        values: '0+90x20'
+      - series: 'baghchal_http_requests_total{status="500"}'
+        values: '0+10x20'
+      - series: 'baghchal_sweeper_runs_total{instance="a"}'
+        values: '0x20'
+      - series: 'up{job="baghchal-api",instance="a"}'
+        values: '1x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: BaghchalServerErrors
+        exp_alerts:
+          - exp_labels: { severity: critical }
+            exp_annotations:
+              summary: More than 2% of requests fail with a server error
+              description: Look at Sentry (if set up) or `docker compose logs api` for tracebacks.
+      - eval_time: 15m
+        alertname: BaghchalSweeperStopped
+        exp_alerts:
+          - exp_labels: { severity: critical }
+            exp_annotations:
+              summary: Nothing is ending games that run out of time
+              description: >-
+                No replica has swept for 5 minutes, so flagged games stay open. With Redis, one
+                replica holds the lease; check Redis and the api logs for "sweeper.failed".
+      - eval_time: 15m
+        alertname: BaghchalDown
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'up{job="baghchal-api",instance="a"}'
+        values: '0x10'
+      - series: 'baghchal_sweeper_runs_total{instance="a"}'
+        values: '0+120x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: BaghchalDown
+        exp_alerts:
+          - exp_labels: { severity: critical }
+            exp_annotations:
+              summary: No API server is answering
+              description: >-
+                Prometheus cannot scrape any API replica. Players cannot sign in or play.
+                Check `docker compose ps`, then the api and db logs.
+      - eval_time: 5m
+        alertname: BaghchalSweeperStopped
+        exp_alerts: []
