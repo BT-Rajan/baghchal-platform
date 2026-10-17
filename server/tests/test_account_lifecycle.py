@@ -258,6 +258,21 @@ async def test_exporting_my_data(app: FastAPI, players: PlayerFactory, clock: Cl
     assert (theirs["side"], theirs["opponent"]) == ("tiger", "alice")
 
 
+async def test_an_opponent_who_deleted_their_account_shows_anonymously(
+    app: FastAPI, players: PlayerFactory
+) -> None:
+    alice, bob = await players("alice"), await players("bob")
+    async with AsyncExitStack() as stack:
+        await _online(app, stack, alice, bob)
+        game = await _start(alice, bob)
+        await alice.http.post(f"/api/v1/games/{game['id']}/resign")
+    assert (await bob.http.post(DELETE, json={"password": PASSWORD})).status_code == 204
+    r = await alice.http.get(EXPORT)
+    assert r.status_code == 200, r.text
+    assert r.json()["games"][0]["opponent"].startswith("deleted-")
+    assert r.json()["challenges"][0]["opponent"].startswith("deleted-")
+
+
 async def test_a_new_player_exports_little(app: FastAPI, players: PlayerFactory) -> None:
     alice = await players("alice")
     data = (await alice.http.get(EXPORT)).json()

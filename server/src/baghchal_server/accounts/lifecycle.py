@@ -26,7 +26,6 @@ from baghchal_server.errors import AppError
 from baghchal_server.games.models import Game, GameMove
 from baghchal_server.games.service import active_games
 from baghchal_server.lobby.models import Block, Challenge, ChallengeStatus
-from baghchal_server.lobby.service import users_by_id
 from baghchal_server.mail import Mail
 from baghchal_server.ratings.models import PlayerRating
 
@@ -71,7 +70,9 @@ async def export(db: AsyncSession, user: User, now: datetime) -> ExportOut:
     opponents = {g.tiger_id if g.goat_id == user.id else g.goat_id for g in games} | {
         c.opponent_id if c.challenger_id == user.id else c.challenger_id for c in challenges
     }
-    names = {uid: u.username for uid, u in (await users_by_id(db, list(opponents))).items()}
+    # Every opponent, deleted ones included (they show under their anonymous name).
+    rows = await db.execute(select(User.id, User.username).where(User.id.in_(opponents)))
+    names: dict[uuid.UUID, str] = dict(rows.all())
     ratings = (
         await db.scalars(
             select(PlayerRating)
