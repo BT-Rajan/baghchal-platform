@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
+import sentry_sdk
 import structlog
 from fastapi import FastAPI
 from redis.asyncio import Redis
@@ -24,6 +25,7 @@ from baghchal_server.health import router as health_router
 from baghchal_server.lobby import models as _lobby_models  # noqa: F401  (registers tables)
 from baghchal_server.lobby.routes import router as lobby_router
 from baghchal_server.mail import Mailer, make_mailer
+from baghchal_server.metrics import CountingMailer, Metrics
 from baghchal_server.middleware import BodyLimit, CrossSiteGuard, RequestContext, SecurityHeaders
 from baghchal_server.moderation import models as _moderation_models  # noqa: F401  (registers tables)
 from baghchal_server.moderation.routes import router as moderation_router
@@ -57,6 +59,20 @@ def configure_logging(settings: Settings) -> None:
     )
 
 
+def configure_error_tracking(settings: Settings) -> None:
+    """Report unexpected errors to Sentry when a DSN is set. No personal data is sent: no
+    IP addresses, cookies, headers or request bodies."""
+    if settings.sentry_dsn is None:
+        return
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn.get_secret_value(),
+        environment=settings.environment,
+        send_default_pii=False,
+        max_request_body_size="never",
+        traces_sample_rate=settings.sentry_traces_sample_rate,
+    )
+
+
 def create_app(
     settings: Settings | None = None,
     *,
@@ -66,6 +82,8 @@ def create_app(
 ) -> FastAPI:
     settings = settings or Settings()
     configure_logging(settings)
+    configure_error_tracking(settings)
+    metrics = Metrics()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -79,11 +97,12 @@ def create_app(
             sessions=session_factory(engine),
             hasher=PasswordHasher(settings.max_concurrent_password_hashes),
             limiter=limiter or (RedisRateLimiter(redis) if redis else MemoryRateLimiter()),
-            mailer=mailer or make_mailer(settings),
+            mailer=CountingMailer(mailer or make_mailer(settings), metrics),
             clock=clock or (lambda: datetime.now(UTC)),
             redis=redis,
             hub=hub,
             presence=RedisPresence(redis) if redis else MemoryPresence(),
+            metrics=metrics,
         )
         sweeper = asyncio.create_task(run_sweeper(app.state.ctx)) if settings.game_sweeper else None
         log.info("startup", environment=settings.environment)
@@ -128,5 +147,5 @@ def create_app(
         max_age=600,
     )
     app.add_middleware(SecurityHeaders, hsts=settings.is_production)
-    app.add_middleware(RequestContext)
+    app.add_middleware(RequestContext, metrics=metrics)
     return app

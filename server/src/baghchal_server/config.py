@@ -51,6 +51,15 @@ class Settings(BaseSettings):
 
     log_json: bool = False
 
+    metrics_token: SecretStr | None = None
+    """When set, ``GET /metrics`` serves Prometheus metrics to requests that send
+    ``Authorization: Bearer <token>``; when unset, ``/metrics`` does not exist."""
+    sentry_dsn: SecretStr | None = None
+    """When set, unexpected errors are reported to Sentry (or a compatible service, such as
+    GlitchTip), without personal data."""
+    sentry_traces_sample_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    """Share of requests traced for performance; 0 sends errors only."""
+
     @property
     def is_production(self) -> bool:
         return self.environment == "production"
