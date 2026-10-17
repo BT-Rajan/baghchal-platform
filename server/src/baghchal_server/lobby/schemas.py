@@ -37,6 +37,8 @@ class ProfileOut(PlayerStatusOut):
     created_at: datetime
     ratings: dict[str, RatingOut]
     """By time-control category (``blitz``, ``rapid``)."""
+    blocked: bool
+    """The viewer has blocked this player."""
 
 
 class ChallengeIn(BaseModel):

@@ -13,6 +13,7 @@ from baghchal_server.lobby.schemas import (
     ChallengeIn,
     ChallengeList,
     ChallengeOut,
+    PlayerOut,
     PlayerStatusOut,
     ProfileOut,
     RatingOut,
@@ -27,6 +28,7 @@ router = APIRouter(prefix="/api/v1")
 
 SEARCH_PER_USER: Final = Limit("player-search", 60, 60)
 CHALLENGES_PER_USER: Final = Limit("challenge-create", 30, 3600)
+BLOCKS_PER_USER: Final = Limit("block", 60, 3600)
 
 
 async def _with_status(
@@ -59,7 +61,7 @@ async def search_players(
 ) -> list[PlayerStatusOut]:
     """Players whose username starts with ``prefix`` (case-insensitive)."""
     await enforce_limit(state, SEARCH_PER_USER, str(user.id))
-    found = await service.search_players(db, prefix, limit)
+    found = await service.search_players(db, prefix, limit, user.id)
     return await _with_status(state, db, [(u.id, u.username) for u in found])
 
 
@@ -69,8 +71,11 @@ async def online_players(
 ) -> list[PlayerStatusOut]:
     ids = await state.presence.list_online(limit)
     users = await service.users_by_id(db, ids)
+    hidden = await service.hidden_from(db, user.id)
     return await _with_status(
-        state, db, [(uid, users[uid].username) for uid in ids if uid in users]
+        state,
+        db,
+        [(uid, users[uid].username) for uid in ids if uid in users and uid not in hidden],
     )
 
 
@@ -95,7 +100,12 @@ async def player_profile(
             provisional=ratings.is_provisional(current),
             rank=await ratings.rank_of(db, row, now) if row else None,
         )
-    return ProfileOut(**status.model_dump(), created_at=player.created_at, ratings=profile_ratings)
+    return ProfileOut(
+        **status.model_dump(),
+        created_at=player.created_at,
+        ratings=profile_ratings,
+        blocked=await service.has_blocked(db, user.id, player.id),
+    )
 
 
 @router.get("/challenges")
@@ -147,3 +157,37 @@ async def cancel_challenge(
     challenge_id: uuid.UUID, user: CurrentUser, state: State, db: DB
 ) -> ChallengeOut:
     return await _respond(challenge_id, "cancel", user, state, db)
+
+
+# ── Blocking ──────────────────────────────────────────────────────────────
+
+
+@router.get("/blocks")
+async def list_blocks(user: CurrentUser, db: DB) -> list[PlayerOut]:
+    """Players you have blocked."""
+    return [
+        PlayerOut(id=p.id, username=p.username) for p in await service.blocked_players(db, user.id)
+    ]
+
+
+async def _player(db: DB, username: str) -> uuid.UUID:
+    player = await service.find_player(db, username)
+    if player is None:
+        raise AppError(404, "player_not_found", "No such player.")
+    return player.id
+
+
+@router.put("/blocks/{username}", status_code=status.HTTP_204_NO_CONTENT)
+async def block_player(username: UsernameQuery, user: CurrentUser, state: State, db: DB) -> None:
+    """Block a player: neither of you can challenge the other, and neither sees the other in
+    the lobby's player lists. Open challenges between you are closed."""
+    await enforce_limit(state, BLOCKS_PER_USER, str(user.id))
+    blocked_id = await _player(db, username)
+    for challenge in await service.block(db, state.clock(), user.id, blocked_id):
+        await _notify(state, db, challenge)
+
+
+@router.delete("/blocks/{username}", status_code=status.HTTP_204_NO_CONTENT)
+async def unblock_player(username: UsernameQuery, user: CurrentUser, state: State, db: DB) -> None:
+    await enforce_limit(state, BLOCKS_PER_USER, str(user.id))
+    await service.unblock(db, user.id, await _player(db, username))

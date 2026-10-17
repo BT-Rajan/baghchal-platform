@@ -1,6 +1,6 @@
 # Phase 6 plan: the app
 
-Status: in progress, on branch `phase-6-app`.
+Status: done. What changed from the plan, and what is left, is at the end.
 
 One Expo / React Native client for web, iOS, Android and tablets, in `app/`. It talks only
 to our own server (Phases 2–5). Per [ADR 0002](../adr/0002-no-dependency-on-expo-cloud.md),
@@ -135,7 +135,8 @@ phones it sits above it. The board is square and as large as fits.
 ## Testing
 - **Unit**: BFEN parsing, board geometry, move-input state machine, clock maths,
   "newer game" ordering, error mapping, realtime reconnect and backoff, and event-to-cache
-  wiring. 100% coverage is enforced on `src/game`, `src/api`, `src/realtime` and `src/auth`.
+  wiring. 100% coverage is enforced on `src/game`, `src/api`, `src/realtime`, `src/auth` and
+  `src/lobby`.
 - **Components**: board taps produce the right move; lobby challenge flow; sign-in form
   errors.
 - **Contract**: CI regenerates the OpenAPI schema from the server and the TypeScript types
@@ -155,11 +156,41 @@ Jest with coverage thresholds → `expo export --platform web` (the production b
   email links open the web app.
 
 ## Delivery steps
-1. Scaffold `app/`: config, lint, format, typecheck, Jest, CI job, guardrails.
-2. OpenAPI export from the server, generated types, sync check.
-3. API client, errors, session and auth screens.
-4. Realtime client and cache wiring.
-5. Lobby, profiles, leaderboard.
-6. Board, move input, clocks, game screen, matches.
-7. Responsive layout, accessibility pass, empty and error states.
-8. Docs (README, app README), local end-to-end smoke, PR.
+1. ✅ Scaffold `app/`: config, lint, format, typecheck, Jest, CI job, guardrails.
+2. ✅ OpenAPI export from the server, generated types, sync check. The schema
+   (`app/src/api/openapi.json`) also carries the WebSocket server messages. A server test fails
+   if it is stale; `npm run api:check` fails if `schema.d.ts` is stale.
+3. ✅ API client, errors, session and auth screens. Checked by hand in Chromium against a real
+   server: sign up, the emailed link, reload, sign out, sign in.
+4. ✅ Realtime client and cache wiring. Checked in Chromium against a real server: the
+   socket authenticates with the cookie, and a challenge made elsewhere arrives live.
+5. ✅ Lobby, profiles, leaderboard. Checked with two browsers (desktop and phone width) against
+   a real server: a challenge sent from one arrives live in the other, and accepting it opens
+   the game for both. The game screen is a summary until step 6.
+6. ✅ Board, move input, clocks, game screen, matches. Checked with two browsers against a real
+   server: a rated match, moves from both sides with the boards in agreement, running clocks,
+   resignation, rating changes, and game 2 opening for both players by itself. Countdowns
+   (game clocks, first moves, challenges) use an estimate of the server's clock.
+7. ✅ Responsive layout, accessibility pass, empty and error states. axe-core reports no WCAG
+   2.1 AA violations on any screen of the web build; the one remaining best-practice note is
+   that the navigation library's header and tab bar sit outside a landmark region.
+8. ✅ Docs (README, app README), local end-to-end smoke (`npm run e2e:smoke`), PR.
+
+## Outcome
+Delivered as planned, with these differences:
+- **Server clock.** Countdowns (game clocks, first moves, challenge expiry) use an estimate of
+  the server's clock taken from the timestamps it sends (`src/game/serverClock.ts`), rather
+  than the device's clock.
+- **Coverage** is also enforced on `src/lobby`.
+- **The OpenAPI schema** also describes the WebSocket messages, so their types are generated too.
+- **The end-to-end smoke test** plays a game to a result on the board (tigers capture five
+  goats), with moves chosen by fixed rules so every run is the same.
+- **Layout.** On wide but short screens (a phone held sideways) the player bars sit beside the
+  board, so the whole board and both clocks fit.
+
+Left for later:
+- Testing on real iOS and Android devices (the native paths are covered by unit tests only).
+- A dark theme.
+- The navigation library's header and tab bar sit outside an ARIA landmark (an axe-core
+  best-practice note, not a WCAG failure).
+- Everything listed under "Out of scope" above.

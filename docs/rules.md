@@ -58,13 +58,24 @@ These rules belong to the platform, not the board; the server enforces them.
 - **Time controls**: 3+2, 5+3, 10+5 and 15+10 (minutes per side + seconds added after each
   move). The server keeps both clocks; only server time counts.
 - **First moves**: clocks start after each side's first move. Each side has 30 seconds to make
-  its first move; if either does not, the game is **aborted** (no result).
+  its first move; if either does not, the game is **aborted** (no result). In the second game
+  of a rated match a side that does not make its first move instead **loses on time**.
 - **Time out**: a side whose clock reaches zero on its turn loses.
+- **Lag allowance**: the server measures each player's round trip on the live connection and
+  does not charge a move for up to 0.5 s of it, so a slow network does not cost clock time.
+  The allowance starts after both first moves and never exceeds the player's measured lag.
 - **Resign**: either player, at any time; the opponent wins.
-- **Abort**: either player, before both sides have moved; no result.
-- **Abandonment**: if a player has been offline for 60 seconds on their own turn, the
-  opponent may claim the win.
+- **Abort**: either player, before both sides have moved; no result. The second game of a
+  rated match cannot be aborted, so nobody can skip the side they would rather not play.
+- **Abandonment**: if it has been a player's turn for 60 seconds and they have been offline
+  for all of the last 60 seconds, the opponent may claim the win. A connection that drops and
+  comes straight back does not count as leaving.
+- **Abort penalty**: a player who aborts 3 games within 24 hours (failing to make a first move
+  counts too) cannot send or accept challenges for 1 hour after the third.
 - **One live game per player** at a time.
+- **Blocking**: a player can block another. Neither can then challenge the other (pending
+  challenges between them are closed), and they no longer see each other in search or the
+  online list. Only the blocker can see or undo the block.
 - No draws by agreement, matching the board rules.
 
 ## Ratings
@@ -73,6 +84,9 @@ These rules belong to the platform, not the board; the server enforces them.
 - **Rated games are two-game matches with sides swapped**: game 2 starts automatically when
   game 1 ends, so nobody's rating depends on which side they drew. Each game is rated on its
   own. If game 1 is aborted the match ends; an aborted game is never rated.
+- **One rated match per pair per 24 hours**, counted from when the match started, so ratings
+  cannot be farmed between friends or between one person's accounts. A match whose first game
+  was aborted does not count. Casual games are not limited.
 - Ratings change after every rated game with a result; the deviation (uncertainty) grows
   while a player is away (one Glicko-2 period per day) and shrinks as they play.
 - A rating is **provisional** while its deviation is above 110.

@@ -32,6 +32,7 @@ class Game(Base):
     __tablename__ = "games"
     __table_args__ = (
         Index("ix_games_status_deadline_at", "status", "deadline_at"),
+        Index("ix_games_aborted_by_finished_at", "aborted_by", "finished_at"),
         MYSQL_TABLE_ARGS,
     )
 
@@ -72,6 +73,13 @@ class Game(Base):
     goat_rating_change: Mapped[int | None] = mapped_column(Integer)
     tiger_rating_change: Mapped[int | None] = mapped_column(Integer)
     """Set when a rated game ends with a result."""
+    lag_ms: Mapped[int] = mapped_column(Integer, default=0)
+    """Network delay allowed to the side to move this turn: never charged to their clock."""
+    aborted_by: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    """Who caused an abort: the player who aborted, or the side that did not make a first
+    move in time. Too many aborts in a day keep a player from starting new games for a while."""
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
     finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 

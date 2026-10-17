@@ -48,7 +48,7 @@ async def play(
 ) -> GameOut:
     await enforce_limit(state, MOVES_PER_USER, str(user.id))
     await _settle(state, db, game_id)
-    game = await service.play(db, game_id, user.id, data, state.clock())
+    game = await service.play(db, game_id, user.id, data, state.clock(), presence=state.presence)
     return await notify(state, db, game)
 
 

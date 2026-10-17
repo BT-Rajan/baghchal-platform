@@ -1,11 +1,12 @@
 """Players and challenges."""
 
+import math
 import uuid
 from collections.abc import Sequence
 from datetime import datetime, timedelta
 from typing import Final, Literal
 
-from sqlalchemy import ColumnElement, and_, func, or_, select, update
+from sqlalchemy import ColumnElement, and_, delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,13 +14,16 @@ from baghchal_server.accounts.models import User
 from baghchal_server.errors import AppError
 from baghchal_server.games import service as games
 from baghchal_server.games.models import Game
-from baghchal_server.lobby.models import Challenge, ChallengeStatus
+from baghchal_server.lobby.models import Block, Challenge, ChallengeStatus
 from baghchal_server.lobby.schemas import ChallengeIn, ChallengeOut, PlayerOut
 from baghchal_server.lobby.time_controls import TIME_CONTROLS
 from baghchal_server.realtime.presence import Presence
 
 CHALLENGE_TTL: Final = timedelta(seconds=60)
 MAX_OUTGOING_CHALLENGES: Final = 5
+RATED_MATCH_EVERY: Final = timedelta(hours=24)
+"""Two players may start one rated match per this long, so ratings cannot be farmed between
+friends or between someone's own accounts. Casual games are not limited."""
 Response = Literal["accept", "decline", "cancel"]
 
 _RESULT: Final = {
@@ -45,17 +49,95 @@ async def find_player(db: AsyncSession, username: str) -> User | None:
     return await db.scalar(select(User).where(User.username_key == username.lower(), _playable()))
 
 
-async def search_players(db: AsyncSession, prefix: str, limit: int) -> Sequence[User]:
+async def search_players(
+    db: AsyncSession, prefix: str, limit: int, viewer_id: uuid.UUID
+) -> Sequence[User]:
+    """Players whose username starts with ``prefix``, leaving out anyone the viewer has
+    blocked or who has blocked the viewer."""
     # "_" is a LIKE wildcard and may appear in usernames, so escape it.
     pattern = prefix.lower().replace("\\", "\\\\").replace("_", "\\_") + "%"
     return (
         await db.scalars(
             select(User)
-            .where(User.username_key.like(pattern, escape="\\"), _playable())
+            .where(
+                User.username_key.like(pattern, escape="\\"),
+                _playable(),
+                User.id.not_in(select(Block.blocked_id).where(Block.blocker_id == viewer_id)),
+                User.id.not_in(select(Block.blocker_id).where(Block.blocked_id == viewer_id)),
+            )
             .order_by(User.username_key)
             .limit(limit)
         )
     ).all()
+
+
+# ── Blocking ──────────────────────────────────────────────────────────────
+
+
+async def hidden_from(db: AsyncSession, viewer_id: uuid.UUID) -> set[uuid.UUID]:
+    """Players the viewer has blocked or who have blocked the viewer: left out of each other's
+    lists of players."""
+    rows = await db.execute(
+        select(Block.blocker_id, Block.blocked_id).where(
+            or_(Block.blocker_id == viewer_id, Block.blocked_id == viewer_id)
+        )
+    )
+    return {blocked if blocker == viewer_id else blocker for blocker, blocked in rows.all()}
+
+
+async def has_blocked(db: AsyncSession, blocker_id: uuid.UUID, blocked_id: uuid.UUID) -> bool:
+    return await db.get(Block, (blocker_id, blocked_id)) is not None
+
+
+async def blocked_players(db: AsyncSession, blocker_id: uuid.UUID) -> Sequence[User]:
+    return (
+        await db.scalars(
+            select(User)
+            .join(Block, Block.blocked_id == User.id)
+            .where(Block.blocker_id == blocker_id)
+            .order_by(User.username_key)
+        )
+    ).all()
+
+
+async def block(
+    db: AsyncSession, now: datetime, blocker_id: uuid.UUID, blocked_id: uuid.UUID
+) -> Sequence[Challenge]:
+    """Block a player (again is fine), closing any open challenge between the two: declined
+    if it was for the blocker, cancelled if it was theirs. Returns the challenges closed."""
+    if blocker_id == blocked_id:
+        raise AppError(422, "cannot_block_self", "You cannot block yourself.")
+    if not await has_blocked(db, blocker_id, blocked_id):
+        db.add(Block(blocker_id=blocker_id, blocked_id=blocked_id, created_at=now))
+        try:
+            await db.flush()
+        except IntegrityError:  # blocked twice at once: the other request did it
+            await db.rollback()
+    key = pair_key(blocker_id, blocked_id)
+    open_challenges = (
+        await db.scalars(
+            select(Challenge).where(
+                Challenge.pair_key == key, Challenge.status == ChallengeStatus.PENDING
+            )
+        )
+    ).all()
+    for challenge in open_challenges:
+        challenge.status = (
+            ChallengeStatus.DECLINED
+            if challenge.opponent_id == blocker_id
+            else ChallengeStatus.CANCELLED
+        )
+        challenge.pair_key = None
+        challenge.responded_at = now
+    await db.commit()
+    return open_challenges
+
+
+async def unblock(db: AsyncSession, blocker_id: uuid.UUID, blocked_id: uuid.UUID) -> None:
+    await db.execute(
+        delete(Block).where(Block.blocker_id == blocker_id, Block.blocked_id == blocked_id)
+    )
+    await db.commit()
 
 
 async def users_by_id(db: AsyncSession, ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, User]:
@@ -76,10 +158,24 @@ async def create_challenge(
         raise AppError(404, "player_not_found", "No such player.")
     if opponent.id == challenger.id:
         raise AppError(422, "cannot_challenge_self", "You cannot challenge yourself.")
+    # Before anything that would tell a blocked player whether the other is online.
+    if await has_blocked(db, challenger.id, opponent.id):
+        raise AppError(
+            403,
+            "player_blocked",
+            f"You have blocked {opponent.username}. Unblock them to challenge them.",
+        )
+    if await has_blocked(db, opponent.id, challenger.id):
+        raise AppError(403, "challenge_refused", f"You cannot challenge {opponent.username}.")
+    await _check_abort_cooldown(db, challenger.id, now)
     if not await presence.online([opponent.id]):
         raise AppError(409, "player_offline", f"{opponent.username} is not online.")
     if await games.busy(db, [challenger.id, opponent.id]):
         raise _busy()
+    if data.rated:
+        last = await games.last_rated_match(db, challenger.id, opponent.id)
+        if last is not None and now - last < RATED_MATCH_EVERY:
+            raise _rated_limit(opponent.username, last + RATED_MATCH_EVERY - now)
     outgoing = await db.scalar(
         select(func.count())
         .select_from(Challenge)
@@ -116,12 +212,27 @@ async def create_challenge(
         expires_at=now + CHALLENGE_TTL,
     )
     db.add(challenge)
+    opponent_id, opponent_name = opponent.id, opponent.username  # a rollback expires them
     try:
         await db.commit()
     except IntegrityError:
         await db.rollback()
+        # The pair already has an open challenge; say which way round it is.
+        incoming = await db.scalar(
+            select(Challenge.id).where(
+                Challenge.pair_key == key, Challenge.challenger_id == opponent_id
+            )
+        )
+        if incoming is not None:
+            raise AppError(
+                409,
+                "challenge_incoming",
+                f"{opponent_name} has already challenged you. Accept their challenge instead.",
+            ) from None
         raise AppError(
-            409, "challenge_exists", "There is already an open challenge between you."
+            409,
+            "challenge_exists",
+            f"You have already challenged {opponent_name}. Wait for their answer.",
         ) from None
     return challenge
 
@@ -134,6 +245,8 @@ async def respond(
     One conditional UPDATE decides, so of two racing responses exactly one wins. Accepting
     starts the game in the same transaction: there is never an accepted challenge without one.
     """
+    if response == "accept":
+        await _check_abort_cooldown(db, user_id, now)
     actor = Challenge.challenger_id if response == "cancel" else Challenge.opponent_id
     result = await db.execute(
         update(Challenge)
@@ -167,6 +280,32 @@ async def respond(
     if (response == "cancel") != (user_id == challenge.challenger_id):
         raise AppError(403, "not_allowed", f"You cannot {response} this challenge.")
     raise AppError(409, "challenge_closed", "This challenge is no longer open.")
+
+
+async def _check_abort_cooldown(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> None:
+    wait = await games.abort_cooldown(db, user_id, now)
+    if wait > timedelta(0):
+        minutes = math.ceil(wait.total_seconds() / 60)
+        raise AppError(
+            429,
+            "abort_cooldown",
+            f"You have aborted {games.ABORT_LIMIT} games in the last 24 hours (not making a "
+            f"first move counts too). You can start new games again in {minutes} "
+            f"{'minute' if minutes == 1 else 'minutes'}.",
+            headers={"Retry-After": str(math.ceil(wait.total_seconds()))},
+        )
+
+
+def _rated_limit(opponent: str, wait: timedelta) -> AppError:
+    hours = math.ceil(wait.total_seconds() / 3600)
+    when = "in under an hour" if hours <= 1 else f"in {hours} hours"
+    return AppError(
+        429,
+        "rated_match_limit",
+        f"You have already played a rated match against {opponent} in the last 24 hours. "
+        f"You can play another {when}; casual games are always open.",
+        headers={"Retry-After": str(math.ceil(wait.total_seconds()))},
+    )
 
 
 def _busy() -> AppError:

@@ -102,3 +102,29 @@ jobs:
         run: >-
           uv run pytest server --cov=baghchal_server --cov-branch --cov-append
           --cov-report=term-missing --cov-fail-under=100
+
+  app:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: app
+    env:
+      EXPO_NO_TELEMETRY: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm run guardrails
+      - run: npm run api:check
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run test:ci
+      - run: npm run export:web
