@@ -35,6 +35,51 @@ jobs:
         working-directory: engine
       - run: uv run mypy --config-file ../pyproject.toml .
         working-directory: server
+      - run: uv run mypy --config-file pyproject.toml tools
+
+  # The production files in deploy/: shell scripts, alert rules (with their unit tests), the
+  # Prometheus config and the Caddyfile, checked by the tools that will read them. Downloads are
+  # pinned and their checksums verified.
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PROMETHEUS: "3.5.0"
+      PROMETHEUS_SHA256: e811827af26d822afb09a4f28314f61b618b12cff5369835a67f674d8b46f39a
+      CADDY: "2.10.2"
+      CADDY_SHA512: 747df7ee74de188485157a383633a1a963fd9233b71fbb4a69ddcbcc589ce4e2cc82dacf5dbbe136cb51d17e14c59daeb5d9bc92487610b0f3b93680b2646546
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Shell scripts
+        run: shellcheck deploy/backup/*.sh
+      - name: Tools
+        run: |
+          curl -sSLo prom.tgz "https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS}/prometheus-${PROMETHEUS}.linux-amd64.tar.gz"
+          echo "${PROMETHEUS_SHA256}  prom.tgz" | sha256sum -c -
+          tar xzf prom.tgz --strip-components=1 "prometheus-${PROMETHEUS}.linux-amd64/promtool"
+          curl -sSLo caddy.tgz "https://github.com/caddyserver/caddy/releases/download/v${CADDY}/caddy_${CADDY}_linux_amd64.tar.gz"
+          echo "${CADDY_SHA512}  caddy.tgz" | sha512sum -c -
+          tar xzf caddy.tgz caddy
+      - name: Alert rules and their tests
+        working-directory: deploy/monitoring
+        run: |
+          ../../promtool check rules alerts.yml
+          ../../promtool test rules alerts.test.yml
+      - name: Prometheus config
+        run: |
+          echo token > /tmp/metrics-token
+          sed "s#/etc/prometheus/alerts.yml#$PWD/deploy/monitoring/alerts.yml#; s#/etc/prometheus/metrics-token#/tmp/metrics-token#" \
+            deploy/monitoring/prometheus.yml > /tmp/prometheus.yml
+          ./promtool check config /tmp/prometheus.yml
+      - name: Caddyfile
+        env:
+          DOMAIN: play.example.com
+          ACME_EMAIL: admin@example.com
+        run: |
+          ./caddy validate --config deploy/Caddyfile --adapter caddyfile
+          ./caddy fmt deploy/Caddyfile | diff deploy/Caddyfile -
 
   engine:
     runs-on: ubuntu-24.04

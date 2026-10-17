@@ -1,0 +1,83 @@
+# What should wake someone up, and what can wait until morning. Each alert's description says
+# what to look at; docs/operations.md has the longer runbook.
+groups:
+  - name: baghchal
+    rules:
+      - alert: BaghchalDown
+        expr: sum(up{job="baghchal-api"}) == 0 or absent(up{job="baghchal-api"})
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: No API server is answering
+          description: >-
+            Prometheus cannot scrape any API replica. Players cannot sign in or play.
+            Check `docker compose ps`, then the api and db logs.
+
+      - alert: BaghchalReplicaDown
+        expr: up{job="baghchal-api"} == 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: An API replica is down ({{ $labels.instance }})
+          description: Caddy routes around it, but capacity is reduced. Check its logs.
+
+      - alert: BaghchalServerErrors
+        expr: >-
+          sum(rate(baghchal_http_requests_total{status=~"5.."}[5m]))
+            / sum(rate(baghchal_http_requests_total[5m])) > 0.02
+        for: 10m
+        labels: { severity: critical }
+        annotations:
+          summary: More than 2% of requests fail with a server error
+          description: Look at Sentry (if set up) or `docker compose logs api` for tracebacks.
+
+      - alert: BaghchalSlowRequests
+        expr: >-
+          histogram_quantile(0.95, sum by (le) (rate(
+            baghchal_http_request_duration_seconds_bucket{route!~"/api/v1/auth/.*"}[5m]
+          ))) > 0.5
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: The slowest 5% of requests take over half a second
+          description: >-
+            Usually the database. Sign-in is left out (password hashing is slow on purpose).
+            Check database load and connection pool use; consider more replicas.
+
+      - alert: BaghchalSweeperStopped
+        expr: sum(rate(baghchal_sweeper_runs_total[5m])) == 0
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: Nothing is ending games that run out of time
+          description: >-
+            No replica has swept for 5 minutes, so flagged games stay open. With Redis, one
+            replica holds the lease; check Redis and the api logs for "sweeper.failed".
+
+      - alert: BaghchalSweeperFailing
+        expr: sum(rate(baghchal_sweeper_failures_total[5m])) > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: The sweeper keeps failing
+          description: Search the api logs for "sweeper.failed" for the traceback.
+
+      - alert: BaghchalMailFailing
+        expr: sum(increase(baghchal_mail_total{result="failed"}[30m])) > 0
+        for: 0m
+        labels: { severity: warning }
+        annotations:
+          summary: Emails are not going out
+          description: >-
+            New players cannot confirm their address and nobody can reset a password.
+            Check the SMTP settings and the provider's status; logs show "mail.failed".
+
+      - alert: BaghchalSignInAttack
+        expr: sum(rate(baghchal_rate_limited_total{limit=~"login.*"}[5m])) > 1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: Many sign-in attempts are being refused
+          description: >-
+            Probably password guessing. The limits are holding; check the access logs for
+            the addresses involved and block them at the firewall if it continues.

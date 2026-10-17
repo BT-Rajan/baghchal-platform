@@ -77,6 +77,11 @@ def create_engine(url: str, pool_size: int = 10) -> AsyncEngine:
         return engine
     return create_async_engine(
         url,
+        # READ COMMITTED, not InnoDB's REPEATABLE READ: there, an UPDATE that matches no row
+        # still locks the gap in the index, and two players creating challenges at once
+        # deadlock. Everything that must happen once relies on unique keys and conditional
+        # updates, which hold at either level.
+        isolation_level="READ COMMITTED",
         pool_size=pool_size,
         max_overflow=pool_size,
         pool_pre_ping=True,

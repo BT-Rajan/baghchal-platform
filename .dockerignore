@@ -8,3 +8,8 @@
 *.db
 .env
 .env.*
+app/node_modules
+app/dist
+app/ios
+app/android
+app/.expo

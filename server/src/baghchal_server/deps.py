@@ -15,6 +15,7 @@ from baghchal_server.accounts.service import resolve_session
 from baghchal_server.config import Settings
 from baghchal_server.errors import AppError
 from baghchal_server.mail import Mailer
+from baghchal_server.metrics import Metrics
 from baghchal_server.ratelimit import Limit, RateLimiter
 from baghchal_server.realtime.hub import Hub
 from baghchal_server.realtime.presence import Presence
@@ -33,6 +34,7 @@ class AppState:
     redis: "Redis | None"
     hub: Hub
     presence: Presence
+    metrics: Metrics
 
 
 def get_state(request: Request) -> AppState:
@@ -81,6 +83,7 @@ def client_ip(request: Request) -> str:
 async def enforce_limit(state: AppState, limit: Limit, key: str) -> None:
     retry_after = await state.limiter.hit(limit, key)
     if retry_after:
+        state.metrics.rate_limited.labels(limit.name).inc()
         raise AppError(
             429,
             "rate_limited",

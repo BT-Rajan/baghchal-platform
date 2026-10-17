@@ -11,6 +11,7 @@ import structlog
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from baghchal_server.errors import error_body
+from baghchal_server.metrics import Metrics
 
 log = structlog.get_logger("baghchal.access")
 
@@ -41,10 +42,12 @@ async def _reject(send: Send, status: int, code: str, message: str) -> None:
 
 
 class RequestContext:
-    """Assigns a request id, binds it to every log line, and writes one access log line."""
+    """Assigns a request id, binds it to every log line, writes one access log line, and
+    counts the request in the metrics (by route template, so ids do not multiply series)."""
 
-    def __init__(self, app: ASGIApp) -> None:
+    def __init__(self, app: ASGIApp, metrics: Metrics) -> None:
         self.app = app
+        self.metrics = metrics
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -68,12 +71,16 @@ class RequestContext:
         try:
             await self.app(scope, receive, send_with_id)
         finally:
+            seconds = time.perf_counter() - start
+            route = getattr(scope.get("route"), "path", "unmatched")
+            self.metrics.requests.labels(scope["method"], route, str(status)).inc()
+            self.metrics.latency.labels(scope["method"], route).observe(seconds)
             log.info(
                 "request",
                 method=scope["method"],
                 path=scope["path"],
                 status=status,
-                ms=round((time.perf_counter() - start) * 1000, 1),
+                ms=round(seconds * 1000, 1),
             )
             structlog.contextvars.clear_contextvars()
 

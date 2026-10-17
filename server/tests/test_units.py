@@ -18,6 +18,7 @@ from baghchal_server.app import create_app
 from baghchal_server.config import Settings
 from baghchal_server.db import UTCDateTime
 from baghchal_server.mail import ConsoleMailer, Mail, MemoryMailer, SmtpMailer, deliver, make_mailer
+from baghchal_server.metrics import Metrics
 from baghchal_server.middleware import BodyLimit, CrossSiteGuard, RequestContext, SecurityHeaders
 from baghchal_server.ratelimit import Limit, MemoryRateLimiter, RedisRateLimiter
 
@@ -70,7 +71,7 @@ async def _call(middleware: Any, scope: Scope, messages: list[Message]) -> list[
 @pytest.mark.parametrize(
     "middleware",
     [
-        RequestContext(_app),
+        RequestContext(_app, Metrics()),
         SecurityHeaders(_app, hsts=True),
         CrossSiteGuard(_app, ["https://a.example"]),
         BodyLimit(_app, 10),

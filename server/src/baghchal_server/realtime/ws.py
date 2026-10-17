@@ -93,6 +93,7 @@ async def socket(ws: WebSocket) -> None:
     await state.hub.attach(conn)
     await state.presence.touch(user.id, conn.id)
     await state.presence.seen(user.id, state.clock())
+    state.metrics.sockets.inc()
     log.info("ws.open", user_id=str(user.id), conn_id=conn.id)
     tasks: set[asyncio.Task[int | None]] = set()
     try:
@@ -117,6 +118,7 @@ async def socket(ws: WebSocket) -> None:
         await state.hub.detach(conn)
         await state.presence.remove(user.id, conn.id)
         await state.presence.seen(user.id, state.clock())
+        state.metrics.sockets.dec()
         log.info("ws.close", user_id=str(user.id), conn_id=conn.id)
 
 

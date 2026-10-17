@@ -1,0 +1,18 @@
+# Where alerts go. Fill in a real receiver: email below, or replace it with Slack, PagerDuty,
+# a webhook… (https://prometheus.io/docs/alerting/latest/configuration/).
+route:
+  receiver: team
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: team
+    email_configs:
+      - to: oncall@example.com
+        from: alerts@example.com
+        smarthost: smtp.example.com:587
+        auth_username: alerts@example.com
+        auth_password: change-me
+        send_resolved: true

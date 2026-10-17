@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./baghchal.db"
     database_pool_size: int = Field(default=10, ge=1, le=200)
     redis_url: str | None = None
+    redis_max_connections: int = Field(default=100, ge=4, le=10_000)
+    """Connections to Redis per server process. When all are busy a command waits for one
+    (up to 5 seconds) instead of failing."""
 
     public_base_url: str = "http://localhost:8081"
     """Where the app is served; used to build links in emails."""
@@ -50,6 +53,15 @@ class Settings(BaseSettings):
     """End games whose clock ran out in the background (tests drive it by hand)."""
 
     log_json: bool = False
+
+    metrics_token: SecretStr | None = None
+    """When set, ``GET /metrics`` serves Prometheus metrics to requests that send
+    ``Authorization: Bearer <token>``; when unset, ``/metrics`` does not exist."""
+    sentry_dsn: SecretStr | None = None
+    """When set, unexpected errors are reported to Sentry (or a compatible service, such as
+    GlitchTip), without personal data."""
+    sentry_traces_sample_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    """Share of requests traced for performance; 0 sends errors only."""
 
     @property
     def is_production(self) -> bool:
