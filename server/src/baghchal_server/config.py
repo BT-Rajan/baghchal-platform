@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./baghchal.db"
     database_pool_size: int = Field(default=10, ge=1, le=200)
     redis_url: str | None = None
+    redis_max_connections: int = Field(default=100, ge=4, le=10_000)
+    """Connections to Redis per server process. When all are busy a command waits for one
+    (up to 5 seconds) instead of failing."""
 
     public_base_url: str = "http://localhost:8081"
     """Where the app is served; used to build links in emails."""

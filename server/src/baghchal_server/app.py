@@ -6,11 +6,12 @@ import logging
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from typing import Final
 
 import sentry_sdk
 import structlog
 from fastapi import FastAPI
-from redis.asyncio import Redis
+from redis.asyncio import BlockingConnectionPool, Redis
 from starlette.middleware.cors import CORSMiddleware
 
 from baghchal_server.accounts.routes import router as accounts_router
@@ -38,6 +39,8 @@ from baghchal_server.realtime.ws import router as ws_router
 from baghchal_server.security import PasswordHasher
 
 log = structlog.get_logger(__name__)
+
+REDIS_WAIT_SECONDS: Final = 5
 
 
 def configure_logging(settings: Settings) -> None:
@@ -88,7 +91,18 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         engine = create_engine(settings.database_url, settings.database_pool_size)
-        redis = Redis.from_url(settings.redis_url) if settings.redis_url else None
+        redis = (
+            # from_pool: the client owns the pool, so closing it closes every connection.
+            Redis.from_pool(
+                BlockingConnectionPool.from_url(
+                    settings.redis_url,
+                    max_connections=settings.redis_max_connections,
+                    timeout=REDIS_WAIT_SECONDS,
+                )
+            )
+            if settings.redis_url
+            else None
+        )
         hub = Hub(RedisBroker(redis) if redis else MemoryBroker())
         await hub.start()
         app.state.ctx = AppState(
