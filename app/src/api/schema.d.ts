@@ -255,6 +255,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Blocks
+         * @description Players you have blocked.
+         */
+        get: operations["list_blocks_api_v1_blocks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/blocks/{username}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Block Player
+         * @description Block a player: neither of you can challenge the other, and neither sees the other in
+         *     the lobby's player lists. Open challenges between you are closed.
+         */
+        put: operations["block_player_api_v1_blocks__username__put"];
+        post?: never;
+        /** Unblock Player */
+        delete: operations["unblock_player_api_v1_blocks__username__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/games": {
         parameters: {
             query?: never;
@@ -654,6 +696,8 @@ export interface components {
             ratings: {
                 [key: string]: components["schemas"]["RatingOut"];
             };
+            /** Blocked */
+            blocked: boolean;
         };
         /** RatingOut */
         RatingOut: {
@@ -779,6 +823,20 @@ export interface components {
              * @constant
              */
             type: "pong";
+        };
+        /**
+         * Probe
+         * @description Sent by the server; the client echoes it back unchanged.
+         */
+        Probe: {
+            /**
+             * Type
+             * @default probe
+             * @constant
+             */
+            type: "probe";
+            /** Id */
+            id: number;
         };
     };
     responses: never;
@@ -1218,6 +1276,84 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ChallengeOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_blocks_api_v1_blocks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlayerOut"][];
+                };
+            };
+        };
+    };
+    block_player_api_v1_blocks__username__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unblock_player_api_v1_blocks__username__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

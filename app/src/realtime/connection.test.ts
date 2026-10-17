@@ -59,7 +59,10 @@ test('connects with the bearer token and delivers parsed messages', () => {
 
   socket.receive({ type: 'pong' });
   socket.receive('garbage');
+  socket.receive({ type: 'probe', id: 3 });
   expect(onMessage.mock.calls).toEqual([[{ type: 'pong' }]]);
+  // Probes are answered at once by the connection, not handed to the app.
+  expect(socket.sent).toEqual([JSON.stringify({ type: 'probe', id: 3 })]);
 });
 
 test('browsers send no header (the cookie goes by itself)', () => {

@@ -94,6 +94,8 @@ builds the web app.
 | GET | `/api/v1/players?prefix=al` | Find players by username prefix (with online status) |
 | GET | `/api/v1/players/online` | Players online now |
 | GET | `/api/v1/players/{username}` | A player's profile, with ratings and leaderboard rank |
+| GET | `/api/v1/blocks` | Players you have blocked |
+| PUT, DELETE | `/api/v1/blocks/{username}` | Block or unblock a player (see [rules](docs/rules.md#live-play-platform-rules)) |
 | GET | `/api/v1/challenges` | Your open challenges, incoming and outgoing |
 | POST | `/api/v1/challenges` | Challenge an online player (`time_control` 3+2, 5+3, 10+5, 15+10; `rated`; `side`) |
 | POST | `/api/v1/challenges/{id}/accept`, `/decline`, `/cancel` | Answer or withdraw a challenge; accepting starts the game |

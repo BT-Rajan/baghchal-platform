@@ -8,7 +8,7 @@
  * Apps pause the connection while in the background (the system would suspend it anyway) and
  * resume it when they return, so a player in the background does not show as online.
  */
-import { PING, parseServerMessage, type ServerMessage } from './protocol';
+import { PING, parseServerMessage, probeReply, type ServerMessage } from './protocol';
 import { backoffDelay } from './backoff';
 
 /** The parts of a WebSocket we use (the browser's and React Native's both fit). */
@@ -127,7 +127,10 @@ export class RealtimeConnection {
     socket.onmessage = (event) => {
       this.heardSincePing = true;
       const message = parseServerMessage(event.data);
-      if (message !== null) this.options.onMessage(message);
+      if (message === null) return;
+      // Answered here and now, so the measured round trip is the network's, not the app's.
+      if (message.type === 'probe') socket.send(probeReply(message.id));
+      else this.options.onMessage(message);
     };
     socket.onerror = () => {}; // a close follows; that is where we act
     socket.onclose = (event) => {

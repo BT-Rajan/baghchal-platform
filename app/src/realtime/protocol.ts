@@ -7,11 +7,19 @@ import type { Challenge, Game, Player } from '@/api/endpoints';
 export type ServerMessage =
   | { type: 'hello'; user: Player }
   | { type: 'pong' }
+  /** Answered at once by the connection: the server times the round trip, and does not
+   * charge it to this player's clock. */
+  | { type: 'probe'; id: number }
   | { type: 'challenge'; challenge: Challenge }
   | { type: 'game'; game: Game }
   | { type: 'error'; code: string; message: string };
 
 export const PING = JSON.stringify({ type: 'ping' });
+
+/** The answer to a probe: the same message, sent straight back. */
+export function probeReply(id: number): string {
+  return JSON.stringify({ type: 'probe', id });
+}
 
 type Json = Record<string, unknown>;
 
@@ -57,6 +65,10 @@ export function parseServerMessage(text: unknown): ServerMessage | null {
       return hasId(data.user) ? { type: 'hello', user: data.user as Player } : null;
     case 'pong':
       return { type: 'pong' };
+    case 'probe':
+      return Number.isSafeInteger(data.id) && (data.id as number) >= 0
+        ? { type: 'probe', id: data.id as number }
+        : null;
     case 'challenge':
       return isChallenge(data.challenge) ? { type: 'challenge', challenge: data.challenge } : null;
     case 'game':

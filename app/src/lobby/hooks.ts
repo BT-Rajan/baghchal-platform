@@ -113,3 +113,28 @@ export function useCreateChallenge() {
     onSuccess: (challenge) => applyChallenge(queryClient, challenge, me.id),
   });
 }
+
+export function useBlocks() {
+  const api = useApi();
+  return useQuery({ queryKey: queryKeys.blocks, queryFn: ({ signal }) => api.blocks(signal) });
+}
+
+/** Block or unblock a player; the lists and profiles that depend on it are fetched again. */
+export function useBlock() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ username, block }: { username: string; block: boolean }) =>
+      block ? api.block(username) : api.unblock(username),
+    onSuccess: (_, { username }) =>
+      Promise.all(
+        [
+          queryKeys.blocks,
+          queryKeys.profile(username),
+          queryKeys.onlinePlayers,
+          ['players', 'search'],
+          queryKeys.challenges,
+        ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+      ),
+  });
+}

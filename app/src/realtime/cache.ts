@@ -100,6 +100,7 @@ export function applyMessage(
       console.warn('Realtime error from the server', message.code, message.message);
       break;
     case 'pong':
+    case 'probe': // answered by the connection
       break;
   }
   return applied;

@@ -63,6 +63,11 @@ export function createApi(client: Client, transport: Transport) {
     gameAction: (id: string, action: GameAction) =>
       client.post<Game>(`${V1}/games/${seg(id)}/${action}`),
 
+    // Blocking
+    blocks: (signal?: AbortSignal) => client.get<Player[]>(`${V1}/blocks`, { signal }),
+    block: (username: string) => client.put<void>(`${V1}/blocks/${seg(username)}`),
+    unblock: (username: string) => client.delete<void>(`${V1}/blocks/${seg(username)}`),
+
     // Ratings
     leaderboard: (category: Category, signal?: AbortSignal) =>
       client.get<LeaderboardEntry[]>(`${V1}/leaderboards/${category}`, { signal }),

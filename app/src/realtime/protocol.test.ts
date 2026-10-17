@@ -1,6 +1,6 @@
 import { challenge, game } from '../../tests/support/games';
 
-import { PING, parseServerMessage } from './protocol';
+import { PING, parseServerMessage, probeReply } from './protocol';
 
 const text = (value: unknown) => JSON.stringify(value);
 
@@ -12,6 +12,8 @@ test('parses every server message', () => {
   const user = { id: 'u1', username: 'alice' };
   expect(parseServerMessage(text({ type: 'hello', user }))).toEqual({ type: 'hello', user });
   expect(parseServerMessage(text({ type: 'pong' }))).toEqual({ type: 'pong' });
+  expect(parseServerMessage(text({ type: 'probe', id: 7 }))).toEqual({ type: 'probe', id: 7 });
+  expect(JSON.parse(probeReply(7))).toEqual({ type: 'probe', id: 7 });
   const c = challenge();
   expect(parseServerMessage(text({ type: 'challenge', challenge: c }))).toEqual({
     type: 'challenge',
@@ -52,6 +54,9 @@ test.each([
   ['a game without server_time', text({ type: 'game', game: { ...game(), server_time: 1 } })],
   ['a game without id', text({ type: 'game', game: { ...game(), id: 7 } })],
   ['an error without a message', text({ type: 'error', code: 'x' })],
+  ['a probe without an id', text({ type: 'probe' })],
+  ['a probe with a negative id', text({ type: 'probe', id: -1 })],
+  ['a probe with a fractional id', text({ type: 'probe', id: 1.5 })],
   ['an error without a code', text({ type: 'error', message: 'x' })],
 ])('ignores %s', (_name, data) => {
   expect(parseServerMessage(data)).toBeNull();

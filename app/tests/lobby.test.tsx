@@ -294,6 +294,7 @@ describe('profiles', () => {
     ...BOB,
     online: true,
     playing: false,
+    blocked: false,
     created_at: '2026-03-02T10:00:00Z',
     ratings: {
       blitz: { rating: 1612, deviation: 80, games: 23, provisional: false, rank: 3 },
@@ -346,12 +347,15 @@ describe('profiles', () => {
           ratings: { blitz: PROFILE.ratings.rapid, rapid: PROFILE.ratings.rapid },
         },
       },
+      'GET /api/v1/blocks': { status: 200, body: [] },
     });
     await screen.findByRole('heading', { name: 'Play' });
     await fireEvent.press(screen.getByRole('button', { name: /^Me, tab/ }));
     expect(await screen.findByText('alice@example.com')).toBeOnTheScreen();
     expect(await screen.findByLabelText('Blitz rating 1500?')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Challenge alice' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Block alice' })).toBeNull();
+    expect(await screen.findByText('You have not blocked anyone.')).toBeOnTheScreen();
   });
 });
 

@@ -61,13 +61,21 @@ These rules belong to the platform, not the board; the server enforces them.
   its first move; if either does not, the game is **aborted** (no result). In the second game
   of a rated match a side that does not make its first move instead **loses on time**.
 - **Time out**: a side whose clock reaches zero on its turn loses.
+- **Lag allowance**: the server measures each player's round trip on the live connection and
+  does not charge a move for up to 0.5 s of it, so a slow network does not cost clock time.
+  The allowance starts after both first moves and never exceeds the player's measured lag.
 - **Resign**: either player, at any time; the opponent wins.
 - **Abort**: either player, before both sides have moved; no result. The second game of a
   rated match cannot be aborted, so nobody can skip the side they would rather not play.
 - **Abandonment**: if it has been a player's turn for 60 seconds and they have been offline
   for all of the last 60 seconds, the opponent may claim the win. A connection that drops and
   comes straight back does not count as leaving.
+- **Abort penalty**: a player who aborts 3 games within 24 hours (failing to make a first move
+  counts too) cannot send or accept challenges for 1 hour after the third.
 - **One live game per player** at a time.
+- **Blocking**: a player can block another. Neither can then challenge the other (pending
+  challenges between them are closed), and they no longer see each other in search or the
+  online list. Only the blocker can see or undo the block.
 - No draws by agreement, matching the board rules.
 
 ## Ratings

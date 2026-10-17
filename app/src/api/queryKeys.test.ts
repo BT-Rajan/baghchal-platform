@@ -13,6 +13,7 @@ test('keys are stable and distinct', () => {
     queryKeys.playerSearch('x'),
     queryKeys.profile('x'),
     queryKeys.leaderboard('x'),
+    queryKeys.blocks,
   ].map((key) => JSON.stringify(key));
   expect(new Set(all).size).toBe(all.length);
 });

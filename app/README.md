@@ -81,6 +81,8 @@ scripts/        the Expo-cloud guardrail
   reconnect as soon as they return; browser tabs stay connected.
 - **Claiming a win** is offered after a countdown, once the opponent has been offline on their
   turn for a minute; the server checks the same rule.
+- **Lag.** The app answers the server's `probe` messages at once, so the server can measure
+  the connection and not charge its delay to the player's clock.
 - **Clocks.** Countdowns (game clocks, first moves, challenges) run on an estimate of the
   server's clock built from the timestamps it sends, so a wrong device clock does not matter.
   The server alone decides when time is up.
@@ -91,7 +93,7 @@ scripts/        the Expo-cloud guardrail
   `src/game` and `src/lobby` must stay at 100% coverage.
 - **Screen tests** in `tests/` render the real routes against a fake server
   (`tests/support/fakeServer.ts`) and a fake socket (`tests/support/fakeSocket.ts`): signing
-  in, the lobby, challenges, live events, playing, clocks, results and matches.
+  in, the lobby, challenges, live events, playing, clocks, results, matches and blocking.
 - **End-to-end smoke** (`npm run e2e:smoke`) runs locally, not in CI. It starts the real server
   on a throwaway SQLite database, builds and serves the web app, and drives two Chromium
   browsers: Alice and Bob sign up, open their emailed links, Alice challenges Bob, Bob accepts,

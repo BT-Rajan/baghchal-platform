@@ -246,7 +246,7 @@ describe('ending a game', () => {
   const waiting = () => game({ ply: 6, side_to_move: 'tiger', server_time: now() });
   const profile = (online: boolean): Route => ({
     status: 200,
-    body: { ...BOB, online, playing: true, created_at: now(), ratings: {} },
+    body: { ...BOB, online, playing: true, blocked: false, created_at: now(), ratings: {} },
   });
 
   test('no claim while the opponent is online', async () => {

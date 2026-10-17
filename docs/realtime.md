@@ -16,6 +16,8 @@ Every message is a JSON text frame with a `type`.
 | server → client | `hello` | `user: {id, username}` — sent once, on connect |
 | client → server | `ping` | — send one at least every 30 s; a silent connection is closed (4410) |
 | server → client | `pong` | — |
+| server → client | `probe` | `id` — reply at once with the same message (`{"type": "probe", "id": …}`); the round trip sets the player's [lag allowance](rules.md#live-play-platform-rules). Sent on connect and every 25 s |
+| client → server | `probe` | `id` — the echo; ids that do not match the latest probe are ignored |
 | server → client | `challenge` | `challenge: {...}` — a challenge involving you was created or changed (any status); match on `challenge.id` |
 | server → client | `game` | `game: {...}` — a game you play in started or changed: the full state (position, legal moves, clocks, result); match on `game.id` and keep the highest `game.ply` |
 | server → client | `error` | `code`, `message` — e.g. `invalid_message`; the socket stays open |

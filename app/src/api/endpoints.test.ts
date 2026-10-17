@@ -12,6 +12,14 @@ function recorder() {
       calls.push(['POST', path, options]);
       return undefined as never;
     },
+    put: async (path, options) => {
+      calls.push(['PUT', path, options]);
+      return undefined as never;
+    },
+    delete: async (path, options) => {
+      calls.push(['DELETE', path, options]);
+      return undefined as never;
+    },
   };
   return { client, calls };
 }
@@ -39,6 +47,9 @@ test('every endpoint calls the right method, path and body', async () => {
   await api.move('g1', 3, 'a1-b2');
   await api.gameAction('g1', 'claim-abandonment');
   await api.leaderboard('blitz');
+  await api.blocks();
+  await api.block('b o');
+  await api.unblock('bob');
 
   const V = '/api/v1';
   expect(calls).toEqual([
@@ -64,5 +75,8 @@ test('every endpoint calls the right method, path and body', async () => {
     ['POST', `${V}/games/g1/moves`, { body: { ply: 3, move: 'a1-b2' } }],
     ['POST', `${V}/games/g1/claim-abandonment`, undefined],
     ['GET', `${V}/leaderboards/blitz`, { signal: undefined }],
+    ['GET', `${V}/blocks`, { signal: undefined }],
+    ['PUT', `${V}/blocks/b%20o`, undefined],
+    ['DELETE', `${V}/blocks/bob`, undefined],
   ]);
 });

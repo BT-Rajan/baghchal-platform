@@ -7,4 +7,5 @@ export const queryKeys = {
   playerSearch: (prefix: string) => ['players', 'search', prefix] as const,
   profile: (username: string) => ['player', username] as const,
   leaderboard: (category: string) => ['leaderboard', category] as const,
+  blocks: ['blocks'] as const,
 };

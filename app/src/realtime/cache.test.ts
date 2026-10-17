@@ -148,6 +148,10 @@ describe('applyMessage', () => {
       startedGame: null,
       otherUser: false,
     });
+    expect(applyMessage(qc, { type: 'probe', id: 1 }, ME.id)).toEqual({
+      startedGame: null,
+      otherUser: false,
+    });
     applyMessage(qc, { type: 'error', code: 'invalid_message', message: 'm' }, ME.id);
     expect(warn).toHaveBeenCalledWith('Realtime error from the server', 'invalid_message', 'm');
     warn.mockRestore();

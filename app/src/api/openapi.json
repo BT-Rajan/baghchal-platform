@@ -537,6 +537,94 @@
         }
       }
     },
+    "/api/v1/blocks": {
+      "get": {
+        "summary": "List Blocks",
+        "description": "Players you have blocked.",
+        "operationId": "list_blocks_api_v1_blocks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Blocks Api V1 Blocks Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/blocks/{username}": {
+      "put": {
+        "summary": "Block Player",
+        "description": "Block a player: neither of you can challenge the other, and neither sees the other in\nthe lobby's player lists. Open challenges between you are closed.",
+        "operationId": "block_player_api_v1_blocks__username__put",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,20}$",
+              "title": "Username"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Unblock Player",
+        "operationId": "unblock_player_api_v1_blocks__username__delete",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,20}$",
+              "title": "Username"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/games": {
       "get": {
         "summary": "My Active Games",
@@ -1495,6 +1583,10 @@
             },
             "type": "object",
             "title": "Ratings"
+          },
+          "blocked": {
+            "type": "boolean",
+            "title": "Blocked"
           }
         },
         "type": "object",
@@ -1504,7 +1596,8 @@
           "online",
           "playing",
           "created_at",
-          "ratings"
+          "ratings",
+          "blocked"
         ],
         "title": "ProfileOut"
       },
@@ -1821,6 +1914,29 @@
           }
         },
         "title": "Pong",
+        "type": "object"
+      },
+      "Probe": {
+        "additionalProperties": false,
+        "description": "Sent by the server; the client echoes it back unchanged.",
+        "properties": {
+          "type": {
+            "const": "probe",
+            "default": "probe",
+            "title": "Type",
+            "type": "string"
+          },
+          "id": {
+            "maximum": 2147483648,
+            "minimum": 0,
+            "title": "Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "Probe",
         "type": "object"
       }
     }

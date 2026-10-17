@@ -32,6 +32,8 @@ export interface RequestOptions {
 export interface Client {
   get<T>(path: string, options?: RequestOptions): Promise<T>;
   post<T>(path: string, options?: RequestOptions): Promise<T>;
+  put<T>(path: string, options?: RequestOptions): Promise<T>;
+  delete<T>(path: string, options?: RequestOptions): Promise<T>;
 }
 
 export const DEFAULT_TIMEOUT_MS = 15_000;
@@ -107,5 +109,7 @@ export function createClient(options: ClientOptions): Client {
   return {
     get: (path, opts = {}) => request('GET', path, opts),
     post: (path, opts = {}) => request('POST', path, opts),
+    put: (path, opts = {}) => request('PUT', path, opts),
+    delete: (path, opts = {}) => request('DELETE', path, opts),
   };
 }
