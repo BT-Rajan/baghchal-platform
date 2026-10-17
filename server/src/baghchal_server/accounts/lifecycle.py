@@ -41,7 +41,7 @@ async def export(db: AsyncSession, user: User, now: datetime) -> ExportOut:
         await db.scalars(
             select(Game)
             .where(or_(Game.goat_id == user.id, Game.tiger_id == user.id))
-            .order_by(Game.created_at)
+            .order_by(Game.created_at, Game.id)
         )
     ).all()
     moves: dict[uuid.UUID, list[str]] = defaultdict(list)
@@ -56,7 +56,7 @@ async def export(db: AsyncSession, user: User, now: datetime) -> ExportOut:
         await db.scalars(
             select(Challenge)
             .where(or_(Challenge.challenger_id == user.id, Challenge.opponent_id == user.id))
-            .order_by(Challenge.created_at)
+            .order_by(Challenge.created_at, Challenge.id)
         )
     ).all()
     blocked = (
@@ -84,7 +84,7 @@ async def export(db: AsyncSession, user: User, now: datetime) -> ExportOut:
         await db.scalars(
             select(Session)
             .where(Session.user_id == user.id, Session.expires_at > now)
-            .order_by(Session.created_at)
+            .order_by(Session.created_at, Session.token_hash)
         )
     ).all()
     return ExportOut(

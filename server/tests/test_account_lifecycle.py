@@ -225,6 +225,7 @@ async def test_exporting_my_data(app: FastAPI, players: PlayerFactory, clock: Cl
         game = await _start(alice, bob, "3+2")
         await _play(alice, bob, game, FIVE_CAPTURES[:3])
         await alice.http.post(f"/api/v1/games/{game['id']}/resign")
+        clock.advance(minutes=1)  # listed oldest first
         r = await carol.http.post(
             "/api/v1/challenges", json={"opponent": "alice", "time_control": "10+5"}
         )
