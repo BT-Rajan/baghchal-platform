@@ -164,17 +164,53 @@ test('events from a socket we already let go of are ignored', () => {
   expect(connection.getStatus()).toBe('connecting');
 });
 
-test('wake reconnects at once while waiting, and only then', () => {
+test('resume reconnects at once while waiting, and only then', () => {
   const { connection } = setup();
-  connection.wake(); // stopped: nothing
+  connection.resume(); // stopped: nothing
   connection.start();
-  connection.wake(); // connecting: nothing
+  connection.resume(); // connecting: nothing
   expect(FakeSocket.all).toHaveLength(1);
   FakeSocket.latest().serverClose(1006);
   FakeSocket.latest().serverClose(1006); // the same socket again: ignored
-  connection.wake();
+  connection.resume();
   expect(FakeSocket.all).toHaveLength(2);
   jest.advanceTimersByTime(60_000); // the cancelled retry does not fire as well
+  expect(FakeSocket.all).toHaveLength(2);
+});
+
+test('pause lets go of the connection until resume', () => {
+  const { connection, onOpen, onStatus } = setup();
+  connection.pause(); // stopped: nothing
+  expect(connection.getStatus()).toBe('stopped');
+  connection.start();
+  const first = FakeSocket.latest();
+  first.open();
+  jest.advanceTimersByTime(PING_INTERVAL_MS - 1);
+  connection.pause();
+  expect(first.closed).toBe(true);
+  expect(connection.getStatus()).toBe('paused');
+  connection.pause(); // twice is fine
+  jest.advanceTimersByTime(10 * 60_000); // no pings, no reconnects while paused
+  expect(first.sent).toEqual([]);
+  expect(FakeSocket.all).toHaveLength(1);
+  connection.resume();
+  FakeSocket.latest().open();
+  expect(onOpen.mock.calls).toEqual([[false], [true]]); // a reconnect: catch up on events
+  expect(onStatus.mock.calls.map(([s]) => s)).toEqual([
+    'connecting',
+    'open',
+    'paused',
+    'connecting',
+    'open',
+  ]);
+});
+
+test('close code 4410 (silent too long) reconnects', () => {
+  const { connection } = setup();
+  connection.start();
+  FakeSocket.latest().open();
+  FakeSocket.latest().serverClose(4410);
+  jest.advanceTimersByTime(1_000);
   expect(FakeSocket.all).toHaveLength(2);
 });
 

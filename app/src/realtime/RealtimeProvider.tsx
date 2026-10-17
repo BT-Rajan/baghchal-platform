@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import type { Game } from '@/api/endpoints';
 import { useSession } from '@/auth/session';
@@ -22,6 +22,8 @@ export interface RealtimeProviderProps {
   /** A game of mine just started: the app opens it. */
   onGameStarted?: (game: Game) => void;
   openSocket?: OpenSocket;
+  /** The platform (for tests). */
+  os?: string;
   children: ReactNode;
 }
 
@@ -30,6 +32,7 @@ export function RealtimeProvider({
   url,
   onGameStarted,
   openSocket,
+  os = Platform.OS,
   children,
 }: RealtimeProviderProps) {
   const { state, session } = useSession();
@@ -60,13 +63,16 @@ export function RealtimeProvider({
     });
     connection.start();
     const foreground = AppState.addEventListener('change', (appState) => {
-      if (appState === 'active') connection.wake();
+      if (appState === 'active') connection.resume();
+      // Apps let go of the connection in the background, so they do not show as online while
+      // nobody is looking; browsers keep it (a tab in the background is still open).
+      else if (appState === 'background' && os !== 'web') connection.pause();
     });
     return () => {
       foreground.remove();
       connection.stop();
     };
-  }, [myId, url, openSocket, session, queryClient]);
+  }, [myId, url, openSocket, session, queryClient, os]);
 
   return <StatusContext.Provider value={status}>{children}</StatusContext.Provider>;
 }

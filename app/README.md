@@ -73,6 +73,10 @@ scripts/        the Expo-cloud guardrail
   have missed. Events write into the same TanStack Query cache the screens read; a game state
   replaces the cached one only if it is newer (higher ply; at equal ply finished beats active,
   then the later `server_time`).
+- **In the background**, apps close their connection (so they stop showing as online) and
+  reconnect as soon as they return; browser tabs stay connected.
+- **Claiming a win** is offered after a countdown, once the opponent has been offline on their
+  turn for a minute; the server checks the same rule.
 - **Clocks.** Countdowns (game clocks, first moves, challenges) run on an estimate of the
   server's clock built from the timestamps it sends, so a wrong device clock does not matter.
   The server alone decides when time is up.

@@ -21,6 +21,7 @@ function Probe() {
 }
 
 async function setup({
+  os = undefined as string | undefined, // the platform's own (iOS under Jest)
   token = 'tok' as string | null,
   routes = { 'GET /api/v1/me': { status: 200, body: ME } } as Record<string, Route>,
   onGameStarted = jest.fn<void, [Game]>(),
@@ -43,7 +44,12 @@ async function setup({
         tokenStore={memoryTokenStore(token)}
         fetch={server.fetch}
       >
-        <RealtimeProvider url={URL} openSocket={openFakeSocket} onGameStarted={onGameStarted}>
+        <RealtimeProvider
+          url={URL}
+          {...(os !== undefined && { os })}
+          openSocket={openFakeSocket}
+          onGameStarted={onGameStarted}
+        >
           <Probe />
         </RealtimeProvider>
       </SessionProvider>
@@ -113,6 +119,31 @@ test('coming back to the foreground reconnects at once', async () => {
   expect(FakeSocket.all).toHaveLength(1);
   await act(() => foreground.forEach((listener) => listener('active')));
   expect(FakeSocket.all).toHaveLength(2);
+});
+
+test('apps let go of the connection in the background and reconnect when back', async () => {
+  const { foreground, queryClient } = await setup();
+  await screen.findByText('signedIn/connecting');
+  await act(() => FakeSocket.latest().open());
+  const invalidate = jest.spyOn(queryClient, 'invalidateQueries');
+  await act(() => foreground.forEach((listener) => listener('inactive'))); // a brief overlay
+  expect(screen.getByText('signedIn/open')).toBeOnTheScreen();
+  await act(() => foreground.forEach((listener) => listener('background')));
+  expect(screen.getByText('signedIn/paused')).toBeOnTheScreen();
+  expect(FakeSocket.all[0]?.closed).toBe(true);
+  await act(() => foreground.forEach((listener) => listener('active')));
+  await act(() => FakeSocket.latest().open());
+  expect(FakeSocket.all).toHaveLength(2);
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.challenges });
+});
+
+test('browsers keep the connection in a background tab', async () => {
+  const { foreground } = await setup({ os: 'web' });
+  await screen.findByText('signedIn/connecting');
+  await act(() => FakeSocket.latest().open());
+  await act(() => foreground.forEach((listener) => listener('background')));
+  expect(screen.getByText('signedIn/open')).toBeOnTheScreen();
+  expect(FakeSocket.latest().closed).toBe(false);
 });
 
 test('a refused handshake checks the session, which may have ended', async () => {

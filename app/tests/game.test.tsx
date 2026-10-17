@@ -267,9 +267,26 @@ describe('ending a game', () => {
         body: { ...waiting(), status: 'finished', result: { winner: 'goat', reason: 'abandoned' } },
       },
     });
-    await screen.findByRole('button', { name: 'Claim the win' });
+    // First a countdown, then the button: the opponent must stay away for a whole minute.
+    expect(
+      await screen.findByText(/^bob seems to have left\. If they are not back in (59|60) s/),
+    ).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Claim the win' })).toBeNull();
+    await aMinuteLater();
     await press('Claim the win');
     expect(await screen.findByText('You won: the other player left.')).toBeOnTheScreen();
+  });
+
+  test('the countdown stops when the turn changes', async () => {
+    await openGame(waiting(), { 'GET /api/v1/players/bob': profile(false) });
+    await screen.findByText(/^bob seems to have left/);
+    const mine = game({ ply: 7, side_to_move: 'goat', server_time: now() });
+    await act(() => {
+      FakeSocket.latest().open();
+      FakeSocket.latest().receive({ type: 'game', game: mine });
+    });
+    expect(await screen.findByText('Your move')).toBeOnTheScreen();
+    expect(screen.queryByText(/^bob seems to have left/)).toBeNull();
   });
 
   test('a claim the server turns down is reported', async () => {
@@ -277,11 +294,19 @@ describe('ending a game', () => {
       'GET /api/v1/players/bob': profile(false),
       'POST /api/v1/games/g1/claim-abandonment': error(409, 'cannot_claim', 'Wait 60 seconds.'),
     });
-    await screen.findByRole('button', { name: 'Claim the win' });
+    await screen.findByText(/^bob seems to have left/);
+    await aMinuteLater();
     await press('Claim the win');
     expect(await screen.findByText('Wait 60 seconds.')).toBeOnTheScreen();
   });
 });
+
+/** Move this device's clock on by a minute (the countdown reads it every second). */
+async function aMinuteLater() {
+  const real = Date.now.bind(Date);
+  jest.spyOn(Date, 'now').mockImplementation(() => real() + 61_000);
+  await screen.findByRole('button', { name: 'Claim the win' }, { timeout: 3000 }).catch(() => null);
+}
 
 describe('matches and results', () => {
   const score = [
@@ -320,6 +345,25 @@ describe('matches and results', () => {
     expect(await screen.findByText('Rated match · game 2 of 2')).toBeOnTheScreen();
     expect(app.getPathname()).toBe('/game/g2');
     expect(screen.getByRole('button', { name: 'Back to game 1' })).toBeOnTheScreen();
+  });
+
+  test('the second game of a match cannot be aborted, and a missed first move loses', async () => {
+    const opening = () =>
+      game({
+        id: 'g2',
+        rated: true,
+        match: { id: 'm1', game: 2, games: ['g1', 'g2'], score },
+        deadline_at: new Date(Date.now() + 25_000).toISOString(),
+        server_time: now(),
+      });
+    await openGame(opening(), {
+      'GET /api/v1/games/g2': () => ({ status: 200, body: opening() }),
+    });
+    expect(
+      await screen.findByText(/^Your move · \d+ s to make a first move, or it counts as a loss$/),
+    ).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Abort game' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Resign' })).toBeOnTheScreen();
   });
 
   test('someone else’s game can be watched but not played', async () => {

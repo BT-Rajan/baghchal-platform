@@ -135,7 +135,10 @@ function Status({ game, mine }: { game: Game; mine: Piece | null }) {
           // Screen readers hear what just happened, then whose turn it is.
           aria-label={[last, turn].filter((part) => part !== null).join(' ')}
         >
-          {firstMove === null ? turn : `${turn} · ${firstMove} s to make a first move`}
+          {firstMove === null
+            ? turn
+            : `${turn} · ${firstMove} s to make a first move` +
+              (game.match?.game === 2 ? ', or it counts as a loss' : '')}
         </Text>
       )}
       {match !== null && (

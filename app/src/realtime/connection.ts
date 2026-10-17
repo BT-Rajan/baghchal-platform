@@ -3,7 +3,10 @@
  * connection (and the user's presence) alive, and drops a connection that stops answering.
  *
  * Close codes: 4401 means the session ended, so it stops. Anything else (including 1003, 1009,
- * 4408 and 4429, or a dropped network) reconnects after a backoff.
+ * 4408, 4410 and 4429, or a dropped network) reconnects after a backoff.
+ *
+ * Apps pause the connection while in the background (the system would suspend it anyway) and
+ * resume it when they return, so a player in the background does not show as online.
  */
 import { PING, parseServerMessage, type ServerMessage } from './protocol';
 import { backoffDelay } from './backoff';
@@ -20,7 +23,7 @@ export interface SocketLike {
 
 export type OpenSocket = (url: string, headers: Record<string, string>) => SocketLike;
 
-export type ConnectionStatus = 'connecting' | 'open' | 'waiting' | 'stopped';
+export type ConnectionStatus = 'connecting' | 'open' | 'waiting' | 'paused' | 'stopped';
 
 export const PING_INTERVAL_MS = 25_000;
 export const CLOSE_SIGNED_OUT = 4401;
@@ -82,9 +85,17 @@ export class RealtimeConnection {
     this.setStatus('stopped');
   }
 
-  /** Reconnect now rather than after the backoff (the app came back to the foreground). */
-  wake(): void {
-    if (this.status !== 'waiting') return;
+  /** Close the connection until `resume` (the app went to the background). */
+  pause(): void {
+    if (this.status === 'stopped' || this.status === 'paused') return;
+    this.clearTimers();
+    this.drop();
+    this.setStatus('paused');
+  }
+
+  /** Connect now: after a pause, or instead of waiting out the backoff. */
+  resume(): void {
+    if (this.status !== 'paused' && this.status !== 'waiting') return;
     this.clearTimers();
     this.attempt = 0;
     this.connect();
