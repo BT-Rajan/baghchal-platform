@@ -7,7 +7,7 @@ from baghchal_server.deps import DB, AppState, CurrentUser, State, enforce_limit
 from baghchal_server.errors import AppError
 from baghchal_server.games import service as games
 from baghchal_server.games.events import notify as notify_game
-from baghchal_server.lobby import service
+from baghchal_server.lobby import seeks, service
 from baghchal_server.lobby.models import Challenge
 from baghchal_server.lobby.schemas import (
     ChallengeIn,
@@ -27,6 +27,7 @@ from baghchal_server.realtime.protocol import ChallengeEvent
 router = APIRouter(prefix="/api/v1")
 
 SEARCH_PER_USER: Final = Limit("player-search", 60, 60)
+SEEKS_PER_USER: Final = Limit("seek", 120, 3600)
 CHALLENGES_PER_USER: Final = Limit("challenge-create", 30, 3600)
 BLOCKS_PER_USER: Final = Limit("block", 60, 3600)
 
@@ -191,3 +192,33 @@ async def block_player(username: UsernameQuery, user: CurrentUser, state: State,
 async def unblock_player(username: UsernameQuery, user: CurrentUser, state: State, db: DB) -> None:
     await enforce_limit(state, BLOCKS_PER_USER, str(user.id))
     await service.unblock(db, user.id, await _player(state, db, username))
+
+
+# ── Quick pairing ─────────────────────────────────────────────────────────
+
+
+@router.post("/seeks")
+async def seek_game(data: seeks.SeekIn, user: CurrentUser, state: State, db: DB) -> seeks.SeekOut:
+    """Play anyone who wants the same kind of game: paired at once with whoever has waited
+    longest, or wait (two minutes) for the next person."""
+    await enforce_limit(state, SEEKS_PER_USER, str(user.id))
+    game, expires = await seeks.seek(
+        db, state.presence, state.clock(), user, data.time_control, rated=data.rated
+    )
+    if game is None:
+        return seeks.SeekOut(status="waiting", game=None, expires_at=expires)
+    return seeks.SeekOut(status="paired", game=await notify_game(state, db, game), expires_at=None)
+
+
+@router.delete("/seeks", status_code=status.HTTP_204_NO_CONTENT)
+async def stop_seeking(user: CurrentUser, db: DB) -> None:
+    await seeks.cancel(db, user.id)
+
+
+@router.get("/seeks")
+async def waiting_players(user: CurrentUser, state: State, db: DB) -> list[seeks.SeekCountOut]:
+    """How many players are waiting for each kind of game."""
+    return [
+        seeks.SeekCountOut(time_control=f"{a // 60}+{b}", rated=rated, players=n)
+        for a, b, rated, n in await seeks.counts(db, state.clock())
+    ]

@@ -201,11 +201,11 @@ async def create_challenge(
         )
     if await has_blocked(db, opponent.id, challenger.id):
         raise AppError(403, "challenge_refused", f"You cannot challenge {opponent.username}.")
-    await _check_abort_cooldown(db, challenger.id, now)
+    await check_abort_cooldown(db, challenger.id, now)
     if not await presence.online([opponent.id]):
         raise AppError(409, "player_offline", f"{opponent.username} is not online.")
     if await games.busy(db, [challenger.id, opponent.id]):
-        raise _busy()
+        raise busy_error()
     if data.rated:
         last = await games.last_rated_match(db, challenger.id, opponent.id)
         if last is not None and now - last < RATED_MATCH_EVERY:
@@ -280,7 +280,7 @@ async def respond(
     starts the game in the same transaction: there is never an accepted challenge without one.
     """
     if response == "accept":
-        await _check_abort_cooldown(db, user_id, now)
+        await check_abort_cooldown(db, user_id, now)
     actor = Challenge.challenger_id if response == "cancel" else Challenge.opponent_id
     result = await db.execute(
         update(Challenge)
@@ -303,7 +303,7 @@ async def respond(
             except IntegrityError:
                 await db.rollback()
                 if await games.busy(db, players):
-                    raise _busy() from None
+                    raise busy_error() from None
                 raise
         await db.commit()
         return challenge, game
@@ -316,7 +316,7 @@ async def respond(
     raise AppError(409, "challenge_closed", "This challenge is no longer open.")
 
 
-async def _check_abort_cooldown(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> None:
+async def check_abort_cooldown(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> None:
     wait = await games.abort_cooldown(db, user_id, now)
     if wait > timedelta(0):
         minutes = math.ceil(wait.total_seconds() / 60)
@@ -342,7 +342,7 @@ def _rated_limit(opponent: str, wait: timedelta) -> AppError:
     )
 
 
-def _busy() -> AppError:
+def busy_error() -> AppError:
     return AppError(409, "player_busy", "One of you is already playing a game.")
 
 

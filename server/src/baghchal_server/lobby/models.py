@@ -62,3 +62,23 @@ class Block(Base):
         Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
+
+
+class Seek(Base):
+    """A player waiting to be paired with anyone who wants the same kind of game. One per
+    player; it lapses at ``expires_at``."""
+
+    __tablename__ = "seeks"
+    __table_args__ = (
+        Index("ix_seeks_kind", "initial_seconds", "increment_seconds", "rated", "created_at"),
+        MYSQL_TABLE_ARGS,
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    initial_seconds: Mapped[int] = mapped_column(Integer)
+    increment_seconds: Mapped[int] = mapped_column(Integer)
+    rated: Mapped[bool] = mapped_column(Boolean)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
