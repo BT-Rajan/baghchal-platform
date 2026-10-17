@@ -124,12 +124,27 @@ async def create_challenge(
         expires_at=now + CHALLENGE_TTL,
     )
     db.add(challenge)
+    opponent_id, opponent_name = opponent.id, opponent.username  # a rollback expires them
     try:
         await db.commit()
     except IntegrityError:
         await db.rollback()
+        # The pair already has an open challenge; say which way round it is.
+        incoming = await db.scalar(
+            select(Challenge.id).where(
+                Challenge.pair_key == key, Challenge.challenger_id == opponent_id
+            )
+        )
+        if incoming is not None:
+            raise AppError(
+                409,
+                "challenge_incoming",
+                f"{opponent_name} has already challenged you. Accept their challenge instead.",
+            ) from None
         raise AppError(
-            409, "challenge_exists", "There is already an open challenge between you."
+            409,
+            "challenge_exists",
+            f"You have already challenged {opponent_name}. Wait for their answer.",
         ) from None
     return challenge
 

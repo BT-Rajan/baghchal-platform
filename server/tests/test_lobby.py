@@ -225,10 +225,19 @@ async def test_one_open_challenge_per_pair(app: FastAPI, players: PlayerFactory)
     async with AsyncExitStack() as stack:
         await _online(app, stack, alice, bob)
         assert (await _challenge(alice, bob)).status_code == 201
-        for challenger, opponent in ((alice, bob), (bob, alice)):
-            r = await _challenge(challenger, opponent)
-            assert r.status_code == 409
-            assert r.json()["error"]["code"] == "challenge_exists"
+        r = await _challenge(alice, bob)
+        assert r.status_code == 409
+        assert r.json()["error"] == {
+            "code": "challenge_exists",
+            "message": "You have already challenged bob. Wait for their answer.",
+        }
+        # Bob challenging back is told that a challenge is waiting for him.
+        r = await _challenge(bob, alice)
+        assert r.status_code == 409
+        assert r.json()["error"] == {
+            "code": "challenge_incoming",
+            "message": "alice has already challenged you. Accept their challenge instead.",
+        }
 
 
 async def test_limit_on_open_outgoing_challenges(app: FastAPI, players: PlayerFactory) -> None:

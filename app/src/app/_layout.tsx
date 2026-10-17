@@ -10,6 +10,7 @@ import { followAppFocus } from '@/api/focus';
 import { shouldRetry } from '@/api/retry';
 import { SessionProvider, useSession } from '@/auth/session';
 import { Button } from '@/components/Button';
+import { ChallengeBanner } from '@/components/ChallengeBanner';
 import { ConnectionBanner } from '@/components/ConnectionBanner';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
@@ -65,6 +66,7 @@ function Routes() {
   return (
     <View style={styles.app}>
       {signedIn && <ConnectionBanner />}
+      {signedIn && <ChallengeBanner />}
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={signedIn}>
           <Stack.Screen name="(tabs)" />

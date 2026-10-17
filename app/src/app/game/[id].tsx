@@ -16,15 +16,25 @@ import { ErrorState, Loading } from '@/components/States';
 import { useServerNow } from '@/components/useNow';
 import { parseBfen, type Piece } from '@/game/bfen';
 import { firstMoveSecondsLeft } from '@/game/clock';
-import { lastMoveText, matchSummary, other, resultText, sideOf, turnText } from '@/game/describe';
+import {
+  lastMoveText,
+  matchSummary,
+  other,
+  playerOf,
+  resultText,
+  sideOf,
+  turnText,
+} from '@/game/describe';
 import { useGame, useGameAction, useMove } from '@/game/hooks';
 import { boardSize, gameLayout } from '@/game/layout';
+import { TIME_CONTROLS } from '@/lobby/format';
+import { useCreateChallenge } from '@/lobby/hooks';
 import { colors, spacing } from '@/theme';
 
 export default function GameScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const me = useMe();
-  const query = useGame(id);
+  const query = useGame(id, me.id);
   const move = useMove(id);
   const action = useGameAction(id);
   const { width, height } = useWindowDimensions();
@@ -87,6 +97,7 @@ export default function GameScreen() {
           onAction={(a) => action.mutate(a)}
         />
       )}
+      {game.status === 'finished' && mine !== null && <Rematch game={game} mine={mine} />}
       {game.status === 'finished' && (
         <Button
           title="Back to the lobby"
@@ -113,6 +124,33 @@ export default function GameScreen() {
         {panel}
       </View>
     </Screen>
+  );
+}
+
+/**
+ * Challenge the same player again: a casual game (rated matches are limited to one a day per
+ * pair) with sides swapped. The answer comes in the lobby.
+ */
+function Rematch({ game, mine }: { game: Game; mine: Piece }) {
+  const create = useCreateChallenge();
+  const timeControl = TIME_CONTROLS.find((tc) => tc.label === game.time_control)?.label;
+  if (timeControl === undefined) return null;
+  const opponent = playerOf(game, other(mine)).username;
+  return (
+    <>
+      {create.error !== null && <Notice tone="error">{describeError(create.error)}</Notice>}
+      <Button
+        title={`Rematch ${opponent}`}
+        label="Rematch (casual, sides swapped)"
+        busy={create.isPending}
+        onPress={() =>
+          create.mutate(
+            { opponent, time_control: timeControl, rated: false, side: other(mine) },
+            { onSuccess: () => router.navigate('/') },
+          )
+        }
+      />
+    </>
   );
 }
 

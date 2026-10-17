@@ -7,6 +7,7 @@ import { queryKeys } from '@/api/queryKeys';
 import { useApi } from '@/auth/session';
 import { applyGame, isNewer } from '@/realtime/cache';
 
+import { sideOf } from './describe';
 import { serverClock } from './serverClock';
 
 /**
@@ -22,11 +23,21 @@ const REFRESH_ON = [
   'cannot_abort',
 ];
 
-export function useGame(id: string) {
+/** How often someone watching a game (not playing in it) fetches it: live events go only to
+ * the two players. */
+export const WATCH_REFRESH_MS = 3_000;
+
+export function useGame(id: string, myId: string) {
   const api = useApi();
   const queryClient = useQueryClient();
-  return useQuery({
+  return useQuery<Game>({
     queryKey: queryKeys.game(id),
+    refetchInterval: ({ state }) => {
+      const game = state.data;
+      const watching =
+        game !== undefined && game.status === 'active' && sideOf(game, myId) === null;
+      return watching ? WATCH_REFRESH_MS : false;
+    },
     queryFn: async ({ signal }) => {
       const fresh = await api.game(id, signal);
       serverClock.observe(fresh.server_time);

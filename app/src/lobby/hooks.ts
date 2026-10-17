@@ -11,6 +11,8 @@ import { applyChallenge, applyGame } from '@/realtime/cache';
 
 /** Presence is not pushed over the socket, so lists of players are polled. */
 export const PRESENCE_REFRESH_MS = 15_000;
+/** Polling while an opponent seems to have left, so the claim is offered without much delay. */
+export const AWAY_REFRESH_MS = 5_000;
 
 export function useChallenges() {
   const api = useApi();
@@ -52,12 +54,12 @@ export function usePlayerSearch(prefix: string | null) {
   });
 }
 
-export function useProfile(username: string, enabled = true) {
+export function useProfile(username: string, enabled = true, refreshMs = PRESENCE_REFRESH_MS) {
   const api = useApi();
   return useQuery({
     queryKey: queryKeys.profile(username),
     queryFn: ({ signal }) => api.profile(username, signal),
-    refetchInterval: PRESENCE_REFRESH_MS,
+    refetchInterval: refreshMs,
     enabled,
   });
 }
