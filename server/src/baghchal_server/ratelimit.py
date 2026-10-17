@@ -20,9 +20,10 @@ class RateLimiter(Protocol):
         """Count one attempt; return 0 if allowed, else seconds until the window resets."""
         ...
 
-    async def exceeded(self, limit: Limit, key: str) -> int:
-        """Without counting anything: 0 if another attempt is allowed, else seconds until the
-        window resets. For limits that count only some outcomes (such as failed sign-ins)."""
+    async def undo(self, limit: Limit, key: str, counted_at: float) -> None:
+        """Take back one attempt counted at ``counted_at`` (a ``time.time()`` taken just before
+        ``hit``): one counted in advance that turned out not to be the kind this limit is about.
+        Only that attempt's window is touched, so a refund never frees room in a later one."""
         ...
 
 
@@ -52,18 +53,25 @@ class MemoryRateLimiter:
             return 0
         return _retry_after(limit, window, now)
 
-    async def exceeded(self, limit: Limit, key: str) -> int:
-        now = time.time()
-        window = int(now // limit.seconds)
-        start, count = self._windows.get(f"{limit.name}:{key}", (window, 0))
-        if start != window or count < limit.count:
-            return 0
-        return _retry_after(limit, window, now)
+    async def undo(self, limit: Limit, key: str, counted_at: float) -> None:
+        window = int(counted_at // limit.seconds)
+        full_key = f"{limit.name}:{key}"
+        start, count = self._windows.get(full_key, (window, 0))
+        if start == window and count > 0:
+            self._windows[full_key] = (start, count - 1)
+
+
+_UNDO = """
+if (tonumber(redis.call('GET', KEYS[1]) or '0')) > 0 then
+  redis.call('DECR', KEYS[1])
+end
+"""
 
 
 class RedisRateLimiter:
     def __init__(self, redis: "Redis") -> None:
         self._redis = redis
+        self._undo = redis.register_script(_UNDO)
 
     async def hit(self, limit: Limit, key: str) -> int:
         now = time.time()
@@ -77,10 +85,6 @@ class RedisRateLimiter:
             return 0
         return _retry_after(limit, window, now)
 
-    async def exceeded(self, limit: Limit, key: str) -> int:
-        now = time.time()
-        window = int(now // limit.seconds)
-        count = await self._redis.get(f"rl:{limit.name}:{window}:{key}")
-        if count is None or int(count) < limit.count:
-            return 0
-        return _retry_after(limit, window, now)
+    async def undo(self, limit: Limit, key: str, counted_at: float) -> None:
+        window = int(counted_at // limit.seconds)
+        await self._undo(keys=[f"rl:{limit.name}:{window}:{key}"])

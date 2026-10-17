@@ -17,7 +17,7 @@ import { spawn } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
-import { dirname, extname, join, resolve } from 'node:path';
+import { dirname, extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { chromium } from 'playwright';
@@ -113,7 +113,7 @@ const TYPES = {
 };
 
 async function serveWeb() {
-  const root = join(APP, 'dist');
+  const root = resolve(APP, 'dist');
   if (process.env.E2E_SKIP_BUILD !== '1') {
     await run('npx', ['expo', 'export', '--platform', 'web'], {
       cwd: APP,
@@ -122,12 +122,23 @@ async function serveWeb() {
   }
   // A static host that serves index.html for app routes, as a CDN rewrite would.
   const web = createServer((request, response) => {
-    const path = decodeURIComponent(new URL(request.url, WEB).pathname);
-    for (const file of [join(root, path), join(root, 'index.html')]) {
+    let file;
+    try {
+      // Resolved inside root, so "/../" (encoded or not) cannot reach other files.
+      file = resolve(root, `.${decodeURIComponent(new URL(request.url, WEB).pathname)}`);
+    } catch {
+      response.writeHead(400).end(); // malformed percent-encoding
+      return;
+    }
+    if (file !== root && !file.startsWith(root + sep)) {
+      response.writeHead(404).end();
+      return;
+    }
+    for (const candidate of [file, join(root, 'index.html')]) {
       try {
-        const body = readFileSync(file);
+        const body = readFileSync(candidate);
         response.writeHead(200, {
-          'content-type': TYPES[extname(file)] ?? 'application/octet-stream',
+          'content-type': TYPES[extname(candidate)] ?? 'application/octet-stream',
         });
         response.end(body);
         return;

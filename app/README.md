@@ -18,6 +18,10 @@ The only setting is the API's address, read at build time:
 must list the app's origin in `BAGHCHAL_ALLOWED_ORIGINS` and use it as `BAGHCHAL_PUBLIC_BASE_URL`
 (the links in emails open the app there).
 
+Release builds must use `https` for the API (plain `http` is allowed only to this machine):
+`expo export` fails otherwise, and a release bundle refuses to start. Development builds may use
+plain `http`, so a phone can reach a server on your network.
+
 On a phone or simulator, use a development build made on your own machine:
 `npx expo run:ios` or `npx expo run:android` (no EAS). Point it at your computer's address, not
 `localhost`: `EXPO_PUBLIC_API_URL=http://192.168.1.20:8000`.

@@ -1,7 +1,15 @@
 import type { ExpoConfig } from 'expo/config';
 
+import { apiUrlProblem } from './src/apiUrl.js';
+
 // No secrets belong here (the API's address, EXPO_PUBLIC_API_URL, is read in src/config.ts),
 // and no Expo-cloud settings (EAS project ID, updates URL): see docs/adr/0002.
+// A release build must not send passwords and tokens over plain http (see src/apiUrl.ts).
+const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+const problem =
+  apiUrl === undefined ? null : apiUrlProblem(apiUrl, process.env.NODE_ENV === 'production');
+if (problem !== null) throw new Error(problem);
+
 const config: ExpoConfig = {
   name: 'Bagh Chal',
   slug: 'baghchal',

@@ -1,5 +1,6 @@
 """Cross-cutting behaviour: security headers, CSRF guard, limits, errors, health, settings."""
 
+import asyncio
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -143,6 +144,24 @@ async def test_one_address_can_sign_in_many_people(
         assert r.status_code == 429
         assert r.json()["error"]["code"] == "rate_limited"
         assert await sign_in(home, "ana") == 200  # another address is not affected
+
+
+async def test_parallel_guesses_cannot_slip_under_the_failure_limit(
+    app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Every attempt is counted as a failure before the password is checked, so a burst of
+    guesses sent at once gets no more tries than the limit allows."""
+    monkeypatch.setattr(account_routes, "LOGIN_FAILURES_PER_IP", Limit("login-fail-ip", 3, 900))
+    transport = httpx.ASGITransport(app=app, client=("203.0.113.9", 1234))
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as attacker:
+        replies = await asyncio.gather(
+            *(
+                attacker.post(LOGIN, json={"login": f"user{i}", "password": "guess guess"})
+                for i in range(12)
+            )
+        )
+    codes = sorted(r.status_code for r in replies)
+    assert codes == [401] * 3 + [429] * 9
 
 
 async def test_memory_rate_limiter_windows_and_capacity() -> None:

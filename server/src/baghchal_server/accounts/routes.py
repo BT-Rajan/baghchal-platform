@@ -1,3 +1,4 @@
+import time
 from typing import Final
 
 from fastapi import APIRouter, BackgroundTasks, Request, Response, status
@@ -96,16 +97,20 @@ async def login(
     data: LoginIn, request: Request, response: Response, state: State, db: DB
 ) -> SessionOut:
     ip, account = client_ip(request), data.login.strip().lower()
-    await enforce_limit(state, LOGIN_FAILURES_PER_IP, ip, count=False)
-    await enforce_limit(state, LOGIN_PER_IP, ip)
-    await enforce_limit(state, LOGIN_PER_ACCOUNT_IP, f"{account}|{ip}")
-    await enforce_limit(state, LOGIN_PER_ACCOUNT, account)
+    # Count this attempt as a failure up front, so parallel guesses cannot all slip under the
+    # limit, and take it back unless the password turns out to be wrong.
+    counted_at = time.time()
+    await enforce_limit(state, LOGIN_FAILURES_PER_IP, ip)
     try:
+        await enforce_limit(state, LOGIN_PER_IP, ip)
+        await enforce_limit(state, LOGIN_PER_ACCOUNT_IP, f"{account}|{ip}")
+        await enforce_limit(state, LOGIN_PER_ACCOUNT, account)
         user, token = await service.login(db, state.hasher, state.settings, state.clock(), data)
     except AppError as error:
-        if error.code == "invalid_credentials":
-            await state.limiter.hit(LOGIN_FAILURES_PER_IP, ip)
+        if error.code != "invalid_credentials":
+            await state.limiter.undo(LOGIN_FAILURES_PER_IP, ip, counted_at)
         raise
+    await state.limiter.undo(LOGIN_FAILURES_PER_IP, ip, counted_at)
     return _session_response(response, state, user, token, data.transport)
 
 

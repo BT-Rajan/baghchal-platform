@@ -78,11 +78,8 @@ def client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-async def enforce_limit(state: AppState, limit: Limit, key: str, *, count: bool = True) -> None:
-    """Refuse the request if ``limit`` is used up for ``key``. With ``count=False`` the request
-    is not counted here (the caller counts only some outcomes, with ``limiter.hit``)."""
-    limiter = state.limiter
-    retry_after = await (limiter.hit(limit, key) if count else limiter.exceeded(limit, key))
+async def enforce_limit(state: AppState, limit: Limit, key: str) -> None:
+    retry_after = await state.limiter.hit(limit, key)
     if retry_after:
         raise AppError(
             429,

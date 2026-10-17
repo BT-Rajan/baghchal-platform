@@ -192,7 +192,12 @@ export class RealtimeConnection {
   }
 }
 
-/** `http(s)://host/…` → `ws(s)://host/api/v1/ws`. */
+/** `http(s)://host/…` → `ws(s)://host/api/v1/ws`: https always becomes the encrypted wss. */
 export function socketUrl(apiUrl: string): string {
-  return `${apiUrl.replace(/\/+$/, '').replace(/^http/, 'ws')}/api/v1/ws`;
+  const url = new URL(apiUrl);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  url.pathname = `${url.pathname.replace(/\/+$/, '')}/api/v1/ws`;
+  url.search = '';
+  url.hash = '';
+  return url.toString();
 }

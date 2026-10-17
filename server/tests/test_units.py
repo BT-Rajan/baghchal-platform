@@ -164,19 +164,21 @@ async def test_memory_limiter_starts_a_new_window(monkeypatch: pytest.MonkeyPatc
     assert await limiter.hit(limit, "k") == 0
 
 
-async def test_memory_limiter_can_check_without_counting(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_memory_limiter_can_take_back_an_attempt(monkeypatch: pytest.MonkeyPatch) -> None:
     now = 1_000_000.0
     monkeypatch.setattr(time, "time", lambda: now)
     limiter = MemoryRateLimiter()
-    limit = Limit("t", 2, 60)
-    assert await limiter.exceeded(limit, "k") == 0  # nothing counted yet
-    await limiter.hit(limit, "k")
-    assert await limiter.exceeded(limit, "k") == 0  # checking counts nothing
-    assert await limiter.exceeded(limit, "k") == 0
-    await limiter.hit(limit, "k")
-    assert await limiter.exceeded(limit, "k") == 20  # used up until 1_000_020
+    limit = Limit("t", 1, 60)
+    await limiter.undo(limit, "k", now)  # nothing to take back
+    assert await limiter.hit(limit, "k") == 0
+    await limiter.undo(limit, "k", now)
+    assert await limiter.hit(limit, "k") == 0  # the first attempt no longer counts
+    counted_at = now
+    assert await limiter.hit(limit, "k") == 20
     now += 60
-    assert await limiter.exceeded(limit, "k") == 0  # a new window
+    assert await limiter.hit(limit, "k") == 0  # the next window: 1 of 1 used
+    await limiter.undo(limit, "k", counted_at)  # a refund for the old window frees nothing
+    assert await limiter.hit(limit, "k") > 0
 
 
 @needs_redis
@@ -190,9 +192,16 @@ async def test_redis_limiter() -> None:
         assert await limiter.hit(limit, "k") == 0
         assert 1 <= await limiter.hit(limit, "k") <= 60
         assert await limiter.hit(limit, "other") == 0
-        assert 1 <= await limiter.exceeded(limit, "k") <= 60
-        assert await limiter.exceeded(limit, "other") == 0  # one of two used
-        assert await limiter.exceeded(limit, "never") == 0
+        now = time.time()
+        await limiter.undo(limit, "k", now)  # 2 of 2 used again: one more is refused
+        assert 1 <= await limiter.hit(limit, "k") <= 60
+        await limiter.undo(limit, "k", now)
+        await limiter.undo(limit, "k", now)  # 1 of 2 used
+        assert await limiter.hit(limit, "k") == 0
+        await limiter.undo(limit, "never", now)  # nothing to take back
+        assert await limiter.hit(limit, "never") == 0
+        await limiter.undo(limit, "k", now - 120)  # another window: nothing changes
+        assert 1 <= await limiter.hit(limit, "k") <= 60
     finally:
         await redis.aclose()
 

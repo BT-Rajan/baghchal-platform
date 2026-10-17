@@ -39,6 +39,8 @@ afterEach(() => jest.useRealTimers());
 test('socketUrl', () => {
   expect(socketUrl('https://api.example/')).toBe('wss://api.example/api/v1/ws');
   expect(socketUrl('http://localhost:8000')).toBe('ws://localhost:8000/api/v1/ws');
+  expect(socketUrl('HTTPS://API.example.com')).toBe('wss://api.example.com/api/v1/ws');
+  expect(socketUrl('https://example.com/game/')).toBe('wss://example.com/game/api/v1/ws');
 });
 
 test('connects with the bearer token and delivers parsed messages', () => {
