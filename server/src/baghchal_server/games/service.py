@@ -62,6 +62,13 @@ from baghchal_server.realtime.presence import Presence
 
 FIRST_MOVE_GRACE: Final = timedelta(seconds=30)
 ABANDON_AFTER: Final = timedelta(seconds=60)
+MAX_LAG_MS: Final = 500
+"""The most network delay (the mover's measured round trip) not charged to a clock per move."""
+ABORT_LIMIT: Final = 3
+ABORT_WINDOW: Final = timedelta(hours=24)
+ABORT_COOLDOWN: Final = timedelta(hours=1)
+"""After ABORT_LIMIT aborts within ABORT_WINDOW, a player cannot start new games until
+ABORT_COOLDOWN after the last one."""
 SWEEP_BATCH: Final = 100
 _CACHE_SIZE: Final = 10_000
 _INITIAL: Final = format_position(Position.initial())
@@ -95,11 +102,16 @@ def _clocks_running(game: Game) -> bool:
     return game.status == GameStatus.ACTIVE and game.ply >= 2
 
 
+def _charged_ms(game: Game, now: datetime) -> int:
+    """Time taken by the side to move so far this turn, less its network delay allowance."""
+    return max(0, _ms(now - game.turn_started_at) - game.lag_ms)
+
+
 def clocks_at(game: Game, now: datetime) -> tuple[int, int]:
     """(goat_ms, tiger_ms) as they stand at ``now``."""
     goat, tiger = game.goat_ms, game.tiger_ms
     if _clocks_running(game):
-        elapsed = _ms(now - game.turn_started_at)
+        elapsed = _charged_ms(game, now)
         if _side_to_move(game) == "goat":
             goat = max(0, goat - elapsed)
         else:
@@ -107,10 +119,18 @@ def clocks_at(game: Game, now: datetime) -> tuple[int, int]:
     return goat, tiger
 
 
-def _deadline(ply: int, turn_started_at: datetime, clock_ms: int) -> datetime:
+def _deadline(ply: int, turn_started_at: datetime, clock_ms: int, lag_ms: int) -> datetime:
     if ply < 2:
         return turn_started_at + FIRST_MOVE_GRACE
-    return turn_started_at + timedelta(milliseconds=clock_ms)
+    return turn_started_at + timedelta(milliseconds=clock_ms + lag_ms)
+
+
+async def _lag_allowance(presence: Presence, user_id: uuid.UUID, ply: int) -> int:
+    """Network delay not to charge the player about to move: their measured round trip
+    (requests and events each cross the network once), capped. None before clocks run."""
+    if ply < 2:
+        return 0
+    return min(MAX_LAG_MS, await presence.round_trip_ms(user_id) or 0)
 
 
 # ── Starting ──────────────────────────────────────────────────────────────
@@ -183,6 +203,7 @@ async def _create_game(  # noqa: PLR0913 - every field of a new game
         tiger_ms=initial_ms,
         turn_started_at=now,
         deadline_at=now + FIRST_MOVE_GRACE,
+        lag_ms=0,
         goat_rating=round(current[goat_id].rating),
         tiger_rating=round(current[tiger_id].rating),
         created_at=now,
@@ -240,6 +261,24 @@ async def _after_finish(db: AsyncSession, game_id: uuid.UUID, now: datetime) -> 
             .where(Match.id == game.match_id)
             .values(status=MatchStatus.FINISHED, finished_at=now)
         )
+
+
+async def abort_cooldown(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> timedelta:
+    """How long until ``user_id`` may start new games again after aborting too many (zero if
+    they may now). Aborting by not making a first move counts too."""
+    recent = (
+        await db.scalars(
+            select(Game.finished_at)
+            .where(Game.aborted_by == user_id, Game.finished_at > now - ABORT_WINDOW)
+            .order_by(Game.finished_at.desc())
+            .limit(ABORT_LIMIT)
+        )
+    ).all()
+    if len(recent) < ABORT_LIMIT:
+        return timedelta(0)
+    latest = recent[0]
+    assert latest is not None  # noqa: S101 - selected by finished_at > ...
+    return max(timedelta(0), latest + ABORT_COOLDOWN - now)
 
 
 async def last_rated_match(db: AsyncSession, a: uuid.UUID, b: uuid.UUID) -> datetime | None:
@@ -393,8 +432,14 @@ async def _describe_match(
 # ── Moves ─────────────────────────────────────────────────────────────────
 
 
-async def play(
-    db: AsyncSession, game_id: uuid.UUID, user_id: uuid.UUID, data: MoveIn, now: datetime
+async def play(  # noqa: PLR0913 - the move, who plays it when, and their network
+    db: AsyncSession,
+    game_id: uuid.UUID,
+    user_id: uuid.UUID,
+    data: MoveIn,
+    now: datetime,
+    *,
+    presence: Presence,
 ) -> Game:
     game = await get_game(db, game_id)
     side = _side_of(game, user_id)
@@ -421,7 +466,7 @@ async def play(
         raise AppError(422, "illegal_move", "That move is not allowed here.") from None
 
     try:
-        think_ms = _ms(now - game.turn_started_at)
+        think_ms = _charged_ms(game, now)
         clock_ms = getattr(game, f"{side}_ms")
         if game.ply >= 2:
             clock_ms = clock_ms - think_ms + game.increment_ms
@@ -431,9 +476,15 @@ async def play(
             "position": format_position(engine_game.position),
             f"{side}_ms": clock_ms,
             "turn_started_at": now,
+            "lag_ms": 0,
         }
         if outcome is None:
-            values["deadline_at"] = _deadline(new_ply, now, getattr(game, f"{_other(side)}_ms"))
+            next_id = game.tiger_id if side == "goat" else game.goat_id
+            lag_ms = await _lag_allowance(presence, next_id, new_ply)
+            values["lag_ms"] = lag_ms
+            values["deadline_at"] = _deadline(
+                new_ply, now, getattr(game, f"{_other(side)}_ms"), lag_ms
+            )
         else:
             values.update(
                 status=GameStatus.FINISHED,
@@ -480,8 +531,14 @@ class _Stale(Exception):
 # ── Ending ────────────────────────────────────────────────────────────────
 
 
-async def _finish(
-    db: AsyncSession, game: Game, now: datetime, winner: SideName | None, reason: EndReason
+async def _finish(  # noqa: PLR0913 - how the game ended, and who caused an abort
+    db: AsyncSession,
+    game: Game,
+    now: datetime,
+    winner: SideName | None,
+    reason: EndReason,
+    *,
+    aborted_by: uuid.UUID | None = None,
 ) -> bool:
     """End the game as it stood at ``game.ply``; False if it changed meanwhile."""
     goat_ms, tiger_ms = clocks_at(game, now)
@@ -498,6 +555,7 @@ async def _finish(
             tiger_ms=tiger_ms,
             deadline_at=None,
             finished_at=now,
+            aborted_by=aborted_by,
         )
     )
     if result.rowcount != 1:  # type: ignore[attr-defined]
@@ -523,7 +581,8 @@ async def _end_by_player(
         if game.status != GameStatus.ACTIVE:
             raise AppError(409, "game_over", "This game is over.")
         winner, reason = await decide(game, side)
-        if await _finish(db, game, now, winner, reason):
+        aborted_by = user_id if reason == EndReason.ABORTED else None
+        if await _finish(db, game, now, winner, reason, aborted_by=aborted_by):
             return await get_game(db, game_id)
     raise AppError(409, "stale_position", "The game is changing quickly; try again.")
 
@@ -580,7 +639,8 @@ async def expire(db: AsyncSession, game: Game, now: datetime) -> bool:
     """End a game whose deadline has passed: aborted before both moved (except in the second
     game of a match, which cannot be aborted), else a timeout loss."""
     if game.ply < 2 and game.match_game != 2:
-        return await _finish(db, game, now, None, EndReason.ABORTED)
+        late = game.goat_id if _side_to_move(game) == "goat" else game.tiger_id
+        return await _finish(db, game, now, None, EndReason.ABORTED, aborted_by=late)
     return await _finish(db, game, now, _other(_side_to_move(game)), EndReason.TIMEOUT)
 
 

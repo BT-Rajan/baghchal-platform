@@ -27,8 +27,11 @@ needs_redis = pytest.mark.skipif(not REDIS_URL, reason="set BAGHCHAL_TEST_REDIS_
 
 
 async def _receive(ws: Any) -> dict[str, Any]:
-    message: dict[str, Any] = await asyncio.wait_for(ws.receive_json(), timeout=2)
-    return message
+    """The next message, skipping round-trip probes (a client may leave them unanswered)."""
+    while True:
+        message: dict[str, Any] = await asyncio.wait_for(ws.receive_json(), timeout=2)
+        if message["type"] != "probe":
+            return message
 
 
 async def _assert_refused(app: FastAPI, headers: dict[str, str], cookies: Any = None) -> None:
@@ -225,6 +228,10 @@ async def _presence_contract(presence: Presence, monkeypatch: pytest.MonkeyPatch
     seen_at = datetime(2026, 1, 1, 12, 30, 15, 250_000, tzinfo=UTC)
     await presence.seen(a, seen_at)
     assert await presence.last_seen(a) == seen_at
+    # Round trips, for lag compensation.
+    assert await presence.round_trip_ms(b) is None
+    await presence.record_round_trip(b, 87)
+    assert await presence.round_trip_ms(b) == 87
     # An entry that is not refreshed lapses (a server that died without cleaning up).
     real_time = time.time
     monkeypatch.setattr(time, "time", lambda: real_time() + presence_module.TTL + 1)

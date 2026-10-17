@@ -338,6 +338,7 @@ async def test_last_moment_flag_race(
                     uuid.UUID(alice.id),
                     MoveIn(ply=2, move="c2"),
                     clock(),
+                    presence=state.presence,
                 )
         assert info.value.code == "game_over"
 
@@ -593,7 +594,12 @@ async def test_a_rival_change_mid_request_makes_the_move_stale(
             async with state.sessions() as other:
                 if rival == "move":
                     await game_service.play(
-                        other, game_id, alice_id, MoveIn(ply=0, move="c3"), clock()
+                        other,
+                        game_id,
+                        alice_id,
+                        MoveIn(ply=0, move="c3"),
+                        clock(),
+                        presence=state.presence,
                     )
                 else:
                     await game_service.resign(other, game_id, alice_id, clock())
@@ -602,7 +608,9 @@ async def test_a_rival_change_mid_request_makes_the_move_stale(
     monkeypatch.setattr(game_service, "_engine_game", racing)
     async with state.sessions() as db:
         with pytest.raises(AppError) as info:
-            await game_service.play(db, game_id, alice_id, MoveIn(ply=0, move="b2"), clock())
+            await game_service.play(
+                db, game_id, alice_id, MoveIn(ply=0, move="b2"), clock(), presence=state.presence
+            )
     assert info.value.code == "stale_position"
     monkeypatch.setattr(game_service, "_engine_game", real_engine_game)
     final = (await alice.http.get(f"/api/v1/games/{game['id']}")).json()

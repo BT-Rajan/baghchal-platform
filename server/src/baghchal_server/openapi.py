@@ -15,9 +15,16 @@ from pydantic.json_schema import models_json_schema
 
 from baghchal_server.app import create_app
 from baghchal_server.config import Settings
-from baghchal_server.realtime.protocol import ChallengeEvent, ErrorEvent, GameEvent, Hello, Pong
+from baghchal_server.realtime.protocol import (
+    ChallengeEvent,
+    ErrorEvent,
+    GameEvent,
+    Hello,
+    Pong,
+    Probe,
+)
 
-SERVER_MESSAGES = (Hello, Pong, ChallengeEvent, GameEvent, ErrorEvent)
+SERVER_MESSAGES = (Hello, Pong, Probe, ChallengeEvent, GameEvent, ErrorEvent)
 
 
 def schema() -> dict[str, Any]:

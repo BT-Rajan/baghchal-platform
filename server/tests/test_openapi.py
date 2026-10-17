@@ -21,7 +21,7 @@ def test_committed_schema_is_current() -> None:
 
 def test_schema_includes_websocket_messages() -> None:
     schemas = openapi.schema()["components"]["schemas"]
-    assert {"Hello", "Pong", "ChallengeEvent", "GameEvent", "ErrorEvent"} <= schemas.keys()
+    assert {"Hello", "Pong", "Probe", "ChallengeEvent", "GameEvent", "ErrorEvent"} <= schemas.keys()
 
 
 def test_main_writes_the_schema(tmp_path: Path) -> None:

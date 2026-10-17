@@ -25,7 +25,7 @@ from baghchal_server.deps import AppState, session_token
 from baghchal_server.lobby.schemas import PlayerOut
 from baghchal_server.realtime import presence as presence_module
 from baghchal_server.realtime.hub import Connection
-from baghchal_server.realtime.protocol import ErrorEvent, Hello, Pong, client_message
+from baghchal_server.realtime.protocol import ErrorEvent, Hello, Ping, Pong, Probe, client_message
 
 log = structlog.get_logger(__name__)
 router = APIRouter()
@@ -35,6 +35,10 @@ MESSAGES_PER_SECOND: Final = 10.0
 MESSAGE_BURST: Final = 20.0
 SESSION_CHECK_SECONDS = 60.0
 IDLE_SECONDS = 90.0
+MAX_ROUND_TRIP_MS: Final = 5_000.0
+"""Echoes slower than this are not measurements of the network (the client was busy)."""
+SMOOTHING: Final = 0.3
+"""Weight of each new round trip in the running average."""
 """Clients ping every 25 seconds; one silent this long is gone. Generous, because browsers
 slow down timers in background tabs."""
 
@@ -95,8 +99,9 @@ async def socket(ws: WebSocket) -> None:
         await ws.send_text(
             Hello(user=PlayerOut(id=user.id, username=user.username)).model_dump_json()
         )
+        _probe(conn)  # measure the round trip early: a game may start any moment
         tasks = {
-            asyncio.create_task(_read(ws, conn)),
+            asyncio.create_task(_read(ws, state, conn)),
             asyncio.create_task(_write(ws, conn)),
             asyncio.create_task(_keep_alive(state, conn, token)),
             asyncio.create_task(_watch_overflow(conn)),
@@ -115,7 +120,26 @@ async def socket(ws: WebSocket) -> None:
         log.info("ws.close", user_id=str(user.id), conn_id=conn.id)
 
 
-async def _read(ws: WebSocket, conn: Connection) -> int | None:
+def _probe(conn: Connection) -> None:
+    conn.probes_sent += 1
+    conn.probe = (conn.probes_sent, time.monotonic())
+    conn.offer(Probe(id=conn.probes_sent).model_dump_json())
+
+
+async def _echoed(state: AppState, conn: Connection, probe: Probe) -> None:
+    """A probe came back: update the client's round trip (only the latest probe counts)."""
+    if conn.probe is None or probe.id != conn.probe[0]:
+        return
+    sample = (time.monotonic() - conn.probe[1]) * 1000
+    conn.probe = None
+    if sample > MAX_ROUND_TRIP_MS:
+        return
+    previous = conn.round_trip_ms
+    conn.round_trip_ms = sample if previous is None else previous + SMOOTHING * (sample - previous)
+    await state.presence.record_round_trip(conn.user_id, round(conn.round_trip_ms))
+
+
+async def _read(ws: WebSocket, state: AppState, conn: Connection) -> int | None:
     """Handle client messages; returns a close code, or None if the client went away."""
     bucket = _TokenBucket(MESSAGES_PER_SECOND, MESSAGE_BURST)
     while True:
@@ -131,7 +155,7 @@ async def _read(ws: WebSocket, conn: Connection) -> int | None:
         if not bucket.take():
             return CLOSE_RATE_LIMITED
         try:
-            client_message.validate_json(text)  # only "ping" exists so far
+            parsed: Ping | Probe = client_message.validate_json(text)
         except ValidationError:
             conn.offer(
                 ErrorEvent(
@@ -139,7 +163,10 @@ async def _read(ws: WebSocket, conn: Connection) -> int | None:
                 ).model_dump_json()
             )
             continue
-        conn.offer(Pong().model_dump_json())
+        if isinstance(parsed, Probe):
+            await _echoed(state, conn, parsed)
+        else:
+            conn.offer(Pong().model_dump_json())
 
 
 async def _write(ws: WebSocket, conn: Connection) -> int | None:
@@ -159,6 +186,7 @@ async def _keep_alive(state: AppState, conn: Connection, token: str) -> int | No
             return CLOSE_IDLE
         await state.presence.touch(conn.user_id, conn.id)
         await state.presence.seen(conn.user_id, state.clock())
+        _probe(conn)
         if time.monotonic() - last_check >= SESSION_CHECK_SECONDS:
             last_check = time.monotonic()
             async with state.sessions() as db:

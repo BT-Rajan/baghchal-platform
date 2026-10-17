@@ -21,8 +21,11 @@ CHALLENGES = "/api/v1/challenges"
 
 
 async def _event(ws: AsyncWebSocketSession) -> dict[str, Any]:
-    message: dict[str, Any] = await asyncio.wait_for(ws.receive_json(), timeout=2)
-    return message
+    """The next message, skipping round-trip probes (a client may leave them unanswered)."""
+    while True:
+        message: dict[str, Any] = await asyncio.wait_for(ws.receive_json(), timeout=2)
+        if message["type"] != "probe":
+            return message
 
 
 async def _online(

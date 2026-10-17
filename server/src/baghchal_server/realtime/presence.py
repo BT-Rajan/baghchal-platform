@@ -21,6 +21,8 @@ HEARTBEAT: Final = 15.0
 TTL: Final = 45.0
 SEEN_TTL: Final = 7 * 24 * 3600
 """How long a last-seen time is kept (seconds)."""
+ROUND_TRIP_TTL: Final = 120
+"""A measured round trip older than this (seconds) is forgotten: the network may have changed."""
 
 
 class Presence(Protocol):
@@ -31,6 +33,8 @@ class Presence(Protocol):
     async def count(self) -> int: ...
     async def seen(self, user_id: uuid.UUID, at: datetime) -> None: ...
     async def last_seen(self, user_id: uuid.UUID) -> datetime | None: ...
+    async def record_round_trip(self, user_id: uuid.UUID, ms: int) -> None: ...
+    async def round_trip_ms(self, user_id: uuid.UUID) -> int | None: ...
 
 
 class MemoryPresence:
@@ -39,6 +43,7 @@ class MemoryPresence:
     def __init__(self) -> None:
         self._conns: dict[uuid.UUID, dict[str, float]] = {}
         self._seen: dict[uuid.UUID, datetime] = {}
+        self._round_trips: dict[uuid.UUID, tuple[int, float]] = {}
 
     def _live(self, user_id: uuid.UUID, now: float) -> bool:
         conns = self._conns.get(user_id)
@@ -76,6 +81,13 @@ class MemoryPresence:
 
     async def last_seen(self, user_id: uuid.UUID) -> datetime | None:
         return self._seen.get(user_id)
+
+    async def record_round_trip(self, user_id: uuid.UUID, ms: int) -> None:
+        self._round_trips[user_id] = (ms, time.time() + ROUND_TRIP_TTL)
+
+    async def round_trip_ms(self, user_id: uuid.UUID) -> int | None:
+        ms, expiry = self._round_trips.get(user_id, (None, 0.0))
+        return ms if expiry > time.time() else None
 
 
 # Keys: presence:users is a sorted set of user ids scored by when they lapse;
@@ -144,3 +156,10 @@ class RedisPresence:
     async def last_seen(self, user_id: uuid.UUID) -> datetime | None:
         raw = await self._redis.get(f"presence:seen:{user_id}")
         return None if raw is None else datetime.fromtimestamp(float(raw), UTC)
+
+    async def record_round_trip(self, user_id: uuid.UUID, ms: int) -> None:
+        await self._redis.set(f"presence:rtt:{user_id}", str(ms), ex=ROUND_TRIP_TTL)
+
+    async def round_trip_ms(self, user_id: uuid.UUID) -> int | None:
+        raw = await self._redis.get(f"presence:rtt:{user_id}")
+        return None if raw is None else int(raw)

@@ -46,3 +46,19 @@ class Challenge(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
     expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
     responded_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+
+
+class Block(Base):
+    """``blocker`` has blocked ``blocked``: neither can challenge the other, and neither sees
+    the other in the lobby's player lists."""
+
+    __tablename__ = "blocks"
+    __table_args__ = (Index("ix_blocks_blocked_id", "blocked_id"), MYSQL_TABLE_ARGS)
+
+    blocker_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    blocked_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime)
