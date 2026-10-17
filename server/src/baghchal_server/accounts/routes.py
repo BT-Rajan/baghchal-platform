@@ -3,12 +3,18 @@ from typing import Final
 
 from fastapi import APIRouter, BackgroundTasks, Request, Response, status
 
-from baghchal_server.accounts import service
+from baghchal_server.accounts import lifecycle, service
 from baghchal_server.accounts.models import User
 from baghchal_server.accounts.schemas import (
     Accepted,
+    DeleteAccountIn,
+    EmailChangeConfirmIn,
+    EmailChangedOut,
+    EmailChangeIn,
+    ExportOut,
     LoginIn,
     MeOut,
+    PasswordChangeIn,
     PasswordResetConfirmIn,
     PasswordResetRequestIn,
     RegisterIn,
@@ -26,6 +32,7 @@ from baghchal_server.deps import (
     session_token,
 )
 from baghchal_server.errors import AppError
+from baghchal_server.lobby.routes import notify_challenge
 from baghchal_server.mail import Mail, deliver
 from baghchal_server.ratelimit import Limit
 
@@ -44,6 +51,9 @@ LOGIN_PER_ACCOUNT_IP: Final = Limit("login-account-ip", 10, 900)
 LOGIN_PER_ACCOUNT: Final = Limit("login-account", 100, 900)
 RESET_PER_IP: Final = Limit("reset-ip", 30, 3600)
 TOKEN_PER_IP: Final = Limit("token-ip", 120, 3600)
+# Changes that need the current password: also caps guessing it from a stolen session.
+ACCOUNT_CHANGES_PER_USER: Final = Limit("account-change", 10, 3600)
+EXPORTS_PER_USER: Final = Limit("export", 10, 3600)
 
 
 def _send(tasks: BackgroundTasks, state: AppState, mail: Mail | None) -> None:
@@ -114,19 +124,23 @@ async def login(
     return _session_response(response, state, user, token, data.transport)
 
 
+def _clear_cookie(response: Response, state: AppState) -> None:
+    response.delete_cookie(
+        state.settings.session_cookie_name,
+        path="/",
+        secure=state.settings.is_production,
+        httponly=True,
+        samesite="lax",
+    )
+
+
 @router.post("/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(request: Request, response: Response, state: State, db: DB) -> None:
     token, transport = session_token(request, state.settings)
     if token:
         await service.revoke_session(db, token)
     if transport == "cookie":
-        response.delete_cookie(
-            state.settings.session_cookie_name,
-            path="/",
-            secure=state.settings.is_production,
-            httponly=True,
-            samesite="lax",
-        )
+        _clear_cookie(response, state)
 
 
 @router.post("/auth/password-reset", status_code=status.HTTP_202_ACCEPTED)
@@ -152,3 +166,89 @@ async def confirm_password_reset(
 @router.get("/me")
 async def me(user: CurrentUser) -> MeOut:
     return MeOut(id=user.id, username=user.username, email=user.email, created_at=user.created_at)
+
+
+# ── The signed-in player's account ────────────────────────────────────────
+
+
+async def _confirm_password(state: AppState, user: User, password: str) -> None:
+    await enforce_limit(state, ACCOUNT_CHANGES_PER_USER, str(user.id))
+    await service.check_password(state.hasher, user, password)
+
+
+@router.post("/me/password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(  # noqa: PLR0913, PLR0917 - FastAPI dependencies
+    data: PasswordChangeIn,
+    request: Request,
+    user: CurrentUser,
+    tasks: BackgroundTasks,
+    state: State,
+    db: DB,
+) -> None:
+    """Choose a new password. Other devices are signed out; this one stays signed in."""
+    await _confirm_password(state, user, data.current_password)
+    token, _ = session_token(request, state.settings)
+    assert token is not None  # noqa: S101 - the request was authenticated with it
+    mail = await service.change_password(
+        db,
+        state.hasher,
+        state.settings,
+        state.clock(),
+        user,
+        current_session=token,
+        new_password=data.new_password,
+    )
+    _send(tasks, state, mail)
+
+
+@router.post("/me/email", status_code=status.HTTP_202_ACCEPTED)
+async def change_email(
+    data: EmailChangeIn, user: CurrentUser, tasks: BackgroundTasks, state: State, db: DB
+) -> Accepted:
+    """Email a confirmation link to the new address; the address changes once it is opened."""
+    await _confirm_password(state, user, data.password)
+    await enforce_limit(state, MAIL_PER_ADDRESS, service.email_key(data.email))
+    mail = await service.request_email_change(db, state.settings, state.clock(), user, data.email)
+    _send(tasks, state, mail)
+    return Accepted()
+
+
+@router.post("/auth/confirm-email")
+async def confirm_email_change(
+    data: EmailChangeConfirmIn, request: Request, tasks: BackgroundTasks, state: State, db: DB
+) -> EmailChangedOut:
+    """Open the link sent to a new address. Works without signing in, on any device."""
+    await enforce_limit(state, TOKEN_PER_IP, client_ip(request))
+    user, notice = await service.confirm_email_change(db, state.settings, state.clock(), data.token)
+    _send(tasks, state, notice)
+    return EmailChangedOut(email=user.email)
+
+
+@router.get("/me/export")
+async def export_data(user: CurrentUser, response: Response, state: State, db: DB) -> ExportOut:
+    """Everything the server keeps about you, as one JSON document."""
+    await enforce_limit(state, EXPORTS_PER_USER, str(user.id))
+    response.headers["content-disposition"] = (
+        f'attachment; filename="baghchal-{user.username}.json"'
+    )
+    return await lifecycle.export(db, user, state.clock())
+
+
+@router.post("/me/delete", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_account(  # noqa: PLR0913, PLR0917 - FastAPI dependencies
+    data: DeleteAccountIn,
+    request: Request,
+    response: Response,
+    user: CurrentUser,
+    tasks: BackgroundTasks,
+    state: State,
+    db: DB,
+) -> None:
+    """Delete your account for good. Every device is signed out."""
+    await _confirm_password(state, user, data.password)
+    closed, mail = await lifecycle.delete_account(db, state.settings, state.clock(), user)
+    for challenge in closed:
+        await notify_challenge(state, db, challenge)
+    _send(tasks, state, mail)
+    if session_token(request, state.settings)[1] == "cookie":
+        _clear_cookie(response, state)

@@ -42,7 +42,7 @@ async def _with_status(
     ]
 
 
-async def _notify(state: AppState, db: DB, challenge: Challenge) -> ChallengeOut:
+async def notify_challenge(state: AppState, db: DB, challenge: Challenge) -> ChallengeOut:
     """Tell both players (all their tabs and devices) about the challenge's new state."""
     (out,) = await service.describe(db, [challenge])
     message = ChallengeEvent(challenge=out).model_dump_json()
@@ -124,14 +124,14 @@ async def create_challenge(
 ) -> ChallengeOut:
     await enforce_limit(state, CHALLENGES_PER_USER, str(user.id))
     challenge = await service.create_challenge(db, state.presence, state.clock(), user, data)
-    return await _notify(state, db, challenge)
+    return await notify_challenge(state, db, challenge)
 
 
 async def _respond(
     challenge_id: uuid.UUID, response: service.Response, user: CurrentUser, state: State, db: DB
 ) -> ChallengeOut:
     challenge, game = await service.respond(db, state.clock(), user.id, challenge_id, response)
-    out = await _notify(state, db, challenge)
+    out = await notify_challenge(state, db, challenge)
     if game is not None:
         await notify_game(state, db, game)
     return out
@@ -184,7 +184,7 @@ async def block_player(username: UsernameQuery, user: CurrentUser, state: State,
     await enforce_limit(state, BLOCKS_PER_USER, str(user.id))
     blocked_id = await _player(db, username)
     for challenge in await service.block(db, state.clock(), user.id, blocked_id):
-        await _notify(state, db, challenge)
+        await notify_challenge(state, db, challenge)
 
 
 @router.delete("/blocks/{username}", status_code=status.HTTP_204_NO_CONTENT)

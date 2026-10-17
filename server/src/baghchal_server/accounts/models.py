@@ -21,6 +21,9 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     email_verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    """When the player deleted the account. The row stays, without personal data, so the
+    games of the players they met keep their opponent."""
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime)
 
@@ -51,6 +54,8 @@ class EmailToken(Base):
         Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     purpose: Mapped[str] = mapped_column(String(16))
+    new_email: Mapped[str | None] = mapped_column(String(254))
+    """For an email change: the address the link was sent to, which it confirms."""
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
     expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
     used_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
