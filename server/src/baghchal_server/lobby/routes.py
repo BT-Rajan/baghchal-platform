@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from typing import Annotated, Final
 
 from fastapi import APIRouter, Query, status
@@ -7,6 +8,7 @@ from baghchal_server.deps import DB, AppState, CurrentUser, State, enforce_limit
 from baghchal_server.errors import AppError
 from baghchal_server.games import service as games
 from baghchal_server.games.events import notify as notify_game
+from baghchal_server.games.schemas import GameSummaryOut
 from baghchal_server.lobby import seeks, service
 from baghchal_server.lobby.models import Challenge
 from baghchal_server.lobby.schemas import (
@@ -192,6 +194,23 @@ async def block_player(username: UsernameQuery, user: CurrentUser, state: State,
 async def unblock_player(username: UsernameQuery, user: CurrentUser, state: State, db: DB) -> None:
     await enforce_limit(state, BLOCKS_PER_USER, str(user.id))
     await service.unblock(db, user.id, await _player(state, db, username))
+
+
+@router.get("/players/{username}/games")
+async def player_games(  # noqa: PLR0913, PLR0917 - FastAPI dependencies and query
+    username: UsernameQuery,
+    user: CurrentUser,
+    state: State,
+    db: DB,
+    before: datetime | None = None,
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+) -> list[GameSummaryOut]:
+    """A player's finished games, newest first. For the next page, pass the last game's
+    ``finished_at`` as ``before``."""
+    player = await service.find_player(db, username, state.clock())
+    if player is None:
+        raise AppError(404, "player_not_found", "No such player.")
+    return await games.history(db, player.id, before=before, limit=limit)
 
 
 # ── Quick pairing ─────────────────────────────────────────────────────────

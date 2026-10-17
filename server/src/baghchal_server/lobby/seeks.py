@@ -90,7 +90,7 @@ async def seek(  # noqa: PLR0913 - who wants which game, and where to look
                 Seek.rated.is_(rated),
                 Seek.expires_at > now,
             )
-            .order_by(Seek.created_at)
+            .order_by(Seek.created_at, Seek.user_id)
             .limit(CANDIDATES)
         )
     ).all()

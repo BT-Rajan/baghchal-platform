@@ -85,15 +85,18 @@ async def test_rated_pairing_is_a_match_and_once_a_day(
         assert (await _seek(bob, "5+3"))["status"] == "paired"  # casual is fine
 
 
-async def test_who_is_passed_over(app: FastAPI, players: PlayerFactory) -> None:
+async def test_who_is_passed_over(app: FastAPI, players: PlayerFactory, clock: Clock) -> None:
     alice, bob = await players("alice"), await players("bob")
     carol, dave = await players("carol"), await players("dave")
     async with AsyncExitStack() as stack:
         await _online(app, stack, bob, carol, dave)  # alice is not online
         await _seek(alice)
         await dave.http.put("/api/v1/blocks/bob")
+        clock.advance(seconds=1)
         assert (await _seek(bob))["status"] == "waiting"  # alice is offline
+        clock.advance(seconds=1)
         assert (await _seek(dave))["status"] == "waiting"  # alice offline, bob blocked
+        clock.advance(seconds=1)
         game = (await _seek(carol))["game"]  # bob has waited longest of those left
         assert {game["goat"]["username"], game["tiger"]["username"]} == {"bob", "carol"}
 

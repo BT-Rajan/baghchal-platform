@@ -46,6 +46,7 @@ from baghchal_server.games.models import (
 from baghchal_server.games.schemas import (
     ClocksOut,
     GameOut,
+    GameSummaryOut,
     MatchOut,
     MatchScoreOut,
     MoveIn,
@@ -471,11 +472,60 @@ async def describe(db: AsyncSession, game: Game, now: datetime) -> GameOut:
         ),
         match=await _describe_match(db, game, names),
         computer=game.bot_level,
+        positions=[] if active else _positions(engine_game),
         deadline_at=game.deadline_at,
         server_time=now,
         created_at=game.created_at,
         finished_at=game.finished_at,
     )
+
+
+def _positions(engine_game: EngineGame) -> list[str]:
+    """The position before the first move and after each move."""
+    replay = EngineGame(engine_game.start)
+    positions = [format_position(replay.position)]
+    for move in engine_game.moves:
+        replay.play(move)
+        positions.append(format_position(replay.position))
+    return positions
+
+
+async def history(
+    db: AsyncSession, user_id: uuid.UUID, *, before: datetime | None, limit: int
+) -> list[GameSummaryOut]:
+    """A player's finished games, newest first; ``before`` pages back in time."""
+    query = select(Game).where(
+        or_(Game.goat_id == user_id, Game.tiger_id == user_id),
+        Game.status == GameStatus.FINISHED,
+    )
+    if before is not None:
+        query = query.where(Game.finished_at < before)
+    found = (await db.scalars(query.order_by(Game.finished_at.desc(), Game.id).limit(limit))).all()
+    opponents = {g.tiger_id if g.goat_id == user_id else g.goat_id for g in found}
+    names = dict(
+        (await db.execute(select(User.id, User.username).where(User.id.in_(opponents)))).all()
+    )
+    out = []
+    for g in found:
+        side: SideName = "goat" if g.goat_id == user_id else "tiger"
+        opponent = g.tiger_id if side == "goat" else g.goat_id
+        assert g.finished_at is not None  # noqa: S101 - finished games have one
+        out.append(
+            GameSummaryOut(
+                id=g.id,
+                opponent=PlayerOut(id=opponent, username=names[opponent]),
+                side=side,
+                time_control=f"{g.initial_ms // 60_000}+{g.increment_ms // 1000}",
+                rated=g.rated,
+                computer=g.bot_level,
+                result=ResultOut(winner=g.winner, reason=EndReason(g.end_reason)),  # type: ignore[arg-type]
+                outcome="aborted" if g.winner is None else "won" if g.winner == side else "lost",
+                rating_change=g.goat_rating_change if side == "goat" else g.tiger_rating_change,
+                moves=g.ply,
+                finished_at=g.finished_at,
+            )
+        )
+    return out
 
 
 async def _describe_match(
