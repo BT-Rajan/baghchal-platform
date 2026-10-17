@@ -8,7 +8,7 @@ live with clocks, and climb rated leaderboards — on web, phones and tablets.
 |---|---|---|
 | `engine/` | Pure-Python rules engine (no dependencies) | Phase 1 ✅ |
 | `server/` | FastAPI backend: accounts, lobby, live games, ratings | Phases 2–5 ✅ |
-| `app/` | Expo / React Native client for web, iOS, Android | Phase 6 (in progress) |
+| `app/` | Expo / React Native client for web, iOS, Android ([README](app/README.md)) | Phase 6 ✅ |
 | `docs/` | Rules canon and architecture decision records | |
 
 Start with [`docs/rules.md`](docs/rules.md), [`docs/realtime.md`](docs/realtime.md) and
@@ -27,7 +27,8 @@ Each phase ships complete — tested, documented and reviewed — before the nex
 4. **Live play** ✅ — authoritative games, server clocks, reconnection, resignation, aborts
    and abandonment.
 5. **Ratings** ✅ — Glicko-2 per time control, side-swapped rated matches, leaderboards.
-6. **App** — Expo client: lobby, board, profile, leaderboard; no Expo-cloud dependency.
+6. **App** ✅ — Expo client for web, iOS and Android: sign-up, lobby and challenges, live
+   games with clocks, rated matches, profiles and leaderboards; no Expo-cloud dependency.
 7. **More to play** — computer opponent, game archive and replay, fair-play checks.
 8. **Production hardening** — load tests, security review, backups, deployment.
 
@@ -55,21 +56,14 @@ uv run uvicorn baghchal_server.asgi:app --reload
 
 Or the full stack (MySQL, Redis, API) with Docker: `docker compose up --build`.
 
-The app (Node 22):
+The app (Node 22): see [`app/README.md`](app/README.md).
 
 ```bash
 cd app
 npm ci
-npm run web                                   # dev server at http://localhost:8081
-npm run typecheck && npm run lint && npm run format:check && npm test
-npm run guardrails                            # no Expo-cloud dependencies (ADR 0002)
-```
-
-After changing the API, regenerate the schema and the app's types:
-
-```bash
-(cd server && uv run python -m baghchal_server.openapi ../app/src/api/openapi.json)
-(cd app && npm run api:generate)
+npm run web                                   # http://localhost:8081, against the local server
+npm run typecheck && npm run lint && npm test
+npm run e2e:smoke                             # two browsers play a game against a real server
 ```
 
 Server tests against MySQL / MariaDB and Redis:
@@ -83,7 +77,9 @@ Settings are read from `BAGHCHAL_*` environment variables; see [`.env.example`](
 Production refuses to start with unsafe settings.
 
 CI runs the engine on Python 3.12 and 3.13, and the server on SQLite plus MySQL 8.4 and
-MariaDB 11.4; both packages must keep 100% branch coverage.
+MariaDB 11.4; both packages must keep 100% branch coverage. The app job checks the Expo-cloud
+guardrail, API type sync, types, lint, formatting and tests (100% coverage on its logic), and
+builds the web app.
 
 ## API (v1)
 | Method | Path | Purpose |

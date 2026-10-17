@@ -1,6 +1,6 @@
 # Phase 6 plan: the app
 
-Status: in progress (steps 1–7 done).
+Status: done. What changed from the plan, and what is left, is at the end.
 
 One Expo / React Native client for web, iOS, Android and tablets, in `app/`. It talks only
 to our own server (Phases 2–5). Per [ADR 0002](../adr/0002-no-dependency-on-expo-cloud.md),
@@ -174,4 +174,23 @@ Jest with coverage thresholds → `expo export --platform web` (the production b
 7. ✅ Responsive layout, accessibility pass, empty and error states. axe-core reports no WCAG
    2.1 AA violations on any screen of the web build; the one remaining best-practice note is
    that the navigation library's header and tab bar sit outside a landmark region.
-8. Docs (README, app README), local end-to-end smoke, PR.
+8. ✅ Docs (README, app README), local end-to-end smoke (`npm run e2e:smoke`), PR.
+
+## Outcome
+Delivered as planned, with these differences:
+- **Server clock.** Countdowns (game clocks, first moves, challenge expiry) use an estimate of
+  the server's clock taken from the timestamps it sends (`src/game/serverClock.ts`), rather
+  than the device's clock.
+- **Coverage** is also enforced on `src/lobby`.
+- **The OpenAPI schema** also describes the WebSocket messages, so their types are generated too.
+- **The end-to-end smoke test** plays a game to a result on the board (tigers capture five
+  goats), with moves chosen by fixed rules so every run is the same.
+- **Layout.** On wide but short screens (a phone held sideways) the player bars sit beside the
+  board, so the whole board and both clocks fit.
+
+Left for later:
+- Testing on real iOS and Android devices (the native paths are covered by unit tests only).
+- A dark theme.
+- The navigation library's header and tab bar sit outside an ARIA landmark (an axe-core
+  best-practice note, not a WCAG failure).
+- Everything listed under "Out of scope" above.

@@ -18,9 +18,9 @@ The app must never talk to Expo's servers at runtime, and builds must not requir
 | Push notifications | Expo Push (`exp.host`) | `getDevicePushTokenAsync()` and sending through FCM / APNs from our backend |
 | Web hosting | EAS Hosting | Static export served from our CDN |
 
-Guardrails (added with the app in a later phase):
-- CI fails if the app config or source references `u.expo.dev`, `exp.host`, an EAS project
-  ID, or `getExpoPushTokenAsync`.
+Guardrails (in CI since Phase 6, `app/scripts/check-guardrails.mjs`):
+- CI fails if the app config, manifests or source reference `u.expo.dev`, `exp.host`, an EAS
+  project ID, `expo-updates` or `getExpoPushTokenAsync`.
 - `EXPO_NO_TELEMETRY=1` in CI.
 
 ## Consequences

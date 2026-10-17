@@ -14,7 +14,7 @@ module.exports = defineConfig([
     },
   },
   {
-    files: ['scripts/**'],
+    files: ['scripts/**', 'e2e/**'],
     rules: { 'no-console': 'off' },
   },
 ]);
