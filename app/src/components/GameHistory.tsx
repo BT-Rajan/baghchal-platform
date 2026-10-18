@@ -5,11 +5,14 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import type { GameSummary } from '@/api/endpoints';
 import { queryKeys } from '@/api/queryKeys';
 import { useApi } from '@/auth/session';
+import { has } from '@/billing/format';
+import { useMyPlan } from '@/billing/hooks';
 import { historyText } from '@/lobby/format';
 import { colors, spacing } from '@/theme';
 
 import { Button } from './Button';
 import { Card, Hint, SectionTitle } from './Card';
+import { TextLink } from './TextLink';
 import { focusRing } from './focus';
 import { ErrorState, Loading } from './States';
 
@@ -26,6 +29,8 @@ export function GameHistory({ username }: { username: string }) {
       last.length < PAGE ? undefined : last.at(-1)?.finished_at,
   });
   const games = history.data?.pages.flat() ?? [];
+  const mine = useMyPlan();
+  const limited = mine.data !== undefined && !has(mine.data, 'full_history');
   return (
     <>
       <SectionTitle>Recent games</SectionTitle>
@@ -49,6 +54,12 @@ export function GameHistory({ username }: { username: string }) {
             </Pressable>
           ))}
         </Card>
+      )}
+      {limited && (
+        <>
+          <Hint>The Free plan shows games from the last 30 days. Plus keeps every game.</Hint>
+          <TextLink href="/plans">See plans</TextLink>
+        </>
       )}
       {history.hasNextPage && (
         <Button

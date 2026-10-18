@@ -6,6 +6,7 @@ import type { GameSummary } from '@/api/endpoints';
 import { renderApp } from './support/app';
 import { ME, error, type Route } from './support/fakeServer';
 import { BOB, game } from './support/games';
+import { PLUS_UNTIL } from './support/plans';
 
 const SIGNED_IN = { 'GET /api/v1/me': { status: 200, body: ME } };
 const COMPUTER = { id: '00000000-0000-4000-8000-0000000000cc', username: 'computer-hard' };
@@ -115,6 +116,7 @@ describe('play now', () => {
     const { server, app } = await signedIn('/play', {
       'POST /api/v1/games/computer': { status: 201, body: started },
       'GET /api/v1/games/g1': { status: 200, body: started },
+      'GET /api/v1/me/plan': { status: 200, body: PLUS_UNTIL }, // Hard comes with Plus
     });
     await fireEvent.press(await screen.findByRole('radio', { name: 'Hard' }));
     await fireEvent.press(screen.getByRole('radio', { name: 'Goats' }));

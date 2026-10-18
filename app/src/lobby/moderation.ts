@@ -52,6 +52,8 @@ const ACTIONS: Record<ModPlayer['actions'][number]['action'], string> = {
   unsuspend: 'Lifted the suspension',
   rename: 'Renamed',
   dismiss_report: 'Dismissed a report',
+  grant: 'Granted',
+  revoke: 'Revoked',
 };
 
 export function actionText(action: ModPlayer['actions'][number]): string {

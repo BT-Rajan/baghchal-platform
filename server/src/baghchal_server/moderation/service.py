@@ -15,8 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from baghchal_server.accounts.models import Session, User
 from baghchal_server.accounts.service import (
-    MODERATOR,
     PERMANENT,
+    STAFF,
     is_suspended,
     username_allowed,
     username_key,
@@ -244,7 +244,7 @@ async def record(db: AsyncSession, user: User) -> ModPlayerOut:
 def _check_target(moderator: User, target: User) -> None:
     if target.id == moderator.id:
         raise AppError(422, "cannot_moderate_self", "You cannot do this to your own account.")
-    if target.role == MODERATOR:
+    if target.role in STAFF:
         raise AppError(403, "cannot_moderate_moderator", "Moderators cannot act on moderators.")
     if not target.is_active:
         raise AppError(409, "account_deleted", "This account has been deleted.")

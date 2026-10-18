@@ -55,6 +55,11 @@ Each phase ships complete — tested, documented and reviewed — before the nex
      ([`SECURITY.md`](SECURITY.md)).
    - Still to do: privacy policy and terms pages, store builds and push notifications for the
      apps, and testing on real devices.
+9. **Plans** — Free, Plus and Pro ([below](#plans)):
+   - ✅ Plans, features, admin grants (a plan or one feature, for a while or for good) and the
+     Hard computer and full history behind Plus.
+   - Next: post-game analysis; themes, sound packs and badges; Razorpay payments; private rooms,
+     tournaments and the trainer for Pro.
 
 ## Development
 Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
@@ -143,6 +148,11 @@ and the Caddyfile.
 | GET | `/api/v1/games/{id}` | A game: position, moves, legal moves, clocks, result; finished games add every position, for replay |
 | POST | `/api/v1/games/{id}/moves` | Play `{"ply": n, "move": "a1-b2"}` (`ply` = moves you have seen) |
 | POST | `/api/v1/games/{id}/resign`, `/abort`, `/claim-abandonment` | End the game (see [rules](docs/rules.md#live-play-platform-rules)) |
+| GET | `/api/v1/plans` | Free, Plus and Pro: features and prices |
+| GET | `/api/v1/me/plan` | My plan, my features, and the grants behind them |
+| GET | `/api/v1/admin/players/{username}/plan` | Admins: a player's plan and every grant |
+| POST | `/api/v1/admin/players/{username}/grants` | Admins: grant a `plan` or a `feature` for `days` (`null`: until revoked), with a `reason` |
+| POST | `/api/v1/admin/grants/{id}/revoke` | Admins: end a grant now, with a `reason` |
 | GET | `/api/v1/leaderboards/{blitz\|rapid}` | Top established players (the app calls these Quick and Standard) |
 | GET | `/api/v1/mod/reports?status=open` | Moderators: the report queue (or closed reports) |
 | POST | `/api/v1/mod/reports/{id}/dismiss` | Moderators: close a report without acting |
@@ -161,10 +171,31 @@ session cannot promote itself). It uses the same `BAGHCHAL_*` settings as the se
 
 ```bash
 cd server
-uv run python -m baghchal_server.moderators grant alice     # or: revoke alice, list
+uv run python -m baghchal_server.moderators grant alice     # moderator; or: revoke alice, list
+uv run python -m baghchal_server.moderators admin alice     # admin: moderates, and grants plans
 ```
 
 Every moderator action is logged with its reason, and moderators cannot act on themselves or
 on other moderators. To refuse usernames containing certain words (ignoring case, digits,
 `_` and `-`), set `BAGHCHAL_BLOCKED_USERNAME_WORDS='["word1", "word2"]'`; moderators can rename
 anything the list misses.
+
+### Plans
+Free, Plus and Pro, each a set of **features** (`server/src/baghchal_server/billing/plans.py`).
+Code checks features, never plans, so admins can give a single feature as well as a whole plan.
+Nothing paid changes who wins a rated game: live play, rated matches and quick pairing are free
+for everyone.
+
+| | Free | Plus (₹149/month, ₹1,490/year) | Pro (₹299/month, ₹2,990/year) |
+|---|---|---|---|
+| Live and rated games, quick pairing | ✅ | ✅ | ✅ |
+| The computer | Easy, Medium | + Hard | + Hard |
+| History and replay | Last 30 days | Everything | Everything |
+| Post-game analysis *(coming)* | — | 5 a day | Unlimited |
+| Themes, sound packs, badge *(coming)* | — | ✅ | ✅ |
+| Private rooms, tournaments, trainer *(coming)* | — | — | ✅ |
+
+A player's features are their plan's plus whatever admins have **granted**. Admins grant a plan
+or one feature for 7, 30, 90 or 365 days or until revoked, always with a reason; the player is
+emailed, and grants and revocations go in the player's moderation log. Admins do this on a
+player's moderation page in the app, or through `/api/v1/admin/…`.

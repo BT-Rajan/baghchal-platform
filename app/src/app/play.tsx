@@ -1,9 +1,12 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { Level, Side, TimeControl } from '@/api/endpoints';
 import { describeError } from '@/api/errors';
+import { has } from '@/billing/format';
+import { useMyPlan } from '@/billing/hooks';
 import { queryKeys } from '@/api/queryKeys';
 import { useApi } from '@/auth/session';
 import { Button } from '@/components/Button';
@@ -133,6 +136,8 @@ function PlayComputer({ timeControl }: { timeControl: TimeControl }) {
   const openStarted = useOpenStartedGame();
   const [level, setLevel] = useState<Level>('medium');
   const [side, setSide] = useState<Side>('random');
+  const mine = useMyPlan();
+  const locked = level === 'hard' && !has(mine.data, 'computer_hard');
   const start = useMutation({
     mutationFn: () => api.playComputer({ level, side, time_control: timeControl }),
     onSuccess: openStarted,
@@ -147,7 +152,18 @@ function PlayComputer({ timeControl }: { timeControl: TimeControl }) {
         </View>
         <Hint>Casual: games against the computer never change your rating.</Hint>
         {start.error !== null && <Notice tone="error">{describeError(start.error)}</Notice>}
-        <Button title="Play the computer" onPress={() => start.mutate()} busy={start.isPending} />
+        {locked && (
+          <>
+            <Notice tone="info">The Hard computer comes with ClawPlay Plus.</Notice>
+            <Button title="See plans" variant="secondary" onPress={() => router.push('/plans')} />
+          </>
+        )}
+        <Button
+          title="Play the computer"
+          onPress={() => start.mutate()}
+          busy={start.isPending}
+          disabled={locked}
+        />
       </Card>
     </>
   );
