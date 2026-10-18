@@ -7,7 +7,13 @@ import { apiUrlProblem } from './src/apiUrl.js';
 // A release build must not send passwords and tokens over plain http (see src/apiUrl.ts).
 const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 const problem =
-  apiUrl === undefined ? null : apiUrlProblem(apiUrl, process.env.NODE_ENV === 'production');
+  apiUrl === undefined
+    ? null
+    : apiUrlProblem(
+        apiUrl,
+        process.env.NODE_ENV === 'production',
+        process.env.EXPO_PUBLIC_ALLOW_PLAIN_HTTP === 'true',
+      );
 if (problem !== null) throw new Error(problem);
 
 const config: ExpoConfig = {
