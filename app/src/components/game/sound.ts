@@ -44,11 +44,37 @@ export function soundSupported(): boolean {
   return AudioContextClass !== undefined;
 }
 
+/**
+ * Browsers keep audio off until the page is clicked, tapped or typed on, and Safari only lets it
+ * start inside that event itself. Moves arrive later (from the server), so audio is switched on
+ * at the first touch of the page, with a silent note to wake it.
+ */
+function unlockOnFirstTouch() {
+  const doc = (globalThis as { document?: EventTarget }).document;
+  if (AudioContextClass === undefined || doc === undefined) return;
+  const events = ['pointerdown', 'touchend', 'keydown'];
+  const unlock = () => {
+    try {
+      context ??= new AudioContextClass();
+      void context.resume().catch(() => {});
+      const silent = context.createBufferSource();
+      silent.buffer = context.createBuffer(1, 1, context.sampleRate);
+      silent.connect(context.destination);
+      silent.start(0);
+    } catch {
+      return;
+    }
+    for (const event of events) doc.removeEventListener(event, unlock, true);
+  };
+  for (const event of events) doc.addEventListener(event, unlock, true);
+}
+
+unlockOnFirstTouch();
+
 export function playSound(sound: Sound): void {
   if (AudioContextClass === undefined) return;
   try {
     context ??= new AudioContextClass();
-    // Browsers start audio suspended until the page has been clicked or tapped.
     if (context.state === 'suspended') void context.resume().catch(() => {});
     const t = context.currentTime + 0.01;
     if (sound === 'move') {
