@@ -26,6 +26,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from baghchal_engine import Game as EngineGame
 from baghchal_engine import format_move, parse_move
 from baghchal_engine.ai import Level, choose_move
+from baghchal_engine.position import Side
+from baghchal_engine.review import review
 from baghchal_server.accounts.models import User
 from baghchal_server.accounts.service import BOT_ROLE, COMPUTER_PREFIX
 from baghchal_server.errors import AppError
@@ -84,6 +86,22 @@ def think(moves: list[str], level: str) -> str:
     return format_move(choose_move(game, Level(level)))
 
 
+def review_game(moves: list[str]) -> list[dict[str, object]]:
+    """The engine's review of a finished game, move by move. Runs in a worker process."""
+    return [
+        {
+            "ply": r.ply,
+            "side": "goat" if r.side is Side.GOAT else "tiger",
+            "move": r.move,
+            "best": r.best,
+            "loss": r.loss,
+            "verdict": r.verdict.value,
+            "score": r.score,
+        }
+        for r in review(parse_move(m) for m in moves)
+    ]
+
+
 class ComputerPlayers:
     """Plays the computer's turns in the background, one at a time per game."""
 
@@ -123,6 +141,12 @@ class ComputerPlayers:
         return await asyncio.get_running_loop().run_in_executor(
             self._pool, think, moves, level.value
         )
+
+    async def review(self, moves: list[str]) -> list[dict[str, object]]:
+        """Review a finished game in a worker, away from the event loop."""
+        if self._pool is None:
+            return await anyio.to_thread.run_sync(review_game, moves)
+        return await asyncio.get_running_loop().run_in_executor(self._pool, review_game, moves)
 
     async def play_turn(self, state: "AppState", game_id: uuid.UUID) -> bool:
         """Play the computer's move if it is its turn; True when a move was played."""

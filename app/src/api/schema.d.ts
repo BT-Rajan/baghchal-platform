@@ -518,6 +518,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/games/{game_id}/analysis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Game Analysis
+         * @description A finished game's analysis, once someone has asked for it (Plus and Pro).
+         */
+        get: operations["game_analysis_api_v1_games__game_id__analysis_get"];
+        put?: never;
+        /**
+         * Analyse Game
+         * @description Analyse a finished game: each move against the engine's choice. Plus: 5 new games a
+         *     day; Pro: no limit. A game already analysed costs nothing.
+         */
+        post: operations["analyse_game_api_v1_games__game_id__analysis_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/games/{game_id}/resign": {
         parameters: {
             query?: never;
@@ -838,6 +863,23 @@ export interface components {
          * @enum {string}
          */
         ActionKind: "suspend" | "unsuspend" | "rename" | "dismiss_report" | "grant" | "revoke";
+        /** AnalysisOut */
+        AnalysisOut: {
+            /**
+             * Game Id
+             * Format: uuid
+             */
+            game_id: string;
+            /** Moves */
+            moves: components["schemas"]["MoveReviewOut"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Left Today */
+            left_today: number | null;
+        };
         /**
          * Category
          * @enum {string}
@@ -1358,6 +1400,29 @@ export interface components {
             ply: number;
             /** Move */
             move: string;
+        };
+        /** MoveReviewOut */
+        MoveReviewOut: {
+            /** Ply */
+            ply: number;
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "goat" | "tiger";
+            /** Move */
+            move: string;
+            /** Best */
+            best: string;
+            /** Loss */
+            loss: number;
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "best" | "good" | "inaccuracy" | "mistake" | "blunder";
+            /** Score */
+            score: number;
         };
         /** MyPlanOut */
         MyPlanOut: {
@@ -2617,6 +2682,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GameOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    game_analysis_api_v1_games__game_id__analysis_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyse_game_api_v1_games__game_id__analysis_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisOut"];
                 };
             };
             /** @description Validation Error */

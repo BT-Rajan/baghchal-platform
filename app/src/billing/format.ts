@@ -16,7 +16,6 @@ export const FEATURE_LABELS: Record<Feature, string> = {
 
 /** Features on sale that are still being built: plans say so, honestly. */
 export const COMING_SOON: ReadonlySet<Feature> = new Set([
-  'analysis',
   'themes',
   'badge',
   'private_rooms',

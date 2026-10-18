@@ -7,11 +7,11 @@ from baghchal_engine.ai import Level
 from baghchal_server.billing import service as billing
 from baghchal_server.billing.plans import Feature
 from baghchal_server.deps import DB, AppState, CurrentUser, State, enforce_limit
+from baghchal_server.games import analysis, service
 from baghchal_server.games import computer as computer_players
-from baghchal_server.games import service
 from baghchal_server.games.events import notify
 from baghchal_server.games.models import GameStatus
-from baghchal_server.games.schemas import ComputerGameIn, GameOut, MoveIn
+from baghchal_server.games.schemas import AnalysisOut, ComputerGameIn, GameOut, MoveIn
 from baghchal_server.lobby.time_controls import TIME_CONTROLS
 from baghchal_server.ratelimit import Limit
 
@@ -20,6 +20,8 @@ router = APIRouter(prefix="/api/v1")
 # Generous: a 3+2 game is fast, but no human needs more than a few moves a second.
 MOVES_PER_USER: Final = Limit("game-move", 300, 60)
 COMPUTER_GAMES_PER_USER: Final = Limit("computer-game", 60, 3600)
+ANALYSES_PER_USER: Final = Limit("analyse", 60, 3600)
+"""Asks for analysis an hour (whatever the plan allows), so nobody can flood the workers."""
 
 
 async def _settle(state: AppState, db: DB, game_id: uuid.UUID) -> None:
@@ -86,6 +88,20 @@ async def play_the_computer(
     out = await notify(state, db, game)
     state.computer.schedule(state, game.id)  # moves first when it has the goats
     return out
+
+
+@router.get("/games/{game_id}/analysis")
+async def game_analysis(game_id: uuid.UUID, user: CurrentUser, state: State, db: DB) -> AnalysisOut:
+    """A finished game's analysis, once someone has asked for it (Plus and Pro)."""
+    return await analysis.read(db, user.id, game_id, state.clock())
+
+
+@router.post("/games/{game_id}/analysis")
+async def analyse_game(game_id: uuid.UUID, user: CurrentUser, state: State, db: DB) -> AnalysisOut:
+    """Analyse a finished game: each move against the engine's choice. Plus: 5 new games a
+    day; Pro: no limit. A game already analysed costs nothing."""
+    await enforce_limit(state, ANALYSES_PER_USER, str(user.id))
+    return await analysis.analyse(db, user.id, game_id, state.clock(), state.computer.review)
 
 
 @router.post("/games/{game_id}/resign")

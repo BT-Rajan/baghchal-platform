@@ -21,6 +21,7 @@ test('keys are stable and distinct', () => {
     queryKeys.modPlayer('x'),
     queryKeys.seekCounts,
     queryKeys.playerGames('x'),
+    queryKeys.analysis('x'),
   ].map((key) => JSON.stringify(key));
   expect(new Set(all).size).toBe(all.length);
 });
