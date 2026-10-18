@@ -80,6 +80,12 @@ Plan one replica per ~150 concurrent games, and at least two for redundancy. The
 is ordinary database and ORM work (a profile shows no single hot spot), so the database is the
 next limit: watch its CPU before going past a handful of replicas.
 
+Games against the computer are searched in a pool of worker processes on each replica
+(`BAGHCHAL_COMPUTER_WORKERS`, default 2; `0` searches in a thread, for tests). A hard move
+takes up to a second of one core and an easy one at most 50 ms, so give each replica a
+core per worker on top of its own, and add workers or replicas if computer moves start to
+arrive late (the sweeper replays any computer turn left waiting more than 3 s).
+
 To load-test a deployment of your own (never production: it creates accounts directly in the
 database):
 

@@ -23,6 +23,9 @@ export const QUIET_LOBBY: Record<string, Route> = {
   'GET /api/v1/games': { status: 200, body: [] },
   'GET /api/v1/challenges': { status: 200, body: { incoming: [], outgoing: [] } },
   'GET /api/v1/players/online': { status: 200, body: [] },
+  // Profiles show game history; nobody has played yet unless a test says so.
+  'GET /api/v1/players/alice/games': { status: 200, body: [] },
+  'GET /api/v1/players/bob/games': { status: 200, body: [] },
 };
 
 export const savedToken = () => mockSecure.get('session-token') ?? null;

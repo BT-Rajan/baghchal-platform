@@ -45,7 +45,7 @@ test('failed lists can be tried again', async () => {
 test('a quiet lobby says what to do', async () => {
   await renderApp('/', { token: 'tok', routes: SIGNED_IN });
   expect(
-    await screen.findByText('Challenge someone who is online, or wait here to be challenged.'),
+    await screen.findByText(/^Play now pairs you with anyone who wants the same game/),
   ).toBeOnTheScreen();
 });
 

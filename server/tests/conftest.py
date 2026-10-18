@@ -85,6 +85,7 @@ def settings(database_url: str) -> Settings:
         mail_backend="memory",
         allowed_origins=(ORIGIN,),
         game_sweeper=False,  # tests call the sweeper directly
+        computer_workers=0,  # think in a thread: no processes to start
     )
 
 
@@ -103,6 +104,7 @@ async def app(settings: Settings, mailer: MemoryMailer, clock: Clock) -> AsyncIt
                 "ratings",
                 "challenges",
                 "blocks",
+                "seeks",
                 "reports",
                 "moderation_actions",
                 "sessions",

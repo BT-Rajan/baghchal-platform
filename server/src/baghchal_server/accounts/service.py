@@ -25,6 +25,9 @@ RESET: Final = "reset"
 EMAIL_CHANGE: Final = "email-change"
 DELETED_PREFIX: Final = "deleted-"
 """Usernames of deleted accounts start with this, so nobody can register one."""
+COMPUTER_PREFIX: Final = "computer"
+"""The computer opponent's accounts are named computer-easy and so on."""
+BOT_ROLE: Final = "bot"
 SESSION_TOUCH_INTERVAL: Final = timedelta(minutes=5)
 RESERVED_USERNAMES: Final = frozenset(
     {"admin", "administrator", "anonymous", "api", "baghchal", "guest", "help", "mod",
@@ -44,7 +47,7 @@ def username_key(username: str) -> str:
 def username_allowed(settings: Settings, username: str) -> bool:
     """False for reserved names and names containing a blocked word."""
     key = username_key(username)
-    if key in RESERVED_USERNAMES or key.startswith(DELETED_PREFIX):
+    if key in RESERVED_USERNAMES or key.startswith((DELETED_PREFIX, COMPUTER_PREFIX)):
         return False
     letters = "".join(c for c in key if c.isalpha())  # "b_a-d1" hides "bad" too
     return not any(word.lower() in letters for word in settings.blocked_username_words)

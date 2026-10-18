@@ -24,6 +24,11 @@ export type ReportReason = S['ReportIn']['reason'];
 export type Report = S['ReportOut'];
 export type ReportStatus = S['ReportOut']['status'];
 export type ModPlayer = S['ModPlayerOut'];
+export type ComputerGameRequest = S['ComputerGameIn'];
+export type Level = NonNullable<S['ComputerGameIn']['level']>;
+export type SeekResult = S['SeekOut'];
+export type SeekCount = S['SeekCountOut'];
+export type GameSummary = S['GameSummaryOut'];
 
 export type ChallengeAnswer = 'accept' | 'decline' | 'cancel';
 export type GameAction = 'resign' | 'abort' | 'claim-abandonment';
@@ -71,6 +76,17 @@ export function createApi(client: Client, transport: Transport) {
       client.post<Challenge>(`${V1}/challenges/${seg(id)}/${answer}`),
 
     // Games
+    playComputer: (body: ComputerGameRequest) =>
+      client.post<Game>(`${V1}/games/computer`, { body }),
+    seek: (timeControl: TimeControl, rated: boolean) =>
+      client.post<SeekResult>(`${V1}/seeks`, { body: { time_control: timeControl, rated } }),
+    stopSeeking: () => client.delete<void>(`${V1}/seeks`),
+    seekCounts: (signal?: AbortSignal) => client.get<SeekCount[]>(`${V1}/seeks`, { signal }),
+    playerGames: (username: string, before?: string, signal?: AbortSignal) =>
+      client.get<GameSummary[]>(`${V1}/players/${seg(username)}/games`, {
+        query: before === undefined ? {} : { before },
+        signal,
+      }),
     activeGames: (signal?: AbortSignal) => client.get<Game[]>(`${V1}/games`, { signal }),
     game: (id: string, signal?: AbortSignal) =>
       client.get<Game>(`${V1}/games/${seg(id)}`, { signal }),

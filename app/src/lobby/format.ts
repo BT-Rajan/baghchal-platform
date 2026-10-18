@@ -1,5 +1,14 @@
 /** Words and numbers for the lobby, profiles and leaderboards. */
-import type { Category, Challenge, Rating, Side, TimeControl } from '@/api/endpoints';
+import type {
+  GameSummary,
+  Level,
+  Category,
+  Challenge,
+  Rating,
+  Side,
+  TimeControl,
+} from '@/api/endpoints';
+import { ratingChangeText } from '@/game/describe';
 
 export const TIME_CONTROLS: readonly { label: TimeControl; category: Category }[] = [
   { label: '3+2', category: 'blitz' },
@@ -84,4 +93,38 @@ export function joinedText(createdAt: string): string {
 export function searchPrefix(text: string): string | null {
   const prefix = text.trim();
   return /^[A-Za-z0-9_-]{1,20}$/.test(prefix) ? prefix : null;
+}
+
+export const LEVELS: readonly { value: Level; label: string }[] = [
+  { value: 'easy', label: 'Easy' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'hard', label: 'Hard' },
+];
+
+const OUTCOMES: Record<GameSummary['outcome'], string> = {
+  won: 'Won',
+  lost: 'Lost',
+  aborted: 'Aborted',
+};
+
+/** "Won · vs bob · 5+3 rated (+12) · 3 Oct 2026" for a player's game history. */
+export function historyText(game: GameSummary): string {
+  const opponent =
+    game.computer === null ? game.opponent.username : `the computer (${game.computer})`;
+  const kind = game.rated ? 'rated' : 'casual';
+  const delta = ratingChangeText(game.rating_change);
+  const change = delta === null ? '' : ` (${delta})`;
+  const day = new Date(game.finished_at).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+  return `${OUTCOMES[game.outcome]} · vs ${opponent} · ${game.time_control} ${kind}${change} · ${day}`;
+}
+
+/** "Looking for 1 more player"-style wording for the number already waiting. */
+export function waitingText(count: number): string {
+  if (count === 0) return 'Nobody is waiting for this game right now.';
+  return count === 1 ? '1 player is waiting.' : `${count} players are waiting.`;
 }

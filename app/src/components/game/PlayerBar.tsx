@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { Game } from '@/api/endpoints';
 import type { Piece } from '@/game/bfen';
 import { formatClock, remainingMs } from '@/game/clock';
-import { SIDE_PLURAL, playerOf, ratingChangeText } from '@/game/describe';
+import { SIDE_PLURAL, isComputer, nameOf, playerOf, ratingChangeText } from '@/game/describe';
 import { colors, radius, spacing } from '@/theme';
 
 import { useServerNow } from '../useNow';
@@ -20,9 +20,13 @@ export function PlayerBar({ game, side, isMe }: { game: Game; side: Piece; isMe:
   return (
     <View style={[styles.bar, toMove && styles.toMove]}>
       <View style={styles.who}>
-        <TextLink href={`/player/${player.username}`}>
-          {isMe ? `${player.username} (you)` : player.username}
-        </TextLink>
+        {isComputer(game, side) ? (
+          <Text style={styles.name}>{nameOf(game, side)}</Text>
+        ) : (
+          <TextLink href={`/player/${player.username}`}>
+            {isMe ? `${player.username} (you)` : player.username}
+          </TextLink>
+        )}
         <Text style={styles.meta}>
           {[SIDE_PLURAL[side], String(rating.rating), change].filter((x) => x !== null).join(' · ')}
         </Text>
@@ -60,6 +64,7 @@ const styles = StyleSheet.create({
   },
   toMove: { borderColor: colors.highlight },
   who: { flex: 1, gap: 2 },
+  name: { fontSize: 15, fontWeight: '600', color: colors.text, paddingVertical: 10 },
   meta: { fontSize: 13, color: colors.muted },
   clock: {
     minWidth: 92,

@@ -46,6 +46,7 @@ from baghchal_server.games.models import (
 from baghchal_server.games.schemas import (
     ClocksOut,
     GameOut,
+    GameSummaryOut,
     MatchOut,
     MatchScoreOut,
     MoveIn,
@@ -70,6 +71,7 @@ ABORT_COOLDOWN: Final = timedelta(hours=1)
 """After ABORT_LIMIT aborts within ABORT_WINDOW, a player cannot start new games until
 ABORT_COOLDOWN after the last one."""
 SWEEP_BATCH: Final = 100
+COMPUTER_TURN_OVERDUE: Final = timedelta(seconds=3)
 _CACHE_SIZE: Final = 10_000
 _INITIAL: Final = format_position(Position.initial())
 
@@ -78,7 +80,12 @@ _INITIAL: Final = format_position(Position.initial())
 _cache: OrderedDict[uuid.UUID, EngineGame] = OrderedDict()
 
 
-def _side_to_move(game: Game) -> SideName:
+def computer_account(level: str) -> uuid.UUID:
+    """The computer's account for a level: the same id on every server and in every database."""
+    return uuid.uuid5(uuid.NAMESPACE_URL, f"https://baghchal.invalid/computer/{level}")
+
+
+def side_to_move(game: Game) -> SideName:
     return "goat" if game.ply % 2 == 0 else "tiger"  # goats move first
 
 
@@ -112,7 +119,7 @@ def clocks_at(game: Game, now: datetime) -> tuple[int, int]:
     goat, tiger = game.goat_ms, game.tiger_ms
     if _clocks_running(game):
         elapsed = _charged_ms(game, now)
-        if _side_to_move(game) == "goat":
+        if side_to_move(game) == "goat":
             goat = max(0, goat - elapsed)
         else:
             tiger = max(0, tiger - elapsed)
@@ -183,6 +190,8 @@ async def _create_game(  # noqa: PLR0913 - every field of a new game
     challenge_id: uuid.UUID | None,
     match_id: uuid.UUID | None,
     match_game: int | None,
+    bot_level: str | None = None,
+    computer_id: uuid.UUID | None = None,
 ) -> Game:
     category = category_of(initial_ms // 1000, increment_ms // 1000)
     current = await ratings.current(db, [goat_id, tiger_id], category, now)
@@ -206,18 +215,75 @@ async def _create_game(  # noqa: PLR0913 - every field of a new game
         lag_ms=0,
         goat_rating=round(current[goat_id].rating),
         tiger_rating=round(current[tiger_id].rating),
+        bot_level=bot_level,
         created_at=now,
     )
     db.add(game)
     await db.flush()  # the game row first: active_games refers to it
+    # One live game per person; the computer plays any number at once.
     db.add_all(
-        [
-            ActiveGame(user_id=goat_id, game_id=game.id),
-            ActiveGame(user_id=tiger_id, game_id=game.id),
-        ]
+        ActiveGame(user_id=uid, game_id=game.id)
+        for uid in (goat_id, tiger_id)
+        if uid != computer_id
     )
     await db.flush()
     return game
+
+
+async def start_computer_game(  # noqa: PLR0913 - who plays whom, which side, how fast
+    db: AsyncSession,
+    now: datetime,
+    *,
+    player_id: uuid.UUID,
+    computer_id: uuid.UUID,
+    level: str,
+    side: str,
+    initial_seconds: int,
+    increment_seconds: int,
+) -> Game:
+    """Start a casual game between a player and the computer; ``side`` is the player's."""
+    if await busy(db, [player_id]):
+        raise AppError(409, "player_busy", "Finish your live game first.")
+    if side == "random":
+        side = secrets.choice(("goat", "tiger"))
+    goat_id, tiger_id = (player_id, computer_id) if side == "goat" else (computer_id, player_id)
+    try:
+        game = await _create_game(
+            db,
+            now,
+            goat_id=goat_id,
+            tiger_id=tiger_id,
+            rated=False,
+            initial_ms=initial_seconds * 1000,
+            increment_ms=increment_seconds * 1000,
+            challenge_id=None,
+            match_id=None,
+            match_game=None,
+            bot_level=level,
+            computer_id=computer_id,
+        )
+        await db.commit()
+    except IntegrityError:  # started another game at the same moment
+        await db.rollback()
+        raise AppError(409, "player_busy", "Finish your live game first.") from None
+    return game
+
+
+async def computer_turns_waiting(db: AsyncSession, now: datetime) -> list[uuid.UUID]:
+    """Games against the computer where it has had the move for a few seconds: its turn was
+    missed (a server restarted mid-thought, say) and should be played now."""
+    rows = await db.execute(
+        select(Game.id, Game.position, Game.goat_id, Game.tiger_id, Game.bot_level).where(
+            Game.status == GameStatus.ACTIVE,
+            Game.bot_level.is_not(None),
+            Game.turn_started_at <= now - COMPUTER_TURN_OVERDUE,
+        )
+    )
+    return [
+        game_id
+        for game_id, position, goat_id, tiger_id, level in rows.all()
+        if (goat_id if position.split()[1] == "g" else tiger_id) == computer_account(str(level))
+    ]
 
 
 async def _after_finish(db: AsyncSession, game_id: uuid.UUID, now: datetime) -> None:
@@ -269,7 +335,11 @@ async def abort_cooldown(db: AsyncSession, user_id: uuid.UUID, now: datetime) ->
     recent = (
         await db.scalars(
             select(Game.finished_at)
-            .where(Game.aborted_by == user_id, Game.finished_at > now - ABORT_WINDOW)
+            .where(
+                Game.aborted_by == user_id,
+                Game.finished_at > now - ABORT_WINDOW,
+                Game.bot_level.is_(None),  # leaving the computer harms nobody
+            )
             .order_by(Game.finished_at.desc())
             .limit(ABORT_LIMIT)
         )
@@ -332,7 +402,7 @@ async def busy(db: AsyncSession, user_ids: Sequence[uuid.UUID]) -> set[uuid.UUID
     return set(await db.scalars(select(ActiveGame.user_id).where(ActiveGame.user_id.in_(user_ids))))
 
 
-async def _move_list(db: AsyncSession, game: Game) -> list[str]:
+async def move_list(db: AsyncSession, game: Game) -> list[str]:
     """The moves up to ``game.ply``. A concurrent request may already have stored more; the
     engine game must match the row this request read, or a move is judged on a newer board."""
     return list(
@@ -354,7 +424,7 @@ async def _engine_game(db: AsyncSession, game: Game, *, take: bool = False) -> E
         if not take:
             _cache.move_to_end(game.id)
         return cached
-    engine_game = EngineGame.replay(parse_move(m) for m in await _move_list(db, game))
+    engine_game = EngineGame.replay(parse_move(m) for m in await move_list(db, game))
     if not take:
         _remember(game.id, engine_game)
     return engine_game
@@ -388,24 +458,74 @@ async def describe(db: AsyncSession, game: Game, now: datetime) -> GameOut:
         result=None if active else ResultOut(winner=game.winner, reason=EndReason(game.end_reason)),  # type: ignore[arg-type]
         position=game.position,
         ply=game.ply,
-        side_to_move=_side_to_move(game),
+        side_to_move=side_to_move(game),
         moves=[format_move(m) for m in engine_game.moves],
         legal_moves=[format_move(m) for m in engine_game.legal_moves()] if active else [],
         clocks=ClocksOut(
             goat_ms=goat_ms,
             tiger_ms=tiger_ms,
-            running=_side_to_move(game) if _clocks_running(game) else None,
+            running=side_to_move(game) if _clocks_running(game) else None,
         ),
         ratings=RatingsOut(
             goat=SideRatingOut(rating=game.goat_rating, change=game.goat_rating_change),
             tiger=SideRatingOut(rating=game.tiger_rating, change=game.tiger_rating_change),
         ),
         match=await _describe_match(db, game, names),
+        computer=game.bot_level,
+        positions=[] if active else _positions(engine_game),
         deadline_at=game.deadline_at,
         server_time=now,
         created_at=game.created_at,
         finished_at=game.finished_at,
     )
+
+
+def _positions(engine_game: EngineGame) -> list[str]:
+    """The position before the first move and after each move."""
+    replay = EngineGame(engine_game.start)
+    positions = [format_position(replay.position)]
+    for move in engine_game.moves:
+        replay.play(move)
+        positions.append(format_position(replay.position))
+    return positions
+
+
+async def history(
+    db: AsyncSession, user_id: uuid.UUID, *, before: datetime | None, limit: int
+) -> list[GameSummaryOut]:
+    """A player's finished games, newest first; ``before`` pages back in time."""
+    query = select(Game).where(
+        or_(Game.goat_id == user_id, Game.tiger_id == user_id),
+        Game.status == GameStatus.FINISHED,
+    )
+    if before is not None:
+        query = query.where(Game.finished_at < before)
+    found = (await db.scalars(query.order_by(Game.finished_at.desc(), Game.id).limit(limit))).all()
+    opponents = {g.tiger_id if g.goat_id == user_id else g.goat_id for g in found}
+    names = dict(
+        (await db.execute(select(User.id, User.username).where(User.id.in_(opponents)))).all()
+    )
+    out = []
+    for g in found:
+        side: SideName = "goat" if g.goat_id == user_id else "tiger"
+        opponent = g.tiger_id if side == "goat" else g.goat_id
+        assert g.finished_at is not None  # noqa: S101 - finished games have one
+        out.append(
+            GameSummaryOut(
+                id=g.id,
+                opponent=PlayerOut(id=opponent, username=names[opponent]),
+                side=side,
+                time_control=f"{g.initial_ms // 60_000}+{g.increment_ms // 1000}",
+                rated=g.rated,
+                computer=g.bot_level,
+                result=ResultOut(winner=g.winner, reason=EndReason(g.end_reason)),  # type: ignore[arg-type]
+                outcome="aborted" if g.winner is None else "won" if g.winner == side else "lost",
+                rating_change=g.goat_rating_change if side == "goat" else g.tiger_rating_change,
+                moves=g.ply,
+                finished_at=g.finished_at,
+            )
+        )
+    return out
 
 
 async def _describe_match(
@@ -447,7 +567,7 @@ async def play(  # noqa: PLR0913 - the move, who plays it when, and their networ
         raise AppError(409, "game_over", "This game is over.")
     if data.ply != game.ply:
         raise AppError(409, "stale_position", "The game has moved on; refresh and try again.")
-    if side != _side_to_move(game):
+    if side != side_to_move(game):
         raise AppError(409, "not_your_turn", "It is not your turn.")
     if game.deadline_at is not None and now >= game.deadline_at:
         # The route settles overdue games first, so this is only a last-moment race; the
@@ -619,7 +739,7 @@ async def claim_abandonment(
         last_seen = await presence.last_seen(opponent_id)
         if (
             game.ply < 2
-            or _side_to_move(game) == side
+            or side_to_move(game) == side
             or now - game.turn_started_at < ABANDON_AFTER
             or await presence.online([opponent_id])
             or (last_seen is not None and now - last_seen < ABANDON_AFTER)
@@ -639,9 +759,9 @@ async def expire(db: AsyncSession, game: Game, now: datetime) -> bool:
     """End a game whose deadline has passed: aborted before both moved (except in the second
     game of a match, which cannot be aborted), else a timeout loss."""
     if game.ply < 2 and game.match_game != 2:
-        late = game.goat_id if _side_to_move(game) == "goat" else game.tiger_id
+        late = game.goat_id if side_to_move(game) == "goat" else game.tiger_id
         return await _finish(db, game, now, None, EndReason.ABORTED, aborted_by=late)
-    return await _finish(db, game, now, _other(_side_to_move(game)), EndReason.TIMEOUT)
+    return await _finish(db, game, now, _other(side_to_move(game)), EndReason.TIMEOUT)
 
 
 async def due_games(db: AsyncSession, now: datetime) -> Sequence[uuid.UUID]:

@@ -62,6 +62,12 @@ test('every endpoint calls the right method, path and body', async () => {
   await api.suspend('bob', null, 'why');
   await api.unsuspend('bob', 'appeal');
   await api.rename('bob', 'nicebob', 'name');
+  await api.playComputer({ level: 'hard', side: 'goat', time_control: '5+3' });
+  await api.seek('5+3', true);
+  await api.stopSeeking();
+  await api.seekCounts(signal);
+  await api.playerGames('b o');
+  await api.playerGames('bob', '2026-01-01T00:00:00Z', signal);
 
   const V = '/api/v1';
   expect(calls).toEqual([
@@ -106,5 +112,11 @@ test('every endpoint calls the right method, path and body', async () => {
     ['POST', `${V}/mod/players/bob/suspend`, { body: { days: null, reason: 'why' } }],
     ['POST', `${V}/mod/players/bob/unsuspend`, { body: { reason: 'appeal' } }],
     ['POST', `${V}/mod/players/bob/rename`, { body: { username: 'nicebob', reason: 'name' } }],
+    ['POST', `${V}/games/computer`, { body: { level: 'hard', side: 'goat', time_control: '5+3' } }],
+    ['POST', `${V}/seeks`, { body: { time_control: '5+3', rated: true } }],
+    ['DELETE', `${V}/seeks`, undefined],
+    ['GET', `${V}/seeks`, { signal }],
+    ['GET', `${V}/players/b%20o/games`, { query: {}, signal: undefined }],
+    ['GET', `${V}/players/bob/games`, { query: { before: '2026-01-01T00:00:00Z' }, signal }],
   ]);
 });

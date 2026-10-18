@@ -80,6 +80,8 @@ class Game(Base):
     )
     """Who caused an abort: the player who aborted, or the side that did not make a first
     move in time. Too many aborts in a day keep a player from starting new games for a while."""
+    bot_level: Mapped[str | None] = mapped_column(String(8))
+    """For a game against the computer: its level (``easy``, ``medium``, ``hard``)."""
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
     finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 

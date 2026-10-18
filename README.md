@@ -1,16 +1,17 @@
 # Bagh Chal Platform
 
-Real-time multiplayer Bagh Chal (बाघचाल): sign in, see who is online, challenge anyone, play
-live with clocks, and climb rated leaderboards — on web, phones and tablets. Players can block
+Real-time multiplayer Bagh Chal (बाघचाल): sign in, see who is online, challenge anyone or play
+whoever is waiting, play the computer, replay finished games, play live with clocks, and climb
+rated leaderboards — on web, phones and tablets. Players can block
 and report others, moderators can suspend and rename, and players can change, export or delete
 their accounts.
 
 ## Repository layout
 | Path | What | Status |
 |---|---|---|
-| `engine/` | Pure-Python rules engine (no dependencies) | Phase 1 ✅ |
-| `server/` | FastAPI backend: accounts, lobby, live games, ratings, moderation, metrics | Phases 2–5, 8 ✅ |
-| `app/` | Expo / React Native client for web, iOS, Android ([README](app/README.md)) | Phase 6 ✅ |
+| `engine/` | Pure-Python rules engine and computer player (no dependencies) | Phases 1, 7 ✅ |
+| `server/` | FastAPI backend: accounts, lobby, live games, ratings, computer games, moderation, metrics | Phases 2–5, 7, 8 ✅ |
+| `app/` | Expo / React Native client for web, iOS, Android ([README](app/README.md)) | Phases 6, 7 ✅ |
 | `docs/` | Rules canon, architecture decision records, [operations runbook](docs/operations.md) | |
 | `deploy/` | Production stack: Compose, Caddy, backups, Prometheus alerts | |
 | `tools/` | The load test (`tools/loadtest.py`) | |
@@ -34,8 +35,10 @@ Each phase ships complete — tested, documented and reviewed — before the nex
 5. **Ratings** ✅ — Glicko-2 per time control, side-swapped rated matches, leaderboards.
 6. **App** ✅ — Expo client for web, iOS and Android: sign-up, lobby and challenges, live
    games with clocks, rated matches, profiles and leaderboards; no Expo-cloud dependency.
-7. **More to play** — next: a computer opponent, quick pairing (play anyone waiting at the
-   same time control), game history and replay, and automatic fair-play checks.
+7. **More to play** ✅ — a computer opponent at three strengths (easy, medium, hard; casual
+   games only, searched in worker processes), quick pairing (play whoever is waiting for the
+   same game; rated pairings are side-swapped matches), and game history on every profile with
+   move-by-move replay. Still to come: automatic fair-play checks.
 8. **Ready for players** — what a public service needs:
    - ✅ **Accounts**: change the email address or password, download your data, delete the
      account ([API](#api-v1)).
@@ -127,11 +130,15 @@ and the Caddyfile.
 | GET | `/api/v1/blocks` | Players you have blocked |
 | PUT, DELETE | `/api/v1/blocks/{username}` | Block or unblock a player (see [rules](docs/rules.md#live-play-platform-rules)) |
 | POST | `/api/v1/players/{username}/report` | Report a player to the moderators (`reason`, `details`, optional `game_id`) |
+| GET | `/api/v1/players/{username}/games?before=&limit=` | A player's finished games, newest first (page back with `before` = the last `finished_at`) |
+| GET | `/api/v1/seeks` | How many players are waiting, per time control and rated or casual |
+| POST, DELETE | `/api/v1/seeks` | Play whoever is waiting for the same game (`time_control`, `rated`): starts the game at once, or waits up to two minutes; `DELETE` stops waiting |
 | GET | `/api/v1/challenges` | Your open challenges, incoming and outgoing |
 | POST | `/api/v1/challenges` | Challenge an online player (`time_control` 3+2, 5+3, 10+5, 15+10; `rated`; `side`) |
 | POST | `/api/v1/challenges/{id}/accept`, `/decline`, `/cancel` | Answer or withdraw a challenge; accepting starts the game |
 | GET | `/api/v1/games` | Your live games (to resume after a reconnect) |
-| GET | `/api/v1/games/{id}` | A game: position, moves, legal moves, clocks, result |
+| POST | `/api/v1/games/computer` | Play the computer (`level` easy, medium or hard; `side`; `time_control`); never rated |
+| GET | `/api/v1/games/{id}` | A game: position, moves, legal moves, clocks, result; finished games add every position, for replay |
 | POST | `/api/v1/games/{id}/moves` | Play `{"ply": n, "move": "a1-b2"}` (`ply` = moves you have seen) |
 | POST | `/api/v1/games/{id}/resign`, `/abort`, `/claim-abandonment` | End the game (see [rules](docs/rules.md#live-play-platform-rules)) |
 | GET | `/api/v1/leaderboards/{blitz\|rapid}` | Top established players |

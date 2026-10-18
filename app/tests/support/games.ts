@@ -22,6 +22,8 @@ export function game(overrides: Partial<Game> = {}): Game {
     clocks: { goat_ms: 300_000, tiger_ms: 300_000, running: null },
     ratings: { goat: { rating: 1500, change: null }, tiger: { rating: 1500, change: null } },
     match: null,
+    computer: null,
+    positions: [],
     deadline_at: null,
     server_time: '2026-01-01T12:00:00Z',
     created_at: '2026-01-01T12:00:00Z',

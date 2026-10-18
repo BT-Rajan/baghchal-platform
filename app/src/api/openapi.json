@@ -786,6 +786,149 @@
         }
       }
     },
+    "/api/v1/players/{username}/games": {
+      "get": {
+        "summary": "Player Games",
+        "description": "A player's finished games, newest first. For the next page, pass the last game's\n``finished_at`` as ``before``.",
+        "operationId": "player_games_api_v1_players__username__games_get",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,20}$",
+              "title": "Username"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GameSummaryOut"
+                  },
+                  "title": "Response Player Games Api V1 Players  Username  Games Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/seeks": {
+      "get": {
+        "summary": "Waiting Players",
+        "description": "How many players are waiting for each kind of game.",
+        "operationId": "waiting_players_api_v1_seeks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SeekCountOut"
+                  },
+                  "type": "array",
+                  "title": "Response Waiting Players Api V1 Seeks Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Seek Game",
+        "description": "Play anyone who wants the same kind of game: paired at once with whoever has waited\nlongest, or wait (two minutes) for the next person.",
+        "operationId": "seek_game_api_v1_seeks_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeekIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeekOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Stop Seeking",
+        "operationId": "stop_seeking_api_v1_seeks_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
     "/api/v1/games": {
       "get": {
         "summary": "My Active Games",
@@ -877,6 +1020,45 @@
         },
         "responses": {
           "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/computer": {
+      "post": {
+        "summary": "Play The Computer",
+        "description": "Start a casual game against the computer. If it plays goats, it moves first.",
+        "operationId": "play_the_computer_api_v1_games_computer_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComputerGameIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
             "description": "Successful Response",
             "content": {
               "application/json": {
@@ -1651,6 +1833,44 @@
         ],
         "title": "ClocksOut"
       },
+      "ComputerGameIn": {
+        "properties": {
+          "level": {
+            "type": "string",
+            "enum": [
+              "easy",
+              "medium",
+              "hard"
+            ],
+            "title": "Level",
+            "default": "medium"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "goat",
+              "tiger",
+              "random"
+            ],
+            "title": "Side",
+            "default": "random"
+          },
+          "time_control": {
+            "type": "string",
+            "enum": [
+              "3+2",
+              "5+3",
+              "10+5",
+              "15+10"
+            ],
+            "title": "Time Control",
+            "default": "10+5"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ComputerGameIn"
+      },
       "DeleteAccountIn": {
         "properties": {
           "password": {
@@ -2133,6 +2353,29 @@
               }
             ]
           },
+          "computer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "easy",
+                  "medium",
+                  "hard"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computer"
+          },
+          "positions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Positions"
+          },
           "deadline_at": {
             "anyOf": [
               {
@@ -2185,6 +2428,8 @@
           "clocks",
           "ratings",
           "match",
+          "computer",
+          "positions",
           "deadline_at",
           "server_time",
           "created_at",
@@ -2199,6 +2444,98 @@
           "finished"
         ],
         "title": "GameStatus"
+      },
+      "GameSummaryOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "opponent": {
+            "$ref": "#/components/schemas/PlayerOut"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "goat",
+              "tiger"
+            ],
+            "title": "Side"
+          },
+          "time_control": {
+            "type": "string",
+            "title": "Time Control"
+          },
+          "rated": {
+            "type": "boolean",
+            "title": "Rated"
+          },
+          "computer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "easy",
+                  "medium",
+                  "hard"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computer"
+          },
+          "result": {
+            "$ref": "#/components/schemas/ResultOut"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "won",
+              "lost",
+              "aborted"
+            ],
+            "title": "Outcome"
+          },
+          "rating_change": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating Change"
+          },
+          "moves": {
+            "type": "integer",
+            "title": "Moves"
+          },
+          "finished_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Finished At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "opponent",
+          "side",
+          "time_control",
+          "rated",
+          "computer",
+          "result",
+          "outcome",
+          "rating_change",
+          "moves",
+          "finished_at"
+        ],
+        "title": "GameSummaryOut",
+        "description": "A finished game, from one player's side, for their game history."
       },
       "HTTPValidationError": {
         "properties": {
@@ -2965,6 +3302,95 @@
           "reason"
         ],
         "title": "ResultOut"
+      },
+      "SeekCountOut": {
+        "properties": {
+          "time_control": {
+            "type": "string",
+            "title": "Time Control"
+          },
+          "rated": {
+            "type": "boolean",
+            "title": "Rated"
+          },
+          "players": {
+            "type": "integer",
+            "title": "Players"
+          }
+        },
+        "type": "object",
+        "required": [
+          "time_control",
+          "rated",
+          "players"
+        ],
+        "title": "SeekCountOut"
+      },
+      "SeekIn": {
+        "properties": {
+          "time_control": {
+            "type": "string",
+            "enum": [
+              "3+2",
+              "5+3",
+              "10+5",
+              "15+10"
+            ],
+            "title": "Time Control"
+          },
+          "rated": {
+            "type": "boolean",
+            "title": "Rated",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "time_control"
+        ],
+        "title": "SeekIn"
+      },
+      "SeekOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "paired",
+              "waiting"
+            ],
+            "title": "Status"
+          },
+          "game": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GameOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "game",
+          "expires_at"
+        ],
+        "title": "SeekOut"
       },
       "SessionOut": {
         "properties": {

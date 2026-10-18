@@ -68,10 +68,24 @@ class GameOut(BaseModel):
     ratings: RatingsOut
     match: MatchOut | None
     """Rated games are played as two-game matches."""
+    computer: Literal["easy", "medium", "hard"] | None
+    """Set when one of the players is the computer: its level."""
+    positions: list[str]
+    """For replaying a finished game: the position (BFEN) before the first move and after each
+    one, so ``positions[ply]``. Empty while the game is in progress."""
     deadline_at: datetime | None
     server_time: datetime
     created_at: datetime
     finished_at: datetime | None
+
+
+class ComputerGameIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    level: Literal["easy", "medium", "hard"] = "medium"
+    side: Literal["goat", "tiger", "random"] = "random"
+    """The side you play."""
+    time_control: Literal["3+2", "5+3", "10+5", "15+10"] = "10+5"
 
 
 class MoveIn(BaseModel):
@@ -80,3 +94,21 @@ class MoveIn(BaseModel):
     ply: Annotated[int, Field(ge=0, le=10_000)]
     """The number of moves the client has seen; the move is rejected if the game moved on."""
     move: Annotated[str, StringConstraints(min_length=2, max_length=5, strict=True)]
+
+
+class GameSummaryOut(BaseModel):
+    """A finished game, from one player's side, for their game history."""
+
+    id: uuid.UUID
+    opponent: PlayerOut
+    side: SideName
+    """The side this player had."""
+    time_control: str
+    rated: bool
+    computer: Literal["easy", "medium", "hard"] | None
+    result: ResultOut
+    outcome: Literal["won", "lost", "aborted"]
+    """How it went for this player."""
+    rating_change: int | None
+    moves: int
+    finished_at: datetime

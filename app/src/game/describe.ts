@@ -20,6 +20,20 @@ export function playerOf(game: Game, side: Piece): Player {
   return side === 'goat' ? game.goat : game.tiger;
 }
 
+const LEVEL_NAMES = { easy: 'easy', medium: 'medium', hard: 'hard' } as const;
+
+/** Whether this side is played by the computer. */
+export function isComputer(game: Game, side: Piece): boolean {
+  return game.computer !== null && playerOf(game, side).username.startsWith('computer-');
+}
+
+/** A player's name as shown: their username, or "Computer (hard)". */
+export function nameOf(game: Game, side: Piece): string {
+  return isComputer(game, side) && game.computer !== null
+    ? `Computer (${LEVEL_NAMES[game.computer]})`
+    : playerOf(game, side).username;
+}
+
 /** How a game ended, to follow "You won" / "You lost" / "Goats (alice) won". */
 const HOW: Record<Exclude<EndReason, 'aborted'>, string> = {
   five_captured: ': the tigers captured five goats',
@@ -35,8 +49,7 @@ export function resultText(game: Game, me: Piece | null): string | null {
   if (game.result === null) return null;
   const { winner, reason } = game.result;
   if (winner === null || reason === 'aborted') return 'Game aborted: no result.';
-  if (me === null)
-    return `${SIDE_PLURAL[winner]} (${playerOf(game, winner).username}) won${HOW[reason]}.`;
+  if (me === null) return `${SIDE_PLURAL[winner]} (${nameOf(game, winner)}) won${HOW[reason]}.`;
   if (reason === 'abandoned' && winner !== me) return 'You lost: you were away too long.';
   return `${winner === me ? 'You won' : 'You lost'}${HOW[reason]}.`;
 }
@@ -45,7 +58,7 @@ export function resultText(game: Game, me: Piece | null): string | null {
 export function turnText(game: Game, me: Piece | null): string | null {
   if (game.status !== 'active') return null;
   if (game.side_to_move === me) return 'Your move';
-  return `${playerOf(game, game.side_to_move).username} to move`;
+  return `${nameOf(game, game.side_to_move)} to move`;
 }
 
 /** "+12" / "−8" / "±0", or null when the game moved no rating. */
@@ -94,7 +107,7 @@ export function lastMoveText(game: Game, me: Piece | null): string | null {
   const move = game.moves.at(-1);
   if (move === undefined) return null;
   const side: Piece = (game.moves.length - 1) % 2 === 0 ? 'goat' : 'tiger';
-  const who = side === me ? 'You' : playerOf(game, side).username;
+  const who = side === me ? 'You' : nameOf(game, side);
   const [from, to] = move.split(/[-x]/);
   if (to === undefined) return `${who} placed a goat on ${move}.`;
   return move.includes('x')

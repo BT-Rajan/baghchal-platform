@@ -74,6 +74,12 @@ scripts/        the Expo-cloud guardrail
 - **Your account.** Me → Account settings changes the email address (confirmed by a link sent
   to the new one) or password, downloads your data (a file on the web, the share sheet in
   apps) and deletes the account.
+- **Play now.** The lobby's "Play now" opens a screen to pair with whoever wants the same game
+  (casual or rated, with a live count of who is waiting; leaving the screen stops waiting) or
+  to play the computer at a chosen strength and side.
+- **History and replay.** Profiles list the player's finished games, newest first and paged;
+  each opens the game, where finished games step through every position. A game against the
+  computer offers "Play the computer again" (sides swapped) instead of a rematch or report.
 - **Reports and moderation.** "Report" on a profile or a finished game sends a report (with
   the game). Moderators see Me → Moderation: the report queue and each player's record, where
   they suspend, ban, lift a suspension, rename and dismiss reports, always with a reason.
@@ -100,7 +106,8 @@ scripts/        the Expo-cloud guardrail
   `src/game` and `src/lobby` must stay at 100% coverage.
 - **Screen tests** in `tests/` render the real routes against a fake server
   (`tests/support/fakeServer.ts`) and a fake socket (`tests/support/fakeSocket.ts`): signing
-  in, the lobby, challenges, live events, playing, clocks, results, matches, blocking, account settings, reports and moderation.
+  in, the lobby, challenges, live events, playing, clocks, results, matches, blocking, account settings, reports and moderation,
+  play now, the computer, history and replay.
 - **End-to-end smoke** (`npm run e2e:smoke`) runs locally, not in CI. It starts the real server
   on a throwaway SQLite database, builds and serves the web app, and drives two Chromium
   browsers: Alice and Bob sign up, open their emailed links, Alice challenges Bob, Bob accepts,
@@ -113,6 +120,5 @@ chromium` once, or set `E2E_CHROMIUM` to a Chromium binary); see the script for 
 - Store builds, signing and over-the-air updates from our own server; push notifications
   through FCM / APNs; universal links (email links open the web app for now).
 - Privacy policy and terms pages (the app stores require them).
-- Playing the computer, quick pairing, game history and replay (Phase 7).
 - A dark theme (the app declares itself light-only until then).
 - Testing on real iOS and Android devices.

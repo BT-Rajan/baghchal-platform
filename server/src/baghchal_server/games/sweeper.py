@@ -58,6 +58,9 @@ async def sweep(state: AppState) -> int:
             if await service.expire(db, game, now):
                 await notify(state, db, await service.get_game(db, game_id))
                 ended += 1
+        # The computer's turns that nobody played (say its server restarted mid-thought).
+        for game_id in await service.computer_turns_waiting(db, now):
+            state.computer.schedule(state, game_id)
     return ended
 
 
