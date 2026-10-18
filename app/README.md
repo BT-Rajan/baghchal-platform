@@ -111,6 +111,8 @@ chromium` once, or set `E2E_CHROMIUM` to a Chromium binary); see the script for 
 ## Not yet
 
 - Store builds, signing and over-the-air updates from our own server; push notifications
-  through FCM / APNs; universal links (email links open the web app for now). Phase 8.
+  through FCM / APNs; universal links (email links open the web app for now).
+- Privacy policy and terms pages (the app stores require them).
+- Playing the computer, quick pairing, game history and replay (Phase 7).
 - A dark theme (the app declares itself light-only until then).
 - Testing on real iOS and Android devices.

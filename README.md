@@ -1,13 +1,15 @@
 # Bagh Chal Platform
 
 Real-time multiplayer Bagh Chal (बाघचाल): sign in, see who is online, challenge anyone, play
-live with clocks, and climb rated leaderboards — on web, phones and tablets.
+live with clocks, and climb rated leaderboards — on web, phones and tablets. Players can block
+and report others, moderators can suspend and rename, and players can change, export or delete
+their accounts.
 
 ## Repository layout
 | Path | What | Status |
 |---|---|---|
 | `engine/` | Pure-Python rules engine (no dependencies) | Phase 1 ✅ |
-| `server/` | FastAPI backend: accounts, lobby, live games, ratings | Phases 2–5 ✅ |
+| `server/` | FastAPI backend: accounts, lobby, live games, ratings, moderation, metrics | Phases 2–5, 8 ✅ |
 | `app/` | Expo / React Native client for web, iOS, Android ([README](app/README.md)) | Phase 6 ✅ |
 | `docs/` | Rules canon, architecture decision records, [operations runbook](docs/operations.md) | |
 | `deploy/` | Production stack: Compose, Caddy, backups, Prometheus alerts | |
@@ -32,10 +34,22 @@ Each phase ships complete — tested, documented and reviewed — before the nex
 5. **Ratings** ✅ — Glicko-2 per time control, side-swapped rated matches, leaderboards.
 6. **App** ✅ — Expo client for web, iOS and Android: sign-up, lobby and challenges, live
    games with clocks, rated matches, profiles and leaderboards; no Expo-cloud dependency.
-7. **More to play** — computer opponent, game archive and replay, fair-play checks.
-8. **Production hardening** — load tests, security review, backups, deployment, monitoring
-   (in place: see [`docs/operations.md`](docs/operations.md)); store builds and push
-   notifications for the apps still to come.
+7. **More to play** — next: a computer opponent, quick pairing (play anyone waiting at the
+   same time control), game history and replay, and automatic fair-play checks.
+8. **Ready for players** — what a public service needs:
+   - ✅ **Accounts**: change the email address or password, download your data, delete the
+     account ([API](#api-v1)).
+   - ✅ **Moderation**: reports, a moderator role, suspensions, bans and renames, with a
+     moderation log ([rules](docs/rules.md#reports-and-moderation)).
+   - ✅ **Operations**: production stack (Caddy, API replicas, MariaDB, Redis), metrics, error
+     reports, alerts, nightly backups with a rehearsed restore, and a load test with measured
+     capacity ([runbook](docs/operations.md)).
+   - ✅ **Fair play**: abort penalties, blocking, lag compensation, one rated match per pair a
+     day.
+   - ✅ **Security review** of the whole platform, with the fixes it called for
+     ([`SECURITY.md`](SECURITY.md)).
+   - Still to do: privacy policy and terms pages, store builds and push notifications for the
+     apps, and testing on real devices.
 
 ## Development
 Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
@@ -47,6 +61,7 @@ uv run pytest server                          # server tests (SQLite by default)
 uv run ruff check . && uv run ruff format --check .
 (cd engine && uv run mypy --config-file ../pyproject.toml .)
 (cd server && uv run mypy --config-file ../pyproject.toml .)
+uv run mypy --config-file pyproject.toml tools
 uv run python engine/benchmarks/bench.py      # engine throughput
 ```
 
@@ -81,10 +96,16 @@ BAGHCHAL_TEST_REDIS_URL=redis://localhost:6379/15 uv run pytest server
 Settings are read from `BAGHCHAL_*` environment variables; see [`.env.example`](.env.example).
 Production refuses to start with unsafe settings.
 
+Load test (many players playing real games against a running server; test deployments only,
+since it creates accounts directly in the database): see
+[`docs/operations.md`](docs/operations.md#scaling) and `tools/loadtest.py`.
+
 CI runs the engine on Python 3.12 and 3.13, and the server on SQLite plus MySQL 8.4 and
-MariaDB 11.4; both packages must keep 100% branch coverage. The app job checks the Expo-cloud
-guardrail, API type sync, types, lint, formatting and tests (100% coverage on its logic), and
-builds the web app.
+MariaDB 11.4, with Redis; both packages must keep 100% branch coverage. The app job checks the
+Expo-cloud guardrail, API type sync, types, lint, formatting and tests (100% coverage on its
+logic), and builds the web app. The deploy job checks the production files: the backup
+scripts (shellcheck), the alert rules and their unit tests (promtool), the Prometheus config
+and the Caddyfile.
 
 ## API (v1)
 | Method | Path | Purpose |
@@ -120,6 +141,7 @@ builds the web app.
 | POST | `/api/v1/mod/players/{username}/suspend`, `/unsuspend`, `/rename` | Moderators: suspend (`days`, or `null` to ban), lift a suspension, or rename; each needs a `reason` |
 | WS | `/api/v1/ws` | Live events — see [`docs/realtime.md`](docs/realtime.md) |
 | GET | `/health/live`, `/health/ready` | Liveness; readiness (database, Redis) |
+| GET | `/metrics` | Prometheus metrics; only with `BAGHCHAL_METRICS_TOKEN` set and sent as a bearer token |
 
 Browsers authenticate with an HttpOnly session cookie; native apps pass
 `"transport": "bearer"` when signing in and send `Authorization: Bearer <token>`.

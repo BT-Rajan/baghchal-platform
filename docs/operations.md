@@ -1,7 +1,7 @@
 # Operations
 
 How to run Bagh Chal in production, watch it, back it up and restore it. Everything here is in
-`deploy/`.
+`deploy/`; the reasons behind the setup are in [ADR 0004](adr/0004-production-topology.md).
 
 ## What runs
 
