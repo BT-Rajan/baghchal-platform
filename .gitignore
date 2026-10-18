@@ -23,3 +23,6 @@ deploy/monitoring/metrics-token
 
 # Settings for the pm2 install (runonce.sh); holds the database password
 bhagchal2.env
+
+# One-off seed SQL with password hashes: keep out of the repository
+bhagchal2-*.sql
