@@ -68,7 +68,7 @@ def _me(user: User) -> MeOut:
         username=user.username,
         email=user.email,
         created_at=user.created_at,
-        role="moderator" if user.role == service.MODERATOR else "player",
+        role=user.role if user.role in service.STAFF else "player",
     )
 
 

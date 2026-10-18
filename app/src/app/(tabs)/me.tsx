@@ -7,6 +7,7 @@ import { useMe, useSession } from '@/auth/session';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Notice } from '@/components/Notice';
+import { PlanCard } from '@/components/PlanCard';
 import { ProfileView } from '@/components/ProfileView';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
@@ -28,8 +29,9 @@ export default function MeScreen() {
       ) : (
         <Loading label="Loading your profile" />
       )}
+      <PlanCard />
       <BlockedPlayers />
-      {me.role === 'moderator' && (
+      {me.role !== 'player' && (
         <Button title="Moderation" variant="secondary" onPress={() => router.push('/moderation')} />
       )}
       <Button

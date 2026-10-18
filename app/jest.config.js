@@ -8,6 +8,7 @@ const FULLY_COVERED = [
   'src/realtime',
   'src/auth',
   'src/lobby',
+  'src/billing',
   'src/apiUrl.js',
 ];
 const full = { branches: 100, functions: 100, lines: 100, statements: 100 };

@@ -29,6 +29,13 @@ export type Level = NonNullable<S['ComputerGameIn']['level']>;
 export type SeekResult = S['SeekOut'];
 export type SeekCount = S['SeekCountOut'];
 export type GameSummary = S['GameSummaryOut'];
+export type Plan = S['Plan'];
+export type Feature = S['Feature'];
+export type PlanInfo = S['PlanInfo'];
+export type MyPlan = S['MyPlanOut'];
+export type PlayerPlan = S['PlayerPlanOut'];
+export type Grant = S['GrantOut'];
+export type GrantRequest = S['GrantIn'];
 
 export type ChallengeAnswer = 'accept' | 'decline' | 'cancel';
 export type GameAction = 'resign' | 'abort' | 'claim-abandonment';
@@ -119,6 +126,16 @@ export function createApi(client: Client, transport: Transport) {
       client.post<ModPlayer>(`${V1}/mod/players/${seg(username)}/rename`, {
         body: { username: newUsername, reason },
       }),
+
+    // Plans
+    plans: (signal?: AbortSignal) => client.get<PlanInfo[]>(`${V1}/plans`, { signal }),
+    myPlan: (signal?: AbortSignal) => client.get<MyPlan>(`${V1}/me/plan`, { signal }),
+    playerPlan: (username: string, signal?: AbortSignal) =>
+      client.get<PlayerPlan>(`${V1}/admin/players/${seg(username)}/plan`, { signal }),
+    grant: (username: string, body: GrantRequest) =>
+      client.post<Grant>(`${V1}/admin/players/${seg(username)}/grants`, { body }),
+    revokeGrant: (id: string, reason: string) =>
+      client.post<Grant>(`${V1}/admin/grants/${seg(id)}/revoke`, { body: { reason } }),
 
     // Ratings
     leaderboard: (category: Category, signal?: AbortSignal) =>

@@ -76,6 +76,7 @@ function Routes() {
           <Stack.Screen name="account" options={{ headerShown: true, title: 'Account' }} />
           <Stack.Screen name="report/[username]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="play" options={{ headerShown: true, title: 'Play now' }} />
+          <Stack.Screen name="plans" options={{ headerShown: true, title: 'Plans' }} />
           <Stack.Screen
             name="moderation/index"
             options={{ headerShown: true, title: 'Moderation' }}

@@ -88,6 +88,9 @@ scripts/        the Expo-cloud guardrail
 - **History and replay.** Profiles list the player's finished games, newest first and paged;
   each opens the game, where finished games step through every position. A game against the
   computer offers "Play the computer again" (sides swapped) instead of a rematch or report.
+- **Plans.** Me → Your plan shows Free, Plus or Pro and leads to the plans. Paid features are
+  shown with what unlocks them (Hard in the computer picker, the 30-day history note) rather
+  than hidden. Admins grant and revoke plans and features on a player's moderation page.
 - **Reports and moderation.** "Report" on a profile or a finished game sends a report (with
   the game). Moderators see Me → Moderation: the report queue and each player's record, where
   they suspend, ban, lift a suspension, rename and dismiss reports, always with a reason.

@@ -9,19 +9,22 @@ export interface SegmentedProps<T extends string> {
   options: readonly { value: T; label: string }[];
   value: T;
   onChange: (value: T) => void;
+  /** One choice per line, for long labels. */
+  vertical?: boolean;
 }
 
-/** A row of mutually exclusive choices (a radio group). */
+/** A row (or column) of mutually exclusive choices (a radio group). */
 export function Segmented<T extends string>({
   label,
   options,
   value,
   onChange,
+  vertical = false,
 }: SegmentedProps<T>) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
-      <View role="radiogroup" aria-label={label} style={styles.row}>
+      <View role="radiogroup" aria-label={label} style={[styles.row, vertical && styles.column]}>
         {options.map((option) => {
           const selected = option.value === value;
           return (
@@ -54,6 +57,7 @@ const styles = StyleSheet.create({
     padding: 2,
     gap: 2,
   },
+  column: { flexDirection: 'column' },
   option: {
     flex: 1,
     minHeight: 44,

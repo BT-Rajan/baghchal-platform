@@ -4,6 +4,8 @@ from typing import Final
 from fastapi import APIRouter, status
 
 from baghchal_engine.ai import Level
+from baghchal_server.billing import service as billing
+from baghchal_server.billing.plans import Feature
 from baghchal_server.deps import DB, AppState, CurrentUser, State, enforce_limit
 from baghchal_server.games import computer as computer_players
 from baghchal_server.games import service
@@ -67,6 +69,8 @@ async def play_the_computer(
     await enforce_limit(state, COMPUTER_GAMES_PER_USER, str(user.id))
     now = state.clock()
     level = Level(data.level)
+    if level == Level.HARD:
+        await billing.require(db, user.id, now, Feature.COMPUTER_HARD, "The Hard computer")
     computer = await computer_players.account(db, level, now)
     tc = TIME_CONTROLS[data.time_control]
     game = await service.start_computer_game(

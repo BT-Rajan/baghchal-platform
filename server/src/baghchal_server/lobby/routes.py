@@ -1,9 +1,11 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Annotated, Final
 
 from fastapi import APIRouter, Query, status
 
+from baghchal_server.billing import service as billing
+from baghchal_server.billing.plans import FREE_HISTORY_DAYS, Feature
 from baghchal_server.deps import DB, AppState, CurrentUser, State, enforce_limit
 from baghchal_server.errors import AppError
 from baghchal_server.games import service as games
@@ -206,11 +208,14 @@ async def player_games(  # noqa: PLR0913, PLR0917 - FastAPI dependencies and que
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
 ) -> list[GameSummaryOut]:
     """A player's finished games, newest first. For the next page, pass the last game's
-    ``finished_at`` as ``before``."""
-    player = await service.find_player(db, username, state.clock())
+    ``finished_at`` as ``before``. Without full history (Plus), only the last 30 days."""
+    now = state.clock()
+    player = await service.find_player(db, username, now)
     if player is None:
         raise AppError(404, "player_not_found", "No such player.")
-    return await games.history(db, player.id, before=before, limit=limit)
+    full = (await billing.entitlements(db, user.id, now)).has(Feature.FULL_HISTORY)
+    since = None if full else now - timedelta(days=FREE_HISTORY_DAYS)
+    return await games.history(db, player.id, before=before, since=since, limit=limit)
 
 
 # ── Quick pairing ─────────────────────────────────────────────────────────

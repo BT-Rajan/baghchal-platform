@@ -491,15 +491,23 @@ def _positions(engine_game: EngineGame) -> list[str]:
 
 
 async def history(
-    db: AsyncSession, user_id: uuid.UUID, *, before: datetime | None, limit: int
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    before: datetime | None,
+    since: datetime | None = None,
+    limit: int,
 ) -> list[GameSummaryOut]:
-    """A player's finished games, newest first; ``before`` pages back in time."""
+    """A player's finished games, newest first; ``before`` pages back in time, back to
+    ``since`` when given."""
     query = select(Game).where(
         or_(Game.goat_id == user_id, Game.tiger_id == user_id),
         Game.status == GameStatus.FINISHED,
     )
     if before is not None:
         query = query.where(Game.finished_at < before)
+    if since is not None:
+        query = query.where(Game.finished_at >= since)
     found = (await db.scalars(query.order_by(Game.finished_at.desc(), Game.id).limit(limit))).all()
     opponents = {g.tiger_id if g.goat_id == user_id else g.goat_id for g in found}
     names = dict(

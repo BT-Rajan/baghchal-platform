@@ -20,6 +20,7 @@ from baghchal_server.games import computer, service, sweeper
 from baghchal_server.games.computer import ComputerPlayers
 
 from .conftest import PASSWORD, Clock, Player, PlayerFactory
+from .test_billing import give_plan
 from .test_games import _online, _start
 
 COMPUTER = "/api/v1/games/computer"
@@ -67,8 +68,9 @@ async def test_the_computer_moves_first_with_the_goats(players: PlayerFactory) -
     await _ply_reaches(alice, game["id"], 1)
 
 
-async def test_the_computer_answers_each_move(players: PlayerFactory) -> None:
+async def test_the_computer_answers_each_move(app: FastAPI, players: PlayerFactory) -> None:
     alice = await players("alice")
+    await give_plan(app, alice)  # Hard comes with Plus
     game = (
         await alice.http.post(
             COMPUTER, json={"level": "hard", "side": "goat", "time_control": "3+2"}

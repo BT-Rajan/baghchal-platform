@@ -12,4 +12,7 @@ export const queryKeys = {
   modPlayer: (username: string) => ['mod', 'player', username] as const,
   seekCounts: ['seeks'] as const,
   playerGames: (username: string) => ['player-games', username] as const,
+  plans: ['plans'] as const,
+  myPlan: ['me', 'plan'] as const,
+  playerPlan: (username: string) => ['admin', 'plan', username] as const,
 };

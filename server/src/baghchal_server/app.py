@@ -15,6 +15,8 @@ from redis.asyncio import BlockingConnectionPool, Redis
 from starlette.middleware.cors import CORSMiddleware
 
 from baghchal_server.accounts.routes import router as accounts_router
+from baghchal_server.billing import models as _billing_models  # noqa: F401  (registers tables)
+from baghchal_server.billing.routes import router as billing_router
 from baghchal_server.config import Settings
 from baghchal_server.db import create_engine, session_factory
 from baghchal_server.deps import AppState
@@ -149,6 +151,7 @@ def create_app(
     app.include_router(games_router)
     app.include_router(ratings_router)
     app.include_router(moderation_router)
+    app.include_router(billing_router)
     app.include_router(health_router)
     app.include_router(ws_router)
 

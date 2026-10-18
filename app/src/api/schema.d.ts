@@ -407,7 +407,7 @@ export interface paths {
         /**
          * Player Games
          * @description A player's finished games, newest first. For the next page, pass the last game's
-         *     ``finished_at`` as ``before``.
+         *     ``finished_at`` as ``before``. Without full history (Plus), only the last 30 days.
          */
         get: operations["player_games_api_v1_players__username__games_get"];
         put?: never;
@@ -726,6 +726,100 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Plans
+         * @description What each plan includes and costs.
+         */
+        get: operations["plans_api_v1_plans_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Plan
+         * @description My plan, what I can use, and the grants behind it.
+         */
+        get: operations["my_plan_api_v1_me_plan_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/players/{username}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Player Plan */
+        get: operations["player_plan_api_v1_admin_players__username__plan_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/players/{username}/grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Grant
+         * @description Give a player a plan or a single feature, for ``days`` or until revoked.
+         */
+        post: operations["grant_api_v1_admin_players__username__grants_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/grants/{grant_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke */
+        post: operations["revoke_api_v1_admin_grants__grant_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -743,7 +837,7 @@ export interface components {
          * ActionKind
          * @enum {string}
          */
-        ActionKind: "suspend" | "unsuspend" | "rename" | "dismiss_report";
+        ActionKind: "suspend" | "unsuspend" | "rename" | "dismiss_report" | "grant" | "revoke";
         /**
          * Category
          * @enum {string}
@@ -1006,6 +1100,11 @@ export interface components {
              */
             expires_at: string;
         };
+        /**
+         * Feature
+         * @enum {string}
+         */
+        Feature: "computer_hard" | "full_history" | "analysis" | "themes" | "badge" | "private_rooms" | "tournaments" | "trainer";
         /** GameOut */
         GameOut: {
             /**
@@ -1099,6 +1198,45 @@ export interface components {
              */
             finished_at: string;
         };
+        /** GrantIn */
+        GrantIn: {
+            plan?: components["schemas"]["Plan"] | null;
+            feature?: components["schemas"]["Feature"] | null;
+            /** Days */
+            days: number | null;
+            /** Reason */
+            reason: string;
+        };
+        /** GrantOut */
+        GrantOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            plan: components["schemas"]["Plan"] | null;
+            feature: components["schemas"]["Feature"] | null;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /** Ends At */
+            ends_at: string | null;
+            /** Reason */
+            reason: string;
+            /** Granted By */
+            granted_by: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Revoked At */
+            revoked_at: string | null;
+            /** Active */
+            active: boolean;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1167,7 +1305,7 @@ export interface components {
              * Role
              * @enum {string}
              */
-            role: "player" | "moderator";
+            role: "player" | "moderator" | "admin";
         };
         /** ModActionOut */
         ModActionOut: {
@@ -1221,6 +1359,16 @@ export interface components {
             /** Move */
             move: string;
         };
+        /** MyPlanOut */
+        MyPlanOut: {
+            plan: components["schemas"]["Plan"];
+            /** Plan Until */
+            plan_until: string | null;
+            /** Features */
+            features: components["schemas"]["Feature"][];
+            /** Grants */
+            grants: components["schemas"]["GrantOut"][];
+        };
         /** PasswordChangeIn */
         PasswordChangeIn: {
             /** Current Password */
@@ -1243,6 +1391,25 @@ export interface components {
              */
             email: string;
         };
+        /**
+         * Plan
+         * @enum {string}
+         */
+        Plan: "free" | "plus" | "pro";
+        /** PlanInfo */
+        PlanInfo: {
+            plan: components["schemas"]["Plan"];
+            /** Name */
+            name: string;
+            /** Features */
+            features: components["schemas"]["Feature"][];
+            /** Monthly Paise */
+            monthly_paise: number | null;
+            /** Yearly Paise */
+            yearly_paise: number | null;
+            /** Analyses Per Day */
+            analyses_per_day: number | null;
+        };
         /** PlayerOut */
         PlayerOut: {
             /**
@@ -1252,6 +1419,23 @@ export interface components {
             id: string;
             /** Username */
             username: string;
+        };
+        /**
+         * PlayerPlanOut
+         * @description An admin's view of a player: every grant, past ones included.
+         */
+        PlayerPlanOut: {
+            plan: components["schemas"]["Plan"];
+            /** Plan Until */
+            plan_until: string | null;
+            /** Features */
+            features: components["schemas"]["Feature"][];
+            /** Grants */
+            grants: components["schemas"]["GrantOut"][];
+            /** Username */
+            username: string;
+            /** History */
+            history: components["schemas"]["GrantOut"][];
         };
         /** PlayerStatusOut */
         PlayerStatusOut: {
@@ -1397,6 +1581,11 @@ export interface components {
             /** Winner */
             winner: ("goat" | "tiger") | null;
             reason: components["schemas"]["EndReason"];
+        };
+        /** RevokeIn */
+        RevokeIn: {
+            /** Reason */
+            reason: string;
         };
         /** SeekCountOut */
         SeekCountOut: {
@@ -2792,6 +2981,147 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModPlayerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    plans_api_v1_plans_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanInfo"][];
+                };
+            };
+        };
+    };
+    my_plan_api_v1_me_plan_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyPlanOut"];
+                };
+            };
+        };
+    };
+    player_plan_api_v1_admin_players__username__plan_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlayerPlanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    grant_api_v1_admin_players__username__grants_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrantIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrantOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_api_v1_admin_grants__grant_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                grant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevokeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrantOut"];
                 };
             };
             /** @description Validation Error */

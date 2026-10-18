@@ -38,6 +38,9 @@ RESERVED_USERNAMES: Final = frozenset(
 PERMANENT: Final = datetime(9999, 12, 31, tzinfo=UTC)
 """A suspension that never ends: a ban."""
 MODERATOR: Final = "moderator"
+ADMIN: Final = "admin"
+"""Moderates, and also grants plans and features (billing). Granted from the command line."""
+STAFF: Final = frozenset({MODERATOR, ADMIN})
 
 
 def username_key(username: str) -> str:

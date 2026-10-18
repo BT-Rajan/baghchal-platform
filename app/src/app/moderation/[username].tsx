@@ -6,11 +6,12 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { ModPlayer } from '@/api/endpoints';
 import { describeError } from '@/api/errors';
 import { queryKeys } from '@/api/queryKeys';
-import { useApi } from '@/auth/session';
+import { useApi, useMe } from '@/auth/session';
 import { usernameProblem } from '@/auth/validation';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Notice } from '@/components/Notice';
+import { PlanAdmin } from '@/components/PlanAdmin';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
 import { TextField } from '@/components/TextField';
@@ -29,6 +30,7 @@ type Action =
 export default function ModeratePlayer() {
   const { username } = useLocalSearchParams<{ username: string }>();
   const api = useApi();
+  const me = useMe();
   const record = useQuery({
     queryKey: queryKeys.modPlayer(username),
     queryFn: ({ signal }) => api.modPlayer(username, signal),
@@ -41,6 +43,9 @@ export default function ModeratePlayer() {
         <Loading label="Loading the player's record" />
       ) : (
         <Record player={record.data} />
+      )}
+      {me.role === 'admin' && record.data !== undefined && !record.data.deleted && (
+        <PlanAdmin username={record.data.username} />
       )}
     </Screen>
   );
@@ -100,9 +105,10 @@ function Record({ player }: { player: ModPlayer }) {
         )}
         <Text style={styles.muted}>{`Joined ${dateTimeText(player.created_at)}`}</Text>
         {player.role === 'moderator' && <Text style={styles.muted}>Moderator</Text>}
+        {player.role === 'admin' && <Text style={styles.muted}>Admin</Text>}
       </Card>
       {act.error !== null && <Notice tone="error">{describeError(act.error)}</Notice>}
-      {!player.deleted && player.role !== 'moderator' && (
+      {!player.deleted && player.role === 'player' && (
         <>
           <SectionTitle>Act</SectionTitle>
           <TextField

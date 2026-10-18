@@ -5,7 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
 
 from baghchal_server.accounts.models import User
 from baghchal_server.accounts.schemas import Accepted
-from baghchal_server.accounts.service import MODERATOR
+from baghchal_server.accounts.service import STAFF
 from baghchal_server.deps import DB, AppState, CurrentUser, State, enforce_limit
 from baghchal_server.errors import AppError
 from baghchal_server.games import service as games
@@ -31,7 +31,7 @@ REPORTS_PER_USER: Final = Limit("report", 20, 86400)
 
 
 async def get_moderator(user: CurrentUser) -> User:
-    if user.role != MODERATOR:
+    if user.role not in STAFF:
         raise AppError(403, "not_a_moderator", "Only moderators can do this.")
     return user
 

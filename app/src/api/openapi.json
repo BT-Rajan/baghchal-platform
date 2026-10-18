@@ -789,7 +789,7 @@
     "/api/v1/players/{username}/games": {
       "get": {
         "summary": "Player Games",
-        "description": "A player's finished games, newest first. For the next page, pass the last game's\n``finished_at`` as ``before``.",
+        "description": "A player's finished games, newest first. For the next page, pass the last game's\n``finished_at`` as ``before``. Without full history (Plus), only the last 30 days.",
         "operationId": "player_games_api_v1_players__username__games_get",
         "parameters": [
           {
@@ -1606,6 +1606,189 @@
           }
         }
       }
+    },
+    "/api/v1/plans": {
+      "get": {
+        "summary": "Plans",
+        "description": "What each plan includes and costs.",
+        "operationId": "plans_api_v1_plans_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PlanInfo"
+                  },
+                  "type": "array",
+                  "title": "Response Plans Api V1 Plans Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/plan": {
+      "get": {
+        "summary": "My Plan",
+        "description": "My plan, what I can use, and the grants behind it.",
+        "operationId": "my_plan_api_v1_me_plan_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyPlanOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/players/{username}/plan": {
+      "get": {
+        "summary": "Player Plan",
+        "operationId": "player_plan_api_v1_admin_players__username__plan_get",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,20}$",
+              "title": "Username"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerPlanOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/players/{username}/grants": {
+      "post": {
+        "summary": "Grant",
+        "description": "Give a player a plan or a single feature, for ``days`` or until revoked.",
+        "operationId": "grant_api_v1_admin_players__username__grants_post",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,20}$",
+              "title": "Username"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/grants/{grant_id}/revoke": {
+      "post": {
+        "summary": "Revoke",
+        "operationId": "revoke_api_v1_admin_grants__grant_id__revoke_post",
+        "parameters": [
+          {
+            "name": "grant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Grant Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1628,7 +1811,9 @@
           "suspend",
           "unsuspend",
           "rename",
-          "dismiss_report"
+          "dismiss_report",
+          "grant",
+          "revoke"
         ],
         "title": "ActionKind"
       },
@@ -2273,6 +2458,20 @@
         ],
         "title": "ExportSession"
       },
+      "Feature": {
+        "type": "string",
+        "enum": [
+          "computer_hard",
+          "full_history",
+          "analysis",
+          "themes",
+          "badge",
+          "private_rooms",
+          "tournaments",
+          "trainer"
+        ],
+        "title": "Feature"
+      },
       "GameOut": {
         "properties": {
           "id": {
@@ -2537,6 +2736,152 @@
         "title": "GameSummaryOut",
         "description": "A finished game, from one player's side, for their game history."
       },
+      "GrantIn": {
+        "properties": {
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Plan"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "feature": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Feature"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3650.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "days",
+          "reason"
+        ],
+        "title": "GrantIn"
+      },
+      "GrantOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Plan"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "feature": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Feature"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "granted_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Granted By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "plan",
+          "feature",
+          "starts_at",
+          "ends_at",
+          "reason",
+          "granted_by",
+          "created_at",
+          "revoked_at",
+          "active"
+        ],
+        "title": "GrantOut"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2686,7 +3031,8 @@
             "type": "string",
             "enum": [
               "player",
-              "moderator"
+              "moderator",
+              "admin"
             ],
             "title": "Role"
           }
@@ -2841,6 +3187,47 @@
         ],
         "title": "MoveIn"
       },
+      "MyPlanOut": {
+        "properties": {
+          "plan": {
+            "$ref": "#/components/schemas/Plan"
+          },
+          "plan_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Until"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/Feature"
+            },
+            "type": "array",
+            "title": "Features"
+          },
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/GrantOut"
+            },
+            "type": "array",
+            "title": "Grants"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan",
+          "plan_until",
+          "features",
+          "grants"
+        ],
+        "title": "MyPlanOut"
+      },
       "PasswordChangeIn": {
         "properties": {
           "current_password": {
@@ -2902,6 +3289,76 @@
         ],
         "title": "PasswordResetRequestIn"
       },
+      "Plan": {
+        "type": "string",
+        "enum": [
+          "free",
+          "plus",
+          "pro"
+        ],
+        "title": "Plan"
+      },
+      "PlanInfo": {
+        "properties": {
+          "plan": {
+            "$ref": "#/components/schemas/Plan"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/Feature"
+            },
+            "type": "array",
+            "title": "Features"
+          },
+          "monthly_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Paise"
+          },
+          "yearly_paise": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yearly Paise"
+          },
+          "analyses_per_day": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analyses Per Day"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan",
+          "name",
+          "features",
+          "monthly_paise",
+          "yearly_paise",
+          "analyses_per_day"
+        ],
+        "title": "PlanInfo"
+      },
       "PlayerOut": {
         "properties": {
           "id": {
@@ -2920,6 +3377,61 @@
           "username"
         ],
         "title": "PlayerOut"
+      },
+      "PlayerPlanOut": {
+        "properties": {
+          "plan": {
+            "$ref": "#/components/schemas/Plan"
+          },
+          "plan_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Until"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/Feature"
+            },
+            "type": "array",
+            "title": "Features"
+          },
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/GrantOut"
+            },
+            "type": "array",
+            "title": "Grants"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/GrantOut"
+            },
+            "type": "array",
+            "title": "History"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan",
+          "plan_until",
+          "features",
+          "grants",
+          "username",
+          "history"
+        ],
+        "title": "PlayerPlanOut",
+        "description": "An admin's view of a player: every grant, past ones included."
       },
       "PlayerStatusOut": {
         "properties": {
@@ -3302,6 +3814,22 @@
           "reason"
         ],
         "title": "ResultOut"
+      },
+      "RevokeIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "RevokeIn"
       },
       "SeekCountOut": {
         "properties": {

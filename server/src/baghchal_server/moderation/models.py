@@ -60,6 +60,9 @@ class ActionKind(StrEnum):
     UNSUSPEND = "unsuspend"
     RENAME = "rename"
     DISMISS_REPORT = "dismiss_report"
+    GRANT = "grant"
+    """An admin gave a plan or a feature (billing)."""
+    REVOKE = "revoke"
 
 
 class ModerationAction(Base):
