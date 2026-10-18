@@ -5,7 +5,7 @@
  */
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Svg, { Circle, Line } from 'react-native-svg';
+import Svg, { Circle } from 'react-native-svg';
 
 import type { Piece, Position } from '@/game/bfen';
 import { EDGES, POINTS, SIZE, type Point } from '@/game/board';
@@ -14,6 +14,7 @@ import { colors } from '@/theme';
 
 import { focusRing } from '../focus';
 import { Coin } from './Coin';
+import { Hole, Wood } from './Wood';
 
 /** Distance from the edge to the outer lines, and between lines, in % of the board. */
 const MARGIN = 10;
@@ -23,6 +24,14 @@ const HIT = 17;
 
 const x = (p: Point) => MARGIN + p.file * GAP;
 const y = (p: Point) => MARGIN + (SIZE - 1 - p.rank) * GAP;
+
+const GROOVES = EDGES.map(([p, q]) => ({
+  key: `${p.name}-${q.name}`,
+  x1: x(p),
+  y1: y(p),
+  x2: x(q),
+  y2: y(q),
+}));
 
 export interface BoardProps {
   position: Position;
@@ -46,18 +55,7 @@ export function Board({ position, legalMoves, lastMove, onMove }: BoardProps) {
   return (
     <View style={styles.board} aria-label="Board">
       <Svg width="100%" height="100%" viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
-        {EDGES.map(([p, q]) => (
-          <Line
-            key={`${p.name}-${q.name}`}
-            x1={x(p)}
-            y1={y(p)}
-            x2={x(q)}
-            y2={y(q)}
-            stroke={colors.boardLine}
-            strokeWidth={0.6}
-            strokeLinecap="round"
-          />
-        ))}
+        <Wood grooves={GROOVES} />
       </Svg>
       {POINTS.map((p) => {
         const piece = position.pieces.get(p.name);
@@ -80,9 +78,7 @@ export function Board({ position, legalMoves, lastMove, onMove }: BoardProps) {
           >
             <Svg width="100%" height="100%" viewBox="0 0 100 100">
               {piece !== undefined && <Coin piece={piece} />}
-              {piece === undefined && !isTarget && (
-                <Circle cx={50} cy={50} r={7} fill={colors.boardLine} />
-              )}
+              {piece === undefined && !isTarget && <Hole />}
               {isTarget && (
                 <Circle
                   cx={50}

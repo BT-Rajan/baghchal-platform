@@ -13,8 +13,13 @@ export const colors = {
   successSurface: '#e6f2e6',
   online: '#2e8b3d',
   offline: '#857b70',
-  board: '#e8cf9f',
-  boardLine: '#7a5a30',
+  /** The board is carved wood (components/game/Wood.tsx). */
+  board: '#d4a062',
+  boardLine: '#4a2a0e',
+  woodLight: '#f2d29e',
+  woodDark: '#b97d3e',
+  woodGrain: '#6b3f17',
+  woodFrame: '#7a4a1c',
   /** Pieces are raised coins (components/game/Coin.tsx): a domed face, a dark edge, an emblem. */
   tiger: '#e07a22',
   tigerLight: '#ffc46b',
