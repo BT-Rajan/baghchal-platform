@@ -25,7 +25,7 @@ export default function ForgotPassword() {
 
   if (request.isSuccess) {
     return (
-      <Screen title="Check your email">
+      <Screen title="Check your email" brand>
         <Notice tone="success">
           {`If ${email.trim()} belongs to an account, we sent it a link to choose a new password.`}
         </Notice>
@@ -35,7 +35,7 @@ export default function ForgotPassword() {
   }
 
   return (
-    <Screen title="Reset your password">
+    <Screen title="Reset your password" brand>
       {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
       <TextField
         label="Email"

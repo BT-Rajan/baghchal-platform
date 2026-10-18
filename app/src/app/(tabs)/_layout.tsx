@@ -1,6 +1,8 @@
 import { Tabs } from 'expo-router';
 import type { ColorValue } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BrandBar } from '@/components/brand/Logo';
 import { TabIcon, type TabIconName } from '@/components/TabIcon';
 import { colors } from '@/theme';
 
@@ -11,14 +13,21 @@ function icon(name: TabIconName) {
 }
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        header: () => <TabsHeader />,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
-        tabBarLabelStyle: { fontSize: 13, fontWeight: '600' },
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
+        tabBarLabelStyle: { fontSize: 13, lineHeight: 18, fontWeight: '600' },
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          // Room for the icon and a whole label, above the home indicator.
+          height: 66 + insets.bottom,
+          paddingBottom: insets.bottom,
+        },
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Play', tabBarIcon: icon('play') }} />
@@ -28,5 +37,14 @@ export default function TabsLayout() {
       />
       <Tabs.Screen name="me" options={{ title: 'Me', tabBarIcon: icon('me') }} />
     </Tabs>
+  );
+}
+
+/** The brand bar above every tab, reaching up under the status bar. */
+function TabsHeader() {
+  return (
+    <SafeAreaView edges={['top']} style={{ backgroundColor: colors.brandInk }}>
+      <BrandBar />
+    </SafeAreaView>
   );
 }

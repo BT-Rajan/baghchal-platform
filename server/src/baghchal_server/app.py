@@ -137,7 +137,7 @@ def create_app(
 
     public_docs = not settings.is_production
     app = FastAPI(
-        title="Bagh Chal",
+        title="ClawPlay",
         lifespan=lifespan,
         docs_url="/docs" if public_docs else None,
         redoc_url=None,

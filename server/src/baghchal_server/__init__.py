@@ -1,1 +1,1 @@
-"""Bagh Chal platform backend."""
+"""ClawPlay: the Bagh Chal platform backend."""

@@ -248,7 +248,7 @@ async def request_password_reset(
     await db.commit()
     return Mail(
         user.email,
-        "Reset your Bagh Chal password",
+        "Reset your ClawPlay password",
         f"Hello {user.username},\n\nTo choose a new password, open this link within "
         f"{_hours(settings.password_reset_ttl)}:\n\n"
         f"{settings.public_base_url}/reset-password?token={token}\n\n"
@@ -304,7 +304,7 @@ async def change_password(  # noqa: PLR0913 - who, which session stays, and the 
     await db.commit()
     return Mail(
         user.email,
-        "Your Bagh Chal password was changed",
+        "Your ClawPlay password was changed",
         f"Hello {user.username},\n\nThe password of your account was just changed, and any "
         "other devices were signed out.\n\nIf you did not do this, reset your password now at "
         f"{settings.public_base_url}/forgot-password.",
@@ -332,8 +332,8 @@ async def request_email_change(
     await db.commit()
     return Mail(
         new_email,
-        "Confirm your new Bagh Chal email address",
-        f"Hello {user.username},\n\nTo use this address for your Bagh Chal account, open this "
+        "Confirm your new ClawPlay email address",
+        f"Hello {user.username},\n\nTo use this address for your ClawPlay account, open this "
         f"link within {_hours(settings.verify_email_ttl)}:\n\n"
         f"{settings.public_base_url}/confirm-email?token={token}\n\n"
         "If you did not ask for this, ignore this email; nothing will change.",
@@ -371,7 +371,7 @@ async def confirm_email_change(
     await db.commit()
     return user, Mail(
         old_email,
-        "Your Bagh Chal email address was changed",
+        "Your ClawPlay email address was changed",
         f"Hello {user.username},\n\nYour account now uses {new_email}; emails will no longer "
         "come to this address.\n\nIf you did not do this, reply to this email so we can help "
         "you get your account back.",
@@ -459,7 +459,7 @@ def _hours(ttl: timedelta) -> str:
 def _verify_mail(settings: Settings, user: User, token: str) -> Mail:
     return Mail(
         user.email,
-        "Confirm your Bagh Chal account",
+        "Confirm your ClawPlay account",
         f"Welcome, {user.username}!\n\nConfirm your email address within "
         f"{_hours(settings.verify_email_ttl)} to finish creating your account:\n\n"
         f"{settings.public_base_url}/verify-email?token={token}\n\n"
@@ -470,7 +470,7 @@ def _verify_mail(settings: Settings, user: User, token: str) -> Mail:
 def _account_exists_mail(settings: Settings, user: User) -> Mail:
     return Mail(
         user.email,
-        "You already have a Bagh Chal account",
+        "You already have a ClawPlay account",
         f"Someone tried to sign up with this email address, but it already belongs to the "
         f"account {user.username}.\n\nIf that was you, sign in at {settings.public_base_url}. "
         f"Forgot your password? Reset it at {settings.public_base_url}/forgot-password.\n\n"

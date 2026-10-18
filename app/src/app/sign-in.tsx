@@ -26,7 +26,7 @@ export default function SignIn() {
   };
 
   return (
-    <Screen title="Sign in">
+    <Screen title="Sign in" brand>
       {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
       <TextField
         label="Username or email"

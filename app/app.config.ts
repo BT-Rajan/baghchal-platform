@@ -17,16 +17,29 @@ const problem =
 if (problem !== null) throw new Error(problem);
 
 const config: ExpoConfig = {
-  name: 'Bagh Chal',
-  slug: 'baghchal',
-  scheme: 'baghchal',
+  name: 'ClawPlay',
+  slug: 'clawplay',
+  scheme: 'clawplay',
+  description: 'Bagh Chal, the tiger-and-goat game of Nepal, played live.',
+  icon: './assets/icon.png',
   version: '0.1.0',
   orientation: 'default',
   // Light only until the theme has a dark palette.
   userInterfaceStyle: 'light',
-  ios: { supportsTablet: true, bundleIdentifier: 'com.baghchal.app' },
-  android: { package: 'com.baghchal.app' },
-  web: { bundler: 'metro', output: 'single' },
+  ios: { supportsTablet: true, bundleIdentifier: 'com.clawplay.app' },
+  android: {
+    package: 'com.clawplay.app',
+    adaptiveIcon: { foregroundImage: './assets/adaptive-icon.png', backgroundColor: '#e2711d' },
+  },
+  web: {
+    bundler: 'metro',
+    output: 'single',
+    name: 'ClawPlay',
+    shortName: 'ClawPlay',
+    favicon: './assets/favicon.png',
+    themeColor: '#2a1608',
+    backgroundColor: '#f6f1e7',
+  },
   plugins: ['expo-router', 'expo-secure-store'],
 };
 

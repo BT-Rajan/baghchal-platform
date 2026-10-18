@@ -1,4 +1,4 @@
-# Bagh Chal app
+# ClawPlay app
 
 The Expo / React Native client for web, iOS, Android and tablets. It talks only to our own
 server (`../server`) and never to Expo's cloud ([ADR 0002](../docs/adr/0002-no-dependency-on-expo-cloud.md)).
@@ -40,6 +40,14 @@ On a phone or simulator, use a development build made on your own machine:
 
 After changing the server's API: `(cd ../server && uv run python -m baghchal_server.openapi ../app/src/api/openapi.json)`,
 then `npm run api:generate`. CI fails if either file is stale.
+
+## Brand
+
+ClawPlay's mark is three tiger claw slashes on an amber badge; the wordmark is "Claw" in ink and
+"Play" in amber. Both are drawn in code (`src/components/brand/Logo.tsx`), so they stay sharp at
+any size. `assets/brand/clawplay-mark.svg` is the same mark as a file, and the app icon, the
+Android adaptive icon and the favicon in `assets/` are made from it. Brand colours live in
+`src/theme.ts` (`brand*`). Bagh Chal remains the name of the game; ClawPlay is the platform.
 
 ## Layout
 

@@ -129,12 +129,12 @@ async def test_smtp_mailer(monkeypatch: pytest.MonkeyPatch) -> None:
         smtp_host="smtp.example.com",
         smtp_username="user",
         smtp_password="secret",
-        mail_from="Bagh Chal <no-reply@baghchal.example>",
+        mail_from="ClawPlay <no-reply@baghchal.example>",
     )
     await SmtpMailer(settings).send(Mail("a@example.com", "Hello", "Body text"))
     message = captured["message"]
     assert message["To"] == "a@example.com"
-    assert message["From"] == "Bagh Chal <no-reply@baghchal.example>"
+    assert message["From"] == "ClawPlay <no-reply@baghchal.example>"
     assert message["Subject"] == "Hello"
     assert message.get_content().strip() == "Body text"
     assert captured["hostname"] == "smtp.example.com"
@@ -240,4 +240,4 @@ async def test_readiness_reports_a_broken_redis(database_url: str) -> None:
 def test_asgi_entry_point(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("BAGHCHAL_ENVIRONMENT", "test")
     asgi = importlib.import_module("baghchal_server.asgi")
-    assert asgi.app.title == "Bagh Chal"
+    assert asgi.app.title == "ClawPlay"

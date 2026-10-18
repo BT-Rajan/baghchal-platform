@@ -4,14 +4,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, spacing } from '@/theme';
 
+import { BrandHeader } from './brand/Logo';
+
 /** A scrolling page with a readable, centred column. */
 export function Screen({
   title,
   align = 'center',
   wide = false,
+  brand = false,
   children,
 }: {
   title?: string;
+  /** The ClawPlay logo above the title (the signed-out screens). */
+  brand?: boolean;
   /** Forms sit in the middle of the screen; lists start at the top. */
   align?: 'center' | 'top';
   /** Use the full width of large screens (the game screen puts its board beside its panel). */
@@ -25,6 +30,7 @@ export function Screen({
         keyboardShouldPersistTaps="handled"
       >
         <View role="main" style={[styles.column, wide && styles.wide]}>
+          {brand && <BrandHeader />}
           {title !== undefined && (
             <Text role="heading" style={styles.title}>
               {title}

@@ -197,7 +197,7 @@ async def test_suspending_a_player(
     mail = mailer.outbox[-1]
     assert (mail.to, mail.subject) == (
         "bob@example.com",
-        "Your Bagh Chal account has been suspended",
+        "Your ClawPlay account has been suspended",
     )
     assert "suspended until 08 January 2026, 12:00 UTC (7 days)" in mail.body
 
@@ -279,7 +279,7 @@ async def test_lifting_a_suspension(
     assert r.status_code == 200, r.text
     assert (r.json()["suspended_until"], r.json()["banned"]) == (None, False)
     assert [a["action"] for a in r.json()["actions"]] == ["unsuspend", "suspend"]
-    assert mailer.outbox[-1].subject == "Your Bagh Chal account is active again"
+    assert mailer.outbox[-1].subject == "Your ClawPlay account is active again"
     assert (await _login(app, "bob")).status_code == 200
 
 
@@ -336,7 +336,7 @@ async def test_renaming_an_offensive_username(
     assert r.status_code == 200, r.text
     assert r.json()["username"] == "Player-1234"
     assert r.json()["actions"][0]["reason"] == "rudename → Player-1234: Offensive username."
-    assert mailer.outbox[-1].subject == "Your Bagh Chal username was changed"
+    assert mailer.outbox[-1].subject == "Your ClawPlay username was changed"
     assert "from rudename to Player-1234" in mailer.outbox[-1].body
     assert (await alice.http.get("/api/v1/players/player-1234")).status_code == 200
     assert (await alice.http.get("/api/v1/players/rudename")).status_code == 404

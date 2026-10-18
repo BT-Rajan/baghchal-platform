@@ -172,7 +172,7 @@ async def delete_account(
     challenges = await close_open_challenges(db, user.id, now)
     mail = Mail(
         user.email,
-        "Your Bagh Chal account was deleted",
+        "Your ClawPlay account was deleted",
         f"Hello {user.username},\n\nYour account and your personal data have been deleted. "
         "Games you played stay in your opponents' history under an anonymous name.\n\n"
         f"You are welcome back any time at {settings.public_base_url}.",

@@ -38,7 +38,7 @@ export default function ConfirmEmail() {
   const next = state.status === 'signedIn' ? 'Back to your account' : 'Sign in';
   if (!valid || confirm.isError) {
     return (
-      <Screen title="Confirm your new email">
+      <Screen title="Confirm your new email" brand>
         <Notice tone="error">
           {valid ? describeError(confirm.error) : 'This link is invalid or has expired.'}
         </Notice>
@@ -48,14 +48,14 @@ export default function ConfirmEmail() {
   }
   if (confirm.isSuccess) {
     return (
-      <Screen title="Email address changed">
+      <Screen title="Email address changed" brand>
         <Notice tone="success">{`Your account now uses ${confirm.data.email}.`}</Notice>
         <TextLink href={home}>{next}</TextLink>
       </Screen>
     );
   }
   return (
-    <Screen title="Confirming your new email…">
+    <Screen title="Confirming your new email…" brand>
       <ActivityIndicator color={colors.accent} size="large" />
     </Screen>
   );

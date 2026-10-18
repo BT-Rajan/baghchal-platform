@@ -21,7 +21,7 @@ const DATA = {
 } satisfies DataExport;
 
 test('the file is named after the player', () => {
-  expect(exportFileName(DATA)).toBe('baghchal-alice.json');
+  expect(exportFileName(DATA)).toBe('clawplay-alice.json');
 });
 
 test('the web downloads a JSON file', async () => {
@@ -38,7 +38,7 @@ test('the web downloads a JSON file', async () => {
 
   await saveExport(DATA, 'web');
   expect(createElement).toHaveBeenCalledWith('a');
-  expect(link).toMatchObject({ href: 'blob:export', download: 'baghchal-alice.json' });
+  expect(link).toMatchObject({ href: 'blob:export', download: 'clawplay-alice.json' });
   expect(click).toHaveBeenCalled();
   expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:export');
   expect(blobs[0]?.type).toBe('application/json');
@@ -51,7 +51,7 @@ test('apps open the share sheet', async () => {
     .mockResolvedValue({ action: 'sharedAction', activityType: undefined });
   await saveExport(DATA, 'ios');
   expect(share).toHaveBeenCalledWith({
-    title: 'baghchal-alice.json',
+    title: 'clawplay-alice.json',
     message: JSON.stringify(DATA, null, 2),
   });
   share.mockRestore();

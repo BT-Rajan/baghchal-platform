@@ -1,6 +1,8 @@
-# Bagh Chal Platform
+# ClawPlay
 
-Real-time multiplayer Bagh Chal (बाघचाल): sign in, see who is online, challenge anyone or play
+<img src="app/assets/brand/clawplay-mark-512.png" alt="ClawPlay" width="96" align="right">
+
+ClawPlay is real-time multiplayer Bagh Chal (बाघचाल): sign in, see who is online, challenge anyone or play
 whoever is waiting, play the computer, replay finished games, play live with clocks, and climb
 rated leaderboards — on web, phones and tablets. Players can block
 and report others, moderators can suspend and rename, and players can change, export or delete

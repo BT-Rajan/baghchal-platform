@@ -4,7 +4,7 @@ import { Platform, Share } from 'react-native';
 import type { DataExport } from '@/api/endpoints';
 
 export function exportFileName(data: DataExport): string {
-  return `baghchal-${data.account.username}.json`;
+  return `clawplay-${data.account.username}.json`;
 }
 
 export async function saveExport(data: DataExport, os: string = Platform.OS): Promise<void> {

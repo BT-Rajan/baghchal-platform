@@ -56,7 +56,7 @@ function Routes() {
   }
   if (state.status === 'unreachable') {
     return (
-      <Screen title="Bagh Chal">
+      <Screen title="ClawPlay">
         <Notice tone="error">{describeError(state.error)}</Notice>
         <Button title="Try again" onPress={() => void session.retry()} />
       </Screen>

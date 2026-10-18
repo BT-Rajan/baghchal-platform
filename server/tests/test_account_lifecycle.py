@@ -51,7 +51,7 @@ async def test_changing_the_password_signs_out_other_devices(
     assert (await alice.http.get(ME)).status_code == 200  # this device stays signed in
     assert (await laptop.get(ME)).status_code == 401
     await laptop.aclose()
-    assert mailer.outbox[-1].subject == "Your Bagh Chal password was changed"
+    assert mailer.outbox[-1].subject == "Your ClawPlay password was changed"
     assert "/forgot-password" in mailer.outbox[-1].body
     assert (await _login(app, "alice"))[0].status_code == 401
     r, http = await _login(app, "alice", NEW_PASSWORD)
@@ -120,7 +120,7 @@ async def test_changing_the_email_address(
     mail = mailer.outbox[-1]
     assert (mail.to, mail.subject) == (
         "new@example.org",
-        "Confirm your new Bagh Chal email address",
+        "Confirm your new ClawPlay email address",
     )
     assert "/confirm-email?token=" in mail.body
     token = last_token(mailer)
@@ -138,7 +138,7 @@ async def test_changing_the_email_address(
     notice = mailer.outbox[-1]
     assert (notice.to, notice.subject) == (
         "alice@example.com",
-        "Your Bagh Chal email address was changed",
+        "Your ClawPlay email address was changed",
     )
     r, http = await _login(app, "new@example.org")
     await http.aclose()
@@ -169,7 +169,7 @@ async def test_an_address_in_use_is_not_revealed(
     r = await alice.http.post(EMAIL_CHANGE, json={"password": PASSWORD, "email": "bob@example.com"})
     assert r.status_code == 202
     mail = mailer.outbox[-1]
-    assert (mail.to, mail.subject) == ("bob@example.com", "You already have a Bagh Chal account")
+    assert (mail.to, mail.subject) == ("bob@example.com", "You already have a ClawPlay account")
 
 
 async def test_an_address_taken_before_confirming(
@@ -199,7 +199,7 @@ async def test_an_abandoned_sign_up_does_not_hold_the_address(
     clock.advance(hours=23)
     r = await alice.http.post(EMAIL_CHANGE, json={"password": PASSWORD, "email": "new@example.org"})
     token = last_token(mailer)
-    assert mailer.outbox[-1].subject == "Confirm your new Bagh Chal email address"
+    assert mailer.outbox[-1].subject == "Confirm your new ClawPlay email address"
     clock.advance(hours=2)  # the sign-up has now expired; the change link has not
     r = await alice.http.post(EMAIL_CONFIRM, json={"token": token})
     assert r.status_code == 200, r.text
@@ -324,7 +324,7 @@ async def test_deleting_my_account(
     assert (await _login(app, "alice"))[0].status_code == 401
     assert (await _login(app, "alice@example.com"))[0].status_code == 401
     assert mailer.outbox[-1].to == "alice@example.com"
-    assert mailer.outbox[-1].subject == "Your Bagh Chal account was deleted"
+    assert mailer.outbox[-1].subject == "Your ClawPlay account was deleted"
 
     # Gone from the lobby; the game stays in bob's history under an anonymous name.
     assert (await bob.http.get("/api/v1/players/alice")).status_code == 404
