@@ -5,7 +5,7 @@
  */
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Svg, { Circle, Line, Path } from 'react-native-svg';
+import Svg, { Circle } from 'react-native-svg';
 
 import type { Piece, Position } from '@/game/bfen';
 import { EDGES, POINTS, SIZE, type Point } from '@/game/board';
@@ -13,6 +13,8 @@ import { highlights, movePoints, tap } from '@/game/moveInput';
 import { colors } from '@/theme';
 
 import { focusRing } from '../focus';
+import { Coin } from './Coin';
+import { Hole, Wood } from './Wood';
 
 /** Distance from the edge to the outer lines, and between lines, in % of the board. */
 const MARGIN = 10;
@@ -22,6 +24,14 @@ const HIT = 17;
 
 const x = (p: Point) => MARGIN + p.file * GAP;
 const y = (p: Point) => MARGIN + (SIZE - 1 - p.rank) * GAP;
+
+const GROOVES = EDGES.map(([p, q]) => ({
+  key: `${p.name}-${q.name}`,
+  x1: x(p),
+  y1: y(p),
+  x2: x(q),
+  y2: y(q),
+}));
 
 export interface BoardProps {
   position: Position;
@@ -45,18 +55,7 @@ export function Board({ position, legalMoves, lastMove, onMove }: BoardProps) {
   return (
     <View style={styles.board} aria-label="Board">
       <Svg width="100%" height="100%" viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
-        {EDGES.map(([p, q]) => (
-          <Line
-            key={`${p.name}-${q.name}`}
-            x1={x(p)}
-            y1={y(p)}
-            x2={x(q)}
-            y2={y(q)}
-            stroke={colors.boardLine}
-            strokeWidth={0.6}
-            strokeLinecap="round"
-          />
-        ))}
+        <Wood grooves={GROOVES} />
       </Svg>
       {POINTS.map((p) => {
         const piece = position.pieces.get(p.name);
@@ -78,11 +77,8 @@ export function Board({ position, legalMoves, lastMove, onMove }: BoardProps) {
             ]}
           >
             <Svg width="100%" height="100%" viewBox="0 0 100 100">
-              {piece === 'tiger' && <Tiger />}
-              {piece === 'goat' && <Goat />}
-              {piece === undefined && !isTarget && (
-                <Circle cx={50} cy={50} r={7} fill={colors.boardLine} />
-              )}
+              {piece !== undefined && <Coin piece={piece} />}
+              {piece === undefined && !isTarget && <Hole />}
               {isTarget && (
                 <Circle
                   cx={50}
@@ -125,43 +121,6 @@ function pointLabel(
   else if (target) parts.push(piece === undefined ? 'move here' : 'capture');
   else if (movable) parts.push('can move');
   return parts.join(', ');
-}
-
-function Tiger() {
-  return (
-    <>
-      <Circle
-        cx={50}
-        cy={50}
-        r={38}
-        fill={colors.tiger}
-        stroke={colors.tigerStripe}
-        strokeWidth={3}
-      />
-      <Path
-        d="M30 34 Q40 42 34 52 M50 22 Q56 34 50 44 M70 34 Q60 42 66 52 M38 64 Q50 58 62 64"
-        stroke={colors.tigerStripe}
-        strokeWidth={5}
-        strokeLinecap="round"
-        fill="none"
-      />
-    </>
-  );
-}
-
-function Goat() {
-  return (
-    <>
-      <Circle cx={50} cy={50} r={33} fill={colors.goat} stroke={colors.goatEdge} strokeWidth={4} />
-      <Path
-        d="M38 36 Q32 24 26 26 M62 36 Q68 24 74 26"
-        stroke={colors.goatEdge}
-        strokeWidth={5}
-        strokeLinecap="round"
-        fill="none"
-      />
-    </>
-  );
 }
 
 const styles = StyleSheet.create({
