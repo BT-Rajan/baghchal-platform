@@ -129,6 +129,23 @@ describe('play now', () => {
     expect(await screen.findByText('Computer (hard)')).toBeOnTheScreen();
   });
 
+  test('nobody watches whether the computer has left', async () => {
+    const thinking = game({
+      tiger: COMPUTER,
+      computer: 'hard',
+      ply: 3,
+      moves: ['a2', 'a1-b1', 'c3'],
+      position: 'T3T/5/2G2/G4/1T2T t 18 0',
+      side_to_move: 'tiger',
+      server_time: now(),
+    });
+    const { server } = await signedIn('/game/g1', {
+      'GET /api/v1/games/g1': { status: 200, body: thinking },
+    });
+    expect(await screen.findByText('Computer (hard) to move')).toBeOnTheScreen();
+    expect(server.requests.some((r) => r.path.startsWith('/api/v1/players/computer'))).toBe(false);
+  });
+
   test('the computer refuses while a game is on', async () => {
     await signedIn('/play', {
       'POST /api/v1/games/computer': error(409, 'player_busy', 'Finish your live game first.'),

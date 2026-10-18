@@ -12,6 +12,8 @@ import { Board } from '@/components/game/Board';
 import { GameActions } from '@/components/game/GameActions';
 import { MoveList } from '@/components/game/MoveList';
 import { PlayerBar } from '@/components/game/PlayerBar';
+import { soundSupported } from '@/components/game/sound';
+import { useMoveSounds, useSoundSetting } from '@/components/game/useMoveSounds';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
@@ -44,6 +46,8 @@ export default function GameScreen() {
   const { width, height } = useWindowDimensions();
   const [shown, setShown] = useState<number | null>(null); // the move being replayed
   const game = query.data;
+  const [soundOn, setSoundOn] = useSoundSetting();
+  useMoveSounds(game, soundOn);
 
   if (game === undefined) {
     return (
@@ -97,6 +101,14 @@ export default function GameScreen() {
         <Text style={styles.counts}>
           {`Goats to place: ${position.inHand} · Goats captured: ${position.captured} of 5`}
         </Text>
+      )}
+      {soundSupported() && game.status === 'active' && (
+        <Button
+          title={soundOn ? 'Turn sounds off' : 'Turn sounds on'}
+          variant="secondary"
+          compact
+          onPress={() => setSoundOn(!soundOn)}
+        />
       )}
       {mine !== null && game.status === 'active' && (
         <GameActions
