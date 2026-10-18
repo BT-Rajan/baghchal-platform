@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { Game, GameAction } from '@/api/endpoints';
 import type { Piece } from '@/game/bfen';
-import { other, playerOf } from '@/game/describe';
+import { isComputer, other, playerOf } from '@/game/describe';
 import { AWAY_REFRESH_MS, PRESENCE_REFRESH_MS, useProfile } from '@/lobby/hooks';
 import { colors, spacing } from '@/theme';
 
@@ -30,19 +30,21 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
   const opponent = playerOf(game, other(me));
   const opening = game.ply < 2;
   const waitingOnOpponent = !opening && game.side_to_move !== me;
+  // The computer never leaves, so there is nobody to watch for.
+  const watching = waitingOnOpponent && !isComputer(game, other(me));
   const [awaySince, setAwaySince] = useState<number | null>(null);
   // Check more often once they seem to have gone, so the claim is offered promptly.
   const presence = useProfile(
     opponent.username,
-    waitingOnOpponent,
+    watching,
     awaySince === null ? PRESENCE_REFRESH_MS : AWAY_REFRESH_MS,
   );
   const { refetch } = presence;
   // A fresh look when their turn starts, so the countdown never starts from an older one.
   useEffect(() => {
-    if (waitingOnOpponent) void refetch();
-  }, [waitingOnOpponent, game.ply, refetch]);
-  const away = waitingOnOpponent && presence.data?.online === false;
+    if (watching) void refetch();
+  }, [watching, game.ply, refetch]);
+  const away = watching && presence.data?.online === false;
   // When we first saw them offline, this time round. Our view lags the server's (we poll), so
   // by the time our wait is over, theirs is too.
   if (away && awaySince === null) setAwaySince(presence.dataUpdatedAt);
