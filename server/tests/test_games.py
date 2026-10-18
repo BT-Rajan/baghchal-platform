@@ -93,8 +93,8 @@ async def test_accepting_starts_a_game(
             assert accepted["game_id"] == game["id"]
             assert (await _event(ws, "game"))["game"] == game
 
-    assert game["goat"] == {"id": alice.id, "username": "alice"}
-    assert game["tiger"] == {"id": bob.id, "username": "bob"}
+    assert game["goat"] == {"id": alice.id, "username": "alice", "badge": None}
+    assert game["tiger"] == {"id": bob.id, "username": "bob", "badge": None}
     assert game["status"] == "active"
     assert game["result"] is None
     assert game["position"] == "T3T/5/5/5/T3T g 20 0"

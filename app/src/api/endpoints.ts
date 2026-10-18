@@ -39,6 +39,11 @@ export type GrantRequest = S['GrantIn'];
 export type Analysis = S['AnalysisOut'];
 export type MoveReview = S['MoveReviewOut'];
 export type Verdict = S['MoveReviewOut']['verdict'];
+export type Appearance = S['AppearanceOut'];
+export type BoardTheme = S['BoardTheme'];
+export type PieceSet = S['PieceSet'];
+export type SoundPack = S['SoundPack'];
+export type Badge = NonNullable<S['PlayerOut']['badge']>;
 
 export type ChallengeAnswer = 'accept' | 'decline' | 'cancel';
 export type GameAction = 'resign' | 'abort' | 'claim-abandonment';
@@ -142,6 +147,10 @@ export function createApi(client: Client, transport: Transport) {
       client.post<Grant>(`${V1}/admin/players/${seg(username)}/grants`, { body }),
     revokeGrant: (id: string, reason: string) =>
       client.post<Grant>(`${V1}/admin/grants/${seg(id)}/revoke`, { body: { reason } }),
+
+    // Appearance
+    appearance: (signal?: AbortSignal) => client.get<Appearance>(`${V1}/me/appearance`, { signal }),
+    setAppearance: (body: Appearance) => client.put<Appearance>(`${V1}/me/appearance`, { body }),
 
     // Ratings
     leaderboard: (category: Category, signal?: AbortSignal) =>

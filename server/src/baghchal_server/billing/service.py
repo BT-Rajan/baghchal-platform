@@ -5,6 +5,7 @@ told by email. Admins are made from the command line only (``baghchal_server.mod
 """
 
 import uuid
+from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
@@ -69,6 +70,24 @@ def _entitlements(grants: list[Grant]) -> Entitlements:
 
 async def entitlements(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> Entitlements:
     return _entitlements(await _grants(db, user_id, now))
+
+
+async def entitlements_of(
+    db: AsyncSession, user_ids: Collection[uuid.UUID], now: datetime
+) -> dict[uuid.UUID, Entitlements]:
+    """Several players' entitlements at once (for badges on lists and games)."""
+    found = await db.scalars(
+        select(Grant).where(
+            Grant.user_id.in_(user_ids),
+            Grant.revoked_at.is_(None),
+            Grant.starts_at <= now,
+            or_(Grant.ends_at.is_(None), Grant.ends_at > now),
+        )
+    )
+    by_user: dict[uuid.UUID, list[Grant]] = {uid: [] for uid in user_ids}
+    for g in found:
+        by_user[g.user_id].append(g)
+    return {uid: _entitlements(grants) for uid, grants in by_user.items()}
 
 
 async def require(

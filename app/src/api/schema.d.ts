@@ -845,6 +845,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/appearance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Appearance
+         * @description My board, pieces and sounds, and whether others see my badge.
+         */
+        get: operations["my_appearance_api_v1_me_appearance_get"];
+        /**
+         * Choose Appearance
+         * @description Choose a board, pieces and sounds (beyond the first of each: Plus and Pro), and whether
+         *     to show my badge.
+         */
+        put: operations["choose_appearance_api_v1_me_appearance_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -880,6 +905,30 @@ export interface components {
             /** Left Today */
             left_today: number | null;
         };
+        /** AppearanceIn */
+        AppearanceIn: {
+            board: components["schemas"]["BoardTheme"];
+            pieces: components["schemas"]["PieceSet"];
+            sounds: components["schemas"]["SoundPack"];
+            /** Show Badge */
+            show_badge: boolean;
+        };
+        /**
+         * AppearanceOut
+         * @description What the app uses now: without the themes feature, the free board, pieces and sounds.
+         */
+        AppearanceOut: {
+            board: components["schemas"]["BoardTheme"];
+            pieces: components["schemas"]["PieceSet"];
+            sounds: components["schemas"]["SoundPack"];
+            /** Show Badge */
+            show_badge: boolean;
+        };
+        /**
+         * BoardTheme
+         * @enum {string}
+         */
+        BoardTheme: "wood" | "walnut" | "slate" | "jade" | "night";
         /**
          * Category
          * @enum {string}
@@ -1457,6 +1506,11 @@ export interface components {
             email: string;
         };
         /**
+         * PieceSet
+         * @enum {string}
+         */
+        PieceSet: "classic" | "bronze" | "porcelain" | "royal";
+        /**
          * Plan
          * @enum {string}
          */
@@ -1484,6 +1538,8 @@ export interface components {
             id: string;
             /** Username */
             username: string;
+            /** Badge */
+            badge?: ("plus" | "pro") | null;
         };
         /**
          * PlayerPlanOut
@@ -1511,6 +1567,8 @@ export interface components {
             id: string;
             /** Username */
             username: string;
+            /** Badge */
+            badge?: ("plus" | "pro") | null;
             /** Online */
             online: boolean;
             /** Playing */
@@ -1525,6 +1583,8 @@ export interface components {
             id: string;
             /** Username */
             username: string;
+            /** Badge */
+            badge?: ("plus" | "pro") | null;
             /** Online */
             online: boolean;
             /** Playing */
@@ -1638,6 +1698,8 @@ export interface components {
             id: string;
             /** Username */
             username: string;
+            /** Badge */
+            badge?: ("plus" | "pro") | null;
             /** Suspended Until */
             suspended_until: string | null;
         };
@@ -1698,6 +1760,11 @@ export interface components {
             /** Change */
             change: number | null;
         };
+        /**
+         * SoundPack
+         * @enum {string}
+         */
+        SoundPack: "gentle" | "woodblock" | "bells" | "arcade";
         /** SuspendIn */
         SuspendIn: {
             /** Days */
@@ -3249,6 +3316,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GrantOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_appearance_api_v1_me_appearance_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppearanceOut"];
+                };
+            };
+        };
+    };
+    choose_appearance_api_v1_me_appearance_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppearanceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppearanceOut"];
                 };
             };
             /** @description Validation Error */

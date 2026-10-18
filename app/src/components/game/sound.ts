@@ -1,8 +1,15 @@
 /**
- * Game sounds, made on the spot with the Web Audio API (no sound files): a soft wooden tock for
- * a move, a tiger's strike and growl for a capture, a fanfare when a game is won and two falling
- * notes when it is lost. Where there is no Web Audio (the native apps for now), there is no sound.
+ * Game sounds, made on the spot with the Web Audio API (no sound files), in four packs:
+ *
+ * - **Gentle** (free): a soft wooden tock for a move, a tiger's strike and growl for a capture, a
+ *   fanfare when a game is won and two falling notes when it is lost.
+ * - **Woodblock**: crisp knocks, and a heavy double thud for a capture.
+ * - **Temple bells**: a small bell for a move, a gong for a capture.
+ * - **Arcade**: square-wave bleeps, a falling zap for a capture.
+ *
+ * Where there is no Web Audio (the native apps for now), there is no sound.
  */
+import type { SoundPack } from '@/api/endpoints';
 import type { Sound } from '@/game/sounds';
 
 export type GameSound = Sound | 'win' | 'loss';
@@ -78,19 +85,90 @@ function unlockOnFirstTouch() {
 
 unlockOnFirstTouch();
 
-export function playSound(sound: GameSound): void {
+type Player = (c: ContextLike, t: number) => void;
+
+const PACKS: Record<SoundPack, Record<GameSound, Player>> = {
+  gentle: {
+    move: (c, t) => tock(c, t, 520, 0.12),
+    capture: growl,
+    win: fanfare,
+    loss: lament,
+  },
+  woodblock: {
+    move: (c, t) => knock(c, t, 880, 0.18),
+    capture: (c, t) => {
+      knock(c, t, 240, 0.5);
+      knock(c, t + 0.12, 170, 0.45);
+      noise(c, t, 0.25, 'lowpass', 500, 0.25);
+    },
+    win: (c, t) => [660, 784, 988, 1319].forEach((f, i) => knock(c, t + i * 0.1, f, 0.2)),
+    loss: (c, t) => [392, 262].forEach((f, i) => knock(c, t + i * 0.25, f, 0.2)),
+  },
+  bells: {
+    move: (c, t) => bell(c, t, 1568, 0.06, 0.5, 'sine'),
+    capture: gong,
+    win: (c, t) =>
+      [784, 988, 1175, 1568].forEach((f, i) => bell(c, t + i * 0.14, f, 0.1, 1.2, 'sine')),
+    loss: (c, t) => [523, 392].forEach((f, i) => bell(c, t + i * 0.35, f, 0.1, 1.2, 'sine')),
+  },
+  arcade: {
+    move: (c, t) => sweep(c, t, 660, 990, 0.06, 0.07),
+    capture: (c, t) => {
+      sweep(c, t, 1400, 90, 0.4, 0.14);
+      noise(c, t, 0.3, 'highpass', 1200, 0.12);
+    },
+    win: (c, t) =>
+      [523, 659, 784, 1047].forEach((f, i) => sweep(c, t + i * 0.09, f, f, 0.08, 0.08)),
+    loss: (c, t) => sweep(c, t, 440, 110, 0.6, 0.1),
+  },
+};
+
+export function playSound(sound: GameSound, pack: SoundPack = 'gentle'): void {
   if (AudioContextClass === undefined) return;
   try {
     context ??= new AudioContextClass();
     if (context.state === 'suspended') void context.resume().catch(() => {});
-    const t = context.currentTime + 0.01;
-    if (sound === 'move') tock(context, t, 520, 0.12);
-    else if (sound === 'capture') growl(context, t);
-    else if (sound === 'win') fanfare(context, t);
-    else lament(context, t);
+    PACKS[pack][sound](context, context.currentTime + 0.01);
   } catch {
     // A sound is a nicety; never let it break the game.
   }
+}
+
+/** A woodblock struck: a bright, very short note over a crack of noise. */
+function knock(c: ContextLike, t: number, frequency: number, level: number) {
+  const osc = c.createOscillator();
+  const gain = c.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(frequency, t);
+  osc.frequency.exponentialRampToValueAtTime(frequency * 0.8, t + 0.05);
+  envelope(gain.gain, t, level, 0.07);
+  osc.connect(gain).connect(c.destination);
+  osc.start(t);
+  osc.stop(t + 0.09);
+  noise(c, t, 0.02, 'highpass', 2500, level * 0.6);
+}
+
+/** A gong: a low note with clashing overtones, ringing on. */
+function gong(c: ContextLike, t: number) {
+  [
+    [98, 0.35],
+    [98 * 2.76, 0.16],
+    [98 * 5.4, 0.08],
+  ].forEach(([frequency, level]) => bell(c, t, frequency!, level!, 2.2, 'sine'));
+  noise(c, t, 0.15, 'lowpass', 300, 0.3);
+}
+
+/** A square-wave note sliding from one pitch to another. */
+function sweep(c: ContextLike, t: number, from: number, to: number, length: number, level: number) {
+  const osc = c.createOscillator();
+  const gain = c.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(from, t);
+  if (to !== from) osc.frequency.exponentialRampToValueAtTime(to, t + length);
+  envelope(gain.gain, t, level, length);
+  osc.connect(gain).connect(c.destination);
+  osc.start(t);
+  osc.stop(t + length + 0.02);
 }
 
 /** A short, falling, softly clicking note: a piece set down on wood. */
@@ -167,10 +245,17 @@ function lament(c: ContextLike, t: number) {
   bell(c, t + 0.28, 294, 0.12, 0.8);
 }
 
-function bell(c: ContextLike, t: number, frequency: number, level: number, length: number) {
+function bell(
+  c: ContextLike,
+  t: number,
+  frequency: number,
+  level: number,
+  length: number,
+  type = 'triangle',
+) {
   const osc = c.createOscillator();
   const gain = c.createGain();
-  osc.type = 'triangle';
+  osc.type = type;
   osc.frequency.setValueAtTime(frequency, t);
   envelope(gain.gain, t, level, length);
   osc.connect(gain).connect(c.destination);

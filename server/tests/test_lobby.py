@@ -101,7 +101,9 @@ async def test_online_list_and_profile_follow_connections(
         assert r.json()["online"] is True
         assert r.json()["username"] == "bob"
         online = (await alice.http.get("/api/v1/players/online")).json()
-        assert online == [{"id": bob.id, "username": "bob", "online": True, "playing": False}]
+        assert online == [
+            {"id": bob.id, "username": "bob", "badge": None, "online": True, "playing": False}
+        ]
 
     assert (await alice.http.get("/api/v1/players/bob")).json()["online"] is False
     assert (await alice.http.get("/api/v1/players/nobody")).status_code == 404
@@ -136,7 +138,7 @@ async def test_challenge_lifecycle(app: FastAPI, players: PlayerFactory) -> None
         assert created["side"] == "random"
         assert created["rated"] is False
         assert created["time_control"] == "5+3"
-        assert created["challenger"] == {"id": alice.id, "username": "alice"}
+        assert created["challenger"] == {"id": alice.id, "username": "alice", "badge": None}
 
         # Both players hear about it, on every connection.
         for ws in (alice_ws, bob_ws):

@@ -14,47 +14,17 @@ import {
   Stop,
 } from 'react-native-svg';
 
+import type { PieceSet } from '@/api/endpoints';
+import { PIECES } from '@/appearance/catalog';
 import type { Piece } from '@/game/bfen';
-import { colors } from '@/theme';
-
-interface Finish {
-  light: string;
-  base: string;
-  dark: string;
-  edge: string;
-  bevelLight: string;
-  bevelDark: string;
-  ink: string;
-}
-
-const FINISH: Record<Piece, Finish> = {
-  tiger: {
-    light: colors.tigerLight,
-    base: colors.tiger,
-    dark: colors.tigerDark,
-    edge: colors.tigerEdge,
-    bevelLight: colors.tigerBevel,
-    bevelDark: colors.tigerDark,
-    ink: colors.tigerStripe,
-  },
-  goat: {
-    light: '#ffffff',
-    base: colors.goat,
-    dark: colors.goatShade,
-    edge: colors.goatEdge,
-    bevelLight: '#ffffff',
-    bevelDark: colors.goatShade,
-    ink: colors.goatInk,
-  },
-};
 
 /** Tigers are a little larger, so the two read apart at a glance as well as by colour. */
 const RADIUS: Record<Piece, number> = { tiger: 40, goat: 37 };
 
-export function Coin({ piece }: { piece: Piece }) {
+export function Coin({ piece, set = 'classic' }: { piece: Piece; set?: PieceSet }) {
   // Gradient ids must be unique on a web page holding many boards' worth of coins.
   const id = `coin${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
-  const c = FINISH[piece];
+  const c = PIECES[set].finish[piece];
   const r = RADIUS[piece];
   const face = 50 - r * 0.04;
   const Emblem = piece === 'tiger' ? TigerHead : GoatHead;

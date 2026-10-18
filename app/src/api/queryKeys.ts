@@ -16,4 +16,5 @@ export const queryKeys = {
   myPlan: ['me', 'plan'] as const,
   playerPlan: (username: string) => ['admin', 'plan', username] as const,
   analysis: (id: string) => ['analysis', id] as const,
+  appearance: ['me', 'appearance'] as const,
 };

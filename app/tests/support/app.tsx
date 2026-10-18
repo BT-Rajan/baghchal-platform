@@ -1,6 +1,7 @@
 /** Renders the whole app (real routes and layout) against a fake server. */
 import { renderRouter } from 'expo-router/testing-library';
 
+import { FREE_APPEARANCE } from '@/appearance/catalog';
 import { serverClock } from '@/game/serverClock';
 
 import { fakeServer, type Route } from './fakeServer';
@@ -30,6 +31,8 @@ export const QUIET_LOBBY: Record<string, Route> = {
   // Everyone is on the Free plan unless a test says otherwise.
   'GET /api/v1/me/plan': { status: 200, body: FREE },
   'GET /api/v1/plans': { status: 200, body: PLANS },
+  // And on the free board, pieces and sounds.
+  'GET /api/v1/me/appearance': { status: 200, body: FREE_APPEARANCE },
 };
 
 export const savedToken = () => mockSecure.get('session-token') ?? null;

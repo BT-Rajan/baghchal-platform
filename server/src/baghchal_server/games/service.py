@@ -33,6 +33,7 @@ from baghchal_engine import (
     parse_move,
 )
 from baghchal_server.accounts.models import User
+from baghchal_server.appearance import service as appearance
 from baghchal_server.errors import AppError
 from baghchal_server.games.models import (
     ActiveGame,
@@ -445,13 +446,18 @@ async def describe(db: AsyncSession, game: Game, now: datetime) -> GameOut:
             )
         ).all()
     )
+    shown = await appearance.badges(db, (game.goat_id, game.tiger_id), now)
     engine_game = await _engine_game(db, game)
     goat_ms, tiger_ms = clocks_at(game, now)
     active = game.status == GameStatus.ACTIVE
     return GameOut(
         id=game.id,
-        goat=PlayerOut(id=game.goat_id, username=names[game.goat_id]),
-        tiger=PlayerOut(id=game.tiger_id, username=names[game.tiger_id]),
+        goat=PlayerOut(
+            id=game.goat_id, username=names[game.goat_id], badge=shown.get(game.goat_id)
+        ),
+        tiger=PlayerOut(
+            id=game.tiger_id, username=names[game.tiger_id], badge=shown.get(game.tiger_id)
+        ),
         time_control=f"{game.initial_ms // 60_000}+{game.increment_ms // 1000}",
         rated=game.rated,
         status=GameStatus(game.status),

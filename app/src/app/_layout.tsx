@@ -78,6 +78,10 @@ function Routes() {
           <Stack.Screen name="play" options={{ headerShown: true, title: 'Play now' }} />
           <Stack.Screen name="plans" options={{ headerShown: true, title: 'Plans' }} />
           <Stack.Screen
+            name="appearance"
+            options={{ headerShown: true, title: 'Board, pieces and sounds' }}
+          />
+          <Stack.Screen
             name="moderation/index"
             options={{ headerShown: true, title: 'Moderation' }}
           />

@@ -1869,6 +1869,62 @@
           }
         }
       }
+    },
+    "/api/v1/me/appearance": {
+      "get": {
+        "summary": "My Appearance",
+        "description": "My board, pieces and sounds, and whether others see my badge.",
+        "operationId": "my_appearance_api_v1_me_appearance_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppearanceOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Choose Appearance",
+        "description": "Choose a board, pieces and sounds (beyond the first of each: Plus and Pro), and whether\nto show my badge.",
+        "operationId": "choose_appearance_api_v1_me_appearance_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppearanceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppearanceOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1936,6 +1992,70 @@
           "left_today"
         ],
         "title": "AnalysisOut"
+      },
+      "AppearanceIn": {
+        "properties": {
+          "board": {
+            "$ref": "#/components/schemas/BoardTheme"
+          },
+          "pieces": {
+            "$ref": "#/components/schemas/PieceSet"
+          },
+          "sounds": {
+            "$ref": "#/components/schemas/SoundPack"
+          },
+          "show_badge": {
+            "type": "boolean",
+            "title": "Show Badge"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "board",
+          "pieces",
+          "sounds",
+          "show_badge"
+        ],
+        "title": "AppearanceIn"
+      },
+      "AppearanceOut": {
+        "properties": {
+          "board": {
+            "$ref": "#/components/schemas/BoardTheme"
+          },
+          "pieces": {
+            "$ref": "#/components/schemas/PieceSet"
+          },
+          "sounds": {
+            "$ref": "#/components/schemas/SoundPack"
+          },
+          "show_badge": {
+            "type": "boolean",
+            "title": "Show Badge"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "board",
+          "pieces",
+          "sounds",
+          "show_badge"
+        ],
+        "title": "AppearanceOut",
+        "description": "What the app uses now: without the themes feature, the free board, pieces and sounds."
+      },
+      "BoardTheme": {
+        "type": "string",
+        "enum": [
+          "wood",
+          "walnut",
+          "slate",
+          "jade",
+          "night"
+        ],
+        "title": "BoardTheme"
       },
       "Category": {
         "type": "string",
@@ -3463,6 +3583,16 @@
         ],
         "title": "PasswordResetRequestIn"
       },
+      "PieceSet": {
+        "type": "string",
+        "enum": [
+          "classic",
+          "bronze",
+          "porcelain",
+          "royal"
+        ],
+        "title": "PieceSet"
+      },
       "Plan": {
         "type": "string",
         "enum": [
@@ -3543,6 +3673,21 @@
           "username": {
             "type": "string",
             "title": "Username"
+          },
+          "badge": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "plus",
+                  "pro"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Badge"
           }
         },
         "type": "object",
@@ -3618,6 +3763,21 @@
             "type": "string",
             "title": "Username"
           },
+          "badge": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "plus",
+                  "pro"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Badge"
+          },
           "online": {
             "type": "boolean",
             "title": "Online"
@@ -3646,6 +3806,21 @@
           "username": {
             "type": "string",
             "title": "Username"
+          },
+          "badge": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "plus",
+                  "pro"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Badge"
           },
           "online": {
             "type": "boolean",
@@ -3940,6 +4115,21 @@
             "type": "string",
             "title": "Username"
           },
+          "badge": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "plus",
+                  "pro"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Badge"
+          },
           "suspended_until": {
             "anyOf": [
               {
@@ -4141,6 +4331,16 @@
           "change"
         ],
         "title": "SideRatingOut"
+      },
+      "SoundPack": {
+        "type": "string",
+        "enum": [
+          "gentle",
+          "woodblock",
+          "bells",
+          "arcade"
+        ],
+        "title": "SoundPack"
       },
       "SuspendIn": {
         "properties": {

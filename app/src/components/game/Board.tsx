@@ -7,6 +7,8 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
+import type { BoardTheme, PieceSet } from '@/api/endpoints';
+import { BOARDS } from '@/appearance/catalog';
 import type { Piece, Position } from '@/game/bfen';
 import { EDGES, POINTS, SIZE, type Point } from '@/game/board';
 import { highlights, movePoints, tap } from '@/game/moveInput';
@@ -25,7 +27,7 @@ const HIT = 17;
 const x = (p: Point) => MARGIN + p.file * GAP;
 const y = (p: Point) => MARGIN + (SIZE - 1 - p.rank) * GAP;
 
-const GROOVES = EDGES.map(([p, q]) => ({
+export const GROOVES = EDGES.map(([p, q]) => ({
   key: `${p.name}-${q.name}`,
   x1: x(p),
   y1: y(p),
@@ -39,9 +41,20 @@ export interface BoardProps {
   legalMoves: readonly string[];
   lastMove?: string | undefined;
   onMove: (move: string) => void;
+  /** The player's board theme and piece set. */
+  theme?: BoardTheme;
+  pieces?: PieceSet;
 }
 
-export function Board({ position, legalMoves, lastMove, onMove }: BoardProps) {
+export function Board({
+  position,
+  legalMoves,
+  lastMove,
+  onMove,
+  theme = 'wood',
+  pieces = 'classic',
+}: BoardProps) {
+  const palette = BOARDS[theme].palette;
   const [selected, setSelected] = useState<string | null>(null);
   const { movable, targets } = highlights(legalMoves, selected);
   const last = new Set(movePoints(lastMove));
@@ -53,9 +66,9 @@ export function Board({ position, legalMoves, lastMove, onMove }: BoardProps) {
   };
 
   return (
-    <View style={styles.board} aria-label="Board">
+    <View style={[styles.board, { backgroundColor: palette.base }]} aria-label="Board">
       <Svg width="100%" height="100%" viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
-        <Wood grooves={GROOVES} />
+        <Wood grooves={GROOVES} palette={palette} />
       </Svg>
       {POINTS.map((p) => {
         const piece = position.pieces.get(p.name);
@@ -77,8 +90,8 @@ export function Board({ position, legalMoves, lastMove, onMove }: BoardProps) {
             ]}
           >
             <Svg width="100%" height="100%" viewBox="0 0 100 100">
-              {piece !== undefined && <Coin piece={piece} />}
-              {piece === undefined && !isTarget && <Hole />}
+              {piece !== undefined && <Coin piece={piece} set={pieces} />}
+              {piece === undefined && !isTarget && <Hole palette={palette} />}
               {isTarget && (
                 <Circle
                   cx={50}
@@ -127,7 +140,6 @@ const styles = StyleSheet.create({
   board: {
     width: '100%',
     aspectRatio: 1,
-    backgroundColor: colors.board,
     borderRadius: 12,
   },
   point: {

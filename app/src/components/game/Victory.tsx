@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import Svg, { Circle, G, Path } from 'react-native-svg';
 
+import type { PieceSet } from '@/api/endpoints';
 import type { Ending } from '@/game/ending';
 import { colors } from '@/theme';
 
@@ -43,7 +44,15 @@ const PIECES = (() => {
   });
 })();
 
-export function Victory({ ending, onClose }: { ending: Ending; onClose: () => void }) {
+export function Victory({
+  ending,
+  onClose,
+  pieces = 'classic',
+}: {
+  ending: Ending;
+  onClose: () => void;
+  pieces?: PieceSet;
+}) {
   const [still, setStill] = useState(false);
   // Animated values live as long as the overlay; state keeps one of each across renders.
   const [shown] = useState(() => new Animated.Value(0)); // backdrop and text
@@ -165,7 +174,7 @@ export function Victory({ ending, onClose }: { ending: Ending; onClose: () => vo
           ]}
         >
           <Svg width="100%" height="100%" viewBox="0 0 100 100">
-            <Coin piece={ending.winner} />
+            <Coin piece={ending.winner} set={pieces} />
           </Svg>
         </Animated.View>
         <View style={styles.words} aria-live="assertive">

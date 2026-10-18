@@ -94,6 +94,9 @@ scripts/        the Expo-cloud guardrail
 - **Analysis.** A finished game has an Analysis section: "Analyse this game" (Plus and Pro;
   Free sees what Plus adds), then the verdict on the move being replayed with the engine's
   choice, "Next mistake", each side's tally, and ?!, ? and ?? marks in the move list.
+- **Board, pieces and sounds.** Me → Board, pieces and sounds: board themes and piece sets
+  (drawn by `Wood.tsx` and `Coin.tsx` from `src/appearance/catalog.ts`), sound packs (made live
+  in `sound.ts`), and showing or hiding the badge. Free sees the choices it would get with Plus.
 - **Reports and moderation.** "Report" on a profile or a finished game sends a report (with
   the game). Moderators see Me → Moderation: the report queue and each player's record, where
   they suspend, ban, lift a suspension, rename and dismiss reports, always with a reason.
