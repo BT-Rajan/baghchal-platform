@@ -8,6 +8,7 @@ import { CATEGORIES, canChallenge, joinedText, presenceText, ratingText } from '
 import { useBlock } from '@/lobby/hooks';
 import { colors, spacing } from '@/theme';
 
+import { BadgePill } from './BadgePill';
 import { Button } from './Button';
 import { Card } from './Card';
 import { GameHistory } from './GameHistory';
@@ -18,6 +19,7 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
   return (
     <>
       <View style={styles.presence}>
+        <BadgePill badge={profile.badge} />
         <PresenceDot online={profile.online} />
         <Text style={styles.muted}>
           {`${presenceText(profile)} · ${joinedText(profile.created_at)}`}

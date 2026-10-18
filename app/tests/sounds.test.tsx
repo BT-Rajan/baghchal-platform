@@ -41,11 +41,17 @@ test('moves and captures sound as they arrive, until sounds are turned off', asy
     });
   await act(() => socket.open());
   await arrive(2, 'T3T/5/2G2/5/1T2T g 19 0', ['c3', 'a1-b1']);
-  await waitFor(() => expect(played.mock.calls).toEqual([['move']]));
+  await waitFor(() => expect(played.mock.calls).toEqual([['move', 'gentle']]));
   await arrive(3, 'T3T/5/2G2/1G3/1T2T t 18 0', ['c3', 'a1-b1', 'b2']);
   await waitFor(() => expect(played).toHaveBeenCalledTimes(2));
   await arrive(4, 'T3T/5/1TG2/5/4T g 18 1', ['c3', 'a1-b1', 'b2', 'b1xb3']);
-  await waitFor(() => expect(played.mock.calls).toEqual([['move'], ['move'], ['capture']]));
+  await waitFor(() =>
+    expect(played.mock.calls).toEqual([
+      ['move', 'gentle'],
+      ['move', 'gentle'],
+      ['capture', 'gentle'],
+    ]),
+  );
 
   await fireEvent.press(screen.getByRole('button', { name: 'Turn sounds off' }));
   await arrive(5, 'T3T/5/1TG2/2G2/4T t 17 1', ['c3', 'a1-b1', 'b2', 'b1xb3', 'c2']);

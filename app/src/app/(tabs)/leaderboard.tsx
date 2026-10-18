@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { Category } from '@/api/endpoints';
 import { useMe } from '@/auth/session';
+import { BadgePill } from '@/components/BadgePill';
 import { Card, Hint } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
@@ -44,6 +45,7 @@ export default function Leaderboard() {
                     ? `${entry.player.username} (you)`
                     : entry.player.username}
                 </TextLink>
+                <BadgePill badge={entry.player.badge} />
               </View>
               <Text style={styles.rating}>{String(entry.rating)}</Text>
               <Text style={styles.games}>{`${entry.games} games`}</Text>
@@ -58,7 +60,7 @@ export default function Leaderboard() {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   rank: { width: 44, fontSize: 15, color: colors.muted },
-  name: { flex: 1 },
+  name: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   rating: { fontSize: 16, fontWeight: '700', color: colors.text },
   games: { width: 76, textAlign: 'right', fontSize: 13, color: colors.muted },
 });

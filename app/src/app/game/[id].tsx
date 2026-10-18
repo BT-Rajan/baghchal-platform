@@ -6,6 +6,7 @@ import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { annotate } from '@/analysis/format';
 import { useAnalysis } from '@/analysis/hooks';
 import type { Game } from '@/api/endpoints';
+import { useAppearance } from '@/appearance/hooks';
 import { describeError } from '@/api/errors';
 import { useApi, useMe } from '@/auth/session';
 import { has } from '@/billing/format';
@@ -53,8 +54,9 @@ export default function GameScreen() {
   const [shown, setShown] = useState<number | null>(null); // the move being replayed
   const game = query.data;
   const [soundOn, setSoundOn] = useSoundSetting();
-  useMoveSounds(game, soundOn);
-  const [ending, dismissEnding] = useEnding(game, me.id, soundOn);
+  const look = useAppearance();
+  useMoveSounds(game, soundOn, look.sounds);
+  const [ending, dismissEnding] = useEnding(game, me.id, soundOn, look.sounds);
   const plan = useMyPlan();
   const allowed = plan.data === undefined ? undefined : has(plan.data, 'analysis');
   const reviewable = game?.status === 'finished' && game.ply > 0;
@@ -95,6 +97,8 @@ export default function GameScreen() {
         legalMoves={myTurn ? game.legal_moves : []}
         lastMove={ply > 0 ? game.moves[ply - 1] : undefined}
         onMove={(m) => move.mutate({ ply: game.ply, move: m })}
+        theme={look.board}
+        pieces={look.pieces}
       />
     );
 
@@ -174,7 +178,9 @@ export default function GameScreen() {
           {layout !== 'short' && opponentBar}
           <View style={[styles.boardBox, { maxWidth: boardSize(layout, width, height) }]}>
             {board}
-            {ending !== null && <Victory ending={ending} onClose={dismissEnding} />}
+            {ending !== null && (
+              <Victory ending={ending} onClose={dismissEnding} pieces={look.pieces} />
+            )}
           </View>
           {layout !== 'short' && myBar}
         </View>

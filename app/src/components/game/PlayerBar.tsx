@@ -6,6 +6,7 @@ import { formatClock, remainingMs } from '@/game/clock';
 import { SIDE_PLURAL, isComputer, nameOf, playerOf, ratingChangeText } from '@/game/describe';
 import { colors, radius, spacing } from '@/theme';
 
+import { BadgePill } from '../BadgePill';
 import { useServerNow } from '../useNow';
 import { TextLink } from '../TextLink';
 
@@ -23,9 +24,12 @@ export function PlayerBar({ game, side, isMe }: { game: Game; side: Piece; isMe:
         {isComputer(game, side) ? (
           <Text style={styles.name}>{nameOf(game, side)}</Text>
         ) : (
-          <TextLink href={`/player/${player.username}`}>
-            {isMe ? `${player.username} (you)` : player.username}
-          </TextLink>
+          <View style={styles.nameRow}>
+            <TextLink href={`/player/${player.username}`}>
+              {isMe ? `${player.username} (you)` : player.username}
+            </TextLink>
+            <BadgePill badge={player.badge} />
+          </View>
         )}
         <Text style={styles.meta}>
           {[SIDE_PLURAL[side], String(rating.rating), change].filter((x) => x !== null).join(' · ')}
@@ -64,6 +68,7 @@ const styles = StyleSheet.create({
   },
   toMove: { borderColor: colors.highlight },
   who: { flex: 1, gap: 2 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   name: { fontSize: 15, fontWeight: '600', color: colors.text, paddingVertical: 10 },
   meta: { fontSize: 13, color: colors.muted },
   clock: {

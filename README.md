@@ -60,8 +60,9 @@ Each phase ships complete — tested, documented and reviewed — before the nex
      Hard computer and full history behind Plus.
    - ✅ **Post-game analysis**: the engine reviews every move of a finished game (best, good,
      inaccuracy, mistake, blunder, with its own choice), 5 new games a day on Plus.
-   - Next: themes, sound packs and badges; Razorpay payments; private rooms, tournaments and the
-     trainer for Pro.
+   - ✅ **Themes, sound packs and badges**: five boards, four piece sets and four sound packs
+     (the first of each free), and a Plus or Pro badge by the player's name.
+   - Next: Razorpay payments; private rooms, tournaments and the trainer for Pro.
 
 ## Development
 Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
@@ -151,6 +152,7 @@ and the Caddyfile.
 | POST | `/api/v1/games/{id}/moves` | Play `{"ply": n, "move": "a1-b2"}` (`ply` = moves you have seen) |
 | POST | `/api/v1/games/{id}/resign`, `/abort`, `/claim-abandonment` | End the game (see [rules](docs/rules.md#live-play-platform-rules)) |
 | GET, POST | `/api/v1/games/{id}/analysis` | Plus and Pro: a finished game's analysis; `POST` works it out if nobody has yet (counts against today's allowance) |
+| GET, PUT | `/api/v1/me/appearance` | My `board`, `pieces` and `sounds` (beyond the first of each: Plus and Pro), and `show_badge` |
 | GET | `/api/v1/plans` | Free, Plus and Pro: features and prices |
 | GET | `/api/v1/me/plan` | My plan, my features, and the grants behind them |
 | GET | `/api/v1/admin/players/{username}/plan` | Admins: a player's plan and every grant |
@@ -195,7 +197,7 @@ for everyone.
 | The computer | Easy, Medium | + Hard | + Hard |
 | History and replay | Last 30 days | Everything | Everything |
 | Post-game analysis | — | 5 new games a day | Unlimited |
-| Themes, sound packs, badge *(coming)* | — | ✅ | ✅ |
+| Board and piece themes, sound packs, badge | — | ✅ | ✅ |
 | Private rooms, tournaments, trainer *(coming)* | — | — | ✅ |
 
 A player's features are their plan's plus whatever admins have **granted**. Admins grant a plan
@@ -210,3 +212,11 @@ evaluation's units (1,000 is a goat), gives the verdict: best, good (≤ 60), in
 mistake (≤ 700) or blunder. A game is analysed once and kept; anyone with the feature can read it without using
 their allowance. Plus has 5 new analyses a day (UTC); Pro, or the feature granted on its own,
 has no limit. Live games are never analysed.
+
+**Themes, sound packs and badges** (`server/src/baghchal_server/appearance/`): boards (Wood,
+Walnut, Slate, Jade, Midnight), piece sets (Classic, Bronze and pearl, Porcelain, Gold and
+silver) and sound packs (Gentle, Woodblock, Temple bells, Arcade), the first of each free. The
+choice is kept on the server, so it follows the player to every device; if their plan lapses
+they see the free set meanwhile, and their choice comes back when it is renewed. Players with
+the badge feature show PLUS or PRO by their name (in games, on profiles, the leaderboard and
+the players online), unless they hide it.

@@ -69,7 +69,7 @@ async def test_bearer_socket(app: FastAPI, players: PlayerFactory) -> None:
     async with open_socket(app, alice.auth) as ws:
         assert await _receive(ws) == {
             "type": "hello",
-            "user": {"id": alice.id, "username": "alice"},
+            "user": {"id": alice.id, "username": "alice", "badge": None},
         }
         await ws.send_json({"type": "ping"})
         assert await _receive(ws) == {"type": "pong"}

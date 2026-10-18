@@ -11,9 +11,15 @@ Side = Literal["goat", "tiger", "random"]
 UsernameQuery = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_-]{1,20}$", strict=True)]
 
 
+Badge = Literal["plus", "pro"]
+
+
 class PlayerOut(BaseModel):
     id: uuid.UUID
     username: str
+    badge: Badge | None = None
+    """ClawPlay Plus or Pro, shown next to the name; given where names are shown large (games,
+    profiles, leaderboards, players online)."""
 
 
 class PlayerStatusOut(PlayerOut):

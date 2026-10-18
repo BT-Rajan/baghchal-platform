@@ -5,6 +5,7 @@ import type { PlayerStatus } from '@/api/endpoints';
 import { canChallenge, presenceText } from '@/lobby/format';
 import { colors, spacing } from '@/theme';
 
+import { BadgePill } from './BadgePill';
 import { Button } from './Button';
 import { TextLink } from './TextLink';
 
@@ -22,7 +23,10 @@ export function PlayerRow({ player, isMe }: { player: PlayerStatus; isMe: boolea
   return (
     <View style={styles.row}>
       <View style={styles.who}>
-        <TextLink href={`/player/${player.username}`}>{player.username}</TextLink>
+        <View style={styles.name}>
+          <TextLink href={`/player/${player.username}`}>{player.username}</TextLink>
+          <BadgePill badge={player.badge} />
+        </View>
         <View style={styles.presence}>
           <PresenceDot online={player.online} />
           <Text style={styles.status}>{isMe ? 'You' : presenceText(player)}</Text>
@@ -45,6 +49,7 @@ export function PlayerRow({ player, isMe }: { player: PlayerStatus; isMe: boolea
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xs },
   who: { flex: 1, gap: 2 },
+  name: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   presence: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   dot: { width: 8, height: 8, borderRadius: 4 },
   status: { fontSize: 13, color: colors.muted },

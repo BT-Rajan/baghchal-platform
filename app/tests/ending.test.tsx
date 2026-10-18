@@ -52,7 +52,7 @@ test('a game won on screen is celebrated, with a fanfare, until closed', async (
     name: 'You won! By resignation. Tap to close.',
   });
   expect(screen.getByText('You won!')).toBeOnTheScreen();
-  await waitFor(() => expect(played).toHaveBeenCalledWith('win'));
+  await waitFor(() => expect(played).toHaveBeenCalledWith('win', 'gentle'));
   await fireEvent.press(overlay);
   expect(screen.queryByText('You won!')).toBeNull();
   expect(screen.getByText('You won by resignation.')).toBeOnTheScreen(); // the result stays
@@ -62,7 +62,7 @@ test('a loss says so, with a quieter sound', async () => {
   await endLive('tiger', 'five_captured');
   expect(await screen.findByText('You lost')).toBeOnTheScreen();
   expect(screen.getByText('Five goats captured')).toBeOnTheScreen();
-  await waitFor(() => expect(played).toHaveBeenCalledWith('loss'));
+  await waitFor(() => expect(played).toHaveBeenCalledWith('loss', 'gentle'));
 });
 
 test('opening a game that is already over shows no celebration', async () => {

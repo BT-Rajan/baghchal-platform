@@ -254,7 +254,7 @@ async def test_blocking_a_player(app: FastAPI, players: PlayerFactory) -> None:
             assert (closed["id"], closed["status"]) == (pending["id"], "declined")
 
         assert (await alice.http.get("/api/v1/blocks")).json() == [
-            {"id": bob.id, "username": "bob"}
+            {"id": bob.id, "username": "bob", "badge": None}
         ]
         assert (await alice.http.get("/api/v1/players/bob")).json()["blocked"] is True
         assert (await bob.http.get("/api/v1/players/alice")).json()["blocked"] is False

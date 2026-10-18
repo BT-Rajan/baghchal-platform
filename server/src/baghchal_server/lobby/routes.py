@@ -4,6 +4,7 @@ from typing import Annotated, Final
 
 from fastapi import APIRouter, Query, status
 
+from baghchal_server.appearance import service as appearance
 from baghchal_server.billing import service as billing
 from baghchal_server.billing.plans import FREE_HISTORY_DAYS, Feature
 from baghchal_server.deps import DB, AppState, CurrentUser, State, enforce_limit
@@ -41,8 +42,15 @@ async def _with_status(
 ) -> list[PlayerStatusOut]:
     online = await state.presence.online(uid for uid, _ in users)
     playing = await games.busy(db, [uid for uid, _ in users])
+    shown = await appearance.badges(db, [uid for uid, _ in users], state.clock())
     return [
-        PlayerStatusOut(id=uid, username=name, online=uid in online, playing=uid in playing)
+        PlayerStatusOut(
+            id=uid,
+            username=name,
+            badge=shown.get(uid),
+            online=uid in online,
+            playing=uid in playing,
+        )
         for uid, name in users
     ]
 

@@ -30,6 +30,11 @@ export default function MeScreen() {
         <Loading label="Loading your profile" />
       )}
       <PlanCard />
+      <Button
+        title="Board, pieces and sounds"
+        variant="secondary"
+        onPress={() => router.push('/appearance')}
+      />
       <BlockedPlayers />
       {me.role !== 'player' && (
         <Button title="Moderation" variant="secondary" onPress={() => router.push('/moderation')} />

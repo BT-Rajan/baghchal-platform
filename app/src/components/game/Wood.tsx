@@ -1,6 +1,7 @@
 /**
- * The board's surface: a framed wooden panel with grain, and the lines carved into it. Drawn in
- * the board's 100×100 box; the grain is generated once, the same on every board.
+ * The board's surface: a framed panel with grain (wood) or veining (stone), and the lines carved
+ * into it, in the colours of the player's board theme. Drawn in the board's 100×100 box; the
+ * grain is generated once, the same on every board.
  */
 import { useId } from 'react';
 import {
@@ -16,7 +17,7 @@ import {
   Stop,
 } from 'react-native-svg';
 
-import { colors } from '@/theme';
+import type { BoardPalette } from '@/appearance/catalog';
 
 interface Grain {
   d: string;
@@ -59,15 +60,15 @@ export interface Groove {
   y2: number;
 }
 
-export function Wood({ grooves }: { grooves: readonly Groove[] }) {
+export function Wood({ grooves, palette }: { grooves: readonly Groove[]; palette: BoardPalette }) {
   const id = `wood${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
     <>
       <Defs>
         <LinearGradient id={`${id}panel`} x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor={colors.woodLight} />
-          <Stop offset="0.5" stopColor={colors.board} />
-          <Stop offset="1" stopColor={colors.woodDark} />
+          <Stop offset="0" stopColor={palette.light} />
+          <Stop offset="0.5" stopColor={palette.base} />
+          <Stop offset="1" stopColor={palette.dark} />
         </LinearGradient>
         <ClipPath id={`${id}clip`}>
           <Rect x={0} y={0} width={100} height={100} rx={3} />
@@ -79,26 +80,28 @@ export function Wood({ grooves }: { grooves: readonly Groove[] }) {
           <Path
             key={i}
             d={g.d}
-            stroke={g.dark ? colors.woodGrain : colors.woodLight}
+            stroke={g.dark ? palette.grain : palette.light}
             strokeWidth={g.width}
             opacity={g.opacity}
             fill="none"
           />
         ))}
         {/* A knot, off to one side. */}
-        <G fill="none" stroke={colors.woodGrain}>
-          {[4.5, 3.2, 2, 0.9].map((r, i) => (
-            <Ellipse
-              key={r}
-              cx={78}
-              cy={22}
-              rx={r * 1.6}
-              ry={r}
-              strokeWidth={0.35}
-              opacity={0.12 + i * 0.05}
-            />
-          ))}
-        </G>
+        {palette.knot && (
+          <G fill="none" stroke={palette.grain}>
+            {[4.5, 3.2, 2, 0.9].map((r, i) => (
+              <Ellipse
+                key={r}
+                cx={78}
+                cy={22}
+                rx={r * 1.6}
+                ry={r}
+                strokeWidth={0.35}
+                opacity={0.12 + i * 0.05}
+              />
+            ))}
+          </G>
+        )}
       </G>
       {/* The frame: a darker rim with a lit inner edge. */}
       <Rect
@@ -108,7 +111,7 @@ export function Wood({ grooves }: { grooves: readonly Groove[] }) {
         height={98.4}
         rx={2.6}
         fill="none"
-        stroke={colors.woodFrame}
+        stroke={palette.frame}
         strokeWidth={1.6}
       />
       <Rect
@@ -118,7 +121,7 @@ export function Wood({ grooves }: { grooves: readonly Groove[] }) {
         height={95.6}
         rx={1.8}
         fill="none"
-        stroke={colors.woodLight}
+        stroke={palette.light}
         strokeWidth={0.4}
         opacity={0.6}
       />
@@ -130,7 +133,7 @@ export function Wood({ grooves }: { grooves: readonly Groove[] }) {
           y1={g.y1 + 0.4}
           x2={g.x2 + 0.3}
           y2={g.y2 + 0.4}
-          stroke={colors.woodLight}
+          stroke={palette.lit}
           strokeWidth={0.55}
           strokeLinecap="round"
           opacity={0.8}
@@ -143,7 +146,7 @@ export function Wood({ grooves }: { grooves: readonly Groove[] }) {
           y1={g.y1}
           x2={g.x2}
           y2={g.y2}
-          stroke={colors.boardLine}
+          stroke={palette.line}
           strokeWidth={0.9}
           strokeLinecap="round"
         />
@@ -153,11 +156,11 @@ export function Wood({ grooves }: { grooves: readonly Groove[] }) {
 }
 
 /** An empty point: a small hole drilled where lines meet. */
-export function Hole() {
+export function Hole({ palette }: { palette: BoardPalette }) {
   return (
     <>
-      <Circle cx={50} cy={51.5} r={7.5} fill={colors.woodLight} opacity={0.7} />
-      <Circle cx={50} cy={50} r={7} fill={colors.boardLine} />
+      <Circle cx={50} cy={51.5} r={7.5} fill={palette.lit} opacity={0.7} />
+      <Circle cx={50} cy={50} r={7} fill={palette.line} />
     </>
   );
 }
