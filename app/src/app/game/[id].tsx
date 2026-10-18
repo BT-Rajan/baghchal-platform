@@ -3,11 +3,16 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
+import { annotate } from '@/analysis/format';
+import { useAnalysis } from '@/analysis/hooks';
 import type { Game } from '@/api/endpoints';
 import { describeError } from '@/api/errors';
 import { useApi, useMe } from '@/auth/session';
+import { has } from '@/billing/format';
+import { useMyPlan } from '@/billing/hooks';
 import { Button } from '@/components/Button';
 import { Card, SectionTitle } from '@/components/Card';
+import { AnalysisPanel } from '@/components/game/AnalysisPanel';
 import { Board } from '@/components/game/Board';
 import { GameActions } from '@/components/game/GameActions';
 import { MoveList } from '@/components/game/MoveList';
@@ -50,6 +55,10 @@ export default function GameScreen() {
   const [soundOn, setSoundOn] = useSoundSetting();
   useMoveSounds(game, soundOn);
   const [ending, dismissEnding] = useEnding(game, me.id, soundOn);
+  const plan = useMyPlan();
+  const allowed = plan.data === undefined ? undefined : has(plan.data, 'analysis');
+  const reviewable = game?.status === 'finished' && game.ply > 0;
+  const analysis = useAnalysis(id, reviewable && allowed === true);
 
   if (game === undefined) {
     return (
@@ -104,6 +113,15 @@ export default function GameScreen() {
           {`Goats to place: ${position.inHand} · Goats captured: ${position.captured} of 5`}
         </Text>
       )}
+      {reviewable && (
+        <AnalysisPanel
+          game={game}
+          allowed={allowed}
+          analysis={analysis}
+          ply={ply}
+          onShow={setShown}
+        />
+      )}
       {soundSupported() && game.status === 'active' && (
         <Button
           title={soundOn ? 'Turn sounds off' : 'Turn sounds on'}
@@ -144,7 +162,7 @@ export default function GameScreen() {
         />
       )}
       <SectionTitle>Moves</SectionTitle>
-      <MoveList moves={game.moves} />
+      <MoveList moves={annotate(game.moves, analysis.data?.moves ?? [])} />
     </View>
   );
 

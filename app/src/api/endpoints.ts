@@ -36,6 +36,9 @@ export type MyPlan = S['MyPlanOut'];
 export type PlayerPlan = S['PlayerPlanOut'];
 export type Grant = S['GrantOut'];
 export type GrantRequest = S['GrantIn'];
+export type Analysis = S['AnalysisOut'];
+export type MoveReview = S['MoveReviewOut'];
+export type Verdict = S['MoveReviewOut']['verdict'];
 
 export type ChallengeAnswer = 'accept' | 'decline' | 'cancel';
 export type GameAction = 'resign' | 'abort' | 'claim-abandonment';
@@ -101,6 +104,9 @@ export function createApi(client: Client, transport: Transport) {
       client.post<Game>(`${V1}/games/${seg(id)}/moves`, { body: { ply, move } }),
     gameAction: (id: string, action: GameAction) =>
       client.post<Game>(`${V1}/games/${seg(id)}/${action}`),
+    analysis: (id: string, signal?: AbortSignal) =>
+      client.get<Analysis>(`${V1}/games/${seg(id)}/analysis`, { signal }),
+    analyse: (id: string) => client.post<Analysis>(`${V1}/games/${seg(id)}/analysis`),
 
     // Blocking
     blocks: (signal?: AbortSignal) => client.get<Player[]>(`${V1}/blocks`, { signal }),

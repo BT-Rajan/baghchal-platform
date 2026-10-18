@@ -58,8 +58,10 @@ Each phase ships complete — tested, documented and reviewed — before the nex
 9. **Plans** — Free, Plus and Pro ([below](#plans)):
    - ✅ Plans, features, admin grants (a plan or one feature, for a while or for good) and the
      Hard computer and full history behind Plus.
-   - Next: post-game analysis; themes, sound packs and badges; Razorpay payments; private rooms,
-     tournaments and the trainer for Pro.
+   - ✅ **Post-game analysis**: the engine reviews every move of a finished game (best, good,
+     inaccuracy, mistake, blunder, with its own choice), 5 new games a day on Plus.
+   - Next: themes, sound packs and badges; Razorpay payments; private rooms, tournaments and the
+     trainer for Pro.
 
 ## Development
 Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
@@ -148,6 +150,7 @@ and the Caddyfile.
 | GET | `/api/v1/games/{id}` | A game: position, moves, legal moves, clocks, result; finished games add every position, for replay |
 | POST | `/api/v1/games/{id}/moves` | Play `{"ply": n, "move": "a1-b2"}` (`ply` = moves you have seen) |
 | POST | `/api/v1/games/{id}/resign`, `/abort`, `/claim-abandonment` | End the game (see [rules](docs/rules.md#live-play-platform-rules)) |
+| GET, POST | `/api/v1/games/{id}/analysis` | Plus and Pro: a finished game's analysis; `POST` works it out if nobody has yet (counts against today's allowance) |
 | GET | `/api/v1/plans` | Free, Plus and Pro: features and prices |
 | GET | `/api/v1/me/plan` | My plan, my features, and the grants behind them |
 | GET | `/api/v1/admin/players/{username}/plan` | Admins: a player's plan and every grant |
@@ -191,7 +194,7 @@ for everyone.
 | Live and rated games, quick pairing | ✅ | ✅ | ✅ |
 | The computer | Easy, Medium | + Hard | + Hard |
 | History and replay | Last 30 days | Everything | Everything |
-| Post-game analysis *(coming)* | — | 5 a day | Unlimited |
+| Post-game analysis | — | 5 new games a day | Unlimited |
 | Themes, sound packs, badge *(coming)* | — | ✅ | ✅ |
 | Private rooms, tournaments, trainer *(coming)* | — | — | ✅ |
 
@@ -199,3 +202,11 @@ A player's features are their plan's plus whatever admins have **granted**. Admi
 or one feature for 7, 30, 90 or 365 days or until revoked, always with a reason; the player is
 emailed, and grants and revocations go in the player's moderation log. Admins do this on a
 player's moderation page in the app, or through `/api/v1/admin/…`.
+
+**Post-game analysis** (`engine/src/baghchal_engine/review.py`): for each move of a finished
+game, the engine searches every legal move (depth 3, up to 0.25 s a position, in the computer
+players' worker processes) and compares the played move with its best. The loss, in the
+evaluation's units (1,000 is a goat), gives the verdict: best, good (≤ 60), inaccuracy (≤ 200),
+mistake (≤ 700) or blunder. A game is analysed once and kept; anyone with the feature can read it without using
+their allowance. Plus has 5 new analyses a day (UTC); Pro, or the feature granted on its own,
+has no limit. Live games are never analysed.

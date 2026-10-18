@@ -1081,6 +1081,86 @@
         }
       }
     },
+    "/api/v1/games/{game_id}/analysis": {
+      "get": {
+        "summary": "Game Analysis",
+        "description": "A finished game's analysis, once someone has asked for it (Plus and Pro).",
+        "operationId": "game_analysis_api_v1_games__game_id__analysis_get",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Analyse Game",
+        "description": "Analyse a finished game: each move against the engine's choice. Plus: 5 new games a\nday; Pro: no limit. A game already analysed costs nothing.",
+        "operationId": "analyse_game_api_v1_games__game_id__analysis_post",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/games/{game_id}/resign": {
       "post": {
         "summary": "Resign",
@@ -1816,6 +1896,46 @@
           "revoke"
         ],
         "title": "ActionKind"
+      },
+      "AnalysisOut": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id"
+          },
+          "moves": {
+            "items": {
+              "$ref": "#/components/schemas/MoveReviewOut"
+            },
+            "type": "array",
+            "title": "Moves"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "left_today": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Today"
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_id",
+          "moves",
+          "created_at",
+          "left_today"
+        ],
+        "title": "AnalysisOut"
       },
       "Category": {
         "type": "string",
@@ -3186,6 +3306,60 @@
           "move"
         ],
         "title": "MoveIn"
+      },
+      "MoveReviewOut": {
+        "properties": {
+          "ply": {
+            "type": "integer",
+            "title": "Ply"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "goat",
+              "tiger"
+            ],
+            "title": "Side"
+          },
+          "move": {
+            "type": "string",
+            "title": "Move"
+          },
+          "best": {
+            "type": "string",
+            "title": "Best"
+          },
+          "loss": {
+            "type": "integer",
+            "title": "Loss"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "best",
+              "good",
+              "inaccuracy",
+              "mistake",
+              "blunder"
+            ],
+            "title": "Verdict"
+          },
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ply",
+          "side",
+          "move",
+          "best",
+          "loss",
+          "verdict",
+          "score"
+        ],
+        "title": "MoveReviewOut"
       },
       "MyPlanOut": {
         "properties": {

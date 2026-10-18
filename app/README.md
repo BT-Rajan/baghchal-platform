@@ -91,6 +91,9 @@ scripts/        the Expo-cloud guardrail
 - **Plans.** Me → Your plan shows Free, Plus or Pro and leads to the plans. Paid features are
   shown with what unlocks them (Hard in the computer picker, the 30-day history note) rather
   than hidden. Admins grant and revoke plans and features on a player's moderation page.
+- **Analysis.** A finished game has an Analysis section: "Analyse this game" (Plus and Pro;
+  Free sees what Plus adds), then the verdict on the move being replayed with the engine's
+  choice, "Next mistake", each side's tally, and ?!, ? and ?? marks in the move list.
 - **Reports and moderation.** "Report" on a profile or a finished game sends a report (with
   the game). Moderators see Me → Moderation: the report queue and each player's record, where
   they suspend, ban, lift a suspension, rename and dismiss reports, always with a reason.

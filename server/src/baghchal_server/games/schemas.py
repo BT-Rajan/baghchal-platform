@@ -112,3 +112,25 @@ class GameSummaryOut(BaseModel):
     rating_change: int | None
     moves: int
     finished_at: datetime
+
+
+class MoveReviewOut(BaseModel):
+    ply: int
+    side: SideName
+    move: str
+    best: str
+    """The engine's choice; the played move when it was as good."""
+    loss: int
+    """How much worse than the best move, for its player (a goat is 1,000)."""
+    verdict: Literal["best", "good", "inaccuracy", "mistake", "blunder"]
+    score: int
+    """The position before the move with best play, from the tigers' side (positive: tigers
+    better), within ±5,000."""
+
+
+class AnalysisOut(BaseModel):
+    game_id: uuid.UUID
+    moves: list[MoveReviewOut]
+    created_at: datetime
+    left_today: int | None
+    """Analyses of new games left today for the asking player; None: no limit."""

@@ -97,6 +97,8 @@ async def app(settings: Settings, mailer: MemoryMailer, clock: Clock) -> AsyncIt
         state: AppState = app.state.ctx
         async with state.engine.begin() as conn:
             for table in (
+                "analysis_uses",
+                "analyses",
                 "active_games",
                 "game_moves",
                 "games",

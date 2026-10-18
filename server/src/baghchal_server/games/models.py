@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import Boolean, ForeignKey, Index, Integer, String, Uuid
+from sqlalchemy import JSON, Boolean, ForeignKey, Index, Integer, String, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from baghchal_server.db import MYSQL_TABLE_ARGS, Base, UTCDateTime
@@ -136,3 +136,32 @@ class ActiveGame(Base):
     game_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("games.id", ondelete="CASCADE"), index=True
     )
+
+
+class Analysis(Base):
+    """The engine's review of a finished game, kept so it is worked out once."""
+
+    __tablename__ = "analyses"
+    __table_args__ = MYSQL_TABLE_ARGS
+
+    game_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("games.id", ondelete="CASCADE"), primary_key=True
+    )
+    moves: Mapped[list[dict[str, object]]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime)
+
+
+class AnalysisUse(Base):
+    """A player had a game analysed: what the daily allowance counts."""
+
+    __tablename__ = "analysis_uses"
+    __table_args__ = (
+        UniqueConstraint("user_id", "game_id", name="uq_analysis_uses_user_id_game_id"),
+        Index("ix_analysis_uses_user_id_created_at", "user_id", "created_at"),
+        MYSQL_TABLE_ARGS,
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"))
+    game_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("games.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime)
