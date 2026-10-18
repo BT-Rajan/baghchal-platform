@@ -13,7 +13,8 @@ import { GameActions } from '@/components/game/GameActions';
 import { MoveList } from '@/components/game/MoveList';
 import { PlayerBar } from '@/components/game/PlayerBar';
 import { soundSupported } from '@/components/game/sound';
-import { useMoveSounds, useSoundSetting } from '@/components/game/useMoveSounds';
+import { useEnding, useMoveSounds, useSoundSetting } from '@/components/game/useMoveSounds';
+import { Victory } from '@/components/game/Victory';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
@@ -48,6 +49,7 @@ export default function GameScreen() {
   const game = query.data;
   const [soundOn, setSoundOn] = useSoundSetting();
   useMoveSounds(game, soundOn);
+  const [ending, dismissEnding] = useEnding(game, me.id, soundOn);
 
   if (game === undefined) {
     return (
@@ -154,6 +156,7 @@ export default function GameScreen() {
           {layout !== 'short' && opponentBar}
           <View style={[styles.boardBox, { maxWidth: boardSize(layout, width, height) }]}>
             {board}
+            {ending !== null && <Victory ending={ending} onClose={dismissEnding} />}
           </View>
           {layout !== 'short' && myBar}
         </View>

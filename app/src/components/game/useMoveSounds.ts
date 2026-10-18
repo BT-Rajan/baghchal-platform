@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { Game } from '@/api/endpoints';
+import { sideOf } from '@/game/describe';
+import { endingFor, type Ending } from '@/game/ending';
 import { soundFor } from '@/game/sounds';
 
 import { playSound } from './sound';
@@ -37,4 +39,34 @@ export function useMoveSounds(game: Game | undefined, enabled: boolean) {
     const sound = soundFor(before, game.ply, game.moves);
     if (enabled && sound !== null) playSound(sound);
   }, [game, enabled]);
+}
+
+/**
+ * The ending to celebrate when the game finishes while it is on screen (not when a finished game
+ * is opened), with a fanfare or a lament once the last move's sound has played. `dismiss` hides
+ * it.
+ */
+export function useEnding(
+  game: Game | undefined,
+  myId: string,
+  soundOn: boolean,
+): [Ending | null, () => void] {
+  const [seen, setSeen] = useState<{ id: string; status: string } | null>(null);
+  const [ending, setEnding] = useState<Ending | null>(null);
+  // Compare with what was last seen while rendering, so the ending shows with the final position.
+  if (game !== undefined && (seen?.id !== game.id || seen.status !== game.status)) {
+    const sameGame = seen?.id === game.id;
+    setSeen({ id: game.id, status: game.status });
+    const next = endingFor(sameGame ? seen.status : null, game, sideOf(game, myId));
+    if (next !== null || !sameGame) setEnding(next);
+  }
+  const played = useRef<Ending | null>(null);
+  useEffect(() => {
+    if (ending === null || played.current === ending || !soundOn) return;
+    played.current = ending;
+    const timer = setTimeout(() => playSound(ending.won === false ? 'loss' : 'win'), 500);
+    return () => clearTimeout(timer);
+  }, [ending, soundOn]);
+  const dismiss = useCallback(() => setEnding(null), []);
+  return [ending, dismiss];
 }
