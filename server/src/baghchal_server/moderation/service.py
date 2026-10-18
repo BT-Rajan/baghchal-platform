@@ -285,7 +285,7 @@ async def suspend(  # noqa: PLR0913 - who, for how long, and why
     )
     return closed, Mail(
         target.email,
-        "Your Bagh Chal account has been suspended",
+        "Your ClawPlay account has been suspended",
         f"Hello {target.username},\n\nYour account has been {how_long}.\n\nReason: {reason}\n\n"
         "If you think this is a mistake, reply to this email.",
     )
@@ -304,7 +304,7 @@ async def unsuspend(
     await db.commit()
     return Mail(
         target.email,
-        "Your Bagh Chal account is active again",
+        "Your ClawPlay account is active again",
         f"Hello {target.username},\n\nYour suspension has been lifted; you can sign in and play "
         "again.",
     )
@@ -341,7 +341,7 @@ async def rename(  # noqa: PLR0913 - who, the new name, and why
     await db.commit()
     return Mail(
         target.email,
-        "Your Bagh Chal username was changed",
+        "Your ClawPlay username was changed",
         f"Hello,\n\nA moderator changed your username from {old} to {username}.\n\n"
         f"Reason: {reason}\n\nSign in with {username} or your email address from now on.",
     )

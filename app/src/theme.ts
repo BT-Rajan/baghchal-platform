@@ -33,6 +33,14 @@ export const colors = {
   goatInk: '#5a4b3a',
   highlight: '#2f7d6d',
   lastMove: 'rgba(47, 125, 109, 0.22)',
+  /** ClawPlay brand (components/brand/Logo.tsx). */
+  brand: '#e2711d',
+  brandLight: '#ffb347',
+  brandDark: '#a8400c',
+  /** "Play" in the wordmark on light backgrounds: 4.6:1 on the page background. */
+  brandDeep: '#b44d17',
+  brandInk: '#2a1608',
+  brandCream: '#fff3df',
   /** Keyboard focus ring (web). */
   focus: '#1f5fbf',
 } as const;

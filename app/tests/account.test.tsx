@@ -127,7 +127,7 @@ describe('downloading my data', () => {
     await press('Download my data');
     await waitFor(() =>
       expect(share).toHaveBeenCalledWith({
-        title: 'baghchal-alice.json',
+        title: 'clawplay-alice.json',
         message: JSON.stringify(data, null, 2),
       }),
     );

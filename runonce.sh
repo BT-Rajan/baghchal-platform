@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sets up Bagh Chal to run under pm2 as "bhagchal2": settings, the MariaDB database, the
+# Sets up ClawPlay (Bagh Chal) to run under pm2 as "bhagchal2": settings, the MariaDB database, the
 # server's Python environment, database migrations and the web app build.
 # Run it once, and again after every update (git pull); it is safe to repeat.
 # Then: ./start.sh and ./stop.sh.
@@ -55,7 +55,7 @@ SMTP_HOST=
 SMTP_PORT=587
 SMTP_USERNAME=
 SMTP_PASSWORD=
-MAIL_FROM='Bagh Chal <no-reply@localhost>'
+MAIL_FROM='ClawPlay <no-reply@localhost>'
 EOF
 fi
 # shellcheck source=/dev/null

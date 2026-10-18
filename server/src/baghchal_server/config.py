@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     """Argon2id uses 64 MiB per hash; this caps memory and CPU spent on hashing at once."""
 
     mail_backend: Literal["console", "memory", "smtp"] = "console"
-    mail_from: str = "Bagh Chal <no-reply@localhost>"
+    mail_from: str = "ClawPlay <no-reply@localhost>"
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_username: str = ""

@@ -35,7 +35,7 @@ export default function VerifyEmail() {
 
   if (!valid || verify.isError) {
     return (
-      <Screen title="Confirm your email">
+      <Screen title="Confirm your email" brand>
         <Notice tone="error">
           {valid ? describeError(verify.error) : 'This link is invalid or has expired.'}
         </Notice>
@@ -45,7 +45,7 @@ export default function VerifyEmail() {
     );
   }
   return (
-    <Screen title="Confirming your email…">
+    <Screen title="Confirming your email…" brand>
       <ActivityIndicator color={colors.accent} size="large" />
     </Screen>
   );

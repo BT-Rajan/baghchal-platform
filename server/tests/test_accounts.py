@@ -133,7 +133,7 @@ async def test_registering_a_known_email_does_not_reveal_it(
     )
     assert r.status_code == 202
     assert r.json() == {"status": "accepted"}
-    assert mailer.outbox[-1].subject == "You already have a Bagh Chal account"
+    assert mailer.outbox[-1].subject == "You already have a ClawPlay account"
     assert [u.username for u in await _users(app)] == ["alice"]
 
 
@@ -373,7 +373,7 @@ async def test_password_reset(
 
     r = await client.post(RESET, json={"email": "ALICE@example.com"})
     assert r.status_code == 202
-    assert mailer.outbox[-1].subject == "Reset your Bagh Chal password"
+    assert mailer.outbox[-1].subject == "Reset your ClawPlay password"
     token = last_token(mailer)
 
     new_password = "a brand new passphrase"

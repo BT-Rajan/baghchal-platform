@@ -34,7 +34,7 @@ export default function SignUp() {
 
   if (register.isSuccess) {
     return (
-      <Screen title="Check your email">
+      <Screen title="Check your email" brand>
         <Notice tone="success">
           {`We sent a link to ${email.trim()}. Open it to finish creating your account.`}
         </Notice>
@@ -44,7 +44,7 @@ export default function SignUp() {
   }
 
   return (
-    <Screen title="Create an account">
+    <Screen title="Create an account" brand>
       {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
       <TextField
         label="Username"

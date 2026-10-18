@@ -31,7 +31,7 @@ export default function ResetPassword() {
 
   if (!isLinkToken(token)) {
     return (
-      <Screen title="Choose a new password">
+      <Screen title="Choose a new password" brand>
         <Notice tone="error">This link is invalid or has expired.</Notice>
         <TextLink href="/forgot-password">Request a new link</TextLink>
       </Screen>
@@ -40,7 +40,7 @@ export default function ResetPassword() {
 
   if (reset.isSuccess) {
     return (
-      <Screen title="Password changed">
+      <Screen title="Password changed" brand>
         <Notice tone="success">
           Your password has been changed and you have been signed out everywhere.
         </Notice>
@@ -55,7 +55,7 @@ export default function ResetPassword() {
   };
 
   return (
-    <Screen title="Choose a new password">
+    <Screen title="Choose a new password" brand>
       {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
       <TextField
         label="New password"
