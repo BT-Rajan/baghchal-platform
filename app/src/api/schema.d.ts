@@ -870,6 +870,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Payments
+         * @description Whether payments are taken, and mine (paid or failed), newest first.
+         */
+        get: operations["my_payments_api_v1_me_payments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Checkout
+         * @description Start buying a plan for a month or a year: an order to pay with Razorpay Checkout.
+         */
+        post: operations["checkout_api_v1_payments_checkout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify
+         * @description Confirm a payment from what Checkout handed the browser, and give the plan.
+         */
+        post: operations["verify_api_v1_payments_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -992,6 +1052,41 @@ export interface components {
          * @enum {string}
          */
         ChallengeStatus: "pending" | "accepted" | "declined" | "cancelled" | "expired";
+        /** CheckoutIn */
+        CheckoutIn: {
+            /**
+             * Plan
+             * @enum {string}
+             */
+            plan: "plus" | "pro";
+            period: components["schemas"]["Period"];
+        };
+        /**
+         * CheckoutOut
+         * @description What Razorpay Checkout needs to take the payment.
+         */
+        CheckoutOut: {
+            /** Key Id */
+            key_id: string;
+            /** Order Id */
+            order_id: string;
+            /** Amount Paise */
+            amount_paise: number;
+            /**
+             * Currency
+             * @default INR
+             * @constant
+             */
+            currency: "INR";
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Email */
+            email: string;
+            /** Username */
+            username: string;
+        };
         /** ClocksOut */
         ClocksOut: {
             /** Goat Ms */
@@ -1327,6 +1422,8 @@ export interface components {
             revoked_at: string | null;
             /** Active */
             active: boolean;
+            /** Paid */
+            paid: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1505,6 +1602,49 @@ export interface components {
              */
             email: string;
         };
+        /** PaymentOut */
+        PaymentOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Plan
+             * @enum {string}
+             */
+            plan: "plus" | "pro";
+            period: components["schemas"]["Period"];
+            /** Amount Paise */
+            amount_paise: number;
+            status: components["schemas"]["PaymentStatus"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Paid At */
+            paid_at: string | null;
+            /** Until */
+            until: string | null;
+        };
+        /**
+         * PaymentStatus
+         * @enum {string}
+         */
+        PaymentStatus: "created" | "paid" | "failed";
+        /** PaymentsOut */
+        PaymentsOut: {
+            /** Enabled */
+            enabled: boolean;
+            /** Payments */
+            payments: components["schemas"]["PaymentOut"][];
+        };
+        /**
+         * Period
+         * @enum {string}
+         */
+        Period: "month" | "year";
         /**
          * PieceSet
          * @enum {string}
@@ -1795,6 +1935,18 @@ export interface components {
              * @enum {string}
              */
             transport: "cookie" | "bearer";
+        };
+        /**
+         * VerifyIn
+         * @description What Razorpay Checkout hands the browser once the player has paid.
+         */
+        VerifyIn: {
+            /** Order Id */
+            order_id: string;
+            /** Payment Id */
+            payment_id: string;
+            /** Signature */
+            signature: string;
         };
         /** ChallengeEvent */
         ChallengeEvent: {
@@ -3369,6 +3521,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AppearanceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_payments_api_v1_me_payments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentsOut"];
+                };
+            };
+        };
+    };
+    checkout_api_v1_payments_checkout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckoutIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckoutOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_api_v1_payments_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentOut"];
                 };
             };
             /** @description Validation Error */

@@ -23,6 +23,7 @@ test('keys are stable and distinct', () => {
     queryKeys.playerGames('x'),
     queryKeys.analysis('x'),
     queryKeys.appearance,
+    queryKeys.payments,
   ].map((key) => JSON.stringify(key));
   expect(new Set(all).size).toBe(all.length);
 });

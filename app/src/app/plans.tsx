@@ -1,19 +1,25 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { MyPlan, PlanInfo } from '@/api/endpoints';
+import type { MyPlan, Period, PlanInfo } from '@/api/endpoints';
 import { myPlanText, PLAN_NAMES, planLines, priceText } from '@/billing/format';
 import { useMyPlan, usePlans } from '@/billing/hooks';
-import { Card, Hint } from '@/components/Card';
+import { Button } from '@/components/Button';
+import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
+import { buyErrorText, buyLabel, paymentText, thanksText } from '@/payments/format';
+import { useBuy, usePayments } from '@/payments/hooks';
 import { colors, radius, spacing } from '@/theme';
 
 /** Free, Plus and Pro side by side, with what each includes and costs. */
 export default function Plans() {
   const plans = usePlans();
   const mine = useMyPlan();
-  const error = plans.error ?? mine.error;
+  const payments = usePayments();
+  const buy = useBuy();
+  const error = plans.error ?? mine.error ?? payments.error;
+  const buyError = buy.error === null ? null : buyErrorText(buy.error);
   return (
     <Screen title="ClawPlay plans" align="top" wide>
       {error !== null ? (
@@ -22,37 +28,79 @@ export default function Plans() {
           onRetry={() => {
             void plans.refetch();
             void mine.refetch();
+            void payments.refetch();
           }}
         />
-      ) : plans.data === undefined || mine.data === undefined ? (
+      ) : plans.data === undefined || mine.data === undefined || payments.data === undefined ? (
         <Loading label="Loading the plans" />
       ) : (
         <>
-          <Notice tone="info">{myPlanText(mine.data)}</Notice>
+          {buy.data !== undefined ? (
+            <Notice tone="success">{thanksText(buy.data)}</Notice>
+          ) : (
+            <Notice tone="info">{myPlanText(mine.data)}</Notice>
+          )}
+          {buyError !== null && <Notice tone="error">{buyError}</Notice>}
           <Hint>
             Everyone plays live games, rated matches and quick pairing for free. Ratings can never
             be bought: paid plans add extras, not advantages.
           </Hint>
           <View style={styles.grid}>
-            {plans.data.map((plan, i) => (
-              <PlanColumn
-                key={plan.plan}
-                plan={plan}
-                lines={planLines(plans.data, i)}
-                mine={mine.data}
-              />
-            ))}
+            {plans.data.map((plan, i) => {
+              const paid = plan.plan === 'free' ? null : plan.plan;
+              return (
+                <PlanColumn
+                  key={plan.plan}
+                  plan={plan}
+                  lines={planLines(plans.data, i)}
+                  mine={mine.data}
+                  onBuy={
+                    payments.data.enabled && paid !== null
+                      ? (period) => buy.mutate({ plan: paid, period })
+                      : null
+                  }
+                  buying={buy.isPending}
+                />
+              );
+            })}
           </View>
           <Hint>
-            Paying online is coming soon. Until then, ClawPlay can add a plan to your account.
+            {payments.data.enabled
+              ? 'Payments are taken by Razorpay: cards, UPI, net banking and wallets. Plans are paid in advance for a month or a year and never renew by themselves; buying again adds on to the time you have.'
+              : 'Paying online is coming soon. Until then, ClawPlay can add a plan to your account.'}
           </Hint>
+          {payments.data.payments.length > 0 && (
+            <>
+              <SectionTitle>Your payments</SectionTitle>
+              <Card>
+                {payments.data.payments.map((p) => (
+                  <Text key={p.id} style={styles.feature}>
+                    {paymentText(p)}
+                  </Text>
+                ))}
+              </Card>
+            </>
+          )}
         </>
       )}
     </Screen>
   );
 }
 
-function PlanColumn({ plan, lines, mine }: { plan: PlanInfo; lines: string[]; mine: MyPlan }) {
+function PlanColumn({
+  plan,
+  lines,
+  mine,
+  onBuy,
+  buying,
+}: {
+  plan: PlanInfo;
+  lines: string[];
+  mine: MyPlan;
+  /** Null where this plan cannot be bought (Free, or payments off). */
+  onBuy: ((period: Period) => void) | null;
+  buying: boolean;
+}) {
   const current = plan.plan === mine.plan;
   return (
     <View
@@ -80,6 +128,17 @@ function PlanColumn({ plan, lines, mine }: { plan: PlanInfo; lines: string[]; mi
         {plan.analyses_per_day !== null && plan.analyses_per_day > 0 && (
           <Text style={styles.muted}>{`Game analysis: ${plan.analyses_per_day} a day`}</Text>
         )}
+        {onBuy !== null &&
+          (['month', 'year'] as const).map((period) => (
+            <Button
+              key={period}
+              title={`Buy ClawPlay ${PLAN_NAMES[plan.plan]} for a ${period}`}
+              label={buyLabel(plan, period)}
+              variant={period === 'year' ? 'primary' : 'secondary'}
+              disabled={buying}
+              onPress={() => onBuy(period)}
+            />
+          ))}
       </Card>
     </View>
   );

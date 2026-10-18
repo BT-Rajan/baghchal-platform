@@ -25,6 +25,7 @@ const grant = (overrides: Partial<Grant> = {}): Grant => ({
   created_at: '2026-01-01T12:00:00Z',
   revoked_at: null,
   active: true,
+  paid: false,
   ...overrides,
 });
 
@@ -53,6 +54,16 @@ test('features, and the ones still being built', () => {
 
 test('grants in words', () => {
   expect(grantText(grant())).toBe('ClawPlay Pro · until 31 Jan 2026 · given by boss: Welcome gift');
+  expect(
+    grantText(
+      grant({
+        plan: 'plus',
+        paid: true,
+        granted_by: null,
+        reason: 'Paid ₹149 for a month (pay_1)',
+      }),
+    ),
+  ).toBe('ClawPlay Plus · until 31 Jan 2026 · Paid ₹149 for a month (pay_1)');
   expect(grantText(grant({ plan: null, feature: 'themes', ends_at: null }))).toBe(
     'Board and coin themes, and sound packs · until revoked · given by boss: Welcome gift',
   );

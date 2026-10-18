@@ -57,7 +57,10 @@ export function myPlanText(mine: MyPlan, who: string | null = null): string {
   return `${who ?? 'You'} ${who === null ? 'have' : 'has'} ClawPlay ${PLAN_NAMES[mine.plan]}${until}.`;
 }
 
-/** "ClawPlay Pro · until 18 Jan 2027 · given by boss: Welcome gift" */
+/**
+ * "ClawPlay Pro · until 18 Jan 2027 · given by boss: Welcome gift", or for a bought plan
+ * "ClawPlay Plus · until 17 Nov 2026 · Paid ₹149 for a month (pay_…)".
+ */
 export function grantText(grant: Grant): string {
   const what =
     grant.plan !== null
@@ -71,7 +74,9 @@ export function grantText(grant: Grant): string {
       : grant.ends_at === null
         ? 'until revoked'
         : `${grant.active ? 'until' : 'ended'} ${dayText(grant.ends_at)}`;
-  return `${what} · ${when} · given by ${grant.granted_by ?? 'a former admin'}: ${grant.reason}`;
+  return grant.paid
+    ? `${what} · ${when} · ${grant.reason}`
+    : `${what} · ${when} · given by ${grant.granted_by ?? 'a former admin'}: ${grant.reason}`;
 }
 
 /**

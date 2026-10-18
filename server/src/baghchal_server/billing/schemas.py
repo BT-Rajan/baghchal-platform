@@ -31,6 +31,8 @@ class GrantOut(BaseModel):
     created_at: datetime
     revoked_at: datetime | None
     active: bool
+    paid: bool
+    """Bought by the player (see ``payments``), rather than given by an admin."""
 
 
 class MyPlanOut(BaseModel):

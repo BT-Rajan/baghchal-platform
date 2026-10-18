@@ -16,6 +16,7 @@ from baghchal_server.config import Settings
 from baghchal_server.errors import AppError
 from baghchal_server.mail import Mailer
 from baghchal_server.metrics import Metrics
+from baghchal_server.payments.gateway import Gateway
 from baghchal_server.ratelimit import Limit, RateLimiter
 from baghchal_server.realtime.hub import Hub
 from baghchal_server.realtime.presence import Presence
@@ -39,6 +40,8 @@ class AppState:
     presence: Presence
     metrics: Metrics
     computer: "ComputerPlayers"
+    gateway: Gateway | None
+    """Razorpay, when payments are configured."""
 
 
 def get_state(request: Request) -> AppState:

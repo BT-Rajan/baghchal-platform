@@ -19,6 +19,7 @@ from baghchal_server.billing.schemas import GrantIn, GrantOut, MyPlanOut, Player
 from baghchal_server.errors import AppError
 from baghchal_server.mail import Mail
 from baghchal_server.moderation.models import ActionKind, ModerationAction
+from baghchal_server.payments.models import Payment
 
 
 @dataclass(frozen=True)
@@ -106,6 +107,11 @@ async def _out(db: AsyncSession, grants: list[Grant], now: datetime) -> list[Gra
     names = dict(
         (await db.execute(select(User.id, User.username).where(User.id.in_(admins)))).all()
     )
+    paid = set(
+        await db.scalars(
+            select(Payment.grant_id).where(Payment.grant_id.in_([g.id for g in grants]))
+        )
+    )
     return [
         GrantOut(
             id=g.id,
@@ -118,6 +124,7 @@ async def _out(db: AsyncSession, grants: list[Grant], now: datetime) -> list[Gra
             created_at=g.created_at,
             revoked_at=g.revoked_at,
             active=_active(g, now),
+            paid=g.id in paid,
         )
         for g in grants
     ]

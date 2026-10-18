@@ -56,6 +56,12 @@ SMTP_PORT=587
 SMTP_USERNAME=
 SMTP_PASSWORD=
 MAIL_FROM='ClawPlay <no-reply@localhost>'
+
+# Payments (Razorpay Dashboard -> Account & Settings -> API Keys; and Webhooks, sending to
+# PUBLIC_URL/api/v1/payments/webhook). Empty: "Paying online is coming soon".
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+RAZORPAY_WEBHOOK_SECRET=
 EOF
 fi
 # shellcheck source=/dev/null

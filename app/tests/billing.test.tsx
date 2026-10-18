@@ -100,6 +100,7 @@ describe('admins', () => {
     created_at: '2026-01-01T12:00:00Z',
     revoked_at: null,
     active: true,
+    paid: false,
     ...overrides,
   });
   const bobPlan = (history: Grant[]): PlayerPlan => ({

@@ -44,6 +44,13 @@ export type BoardTheme = S['BoardTheme'];
 export type PieceSet = S['PieceSet'];
 export type SoundPack = S['SoundPack'];
 export type Badge = NonNullable<S['PlayerOut']['badge']>;
+export type Checkout = S['CheckoutOut'];
+export type CheckoutRequest = S['CheckoutIn'];
+export type PaidPlan = S['CheckoutIn']['plan'];
+export type Period = S['Period'];
+export type Payment = S['PaymentOut'];
+export type Payments = S['PaymentsOut'];
+export type PaymentProof = S['VerifyIn'];
 
 export type ChallengeAnswer = 'accept' | 'decline' | 'cancel';
 export type GameAction = 'resign' | 'abort' | 'claim-abandonment';
@@ -147,6 +154,11 @@ export function createApi(client: Client, transport: Transport) {
       client.post<Grant>(`${V1}/admin/players/${seg(username)}/grants`, { body }),
     revokeGrant: (id: string, reason: string) =>
       client.post<Grant>(`${V1}/admin/grants/${seg(id)}/revoke`, { body: { reason } }),
+
+    // Payments
+    payments: (signal?: AbortSignal) => client.get<Payments>(`${V1}/me/payments`, { signal }),
+    checkout: (body: CheckoutRequest) => client.post<Checkout>(`${V1}/payments/checkout`, { body }),
+    verifyPayment: (body: PaymentProof) => client.post<Payment>(`${V1}/payments/verify`, { body }),
 
     // Appearance
     appearance: (signal?: AbortSignal) => client.get<Appearance>(`${V1}/me/appearance`, { signal }),
