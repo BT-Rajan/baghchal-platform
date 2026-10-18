@@ -46,6 +46,27 @@ the session cookie is first-party and needs no CORS.
 The server refuses to start in production with unsafe settings (SQLite, no Redis, no SMTP,
 non-https addresses), and says which.
 
+## A single server with pm2
+
+For a machine that already runs MariaDB and pm2, without Docker:
+
+```sh
+./runonce.sh   # settings (bhagchal2.env), database, server, migrations, web build
+./start.sh     # starts the API and web app as one pm2 app, "bhagchal2"
+./stop.sh      # pm2 stop bhagchal2; other pm2 apps are left alone
+```
+
+`runonce.sh` asks once for the MariaDB password of `app_user` and keeps the settings in
+`bhagchal2.env` (not committed; edit it, then run `runonce.sh` again). Run it again after
+every `git pull` too: it applies migrations and rebuilds the app. Players open port 7070,
+where `deploy/pm2/web.mjs` serves the app and passes `/api` to the API on 127.0.0.1:7071.
+
+This is the server's development mode: no Redis (so one server only) and, unless `SMTP_HOST`
+is set, emails (sign-up links, password resets) only appear in `pm2 logs bhagchal2`. With a
+plain `http://` address the app is built to allow it, so passwords cross the network
+unencrypted: keep it to a network you trust, or put an https proxy in front and set
+`PUBLIC_URL` to the https address.
+
 ## Upgrading
 
 ```bash

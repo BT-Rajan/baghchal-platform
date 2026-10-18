@@ -30,6 +30,12 @@ test.each([
   expect(apiUrlProblem(url, true)).toMatch(problem);
 });
 
+test('plain http on a private network only when the build opts in', () => {
+  expect(apiUrlProblem('http://192.168.1.20:7070', true, true)).toBeNull();
+  expect(apiUrlProblem('http://192.168.1.20:7070', true, false)).toMatch(/must use https/);
+  expect(apiUrlProblem('https://user@192.168.1.20', true, true)).toMatch(/credentials/);
+});
+
 test('credentials and other schemes are refused in development too', () => {
   expect(apiUrlProblem('https://user@api.example.com', false)).toMatch(/credentials/);
   expect(apiUrlProblem('ws://api.example.com', false)).toMatch(/must use https/);
