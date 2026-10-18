@@ -141,7 +141,7 @@ and the Caddyfile.
 | GET | `/api/v1/games/{id}` | A game: position, moves, legal moves, clocks, result; finished games add every position, for replay |
 | POST | `/api/v1/games/{id}/moves` | Play `{"ply": n, "move": "a1-b2"}` (`ply` = moves you have seen) |
 | POST | `/api/v1/games/{id}/resign`, `/abort`, `/claim-abandonment` | End the game (see [rules](docs/rules.md#live-play-platform-rules)) |
-| GET | `/api/v1/leaderboards/{blitz\|rapid}` | Top established players |
+| GET | `/api/v1/leaderboards/{blitz\|rapid}` | Top established players (the app calls these Quick and Standard) |
 | GET | `/api/v1/mod/reports?status=open` | Moderators: the report queue (or closed reports) |
 | POST | `/api/v1/mod/reports/{id}/dismiss` | Moderators: close a report without acting |
 | GET | `/api/v1/mod/players/{username}` | Moderators: a player's standing, reports and moderation log |

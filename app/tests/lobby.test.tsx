@@ -308,9 +308,9 @@ describe('profiles', () => {
       routes: { ...SIGNED_IN, 'GET /api/v1/players/bob': { status: 200, body: PROFILE } },
     });
     expect(await screen.findByText('Online · Joined March 2026')).toBeOnTheScreen();
-    expect(screen.getByLabelText('Blitz rating 1612')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Quick rating 1612')).toBeOnTheScreen();
     expect(screen.getByText('23 games · #3')).toBeOnTheScreen();
-    expect(screen.getByLabelText('Rapid rating 1500?')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Standard rating 1500?')).toBeOnTheScreen();
     expect(screen.getByText('1 game · provisional')).toBeOnTheScreen();
     await press('Challenge bob');
     expect(await screen.findByRole('heading', { name: 'Challenge bob' })).toBeOnTheScreen();
@@ -352,7 +352,7 @@ describe('profiles', () => {
     await screen.findByRole('heading', { name: 'Play' });
     await fireEvent.press(screen.getByRole('button', { name: /^Me, tab/ }));
     expect(await screen.findByText('alice@example.com')).toBeOnTheScreen();
-    expect(await screen.findByLabelText('Blitz rating 1500?')).toBeOnTheScreen();
+    expect(await screen.findByLabelText('Quick rating 1500?')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Challenge alice' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Block alice' })).toBeNull();
     expect(await screen.findByText('You have not blocked anyone.')).toBeOnTheScreen();
@@ -360,7 +360,7 @@ describe('profiles', () => {
 });
 
 describe('leaderboard', () => {
-  test('blitz and rapid tabs', async () => {
+  test('quick and standard tabs', async () => {
     await lobby({
       'GET /api/v1/leaderboards/blitz': {
         status: 200,
@@ -377,7 +377,7 @@ describe('leaderboard', () => {
     expect(screen.getByText('alice (you)')).toBeOnTheScreen();
     expect(screen.getByText('#2')).toBeOnTheScreen();
 
-    await fireEvent.press(screen.getByRole('radio', { name: 'Rapid' }));
+    await fireEvent.press(screen.getByRole('radio', { name: 'Standard' }));
     expect(await screen.findByText(/Nobody is listed yet/)).toBeOnTheScreen();
   });
 

@@ -91,8 +91,9 @@ These rules belong to the platform, not the board; the server enforces them.
   name and the reason.
 
 ## Ratings
-- **Glicko-2**, separately for **blitz** (3+2, 5+3) and **rapid** (10+5, 15+10). Everyone
-  starts at 1500 with deviation 350. Only rated games count; casual games never do.
+- **Glicko-2**, separately for **quick** games (3+2, 5+3) and **standard** games (10+5, 15+10);
+  the API calls them `blitz` and `rapid`. Everyone starts at 1500 with deviation 350. Only
+  rated games count; casual games never do.
 - **Rated games are two-game matches with sides swapped**: game 2 starts automatically when
   game 1 ends, so nobody's rating depends on which side they drew. Each game is rated on its
   own. If game 1 is aborted the match ends; an aborted game is never rated.

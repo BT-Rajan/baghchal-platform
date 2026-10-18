@@ -22,6 +22,7 @@ import {
 test('time controls and categories', () => {
   expect(TIME_CONTROLS.map((tc) => tc.label)).toEqual(['3+2', '5+3', '10+5', '15+10']);
   expect(CATEGORIES.map((c) => c.value)).toEqual(['blitz', 'rapid']);
+  expect(CATEGORIES.map((c) => c.label)).toEqual(['Quick', 'Standard']);
   expect(categoryOf('5+3')).toBe('blitz');
   expect(categoryOf('15+10')).toBe('rapid');
   expect(categoryOf('1+0')).toBeUndefined();

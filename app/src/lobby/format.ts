@@ -17,9 +17,10 @@ export const TIME_CONTROLS: readonly { label: TimeControl; category: Category }[
   { label: '15+10', category: 'rapid' },
 ];
 
+/** Players see Quick and Standard; the API keeps its names, blitz and rapid. */
 export const CATEGORIES: readonly { value: Category; label: string }[] = [
-  { value: 'blitz', label: 'Blitz' },
-  { value: 'rapid', label: 'Rapid' },
+  { value: 'blitz', label: 'Quick' },
+  { value: 'rapid', label: 'Standard' },
 ];
 
 export function categoryOf(timeControl: string): Category | undefined {
