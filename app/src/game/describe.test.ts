@@ -2,6 +2,8 @@ import { ME } from '../../tests/support/fakeServer';
 import { BOB, game } from '../../tests/support/games';
 
 import {
+  isComputer,
+  nameOf,
   lastMoveText,
   matchSummary,
   movePairs,
@@ -94,4 +96,27 @@ test('lastMoveText', () => {
   expect(lastMoveText(game({ moves: ['c3', 'a1-b1', 'c3-c4'] }), 'tiger')).toBe(
     'alice moved c3 to c4.',
   );
+});
+
+test('the computer is named by its level', () => {
+  const computer = { id: 'c1', username: 'computer-hard' };
+  const vsComputer = game({ tiger: computer, computer: 'hard', side_to_move: 'tiger' });
+  expect(isComputer(vsComputer, 'tiger')).toBe(true);
+  expect(isComputer(vsComputer, 'goat')).toBe(false);
+  expect(nameOf(vsComputer, 'tiger')).toBe('Computer (hard)');
+  expect(nameOf(vsComputer, 'goat')).toBe('alice');
+  expect(turnText(vsComputer, 'goat')).toBe('Computer (hard) to move');
+  const won = game({
+    tiger: computer,
+    computer: 'hard',
+    status: 'finished',
+    result: { winner: 'tiger', reason: 'five_captured' },
+  });
+  expect(resultText(won, null)).toBe(
+    'Tigers (Computer (hard)) won: the tigers captured five goats.',
+  );
+  // An ordinary game: nobody is the computer, whatever their name.
+  const named = game({ tiger: { id: 'x', username: 'computer-fan' } });
+  expect(isComputer(named, 'tiger')).toBe(false);
+  expect(nameOf(named, 'tiger')).toBe('computer-fan');
 });

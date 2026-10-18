@@ -65,7 +65,13 @@ export default function Play() {
       {challenges.error !== null && (
         <ErrorState error={challenges.error} onRetry={() => void challenges.refetch()} />
       )}
-      {quiet && <Hint>Challenge someone who is online, or wait here to be challenged.</Hint>}
+      {games.data?.length === 0 && <Button title="Play now" onPress={() => router.push('/play')} />}
+      {quiet && (
+        <Hint>
+          Play now pairs you with anyone who wants the same game, or with the computer. You can also
+          challenge someone who is online, or wait here to be challenged.
+        </Hint>
+      )}
       {incoming.length > 0 && <SectionTitle>Challenges for you</SectionTitle>}
       {incoming.map((c) => (
         <ChallengeCard

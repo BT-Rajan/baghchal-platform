@@ -10,6 +10,7 @@ import { colors, spacing } from '@/theme';
 
 import { Button } from './Button';
 import { Card } from './Card';
+import { GameHistory } from './GameHistory';
 import { Notice } from './Notice';
 import { PresenceDot } from './PlayerRow';
 
@@ -62,6 +63,7 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
         />
       )}
       {!isMe && <BlockControl username={profile.username} blocked={profile.blocked} />}
+      <GameHistory username={profile.username} />
       {!isMe && (
         <Button
           title={`Report ${profile.username}`}

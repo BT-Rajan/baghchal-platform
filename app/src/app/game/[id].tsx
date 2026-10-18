@@ -1,9 +1,11 @@
+import { useMutation } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import type { Game } from '@/api/endpoints';
 import { describeError } from '@/api/errors';
-import { useMe } from '@/auth/session';
+import { useApi, useMe } from '@/auth/session';
 import { Button } from '@/components/Button';
 import { Card, SectionTitle } from '@/components/Card';
 import { Board } from '@/components/game/Board';
@@ -17,8 +19,10 @@ import { useServerNow } from '@/components/useNow';
 import { parseBfen, type Piece } from '@/game/bfen';
 import { firstMoveSecondsLeft } from '@/game/clock';
 import {
+  isComputer,
   lastMoveText,
   matchSummary,
+  nameOf,
   other,
   playerOf,
   resultText,
@@ -28,7 +32,7 @@ import {
 import { useGame, useGameAction, useMove } from '@/game/hooks';
 import { boardSize, gameLayout } from '@/game/layout';
 import { TIME_CONTROLS } from '@/lobby/format';
-import { useCreateChallenge } from '@/lobby/hooks';
+import { useCreateChallenge, useOpenStartedGame } from '@/lobby/hooks';
 import { colors, spacing } from '@/theme';
 
 export default function GameScreen() {
@@ -38,6 +42,7 @@ export default function GameScreen() {
   const move = useMove(id);
   const action = useGameAction(id);
   const { width, height } = useWindowDimensions();
+  const [shown, setShown] = useState<number | null>(null); // the move being replayed
   const game = query.data;
 
   if (game === undefined) {
@@ -54,7 +59,10 @@ export default function GameScreen() {
   }
 
   const mine = sideOf(game, me.id);
-  const position = parseBfen(game.position);
+  // A finished game can be stepped through; otherwise the board shows the game as it is.
+  const replaying = game.positions.length > 0;
+  const ply = replaying ? Math.min(shown ?? game.ply, game.ply) : game.ply;
+  const position = parseBfen(replaying ? (game.positions[ply] ?? game.position) : game.position);
   // Bottom of the screen is me; spectators see goats at the bottom.
   const bottom: Piece = mine ?? 'goat';
   const myTurn = game.status === 'active' && game.side_to_move === mine && !move.isPending;
@@ -67,10 +75,10 @@ export default function GameScreen() {
       <Notice tone="error">This position could not be shown.</Notice>
     ) : (
       <Board
-        key={game.ply}
+        key={`${game.ply}-${ply}`}
         position={position}
         legalMoves={myTurn ? game.legal_moves : []}
-        lastMove={game.moves.at(-1)}
+        lastMove={ply > 0 ? game.moves[ply - 1] : undefined}
         onMove={(m) => move.mutate({ ply: game.ply, move: m })}
       />
     );
@@ -83,6 +91,7 @@ export default function GameScreen() {
       {layout === 'short' && opponentBar}
       {layout === 'short' && myBar}
       <Status game={game} mine={mine} />
+      {replaying && <Replay ply={ply} total={game.ply} onShow={setShown} />}
       {error !== null && <Notice tone="error">{describeError(error)}</Notice>}
       {position !== null && (
         <Text style={styles.counts}>
@@ -97,8 +106,14 @@ export default function GameScreen() {
           onAction={(a) => action.mutate(a)}
         />
       )}
-      {game.status === 'finished' && mine !== null && <Rematch game={game} mine={mine} />}
-      {game.status === 'finished' && mine !== null && (
+      {game.status === 'finished' &&
+        mine !== null &&
+        (game.computer === null ? (
+          <Rematch game={game} mine={mine} />
+        ) : (
+          <PlayAgain game={game} mine={mine} />
+        ))}
+      {game.status === 'finished' && mine !== null && !isComputer(game, other(mine)) && (
         <Button
           title={`Report ${playerOf(game, other(mine)).username}`}
           variant="secondary"
@@ -121,7 +136,7 @@ export default function GameScreen() {
 
   return (
     <Screen align="top" wide={wide}>
-      <Stack.Screen options={{ title: `${game.goat.username} vs ${game.tiger.username}` }} />
+      <Stack.Screen options={{ title: `${nameOf(game, 'goat')} vs ${nameOf(game, 'tiger')}` }} />
       <View style={wide ? styles.row : styles.column}>
         <View style={wide ? styles.boardWide : styles.boardColumn}>
           {layout !== 'short' && opponentBar}
@@ -158,6 +173,86 @@ function Rematch({ game, mine }: { game: Game; mine: Piece }) {
             { onSuccess: () => router.navigate('/') },
           )
         }
+      />
+    </>
+  );
+}
+
+/** Step through a finished game: start, back, forward, end. */
+function Replay({
+  ply,
+  total,
+  onShow,
+}: {
+  ply: number;
+  total: number;
+  onShow: (ply: number) => void;
+}) {
+  return (
+    <View style={styles.replay}>
+      <Text style={styles.counts}>
+        {ply === 0 ? 'Start position' : `After move ${ply} of ${total}`}
+      </Text>
+      <View style={styles.replayButtons}>
+        <Button
+          title="Start position"
+          label="⏮"
+          compact
+          variant="secondary"
+          disabled={ply === 0}
+          onPress={() => onShow(0)}
+        />
+        <Button
+          title="Previous move"
+          label="◀"
+          compact
+          variant="secondary"
+          disabled={ply === 0}
+          onPress={() => onShow(ply - 1)}
+        />
+        <Button
+          title="Next move"
+          label="▶"
+          compact
+          variant="secondary"
+          disabled={ply === total}
+          onPress={() => onShow(ply + 1)}
+        />
+        <Button
+          title="Final position"
+          label="⏭"
+          compact
+          variant="secondary"
+          disabled={ply === total}
+          onPress={() => onShow(total)}
+        />
+      </View>
+    </View>
+  );
+}
+
+/** Another game against the computer at the same level, sides swapped. */
+function PlayAgain({ game, mine }: { game: Game; mine: Piece }) {
+  const api = useApi();
+  const openStarted = useOpenStartedGame();
+  const timeControl = TIME_CONTROLS.find((tc) => tc.label === game.time_control)?.label;
+  const start = useMutation({
+    mutationFn: () =>
+      api.playComputer({
+        level: game.computer ?? 'medium',
+        side: other(mine),
+        time_control: timeControl ?? '10+5',
+      }),
+    onSuccess: openStarted,
+  });
+  return (
+    <>
+      {start.error !== null && <Notice tone="error">{describeError(start.error)}</Notice>}
+      <Button
+        title="Play the computer again"
+        label="Play again (sides swapped)"
+        busy={start.isPending}
+        onPress={() => start.mutate()}
       />
     </>
   );
@@ -206,6 +301,8 @@ function Status({ game, mine }: { game: Game; mine: Piece | null }) {
 }
 
 const styles = StyleSheet.create({
+  replay: { gap: spacing.xs },
+  replayButtons: { flexDirection: 'row', gap: spacing.sm },
   row: { flexDirection: 'row', gap: spacing.lg, alignItems: 'flex-start' },
   column: { gap: spacing.md },
   boardWide: { flex: 1, maxWidth: 640, gap: spacing.sm },

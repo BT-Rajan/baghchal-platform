@@ -2,6 +2,9 @@ import { ME } from '../../tests/support/fakeServer';
 import { BOB, challenge } from '../../tests/support/games';
 
 import {
+  LEVELS,
+  historyText,
+  waitingText,
   CATEGORIES,
   TIME_CONTROLS,
   canChallenge,
@@ -95,4 +98,34 @@ test('searchPrefix', () => {
   expect(searchPrefix('a b')).toBeNull();
   expect(searchPrefix('%')).toBeNull();
   expect(searchPrefix('a'.repeat(21))).toBeNull();
+});
+
+test('history lines', () => {
+  const base = {
+    id: 'g1',
+    opponent: BOB,
+    side: 'goat' as const,
+    time_control: '5+3',
+    rated: true,
+    computer: null,
+    result: { winner: 'goat' as const, reason: 'five_captured' as const },
+    outcome: 'won' as const,
+    rating_change: 12,
+    moves: 40,
+    finished_at: '2026-10-03T12:00:00Z',
+  };
+  expect(historyText(base)).toBe('Won · vs bob · 5+3 rated (+12) · 3 Oct 2026');
+  expect(
+    historyText({ ...base, rated: false, rating_change: null, outcome: 'lost', computer: 'easy' }),
+  ).toBe('Lost · vs the computer (easy) · 5+3 casual · 3 Oct 2026');
+  expect(historyText({ ...base, outcome: 'aborted', rating_change: null })).toBe(
+    'Aborted · vs bob · 5+3 rated · 3 Oct 2026',
+  );
+});
+
+test('waiting players and levels', () => {
+  expect(waitingText(0)).toBe('Nobody is waiting for this game right now.');
+  expect(waitingText(1)).toBe('1 player is waiting.');
+  expect(waitingText(3)).toBe('3 players are waiting.');
+  expect(LEVELS.map((l) => l.value)).toEqual(['easy', 'medium', 'hard']);
 });

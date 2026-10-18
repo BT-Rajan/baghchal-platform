@@ -397,6 +397,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/players/{username}/games": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Player Games
+         * @description A player's finished games, newest first. For the next page, pass the last game's
+         *     ``finished_at`` as ``before``.
+         */
+        get: operations["player_games_api_v1_players__username__games_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/seeks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Waiting Players
+         * @description How many players are waiting for each kind of game.
+         */
+        get: operations["waiting_players_api_v1_seeks_get"];
+        put?: never;
+        /**
+         * Seek Game
+         * @description Play anyone who wants the same kind of game: paired at once with whoever has waited
+         *     longest, or wait (two minutes) for the next person.
+         */
+        post: operations["seek_game_api_v1_seeks_post"];
+        /** Stop Seeking */
+        delete: operations["stop_seeking_api_v1_seeks_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/games": {
         parameters: {
             query?: never;
@@ -445,6 +492,26 @@ export interface paths {
         put?: never;
         /** Play */
         post: operations["play_api_v1_games__game_id__moves_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/games/computer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Play The Computer
+         * @description Start a casual game against the computer. If it plays goats, it moves first.
+         */
+        post: operations["play_the_computer_api_v1_games_computer_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -749,6 +816,27 @@ export interface components {
             /** Running */
             running: ("goat" | "tiger") | null;
         };
+        /** ComputerGameIn */
+        ComputerGameIn: {
+            /**
+             * Level
+             * @default medium
+             * @enum {string}
+             */
+            level: "easy" | "medium" | "hard";
+            /**
+             * Side
+             * @default random
+             * @enum {string}
+             */
+            side: "goat" | "tiger" | "random";
+            /**
+             * Time Control
+             * @default 10+5
+             * @enum {string}
+             */
+            time_control: "3+2" | "5+3" | "10+5" | "15+10";
+        };
         /** DeleteAccountIn */
         DeleteAccountIn: {
             /** Password */
@@ -949,6 +1037,10 @@ export interface components {
             clocks: components["schemas"]["ClocksOut"];
             ratings: components["schemas"]["RatingsOut"];
             match: components["schemas"]["MatchOut"] | null;
+            /** Computer */
+            computer: ("easy" | "medium" | "hard") | null;
+            /** Positions */
+            positions: string[];
             /** Deadline At */
             deadline_at: string | null;
             /**
@@ -969,6 +1061,44 @@ export interface components {
          * @enum {string}
          */
         GameStatus: "active" | "finished";
+        /**
+         * GameSummaryOut
+         * @description A finished game, from one player's side, for their game history.
+         */
+        GameSummaryOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            opponent: components["schemas"]["PlayerOut"];
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "goat" | "tiger";
+            /** Time Control */
+            time_control: string;
+            /** Rated */
+            rated: boolean;
+            /** Computer */
+            computer: ("easy" | "medium" | "hard") | null;
+            result: components["schemas"]["ResultOut"];
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "won" | "lost" | "aborted";
+            /** Rating Change */
+            rating_change: number | null;
+            /** Moves */
+            moves: number;
+            /**
+             * Finished At
+             * Format: date-time
+             */
+            finished_at: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1267,6 +1397,39 @@ export interface components {
             /** Winner */
             winner: ("goat" | "tiger") | null;
             reason: components["schemas"]["EndReason"];
+        };
+        /** SeekCountOut */
+        SeekCountOut: {
+            /** Time Control */
+            time_control: string;
+            /** Rated */
+            rated: boolean;
+            /** Players */
+            players: number;
+        };
+        /** SeekIn */
+        SeekIn: {
+            /**
+             * Time Control
+             * @enum {string}
+             */
+            time_control: "3+2" | "5+3" | "10+5" | "15+10";
+            /**
+             * Rated
+             * @default false
+             */
+            rated: boolean;
+        };
+        /** SeekOut */
+        SeekOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "paired" | "waiting";
+            game: components["schemas"]["GameOut"] | null;
+            /** Expires At */
+            expires_at: string | null;
         };
         /** SessionOut */
         SessionOut: {
@@ -2054,6 +2217,111 @@ export interface operations {
             };
         };
     };
+    player_games_api_v1_players__username__games_get: {
+        parameters: {
+            query?: {
+                before?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameSummaryOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    waiting_players_api_v1_seeks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeekCountOut"][];
+                };
+            };
+        };
+    };
+    seek_game_api_v1_seeks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeekIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeekOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stop_seeking_api_v1_seeks_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     my_active_games_api_v1_games_get: {
         parameters: {
             query?: never;
@@ -2122,6 +2390,39 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    play_the_computer_api_v1_games_computer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComputerGameIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
