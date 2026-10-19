@@ -524,6 +524,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/players/{username}/achievements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Achievements
+         * @description A player's achievements: every one, with when they earned it (None if not yet).
+         */
+        get: operations["achievements_api_v1_players__username__achievements_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/games": {
         parameters: {
             query?: never;
@@ -1342,6 +1362,17 @@ export interface components {
              * @constant
              */
             status: "accepted";
+        };
+        /**
+         * Achievement
+         * @enum {string}
+         */
+        Achievement: "first_win" | "goat_win" | "tiger_win" | "trapped" | "five_captures" | "beat_medium" | "beat_hard" | "rated_10" | "puzzle_streak_7";
+        /** AchievementOut */
+        AchievementOut: {
+            key: components["schemas"]["Achievement"];
+            /** Earned At */
+            earned_at: string | null;
         };
         /**
          * ActionKind
@@ -3628,6 +3659,37 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    achievements_api_v1_players__username__achievements_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AchievementOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

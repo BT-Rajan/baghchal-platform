@@ -9,6 +9,7 @@ import { useBlock } from '@/lobby/hooks';
 import { useMe } from '@/auth/session';
 import { colors, spacing } from '@/theme';
 
+import { Achievements } from './Achievements';
 import { BadgePill } from './BadgePill';
 import { Button } from './Button';
 import { Card, Hint } from './Card';
@@ -79,6 +80,7 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
         />
       )}
       {!isMe && <BlockControl username={profile.username} blocked={profile.blocked} />}
+      <Achievements username={profile.username} />
       <GameHistory username={profile.username} />
       {!isMe && (
         <Button

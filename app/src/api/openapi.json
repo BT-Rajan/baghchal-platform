@@ -1088,6 +1088,51 @@
         }
       }
     },
+    "/api/v1/players/{username}/achievements": {
+      "get": {
+        "summary": "Achievements",
+        "description": "A player's achievements: every one, with when they earned it (None if not yet).",
+        "operationId": "achievements_api_v1_players__username__achievements_get",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,20}$",
+              "title": "Username"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AchievementOut"
+                  },
+                  "title": "Response Achievements Api V1 Players  Username  Achievements Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/games": {
       "get": {
         "summary": "My Active Games",
@@ -2827,6 +2872,46 @@
         },
         "type": "object",
         "title": "Accepted"
+      },
+      "Achievement": {
+        "type": "string",
+        "enum": [
+          "first_win",
+          "goat_win",
+          "tiger_win",
+          "trapped",
+          "five_captures",
+          "beat_medium",
+          "beat_hard",
+          "rated_10",
+          "puzzle_streak_7"
+        ],
+        "title": "Achievement"
+      },
+      "AchievementOut": {
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/Achievement"
+          },
+          "earned_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earned At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "earned_at"
+        ],
+        "title": "AchievementOut"
       },
       "ActionKind": {
         "type": "string",

@@ -96,6 +96,8 @@ scripts/        the Expo-cloud guardrail
   players, moderation (staff) and signing out; for members it also changes the email address (confirmed by a link sent
   to the new one) or password, downloads your data (a file on the web, the share sheet in
   apps) and deletes the account.
+- **Achievements.** Profiles show a player's achievements (`Achievements`, words in
+  `src/lobby/achievements.ts`), earned ones first with their date.
 - **Quick messages.** In a game against a person, five set phrases (`src/game/emotes.ts`)
   show for a moment on the sender's bar, the opponent's via an `emote` event. The chat button
   beside them hides the opponent's; it is the same `emotes_on` setting as on the Board, pieces

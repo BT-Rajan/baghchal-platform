@@ -30,6 +30,10 @@ export const QUIET_LOBBY: Record<string, Route> = {
   'GET /api/v1/players/alice/games': { status: 200, body: [] },
   'GET /api/v1/players/bob/games': { status: 200, body: [] },
   'GET /api/v1/players/guest-3fa9c1/games': { status: 200, body: [] },
+  // Nobody has achievements unless a test says so.
+  'GET /api/v1/players/alice/achievements': { status: 200, body: [] },
+  'GET /api/v1/players/bob/achievements': { status: 200, body: [] },
+  'GET /api/v1/players/guest-3fa9c1/achievements': { status: 200, body: [] },
   // Settings list blocked players; nobody is blocked unless a test says so.
   'GET /api/v1/blocks': { status: 200, body: [] },
   'GET /api/v1/notifications': { status: 200, body: { unread: 0, items: [] } },
