@@ -62,7 +62,9 @@ Each phase ships complete — tested, documented and reviewed — before the nex
      inaccuracy, mistake, blunder, with its own choice), 5 new games a day on Plus.
    - ✅ **Themes, sound packs and badges**: five boards, four piece sets and four sound packs
      (the first of each free), and a Plus or Pro badge by the player's name.
-   - Next: Razorpay payments; private rooms, tournaments and the trainer for Pro.
+   - ✅ **Payments with Razorpay**: Plus and Pro for a month or a year, confirmed by signature and
+     webhook.
+   - Next: private rooms, tournaments and the trainer for Pro.
 
 ## Development
 Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
@@ -152,6 +154,10 @@ and the Caddyfile.
 | POST | `/api/v1/games/{id}/moves` | Play `{"ply": n, "move": "a1-b2"}` (`ply` = moves you have seen) |
 | POST | `/api/v1/games/{id}/resign`, `/abort`, `/claim-abandonment` | End the game (see [rules](docs/rules.md#live-play-platform-rules)) |
 | GET, POST | `/api/v1/games/{id}/analysis` | Plus and Pro: a finished game's analysis; `POST` works it out if nobody has yet (counts against today's allowance) |
+| GET | `/api/v1/me/payments` | Whether payments are taken, and my payments |
+| POST | `/api/v1/payments/checkout` | Start buying a `plan` (plus, pro) for a `period` (month, year): a Razorpay order |
+| POST | `/api/v1/payments/verify` | Confirm a payment with what Razorpay Checkout returned (`order_id`, `payment_id`, `signature`) |
+| POST | `/api/v1/payments/webhook` | Razorpay's webhook (`payment.captured`, `order.paid`, `payment.failed`), checked by its signature |
 | GET, PUT | `/api/v1/me/appearance` | My `board`, `pieces` and `sounds` (beyond the first of each: Plus and Pro), and `show_badge` |
 | GET | `/api/v1/plans` | Free, Plus and Pro: features and prices |
 | GET | `/api/v1/me/plan` | My plan, my features, and the grants behind them |
@@ -220,3 +226,24 @@ choice is kept on the server, so it follows the player to every device; if their
 they see the free set meanwhile, and their choice comes back when it is renewed. Players with
 the badge feature show PLUS or PRO by their name (in games, on profiles, the leaderboard and
 the players online), unless they hide it.
+
+**Payments** (`server/src/baghchal_server/payments/`): players buy Plus or Pro for a month (30
+days) or a year (365 days) with [Razorpay Checkout](https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/):
+cards, UPI, net banking and wallets. Plans are paid in advance and never renew by themselves;
+buying again adds on to the time already held. The server creates an order for the price, the
+browser takes the payment in Razorpay's window, and the plan is given when the server has
+checked Razorpay's signature: from the browser, or from the webhook if the browser never comes
+back. Each order is given once. A paid period is an ordinary grant, marked as paid, so it shows
+in the player's grant history; the player is emailed a receipt. Payment records are kept when
+an account is deleted.
+
+To take payments:
+
+1. In the Razorpay Dashboard, create API keys (Account & Settings → API Keys; test mode first,
+   `rzp_test_…`).
+2. Add a webhook (Account & Settings → Webhooks) to `https://<your site>/api/v1/payments/webhook`
+   with the events `payment.captured`, `order.paid` and `payment.failed`, and a secret.
+3. Set `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` in
+   `bhagchal2.env` (or `BAGHCHAL_RAZORPAY_…` elsewhere) and restart. Until they are set, the
+   plans page says paying online is coming soon.
+4. Try a payment with Razorpay's test cards, then switch to live keys.

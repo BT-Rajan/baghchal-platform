@@ -94,6 +94,10 @@ scripts/        the Expo-cloud guardrail
 - **Analysis.** A finished game has an Analysis section: "Analyse this game" (Plus and Pro;
   Free sees what Plus adds), then the verdict on the move being replayed with the engine's
   choice, "Next mistake", each side's tally, and ?!, ? and ?? marks in the move list.
+- **Payments.** The plans page has "Buy a month" and "Buy a year" for Plus and Pro when the
+  server takes payments. Razorpay's Checkout script is loaded on the first purchase
+  (`src/payments/razorpay.ts`) and opens Razorpay's own window; the app never sees card
+  details, and the server confirms the payment before the plan changes. Web only for now.
 - **Board, pieces and sounds.** Me → Board, pieces and sounds: board themes and piece sets
   (drawn by `Wood.tsx` and `Coin.tsx` from `src/appearance/catalog.ts`), sound packs (made live
   in `sound.ts`), and showing or hiding the badge. Free sees the choices it would get with Plus.

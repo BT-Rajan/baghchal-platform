@@ -11,6 +11,7 @@ const FULLY_COVERED = [
   'src/billing',
   'src/analysis',
   'src/appearance',
+  'src/payments',
   'src/apiUrl.js',
 ];
 const full = { branches: 100, functions: 100, lines: 100, statements: 100 };

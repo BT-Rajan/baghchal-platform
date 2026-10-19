@@ -1925,6 +1925,103 @@
           }
         }
       }
+    },
+    "/api/v1/me/payments": {
+      "get": {
+        "summary": "My Payments",
+        "description": "Whether payments are taken, and mine (paid or failed), newest first.",
+        "operationId": "my_payments_api_v1_me_payments_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentsOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/checkout": {
+      "post": {
+        "summary": "Checkout",
+        "description": "Start buying a plan for a month or a year: an order to pay with Razorpay Checkout.",
+        "operationId": "checkout_api_v1_payments_checkout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/verify": {
+      "post": {
+        "summary": "Verify",
+        "description": "Confirm a payment from what Checkout handed the browser, and give the plan.",
+        "operationId": "verify_api_v1_payments_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2223,6 +2320,78 @@
           "expired"
         ],
         "title": "ChallengeStatus"
+      },
+      "CheckoutIn": {
+        "properties": {
+          "plan": {
+            "type": "string",
+            "enum": [
+              "plus",
+              "pro"
+            ],
+            "title": "Plan"
+          },
+          "period": {
+            "$ref": "#/components/schemas/Period"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "plan",
+          "period"
+        ],
+        "title": "CheckoutIn"
+      },
+      "CheckoutOut": {
+        "properties": {
+          "key_id": {
+            "type": "string",
+            "title": "Key Id"
+          },
+          "order_id": {
+            "type": "string",
+            "title": "Order Id"
+          },
+          "amount_paise": {
+            "type": "integer",
+            "title": "Amount Paise"
+          },
+          "currency": {
+            "type": "string",
+            "const": "INR",
+            "title": "Currency",
+            "default": "INR"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key_id",
+          "order_id",
+          "amount_paise",
+          "name",
+          "description",
+          "email",
+          "username"
+        ],
+        "title": "CheckoutOut",
+        "description": "What Razorpay Checkout needs to take the payment."
       },
       "ClocksOut": {
         "properties": {
@@ -3105,6 +3274,10 @@
           "active": {
             "type": "boolean",
             "title": "Active"
+          },
+          "paid": {
+            "type": "boolean",
+            "title": "Paid"
           }
         },
         "type": "object",
@@ -3118,7 +3291,8 @@
           "granted_by",
           "created_at",
           "revoked_at",
-          "active"
+          "active",
+          "paid"
         ],
         "title": "GrantOut"
       },
@@ -3582,6 +3756,112 @@
           "email"
         ],
         "title": "PasswordResetRequestIn"
+      },
+      "PaymentOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "plan": {
+            "type": "string",
+            "enum": [
+              "plus",
+              "pro"
+            ],
+            "title": "Plan"
+          },
+          "period": {
+            "$ref": "#/components/schemas/Period"
+          },
+          "amount_paise": {
+            "type": "integer",
+            "title": "Amount Paise"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PaymentStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "paid_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid At"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Until"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "plan",
+          "period",
+          "amount_paise",
+          "status",
+          "created_at",
+          "paid_at",
+          "until"
+        ],
+        "title": "PaymentOut"
+      },
+      "PaymentStatus": {
+        "type": "string",
+        "enum": [
+          "created",
+          "paid",
+          "failed"
+        ],
+        "title": "PaymentStatus"
+      },
+      "PaymentsOut": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "payments": {
+            "items": {
+              "$ref": "#/components/schemas/PaymentOut"
+            },
+            "type": "array",
+            "title": "Payments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "payments"
+        ],
+        "title": "PaymentsOut"
+      },
+      "Period": {
+        "type": "string",
+        "enum": [
+          "month",
+          "year"
+        ],
+        "title": "Period"
       },
       "PieceSet": {
         "type": "string",
@@ -4435,6 +4715,34 @@
           "token"
         ],
         "title": "VerifyEmailIn"
+      },
+      "VerifyIn": {
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Order Id"
+          },
+          "payment_id": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Payment Id"
+          },
+          "signature": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Signature"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "order_id",
+          "payment_id",
+          "signature"
+        ],
+        "title": "VerifyIn",
+        "description": "What Razorpay Checkout hands the browser once the player has paid."
       },
       "ChallengeEvent": {
         "properties": {

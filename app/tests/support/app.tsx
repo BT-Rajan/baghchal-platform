@@ -33,6 +33,8 @@ export const QUIET_LOBBY: Record<string, Route> = {
   'GET /api/v1/plans': { status: 200, body: PLANS },
   // And on the free board, pieces and sounds.
   'GET /api/v1/me/appearance': { status: 200, body: FREE_APPEARANCE },
+  // Payments are off unless a test turns them on.
+  'GET /api/v1/me/payments': { status: 200, body: { enabled: false, payments: [] } },
 };
 
 export const savedToken = () => mockSecure.get('session-token') ?? null;

@@ -67,6 +67,18 @@ class Settings(BaseSettings):
     sentry_traces_sample_rate: float = Field(default=0.0, ge=0.0, le=1.0)
     """Share of requests traced for performance; 0 sends errors only."""
 
+    razorpay_key_id: str = ""
+    """Razorpay API key (``rzp_test_…`` or ``rzp_live_…``); payments are off until it and the
+    secret are set."""
+    razorpay_key_secret: SecretStr = SecretStr("")
+    razorpay_webhook_secret: SecretStr = SecretStr("")
+    """The secret set on the Razorpay webhook (Dashboard → Webhooks); without it, webhooks are
+    refused and payments are confirmed only by the browser."""
+
+    @property
+    def payments_enabled(self) -> bool:
+        return bool(self.razorpay_key_id and self.razorpay_key_secret.get_secret_value())
+
     @property
     def is_production(self) -> bool:
         return self.environment == "production"

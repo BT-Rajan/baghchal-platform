@@ -25,6 +25,7 @@ from baghchal_server.app import create_app
 from baghchal_server.config import Settings
 from baghchal_server.deps import AppState
 from baghchal_server.mail import MemoryMailer
+from baghchal_server.payments.gateway import Gateway
 from baghchal_server.ratelimit import MemoryRateLimiter
 
 SERVER_DIR = Path(__file__).resolve().parents[1]
@@ -90,8 +91,18 @@ def settings(database_url: str) -> Settings:
 
 
 @pytest.fixture
-async def app(settings: Settings, mailer: MemoryMailer, clock: Clock) -> AsyncIterator[FastAPI]:
-    app = create_app(settings, mailer=mailer, limiter=MemoryRateLimiter(), clock=clock)
+def gateway() -> Gateway | None:
+    """No payments, unless a test module provides a gateway (and Razorpay settings)."""
+    return None
+
+
+@pytest.fixture
+async def app(
+    settings: Settings, mailer: MemoryMailer, clock: Clock, gateway: Gateway | None
+) -> AsyncIterator[FastAPI]:
+    app = create_app(
+        settings, mailer=mailer, limiter=MemoryRateLimiter(), clock=clock, gateway=gateway
+    )
     async with app.router.lifespan_context(app):
         yield app
         state: AppState = app.state.ctx
@@ -109,6 +120,7 @@ async def app(settings: Settings, mailer: MemoryMailer, clock: Clock) -> AsyncIt
                 "seeks",
                 "reports",
                 "moderation_actions",
+                "payments",
                 "grants",
                 "appearances",
                 "sessions",

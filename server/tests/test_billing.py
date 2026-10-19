@@ -287,3 +287,13 @@ def test_the_best_plan_wins_whatever_the_order(clock: Clock) -> None:
     assert (found.plan, found.plan_until) == (Plan.PRO, None)
     found = service._entitlements([grant("pro", 3), grant("plus", 9)])
     assert (found.plan, found.plan_until) == (Plan.PRO, clock.now + timedelta(days=3))
+
+
+async def test_payments_are_off_without_razorpay(players: PlayerFactory) -> None:
+    alice = await players("alice")
+    assert (await alice.http.get("/api/v1/me/payments")).json() == {
+        "enabled": False,
+        "payments": [],
+    }
+    r = await alice.http.post("/api/v1/payments/checkout", json={"plan": "plus", "period": "year"})
+    assert (r.status_code, r.json()["error"]["code"]) == (503, "payments_off")

@@ -18,6 +18,7 @@ from baghchal_server.db import Base, create_engine
 from baghchal_server.games import models as game_models  # noqa: F401
 from baghchal_server.lobby import models as lobby_models  # noqa: F401
 from baghchal_server.moderation import models as moderation_models  # noqa: F401
+from baghchal_server.payments import models as payments_models  # noqa: F401
 from baghchal_server.ratings import models as rating_models  # noqa: F401
 
 config = context.config

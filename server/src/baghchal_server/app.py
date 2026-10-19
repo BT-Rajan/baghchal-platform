@@ -35,6 +35,9 @@ from baghchal_server.metrics import CountingMailer, Metrics
 from baghchal_server.middleware import BodyLimit, CrossSiteGuard, RequestContext, SecurityHeaders
 from baghchal_server.moderation import models as _moderation_models  # noqa: F401  (registers tables)
 from baghchal_server.moderation.routes import router as moderation_router
+from baghchal_server.payments import models as _payments_models  # noqa: F401  (registers tables)
+from baghchal_server.payments.gateway import Gateway, RazorpayGateway
+from baghchal_server.payments.routes import router as payments_router
 from baghchal_server.ratelimit import MemoryRateLimiter, RateLimiter, RedisRateLimiter
 from baghchal_server.ratings import models as _rating_models  # noqa: F401  (registers tables)
 from baghchal_server.ratings.routes import router as ratings_router
@@ -87,6 +90,7 @@ def create_app(
     mailer: Mailer | None = None,
     limiter: RateLimiter | None = None,
     clock: Callable[[], datetime] | None = None,
+    gateway: Gateway | None = None,
 ) -> FastAPI:
     settings = settings or Settings()
     configure_logging(settings)
@@ -123,6 +127,14 @@ def create_app(
             presence=RedisPresence(redis) if redis else MemoryPresence(),
             metrics=metrics,
             computer=ComputerPlayers(settings.computer_workers),
+            gateway=gateway
+            or (
+                RazorpayGateway(
+                    settings.razorpay_key_id, settings.razorpay_key_secret.get_secret_value()
+                )
+                if settings.payments_enabled
+                else None
+            ),
         )
         sweeper = asyncio.create_task(run_sweeper(app.state.ctx)) if settings.game_sweeper else None
         log.info("startup", environment=settings.environment)
@@ -134,6 +146,8 @@ def create_app(
                 with contextlib.suppress(asyncio.CancelledError):
                     await sweeper
             await app.state.ctx.computer.stop()
+            if app.state.ctx.gateway is not None:
+                await app.state.ctx.gateway.close()
             await hub.stop()
             await engine.dispose()
             if redis is not None:
@@ -155,6 +169,7 @@ def create_app(
     app.include_router(moderation_router)
     app.include_router(billing_router)
     app.include_router(appearance_router)
+    app.include_router(payments_router)
     app.include_router(health_router)
     app.include_router(ws_router)
 
