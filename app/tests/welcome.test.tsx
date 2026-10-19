@@ -21,7 +21,7 @@ describe('the welcome page', () => {
       goat: { id: GUEST.id, username: GUEST.username },
       tiger: { id: 'cpu', username: 'computer-easy' },
       computer: 'easy',
-      time_control: '15+10',
+      time_control: '5+3',
       server_time: new Date().toISOString(),
     });
     const { server, app } = await renderApp('/', {
@@ -43,7 +43,7 @@ describe('the welcome page', () => {
     expect(server.lastTo('POST /api/v1/games/computer').body).toEqual({
       level: 'easy',
       side: 'goat',
-      time_control: '15+10',
+      time_control: '5+3',
     });
     expect(await screen.findByText('Place a goat')).toBeOnTheScreen();
   });

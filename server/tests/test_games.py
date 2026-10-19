@@ -452,7 +452,7 @@ async def test_claiming_an_abandoned_game(
         await _online(app, stack, alice)
         bob_socket = AsyncExitStack()
         await _online(app, bob_socket, bob)
-        game = await _start(alice, bob, "15+10")
+        game = await _start(alice, bob, "5+3")
         game = await _play(alice, bob, game, ["c3", "a1-b2", "c2"])  # bob (tiger) to move
         url = f"/api/v1/games/{game['id']}/claim-abandonment"
 
@@ -483,7 +483,7 @@ async def test_a_connection_that_blinks_does_not_count_as_leaving(
         await _online(app, stack, alice)
         bob_socket = AsyncExitStack()
         await _online(app, bob_socket, bob)
-        game = await _start(alice, bob, "15+10")
+        game = await _start(alice, bob, "5+3")
         game = await _play(alice, bob, game, ["c3", "a1-b2", "c2"])  # bob (tiger) to move
         url = f"/api/v1/games/{game['id']}/claim-abandonment"
         await bob_socket.aclose()
@@ -504,7 +504,7 @@ async def test_claiming_against_someone_never_seen_online(
     alice, bob = pair
     async with AsyncExitStack() as stack:
         await _online(app, stack, bob)
-        game = await _start(alice, bob, "15+10")  # alice never opens a socket
+        game = await _start(alice, bob, "5+3")  # alice never opens a socket
         game = await _play(alice, bob, game, ["c3", "a1-b2"])  # alice (goat) to move
         clock.advance(seconds=ABANDON_AFTER.total_seconds())
         r = await bob.http.post(f"/api/v1/games/{game['id']}/claim-abandonment")
@@ -517,7 +517,7 @@ async def test_no_claim_before_the_wait_is_over(
     alice, bob = pair
     async with AsyncExitStack() as stack:
         await _online(app, stack, bob)
-        game = await _start(alice, bob, "15+10")
+        game = await _start(alice, bob, "5+3")
         url = f"/api/v1/games/{game['id']}/claim-abandonment"
         assert (await alice.http.post(url)).json()["error"]["code"] == "cannot_claim"  # ply 0
         game = await _play(alice, bob, game, ["c3", "a1-b2", "c2"])

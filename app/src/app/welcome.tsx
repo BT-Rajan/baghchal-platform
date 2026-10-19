@@ -20,7 +20,7 @@ import { colors, radius, spacing } from '@/theme';
  * A newcomer's first game: the Easy computer, which coaches as they play, with the goats (who
  * move first, so there is something to do at once) and the longest time control.
  */
-const FIRST_GAME = { level: 'easy', side: 'goat', time_control: '15+10' } as const;
+const FIRST_GAME = { level: 'easy', side: 'goat', time_control: '5+3' } as const;
 
 /** Wide enough to put the board beside the words. */
 const WIDE = 880;

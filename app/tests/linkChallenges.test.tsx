@@ -36,7 +36,7 @@ const STARTED = { status: 200, body: game({ server_time: new Date().toISOString(
 
 describe('challenges by link', () => {
   test('make one from home, share it, cancel it', async () => {
-    const mine = link({ challenger: ALICE, side: 'goat', time_control: '10+5' });
+    const mine = link({ challenger: ALICE, side: 'goat', time_control: '2+1' });
     const { app, server } = await open('/', {
       'POST /api/v1/challenges': { status: 201, body: mine },
       'POST /api/v1/challenges/c1/cancel': {
@@ -51,17 +51,17 @@ describe('challenges by link', () => {
     expect(app.getPathname()).toBe('/invite');
     // Challenges by link are casual: there is no rated choice.
     expect(screen.queryByRole('radio', { name: 'Rated' })).toBeNull();
-    await fireEvent.press(screen.getByRole('radio', { name: '10+5' }));
+    await fireEvent.press(screen.getByRole('radio', { name: '2+1' }));
     await fireEvent.press(screen.getByRole('radio', { name: 'Goats' }));
     await press('Make a link');
 
     expect(await screen.findByText('Your challenge by link')).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/challenges').body).toEqual({
-      time_control: '10+5',
+      time_control: '2+1',
       rated: false,
       side: 'goat',
     });
-    expect(screen.getByText('10+5 · casual · you play goats')).toBeOnTheScreen();
+    expect(screen.getByText('2+1 · casual · you play goats')).toBeOnTheScreen();
     expect(screen.getByLabelText('Link to share')).toHaveTextContent('/c/abc123');
     expect(screen.getByText(/^Expires in (23 h 59 min|24 h)$/)).toBeOnTheScreen();
     await press('Cancel the challenge by link');

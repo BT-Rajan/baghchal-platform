@@ -54,7 +54,8 @@ class TournamentOut(BaseModel):
     """Share ``/tournament/<code>`` to invite players."""
     name: str
     host: PlayerOut
-    time_control: TimeControlLabel
+    time_control: str
+    """A label; tournaments made before a time control was retired keep it."""
     max_players: int
     status: TournamentStatus
     players: list[PlayerOut]

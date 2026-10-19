@@ -297,11 +297,11 @@ async def test_rated_and_side_options(app: FastAPI, players: PlayerFactory) -> N
         await _online(app, stack, bob, carol)
         rated = (await _challenge(alice, bob, rated=True)).json()
         assert (rated["rated"], rated["side"]) == (True, None)
-        casual = (await _challenge(alice, carol, side="tiger", time_control="15+10")).json()
+        casual = (await _challenge(alice, carol, side="tiger", time_control="3+2")).json()
         assert (casual["rated"], casual["side"], casual["time_control"]) == (
             False,
             "tiger",
-            "15+10",
+            "3+2",
         )
 
 

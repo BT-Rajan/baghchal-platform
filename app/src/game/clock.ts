@@ -5,13 +5,17 @@ import type { Piece } from './bfen';
 
 /**
  * A side's time left at `serverNowMs`: the clock as of the game's `server_time`, less the time
- * since then if that side's clock is the running one.
+ * since then if that side's clock is the running one. With the sand clock, what the running
+ * side spends is added to the other side's.
  */
 export function remainingMs(game: Game, side: Piece, serverNowMs: number): number {
-  const base = side === 'goat' ? game.clocks.goat_ms : game.clocks.tiger_ms;
-  if (game.status !== 'active' || game.clocks.running !== side) return base;
+  const { goat_ms, tiger_ms, running } = game.clocks;
+  const base = side === 'goat' ? goat_ms : tiger_ms;
+  if (game.status !== 'active' || running === null) return base;
   const elapsed = Math.max(0, serverNowMs - Date.parse(game.server_time));
-  return Math.max(0, base - elapsed);
+  if (running === side) return Math.max(0, base - elapsed);
+  if (game.time_control !== 'sand') return base;
+  return base + Math.min(elapsed, running === 'goat' ? goat_ms : tiger_ms);
 }
 
 /** "4:05", and tenths under ten seconds: "0:09.4". */

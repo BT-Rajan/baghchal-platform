@@ -170,7 +170,7 @@ and the Caddyfile.
 | GET | `/api/v1/seeks` | How many players are waiting, per time control and rated or casual |
 | POST, DELETE | `/api/v1/seeks` | Play whoever is waiting for the same game (`time_control`, `rated`): starts the game at once, or waits up to two minutes; `DELETE` stops waiting |
 | GET | `/api/v1/challenges` | Your open challenges, incoming and outgoing |
-| POST | `/api/v1/challenges` | Challenge an online player (`opponent`; `time_control` 3+2, 5+3, 10+5, 15+10; `rated`; `side`), or, with no `opponent`, make a casual challenge by link (its `code`, open for a day) |
+| POST | `/api/v1/challenges` | Challenge an online player (`opponent`; `time_control` 2+1, 3+2, 5+3 or `sand` (the sand clock); `rated`; `side`), or, with no `opponent`, make a casual challenge by link (its `code`, open for a day) |
 | GET | `/api/v1/challenges/link/{code}` | A challenge by link, for whoever has the link |
 | POST | `/api/v1/challenges/link/{code}/accept` | Accept a challenge by link (guests too); the game starts now if the challenger is online |
 | POST | `/api/v1/challenges/{id}/accept`, `/decline`, `/cancel` | Answer or withdraw a challenge; accepting starts the game |
@@ -198,7 +198,7 @@ and the Caddyfile.
 | GET | `/api/v1/admin/players/{username}/plan` | Admins: a player's plan and every grant |
 | POST | `/api/v1/admin/players/{username}/grants` | Admins: grant a `plan` or a `feature` for `days` (`null`: until revoked), with a `reason` |
 | POST | `/api/v1/admin/grants/{id}/revoke` | Admins: end a grant now, with a `reason` |
-| GET | `/api/v1/leaderboards/{blitz\|rapid}` | Top established players (the app calls these Quick and Standard) |
+| GET | `/api/v1/leaderboards/{blitz\|rapid\|sand}` | Top established players (the app calls these Quick, Standard and Sand clock) |
 | GET | `/api/v1/mod/reports?status=open` | Moderators: the report queue (or closed reports) |
 | POST | `/api/v1/mod/reports/{id}/dismiss` | Moderators: close a report without acting |
 | GET | `/api/v1/mod/players/{username}` | Moderators: a player's standing, reports and moderation log |

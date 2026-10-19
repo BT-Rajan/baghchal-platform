@@ -234,7 +234,7 @@ describe('challenge form', () => {
         body: challenge({
           challenger: ALICE,
           opponent: BOB,
-          time_control: '10+5',
+          time_control: '2+1',
           side: 'tiger',
           ...fresh(60),
         }),
@@ -246,17 +246,17 @@ describe('challenge form', () => {
     expect(app.getPathname()).toBe('/challenge/bob');
     expect(screen.getByText(/rated match is two games/)).toBeOnTheScreen();
 
-    await fireEvent.press(screen.getByRole('radio', { name: '10+5' }));
+    await fireEvent.press(screen.getByRole('radio', { name: '2+1' }));
     await fireEvent.press(screen.getByRole('radio', { name: 'Casual' }));
     await fireEvent.press(screen.getByRole('radio', { name: 'Tigers' }));
     expect(screen.getByRole('radio', { name: 'Tigers' })).toBeChecked();
     await press('Send challenge');
 
     expect(await screen.findByText('Waiting for bob')).toBeOnTheScreen();
-    expect(screen.getByText('10+5 · casual · you play tigers')).toBeOnTheScreen();
+    expect(screen.getByText('2+1 · casual · you play tigers')).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/challenges').body).toEqual({
       opponent: 'bob',
-      time_control: '10+5',
+      time_control: '2+1',
       rated: false,
       side: 'tiger',
     });

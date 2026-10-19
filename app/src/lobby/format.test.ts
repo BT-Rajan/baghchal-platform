@@ -15,6 +15,7 @@ import {
   joinedText,
   presenceText,
   searchPrefix,
+  timeControlName,
   secondsLeft,
   durationText,
   linkPath,
@@ -22,11 +23,19 @@ import {
 } from './format';
 
 test('time controls and categories', () => {
-  expect(TIME_CONTROLS.map((tc) => tc.label)).toEqual(['3+2', '5+3', '10+5', '15+10']);
-  expect(CATEGORIES.map((c) => c.value)).toEqual(['blitz', 'rapid']);
-  expect(CATEGORIES.map((c) => c.label)).toEqual(['Quick', 'Standard']);
-  expect(categoryOf('5+3')).toBe('blitz');
-  expect(categoryOf('15+10')).toBe('rapid');
+  expect(TIME_CONTROLS.map((tc) => tc.label)).toEqual(['2+1', '3+2', '5+3', 'sand']);
+  expect(TIME_CONTROLS.map((tc) => timeControlName(tc.label))).toEqual([
+    '2+1',
+    '3+2',
+    '5+3',
+    'Sand clock',
+  ]);
+  expect(timeControlName('10+5')).toBe('10+5'); // retired, still shown in old games
+  expect(CATEGORIES.map((c) => c.value)).toEqual(['blitz', 'rapid', 'sand']);
+  expect(CATEGORIES.map((c) => c.label)).toEqual(['Quick', 'Standard', 'Sand clock']);
+  expect(categoryOf('3+2')).toBe('blitz');
+  expect(categoryOf('5+3')).toBe('rapid');
+  expect(categoryOf('sand')).toBe('sand');
   expect(categoryOf('1+0')).toBeUndefined();
 });
 

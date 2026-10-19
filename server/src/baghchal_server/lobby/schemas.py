@@ -6,7 +6,8 @@ from pydantic import BaseModel, ConfigDict, StringConstraints, model_validator
 
 from baghchal_server.lobby.models import ChallengeStatus
 
-TimeControlLabel = Literal["3+2", "5+3", "10+5", "15+10"]
+TimeControlLabel = Literal["2+1", "3+2", "5+3", "sand"]
+"""The time controls on offer (see ``time_controls``)."""
 Side = Literal["goat", "tiger", "random"]
 UsernameQuery = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_-]{1,20}$", strict=True)]
 

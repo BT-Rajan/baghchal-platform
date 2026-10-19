@@ -389,7 +389,7 @@ function PlayAgain({ game, mine }: { game: Game; mine: Piece }) {
       api.playComputer({
         level: game.computer ?? 'medium',
         side: other(mine),
-        time_control: timeControl ?? '10+5',
+        time_control: timeControl ?? '5+3',
       }),
     onSuccess: openStarted,
   });

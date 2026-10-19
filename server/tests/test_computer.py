@@ -64,7 +64,7 @@ async def test_the_computer_moves_first_with_the_goats(players: PlayerFactory) -
     assert game["computer"] == "easy"
     assert game["goat"]["username"] == "computer-easy"
     assert game["rated"] is False
-    assert game["time_control"] == "10+5"
+    assert game["time_control"] == "5+3"
     await _ply_reaches(alice, game["id"], 1)
 
 
