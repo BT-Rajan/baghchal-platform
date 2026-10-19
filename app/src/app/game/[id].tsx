@@ -6,7 +6,7 @@ import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { annotate } from '@/analysis/format';
 import { useAnalysis } from '@/analysis/hooks';
 import type { Game } from '@/api/endpoints';
-import { useAppearance } from '@/appearance/hooks';
+import { useAppearance, useChooseAppearance } from '@/appearance/hooks';
 import { describeError } from '@/api/errors';
 import { useApi, useMe } from '@/auth/session';
 import { has } from '@/billing/format';
@@ -19,7 +19,7 @@ import { GameActions } from '@/components/game/GameActions';
 import { MoveList } from '@/components/game/MoveList';
 import { PlayerBar } from '@/components/game/PlayerBar';
 import { soundSupported } from '@/components/game/sound';
-import { useEnding, useMoveSounds, useSoundSetting } from '@/components/game/useMoveSounds';
+import { useEnding, useMoveSounds } from '@/components/game/useMoveSounds';
 import { Victory } from '@/components/game/Victory';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
@@ -53,8 +53,9 @@ export default function GameScreen() {
   const { width, height } = useWindowDimensions();
   const [shown, setShown] = useState<number | null>(null); // the move being replayed
   const game = query.data;
-  const [soundOn, setSoundOn] = useSoundSetting();
   const look = useAppearance();
+  const chooseLook = useChooseAppearance();
+  const soundOn = look.sounds_on;
   useMoveSounds(game, soundOn, look.sounds);
   const [ending, dismissEnding] = useEnding(game, me.id, soundOn, look.sounds);
   const plan = useMyPlan();
@@ -131,7 +132,7 @@ export default function GameScreen() {
           title={soundOn ? 'Turn sounds off' : 'Turn sounds on'}
           variant="secondary"
           compact
-          onPress={() => setSoundOn(!soundOn)}
+          onPress={() => chooseLook.mutate({ sounds_on: !soundOn })}
         />
       )}
       {mine !== null && game.status === 'active' && (

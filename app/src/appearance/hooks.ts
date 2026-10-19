@@ -19,15 +19,21 @@ export function useAppearance(): Appearance {
   return useAppearanceQuery().data ?? FREE_APPEARANCE;
 }
 
-/** Save a choice, showing it at once and putting it back if the server refuses. */
+/**
+ * Change part of my appearance (what is left out stays as it was), showing it at once and
+ * putting it back if the server refuses.
+ */
 export function useChooseAppearance() {
   const api = useApi();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (choice: Appearance) => api.setAppearance(choice),
-    onMutate: (choice) => {
+    mutationFn: (change: Partial<Appearance>) => api.changeAppearance(change),
+    onMutate: (change) => {
       const before = queryClient.getQueryData<Appearance>(queryKeys.appearance);
-      queryClient.setQueryData(queryKeys.appearance, choice);
+      queryClient.setQueryData<Appearance>(queryKeys.appearance, {
+        ...(before ?? FREE_APPEARANCE),
+        ...change,
+      });
       return { before };
     },
     onError: (_error, _choice, context) =>

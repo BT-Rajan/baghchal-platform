@@ -26,13 +26,23 @@ class SoundPack(StrEnum):
 
 
 class AppearanceIn(BaseModel):
+    """A change: only the fields given are changed."""
+
     model_config = ConfigDict(extra="forbid")
+
+    board: BoardTheme | None = None
+    pieces: PieceSet | None = None
+    sounds: SoundPack | None = None
+    sounds_on: bool | None = None
+    """Whether game sounds play at all (on every device)."""
+    show_badge: bool | None = None
+
+
+class AppearanceOut(BaseModel):
+    """What the app uses now: without the themes feature, the free board, pieces and sounds."""
 
     board: BoardTheme
     pieces: PieceSet
     sounds: SoundPack
+    sounds_on: bool
     show_badge: bool
-
-
-class AppearanceOut(AppearanceIn):
-    """What the app uses now: without the themes feature, the free board, pieces and sounds."""

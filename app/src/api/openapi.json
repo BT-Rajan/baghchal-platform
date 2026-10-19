@@ -1950,7 +1950,7 @@
     "/api/v1/me/appearance": {
       "get": {
         "summary": "My Appearance",
-        "description": "My board, pieces and sounds, and whether others see my badge.",
+        "description": "My board, pieces and sounds, whether game sounds play, and whether others see my badge.",
         "operationId": "my_appearance_api_v1_me_appearance_get",
         "responses": {
           "200": {
@@ -1965,10 +1965,10 @@
           }
         }
       },
-      "put": {
+      "patch": {
         "summary": "Choose Appearance",
-        "description": "Choose a board, pieces and sounds (beyond the first of each: Plus and Pro), and whether\nto show my badge.",
-        "operationId": "choose_appearance_api_v1_me_appearance_put",
+        "description": "Change my board, pieces or sounds (beyond the first of each: Plus and Pro), whether game\nsounds play, or whether to show my badge; what is left out stays as it was.",
+        "operationId": "choose_appearance_api_v1_me_appearance_patch",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2804,28 +2804,62 @@
       "AppearanceIn": {
         "properties": {
           "board": {
-            "$ref": "#/components/schemas/BoardTheme"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardTheme"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "pieces": {
-            "$ref": "#/components/schemas/PieceSet"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PieceSet"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "sounds": {
-            "$ref": "#/components/schemas/SoundPack"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SoundPack"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sounds_on": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sounds On"
           },
           "show_badge": {
-            "type": "boolean",
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Show Badge"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "required": [
-          "board",
-          "pieces",
-          "sounds",
-          "show_badge"
-        ],
-        "title": "AppearanceIn"
+        "title": "AppearanceIn",
+        "description": "A change: only the fields given are changed."
       },
       "AppearanceOut": {
         "properties": {
@@ -2838,17 +2872,21 @@
           "sounds": {
             "$ref": "#/components/schemas/SoundPack"
           },
+          "sounds_on": {
+            "type": "boolean",
+            "title": "Sounds On"
+          },
           "show_badge": {
             "type": "boolean",
             "title": "Show Badge"
           }
         },
-        "additionalProperties": false,
         "type": "object",
         "required": [
           "board",
           "pieces",
           "sounds",
+          "sounds_on",
           "show_badge"
         ],
         "title": "AppearanceOut",

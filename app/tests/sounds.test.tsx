@@ -1,9 +1,11 @@
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { renderApp } from './support/app';
-import { ME } from './support/fakeServer';
+import { ME, error } from './support/fakeServer';
 import { FakeSocket } from './support/fakeSocket';
 import { game } from './support/games';
+
+import { FREE_APPEARANCE } from '@/appearance/catalog';
 
 import { playSound } from '@/components/game/sound';
 
@@ -15,10 +17,14 @@ const played = playSound as jest.Mock;
 test('moves and captures sound as they arrive, until sounds are turned off', async () => {
   played.mockClear();
   const start = game({ ply: 1, side_to_move: 'tiger', moves: ['c3'], server_time: now() });
-  await renderApp('/game/g1', {
+  const rendered = await renderApp('/game/g1', {
     token: 'tok',
     routes: {
       'GET /api/v1/me': { status: 200, body: ME },
+      'PATCH /api/v1/me/appearance': {
+        status: 200,
+        body: { ...FREE_APPEARANCE, sounds_on: false },
+      },
       'GET /api/v1/games/g1': { status: 200, body: start },
     },
   });
@@ -53,9 +59,54 @@ test('moves and captures sound as they arrive, until sounds are turned off', asy
     ]),
   );
 
+  // The same setting as on "Board, pieces and sounds": kept on the server, for every device.
+  const { server } = rendered;
   await fireEvent.press(screen.getByRole('button', { name: 'Turn sounds off' }));
+  await waitFor(() =>
+    expect(server.lastTo('PATCH /api/v1/me/appearance').body).toEqual({ sounds_on: false }),
+  );
   await arrive(5, 'T3T/5/1TG2/2G2/4T t 17 1', ['c3', 'a1-b1', 'b2', 'b1xb3', 'c2']);
   expect(await screen.findByText('bob to move')).toBeOnTheScreen();
   expect(played).toHaveBeenCalledTimes(3);
   expect(screen.getByRole('button', { name: 'Turn sounds on' })).toBeOnTheScreen();
+});
+
+test('sounds turned off on any device stay off', async () => {
+  played.mockClear();
+  await renderApp('/game/g1', {
+    token: 'tok',
+    routes: {
+      'GET /api/v1/me': { status: 200, body: ME },
+      'GET /api/v1/me/appearance': {
+        status: 200,
+        body: { ...FREE_APPEARANCE, sounds_on: false },
+      },
+      'GET /api/v1/games/g1': {
+        status: 200,
+        body: game({ ply: 1, side_to_move: 'tiger', moves: ['c3'], server_time: now() }),
+      },
+    },
+  });
+  expect(await screen.findByRole('button', { name: 'Turn sounds on' })).toBeOnTheScreen();
+});
+
+test('sounds can be turned off before the setting has loaded', async () => {
+  const { server } = await renderApp('/game/g1', {
+    token: 'tok',
+    routes: {
+      'GET /api/v1/me': { status: 200, body: ME },
+      'GET /api/v1/me/appearance': error(400, 'bad', 'Not now.'),
+      'PATCH /api/v1/me/appearance': {
+        status: 200,
+        body: { ...FREE_APPEARANCE, sounds_on: false },
+      },
+      'GET /api/v1/games/g1': {
+        status: 200,
+        body: game({ ply: 1, side_to_move: 'tiger', moves: ['c3'], server_time: now() }),
+      },
+    },
+  });
+  await fireEvent.press(await screen.findByRole('button', { name: 'Turn sounds off' }));
+  expect(await screen.findByRole('button', { name: 'Turn sounds on' })).toBeOnTheScreen();
+  expect(server.lastTo('PATCH /api/v1/me/appearance').body).toEqual({ sounds_on: false });
 });

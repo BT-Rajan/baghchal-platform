@@ -10,6 +10,7 @@ export const FREE_APPEARANCE: Appearance = {
   board: 'wood',
   pieces: 'classic',
   sounds: 'gentle',
+  sounds_on: true,
   show_badge: true,
 };
 

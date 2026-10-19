@@ -109,7 +109,9 @@ scripts/        the Expo-cloud guardrail
   Each shows players without Pro what it does, and the way to the plans.
 - **Board, pieces and sounds.** Me → Board, pieces and sounds: board themes and piece sets
   (drawn by `Wood.tsx` and `Coin.tsx` from `src/appearance/catalog.ts`), sound packs (made live
-  in `sound.ts`), and showing or hiding the badge. Free sees the choices it would get with Plus.
+  in `sound.ts`), game sounds on or off, and showing or hiding the badge. Free sees the choices
+  it would get with Plus. These are one setting, kept on the server for every device: the
+  game's "Turn sounds off" button changes the same `sounds_on`.
 - **Reports and moderation.** "Report" on a profile or a finished game sends a report (with
   the game). Moderators see Me → Moderation: the report queue and each player's record, where
   they suspend, ban, lift a suspension, rename and dismiss reports, always with a reason.

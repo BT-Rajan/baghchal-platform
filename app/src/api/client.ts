@@ -33,6 +33,7 @@ export interface Client {
   get<T>(path: string, options?: RequestOptions): Promise<T>;
   post<T>(path: string, options?: RequestOptions): Promise<T>;
   put<T>(path: string, options?: RequestOptions): Promise<T>;
+  patch<T>(path: string, options?: RequestOptions): Promise<T>;
   delete<T>(path: string, options?: RequestOptions): Promise<T>;
 }
 
@@ -110,6 +111,7 @@ export function createClient(options: ClientOptions): Client {
     get: (path, opts = {}) => request('GET', path, opts),
     post: (path, opts = {}) => request('POST', path, opts),
     put: (path, opts = {}) => request('PUT', path, opts),
+    patch: (path, opts = {}) => request('PATCH', path, opts),
     delete: (path, opts = {}) => request('DELETE', path, opts),
   };
 }

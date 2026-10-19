@@ -16,6 +16,10 @@ function recorder() {
       calls.push(['PUT', path, options]);
       return undefined as never;
     },
+    patch: async (path, options) => {
+      calls.push(['PATCH', path, options]);
+      return undefined as never;
+    },
     delete: async (path, options) => {
       calls.push(['DELETE', path, options]);
       return undefined as never;

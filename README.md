@@ -170,7 +170,7 @@ and the Caddyfile.
 | POST | `/api/v1/tournaments/{code}/pairings/{id}/play` | Start one of my tournament games (my opponent must be online) |
 | GET | `/api/v1/trainer?kind=opening\|endgame` | Pro: my next puzzle and progress |
 | POST | `/api/v1/trainer/{id}/answer` | Answer a puzzle with a `move`; says whether it was best, and which was |
-| GET, PUT | `/api/v1/me/appearance` | My `board`, `pieces` and `sounds` (beyond the first of each: Plus and Pro), and `show_badge` |
+| GET, PATCH | `/api/v1/me/appearance` | My `board`, `pieces` and `sounds` (beyond the first of each: Plus and Pro), `sounds_on` and `show_badge`; a change sends only what changes |
 | GET | `/api/v1/plans` | Free, Plus and Pro: features and prices |
 | GET | `/api/v1/me/plan` | My plan, my features, and the grants behind them |
 | GET | `/api/v1/admin/players/{username}/plan` | Admins: a player's plan and every grant |

@@ -9,14 +9,14 @@ router = APIRouter(prefix="/api/v1")
 
 @router.get("/me/appearance")
 async def my_appearance(user: CurrentUser, state: State, db: DB) -> AppearanceOut:
-    """My board, pieces and sounds, and whether others see my badge."""
+    """My board, pieces and sounds, whether game sounds play, and whether others see my badge."""
     return await service.mine(db, user.id, state.clock())
 
 
-@router.put("/me/appearance")
+@router.patch("/me/appearance")
 async def choose_appearance(
     data: AppearanceIn, user: CurrentUser, state: State, db: DB
 ) -> AppearanceOut:
-    """Choose a board, pieces and sounds (beyond the first of each: Plus and Pro), and whether
-    to show my badge."""
+    """Change my board, pieces or sounds (beyond the first of each: Plus and Pro), whether game
+    sounds play, or whether to show my badge; what is left out stays as it was."""
     return await service.choose(db, user.id, state.clock(), data)

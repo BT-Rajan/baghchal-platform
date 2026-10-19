@@ -53,13 +53,12 @@ export default function AppearanceScreen() {
   const current = look.data;
   const themes = has(plan.data, 'themes');
   const pick = (change: Partial<Appearance>) => {
-    const next = { ...current, ...change };
-    if (!themes && isThemed(next)) {
+    if (!themes && isThemed({ ...current, ...change })) {
       setRefused(true);
       return;
     }
     setRefused(false);
-    choose.mutate(next);
+    choose.mutate(change);
   };
   const locked = (free: boolean) => !themes && !free;
 
@@ -109,6 +108,15 @@ export default function AppearanceScreen() {
       </View>
 
       <SectionTitle>Sounds</SectionTitle>
+      <Segmented
+        label="Game sounds"
+        value={current.sounds_on ? 'on' : 'off'}
+        onChange={(value) => pick({ sounds_on: value === 'on' })}
+        options={[
+          { value: 'on', label: 'On' },
+          { value: 'off', label: 'Off' },
+        ]}
+      />
       <Segmented
         label="Sound pack"
         vertical

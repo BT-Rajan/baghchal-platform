@@ -49,7 +49,7 @@ describe('board, pieces and sounds', () => {
       screen.getByText('A choice of boards, pieces and sounds comes with ClawPlay Plus.'),
     ).toBeOnTheScreen();
     expect(radio('Wood')).toBeChecked();
-    expect(server.requests.some((r) => r.method === 'PUT')).toBe(false);
+    expect(server.requests.some((r) => r.method === 'PATCH')).toBe(false);
     await fireEvent.press(screen.getByRole('button', { name: 'See plans' }));
     await waitFor(() => expect(app.getPathname()).toBe('/plans'));
   });
@@ -59,8 +59,8 @@ describe('board, pieces and sounds', () => {
     const { server } = await open('/appearance', {
       ...PLUS,
       [`GET ${URL}`]: () => ({ status: 200, body: saved }),
-      [`PUT ${URL}`]: (request) => {
-        saved = request.body as Appearance;
+      [`PATCH ${URL}`]: (request) => {
+        saved = { ...saved, ...(request.body as Partial<Appearance>) };
         return { status: 200, body: saved };
       },
     });
@@ -69,14 +69,18 @@ describe('board, pieces and sounds', () => {
     expect(radio('Walnut')).toBeChecked();
     await fireEvent.press(radio('Porcelain'));
     await fireEvent.press(radio(/^Temple bells/));
-    await waitFor(() =>
-      expect(server.lastTo(`PUT ${URL}`).body).toEqual({
-        board: 'walnut',
-        pieces: 'porcelain',
-        sounds: 'bells',
-        show_badge: true,
-      }),
-    );
+    // Only what changed is sent; the rest stays as it was.
+    await waitFor(() => expect(server.lastTo(`PATCH ${URL}`).body).toEqual({ sounds: 'bells' }));
+    expect(saved).toEqual({
+      ...FREE_APPEARANCE,
+      board: 'walnut',
+      pieces: 'porcelain',
+      sounds: 'bells',
+    });
+
+    await fireEvent.press(radio('Off'));
+    await waitFor(() => expect(saved.sounds_on).toBe(false));
+    expect(radio('Off')).toBeChecked();
 
     played.mockClear();
     await fireEvent.press(screen.getByRole('button', { name: 'Hear Temple bells' }));
@@ -97,7 +101,7 @@ describe('board, pieces and sounds', () => {
       ...PLUS,
       [`GET ${URL}`]: () =>
         fail ? error(400, 'bad', 'Appearance is down.') : { status: 200, body: FREE_APPEARANCE },
-      [`PUT ${URL}`]: error(403, 'upgrade_required', 'Your plan has ended.'),
+      [`PATCH ${URL}`]: error(403, 'upgrade_required', 'Your plan has ended.'),
     });
     expect(await screen.findByText('Appearance is down.')).toBeOnTheScreen();
     fail = false;

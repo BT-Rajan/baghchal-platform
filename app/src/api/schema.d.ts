@@ -893,20 +893,20 @@ export interface paths {
         };
         /**
          * My Appearance
-         * @description My board, pieces and sounds, and whether others see my badge.
+         * @description My board, pieces and sounds, whether game sounds play, and whether others see my badge.
          */
         get: operations["my_appearance_api_v1_me_appearance_get"];
-        /**
-         * Choose Appearance
-         * @description Choose a board, pieces and sounds (beyond the first of each: Plus and Pro), and whether
-         *     to show my badge.
-         */
-        put: operations["choose_appearance_api_v1_me_appearance_put"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Choose Appearance
+         * @description Change my board, pieces or sounds (beyond the first of each: Plus and Pro), whether game
+         *     sounds play, or whether to show my badge; what is left out stays as it was.
+         */
+        patch: operations["choose_appearance_api_v1_me_appearance_patch"];
         trace?: never;
     };
     "/api/v1/me/payments": {
@@ -1279,13 +1279,18 @@ export interface components {
             /** Best */
             best: string;
         };
-        /** AppearanceIn */
+        /**
+         * AppearanceIn
+         * @description A change: only the fields given are changed.
+         */
         AppearanceIn: {
-            board: components["schemas"]["BoardTheme"];
-            pieces: components["schemas"]["PieceSet"];
-            sounds: components["schemas"]["SoundPack"];
+            board?: components["schemas"]["BoardTheme"] | null;
+            pieces?: components["schemas"]["PieceSet"] | null;
+            sounds?: components["schemas"]["SoundPack"] | null;
+            /** Sounds On */
+            sounds_on?: boolean | null;
             /** Show Badge */
-            show_badge: boolean;
+            show_badge?: boolean | null;
         };
         /**
          * AppearanceOut
@@ -1295,6 +1300,8 @@ export interface components {
             board: components["schemas"]["BoardTheme"];
             pieces: components["schemas"]["PieceSet"];
             sounds: components["schemas"]["SoundPack"];
+            /** Sounds On */
+            sounds_on: boolean;
             /** Show Badge */
             show_badge: boolean;
         };
@@ -4038,7 +4045,7 @@ export interface operations {
             };
         };
     };
-    choose_appearance_api_v1_me_appearance_put: {
+    choose_appearance_api_v1_me_appearance_patch: {
         parameters: {
             query?: never;
             header?: never;

@@ -40,6 +40,7 @@ export type Analysis = S['AnalysisOut'];
 export type MoveReview = S['MoveReviewOut'];
 export type Verdict = S['MoveReviewOut']['verdict'];
 export type Appearance = S['AppearanceOut'];
+export type AppearanceChange = S['AppearanceIn'];
 export type BoardTheme = S['BoardTheme'];
 export type PieceSet = S['PieceSet'];
 export type SoundPack = S['SoundPack'];
@@ -199,7 +200,8 @@ export function createApi(client: Client, transport: Transport) {
 
     // Appearance
     appearance: (signal?: AbortSignal) => client.get<Appearance>(`${V1}/me/appearance`, { signal }),
-    setAppearance: (body: Appearance) => client.put<Appearance>(`${V1}/me/appearance`, { body }),
+    changeAppearance: (body: AppearanceChange) =>
+      client.patch<Appearance>(`${V1}/me/appearance`, { body }),
 
     // Ratings
     leaderboard: (category: Category, signal?: AbortSignal) =>
