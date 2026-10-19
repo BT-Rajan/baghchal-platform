@@ -1450,6 +1450,15 @@ export interface components {
          */
         BoardTheme: "wood" | "walnut" | "slate" | "jade" | "night";
         /**
+         * ByeOut
+         * @description A player who sat a round out (odd numbers), scoring a point.
+         */
+        ByeOut: {
+            /** Round */
+            round: number;
+            player: components["schemas"]["PlayerOut"];
+        };
+        /**
          * Category
          * @description The rating pools: Quick (blitz), Standard (rapid) and the sand clock.
          * @enum {string}
@@ -2206,6 +2215,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Round */
+            round: number;
             goat: components["schemas"]["PlayerOut"];
             tiger: components["schemas"]["PlayerOut"];
             state: components["schemas"]["PairingState"];
@@ -2577,6 +2588,8 @@ export interface components {
             player: components["schemas"]["PlayerOut"];
             /** Points */
             points: number;
+            /** Buchholz */
+            buchholz: number;
             /** Played */
             played: number;
         };
@@ -2598,7 +2611,7 @@ export interface components {
             time_control: "2+1" | "3+2" | "5+3" | "sand";
             /**
              * Max Players
-             * @default 6
+             * @default 32
              */
             max_players: number;
         };
@@ -2614,12 +2627,18 @@ export interface components {
             /** Max Players */
             max_players: number;
             status: components["schemas"]["TournamentStatus"];
+            /** Round */
+            round: number;
+            /** Rounds */
+            rounds: number;
             /** Players */
             players: components["schemas"]["PlayerOut"][];
             /** Standings */
             standings: components["schemas"]["StandingOut"][];
             /** Pairings */
             pairings: components["schemas"]["PairingOut"][];
+            /** Byes */
+            byes: components["schemas"]["ByeOut"][];
             /**
              * Created At
              * Format: date-time

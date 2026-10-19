@@ -20,7 +20,7 @@ import { tournamentStatusText } from '@/pro/format';
 import { useCreateTournament, useTournaments } from '@/pro/hooks';
 import { colors } from '@/theme';
 
-const SIZES = ['3', '4', '5', '6'].map((n) => ({ value: n, label: `${n} players` }));
+const SIZES = ['4', '8', '16', '32'].map((n) => ({ value: n, label: `${n} players` }));
 
 /** Small tournaments: hosting one (Pro), and the ones I am in. */
 export default function Tournaments() {
@@ -28,8 +28,9 @@ export default function Tournaments() {
   return (
     <Screen align="top">
       <Hint>
-        A round robin for 3 to 6 friends: everyone plays everyone, once with each side, in casual
-        games. Anyone can join with the link.
+        A Swiss tournament for 3 to 32 friends: each round you meet a player on your score, never
+        the same one twice if it can be helped, with sides taking turns. Games are casual; anyone
+        can join with the link.
       </Hint>
       {plan.data !== undefined &&
         (has(plan.data, 'tournaments') ? (
@@ -45,7 +46,7 @@ export default function Tournaments() {
 function NewTournament() {
   const [name, setName] = useState('');
   const [timeControl, setTimeControl] = useState<TimeControl>('5+3');
-  const [size, setSize] = useState('6');
+  const [size, setSize] = useState('8');
   const create = useCreateTournament();
   return (
     <>

@@ -1,4 +1,4 @@
-"""Small tournaments: a Pro host's round robin among friends."""
+"""Tournaments: a Pro host's Swiss tournament among friends."""
 
 import uuid
 from contextlib import AsyncExitStack
@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 from fastapi import FastAPI
-from sqlalchemy import update
+from sqlalchemy import select, update
 
 from baghchal_server.deps import AppState
 from baghchal_server.tournaments.models import Pairing
@@ -29,11 +29,23 @@ async def _get(player: Player, code: str) -> dict[str, Any]:
     return (await player.http.get(f"{URL}/{code}")).json()  # type: ignore[no-any-return]
 
 
-def _pairing(t: dict[str, Any], goat: str, tiger: str) -> dict[str, Any]:
-    (found,) = (
-        p for p in t["pairings"] if (p["goat"]["username"], p["tiger"]["username"]) == (goat, tiger)
-    )
-    return found  # type: ignore[no-any-return]
+def _mine(t: dict[str, Any], username: str) -> dict[str, Any] | None:
+    """This player's game in the round being played (None if they have the bye)."""
+    for p in t["pairings"]:
+        if p["round"] == t["round"] and username in (p["goat"]["username"], p["tiger"]["username"]):
+            return p  # type: ignore[no-any-return]
+    return None
+
+
+async def _play_round(people: dict[str, Player], code: str) -> dict[str, Any]:
+    """Play every game of the round being played: the goats resign each time."""
+    t = await _get(next(iter(people.values())), code)
+    for p in [p for p in t["pairings"] if p["round"] == t["round"]]:
+        goat = people[p["goat"]["username"]]
+        game = (await _play(goat, code, p)).json()
+        r = await goat.http.post(f"/api/v1/games/{game['id']}/resign")
+        assert r.status_code == 200, r.text
+    return await _get(next(iter(people.values())), code)
 
 
 async def _play(player: Player, code: str, pairing: dict[str, Any]) -> Any:
@@ -83,12 +95,18 @@ async def test_joining(app: FastAPI, players: PlayerFactory) -> None:
 
     started = (await alice.http.post(f"{URL}/{code}/start")).json()
     assert started["status"] == "running"
-    assert len(started["pairings"]) == 6  # each pair twice, once with each side
-    assert {(s["player"]["username"], s["points"]) for s in started["standings"]} == {
-        ("alice", 0),
-        ("bob", 0),
-        ("carol", 0),
-    }
+    # Three players: two rounds; one game a round, and a bye (a point) for the odd one out.
+    assert (started["round"], started["rounds"]) == (1, 2)
+    assert (len(started["pairings"]), len(started["byes"])) == (1, 1)
+    assert sorted(s["points"] for s in started["standings"]) == [0, 0, 1]
+    # A bye is not a game to play.
+    state: AppState = app.state.ctx
+    async with state.sessions() as db:
+        bye = await db.scalar(select(Pairing).where(Pairing.tiger_id.is_(None)))
+    assert bye is not None
+    sitter = {"alice": alice, "bob": bob, "carol": carol}[started["byes"][0]["player"]["username"]]
+    r = await _play(sitter, code, {"id": str(bye.id)})
+    assert (r.status_code, r.json()["error"]["code"]) == (409, "pairing_played")
     for who, path in ((dave, "join"), (bob, "leave")):
         r = await who.http.post(f"{URL}/{code}/{path}")
         assert (r.status_code, r.json()["error"]["code"]) == (409, "tournament_started")
@@ -109,68 +127,89 @@ async def test_hosting_limits_and_blocks(app: FastAPI, players: PlayerFactory) -
     assert (r.status_code, r.json()["error"]["code"]) == (403, "player_blocked")
 
 
-async def test_a_round_robin(app: FastAPI, players: PlayerFactory) -> None:
-    alice, bob, carol, dave = [await players(n) for n in ("alice", "bob", "carol", "dave")]
+async def test_a_swiss_tournament(app: FastAPI, players: PlayerFactory) -> None:
+    names = ("alice", "bob", "carol", "dave")
+    alice, bob, carol, dave = [await players(n) for n in names]
+    eve = await players("eve")
+    people = dict(zip(names, (alice, bob, carol, dave), strict=True))
     t = await _host(app, alice, time_control="3+2")
     code = t["code"]
-    for p in (bob, carol):
+    for p in (bob, carol, dave):
         await p.http.post(f"{URL}/{code}/join")
     t = (await alice.http.post(f"{URL}/{code}/start")).json()
-    first = _pairing(t, "alice", "bob")
+    assert (t["round"], t["rounds"], len(t["pairings"]), t["byes"]) == (1, 3, 2, [])
+    first = _mine(t, "alice")
+    assert first is not None
+    opponent = next(
+        n for n in (first["goat"]["username"], first["tiger"]["username"]) if n != "alice"
+    )
+    outsider = next(n for n in names if n not in {"alice", opponent})
 
-    r = await _play(carol, code, first)
+    r = await _play(people[outsider], code, first)
     assert (r.status_code, r.json()["error"]["code"]) == (403, "not_your_game")
-    r = await _play(bob, code, first)
+    r = await _play(alice, code, first)
     assert (r.status_code, r.json()["error"]["code"]) == (409, "player_offline")
     async with AsyncExitStack() as stack:
-        await _online(app, stack, alice, bob, carol, dave)
-        game = (await _play(bob, code, first)).json()
-        assert (game["goat"]["username"], game["tiger"]["username"], game["rated"]) == (
-            "alice",
-            "bob",
-            False,
-        )
-        assert game["time_control"] == "3+2"
-        assert _pairing(await _get(bob, code), "alice", "bob")["state"] == "playing"
+        await _online(app, stack, alice, bob, carol, dave, eve)
+        game = (await _play(alice, code, first)).json()
+        assert (game["rated"], game["time_control"]) == (False, "3+2")
+        assert _mine(await _get(bob, code), "alice")["state"] == "playing"  # type: ignore[index]
         r = await _play(alice, code, first)
         assert (r.status_code, r.json()["error"]["code"]) == (409, "pairing_played")
 
         # An aborted game is played again.
         await alice.http.post(f"/api/v1/games/{game['id']}/abort")
-        assert _pairing(await _get(bob, code), "alice", "bob")["state"] == "waiting"
-        game = (await _play(alice, code, first)).json()
-        await alice.http.post(f"/api/v1/games/{game['id']}/resign")
-        done = _pairing(await _get(bob, code), "alice", "bob")
-        assert (done["state"], done["winner"]["username"]) == ("done", "bob")
+        assert _mine(await _get(bob, code), "alice")["state"] == "waiting"  # type: ignore[index]
 
         # A player busy elsewhere cannot start one.
-        busy = await _start(carol, dave)
-        r = await _play(alice, code, _pairing(t, "alice", "carol"))
+        busy = await _start(people[outsider], eve)
+        theirs = _mine(t, outsider)
+        assert theirs is not None
+        r = await _play(people[outsider], code, theirs)
         assert (r.status_code, r.json()["error"]["code"]) == (409, "player_busy")
-        await carol.http.post(f"/api/v1/games/{busy['id']}/resign")
+        await people[outsider].http.post(f"/api/v1/games/{busy['id']}/resign")
 
-        # Everyone else's games: the goats resign each time.
-        for goat, tiger in (
-            ("alice", "carol"),
-            ("bob", "alice"),
-            ("bob", "carol"),
-            ("carol", "alice"),
-            ("carol", "bob"),
-        ):
-            people = {"alice": alice, "bob": bob, "carol": carol}
-            game = (await _play(people[goat], code, _pairing(t, goat, tiger))).json()
-            r = await people[goat].http.post(f"/api/v1/games/{game['id']}/resign")
-            assert r.status_code == 200, r.text
+        # Three rounds; the tigers win every game (the goats resign).
+        after_one = await _play_round(people, code)
+        assert after_one["round"] == 2
+        # Round 2: the two winners meet, and the two losers.
+        points = {s["player"]["username"]: s["points"] for s in after_one["standings"]}
+        for p in (p for p in after_one["pairings"] if p["round"] == 2):
+            assert points[p["goat"]["username"]] == points[p["tiger"]["username"]]
+        await _play_round(people, code)
+        final = await _play_round(people, code)
 
-    final = await _get(dave, code)
-    assert final["status"] == "finished"  # every game played
-    assert [(s["player"]["username"], s["points"], s["played"]) for s in final["standings"]] == [
-        ("alice", 2, 4),
-        ("bob", 2, 4),
-        ("carol", 2, 4),
-    ]
+    assert final["status"] == "finished"  # every round played
+    assert final["round"] == 3
+    met = {frozenset((p["goat"]["username"], p["tiger"]["username"])) for p in final["pairings"]}
+    assert len(met) == 6  # nobody met anyone twice: four players, three rounds, everyone met
+    standings = final["standings"]
+    assert sum(s["points"] for s in standings) == 6
+    assert [s["points"] for s in standings] == sorted(
+        (s["points"] for s in standings), reverse=True
+    )
+    for s in standings:  # the tie-break: everyone's opponents' points
+        assert s["buchholz"] == 6 - s["points"]
     r = await _play(alice, code, first)
     assert (r.status_code, r.json()["error"]["code"]) == (409, "tournament_not_running")
+
+
+async def test_a_bye_goes_round(app: FastAPI, players: PlayerFactory) -> None:
+    alice, bob, carol = [await players(n) for n in ("alice", "bob", "carol")]
+    people = {"alice": alice, "bob": bob, "carol": carol}
+    t = await _host(app, alice)
+    for p in (bob, carol):
+        await p.http.post(f"{URL}/{t['code']}/join")
+    first = (await alice.http.post(f"{URL}/{t['code']}/start")).json()
+    async with AsyncExitStack() as stack:
+        await _online(app, stack, alice, bob, carol)
+        second = await _play_round(people, t["code"])
+        assert second["round"] == 2
+        sat = {b["player"]["username"] for b in second["byes"]}
+        assert len(sat) == 2  # the bye went to someone who had not had one
+        assert first["byes"][0]["player"]["username"] in sat
+        final = await _play_round(people, t["code"])
+    assert final["status"] == "finished"
 
 
 async def test_the_host_ends_it(app: FastAPI, players: PlayerFactory) -> None:
@@ -200,15 +239,19 @@ async def test_pairings_belong_to_their_tournament_and_one_start_wins(
             await p.http.post(f"{URL}/{t['code']}/join")
         await alice.http.post(f"{URL}/{t['code']}/start")
     one, two = await _get(alice, one["code"]), await _get(alice, two["code"])
-    r = await _play(alice, one["code"], _pairing(two, "alice", "bob"))
+    r = await _play(alice, one["code"], two["pairings"][0])
     assert (r.status_code, r.json()["error"]["code"]) == (404, "pairing_not_found")
 
     state: AppState = app.state.ctx
-    pairing = _pairing(one, "alice", "bob")
+    pairing = one["pairings"][0]
+    people = {"alice": alice, "bob": bob, "carol": carol}
+    starter = people[pairing["goat"]["username"]]
+    elsewhere = two["pairings"][0]
+    other_player = people[elsewhere["goat"]["username"]]
     async with AsyncExitStack() as stack:
         await _online(app, stack, alice, bob, carol)
-        other_game = (await _play(carol, two["code"], _pairing(two, "carol", "bob"))).json()
-        await carol.http.post(f"/api/v1/games/{other_game['id']}/resign")
+        other_game = (await _play(other_player, two["code"], elsewhere)).json()
+        await other_player.http.post(f"/api/v1/games/{other_game['id']}/resign")
 
         async def someone_else_first(ids: Any) -> set[Any]:
             async with state.sessions() as db:
@@ -221,7 +264,7 @@ async def test_pairings_belong_to_their_tournament_and_one_start_wins(
             return set(ids)
 
         monkeypatch.setattr(state.presence, "online", someone_else_first)
-        r = await _play(alice, one["code"], pairing)
+        r = await _play(starter, one["code"], pairing)
         assert (r.status_code, r.json()["error"]["message"]) == (
             409,
             "This game has just been started.",

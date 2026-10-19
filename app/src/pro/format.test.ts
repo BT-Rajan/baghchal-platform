@@ -5,6 +5,7 @@ import {
   dailyStreakText,
   isMine,
   pairingText,
+  roundsOf,
   progressText,
   puzzlePrompt,
   tournamentStatusText,
@@ -15,6 +16,7 @@ const BOB = { id: 'b', username: 'bob' };
 
 const pairing = (overrides: Partial<Pairing> = {}): Pairing => ({
   id: 'p1',
+  round: 1,
   goat: ALICE,
   tiger: BOB,
   state: 'waiting',
@@ -31,21 +33,33 @@ const tournament = (overrides: Partial<Tournament> = {}): Tournament => ({
   max_players: 6,
   status: 'open',
   players: [ALICE, BOB],
+  round: 0,
+  rounds: 0,
   standings: [],
   pairings: [],
+  byes: [],
   created_at: '2026-01-01T12:00:00Z',
   ...overrides,
 });
 
 test('tournaments', () => {
   expect(tournamentStatusText(tournament())).toBe('Waiting for players: 2 of 6');
-  const pairings = [pairing({ state: 'done', winner: BOB }), pairing({ id: 'p2' })];
-  expect(tournamentStatusText(tournament({ status: 'running', pairings }))).toBe(
-    '1 of 2 games played',
+  const pairings = [
+    pairing({ state: 'done', winner: BOB }),
+    pairing({ id: 'p2', round: 2 }),
+    pairing({ id: 'p3', round: 2, state: 'done', winner: ALICE }),
+  ];
+  const running = tournament({ status: 'running', round: 2, rounds: 3, pairings });
+  expect(tournamentStatusText(running)).toBe('Round 2 of 3 · 1 of 2 games played');
+  expect(tournamentStatusText({ ...running, status: 'finished' })).toBe('Finished after 2 rounds');
+  expect(tournamentStatusText({ ...running, status: 'finished', round: 1 })).toBe(
+    'Finished after 1 round',
   );
-  expect(tournamentStatusText(tournament({ status: 'finished', pairings }))).toBe(
-    'Finished · 1 of 2 games played',
-  );
+  const byes = [{ round: 1, player: ALICE }];
+  expect(roundsOf({ ...running, byes })).toEqual([
+    { round: 2, games: [pairings[1], pairings[2]], bye: null },
+    { round: 1, games: [pairings[0]], bye: 'alice' },
+  ]);
   expect(pairingText(pairing())).toBe('alice (goats) v bob (tigers) · to play');
   expect(pairingText(pairing({ state: 'playing' }))).toBe(
     'alice (goats) v bob (tigers) · playing now',

@@ -1,12 +1,27 @@
 /** Words for tournaments and the trainer (the Pro extras, and the daily puzzle for everyone). */
 import type { Pairing, Tournament, Trainer, TrainerAnswer, TrainerPuzzle } from '@/api/endpoints';
 
-/** "Waiting for players: 2 of 6", "4 of 12 games played", "Finished". */
+/** "Waiting for players: 2 of 8", "Round 2 of 4 · 1 of 3 games played", "Finished after 4 rounds". */
 export function tournamentStatusText(t: Tournament): string {
   if (t.status === 'open') return `Waiting for players: ${t.players.length} of ${t.max_players}`;
-  const done = t.pairings.filter((p) => p.state === 'done').length;
-  const played = `${done} of ${t.pairings.length} games played`;
-  return t.status === 'running' ? played : `Finished · ${played}`;
+  if (t.status === 'finished') {
+    return `Finished after ${t.round} ${t.round === 1 ? 'round' : 'rounds'}`;
+  }
+  const current = t.pairings.filter((p) => p.round === t.round);
+  const done = current.filter((p) => p.state === 'done').length;
+  return `Round ${t.round} of ${t.rounds} · ${done} of ${current.length} games played`;
+}
+
+/** The rounds played so far, newest first: each round's games and its bye, if any. */
+export function roundsOf(t: Tournament): { round: number; games: Pairing[]; bye: string | null }[] {
+  const rounds = [...new Set(t.pairings.map((p) => p.round).concat(t.byes.map((b) => b.round)))];
+  return rounds
+    .sort((a, b) => b - a)
+    .map((round) => ({
+      round,
+      games: t.pairings.filter((p) => p.round === round),
+      bye: t.byes.find((b) => b.round === round)?.player.username ?? null,
+    }));
 }
 
 /** "alice (goats) v bob (tigers) · won by bob" */

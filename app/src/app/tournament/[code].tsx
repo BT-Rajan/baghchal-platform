@@ -10,7 +10,7 @@ import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
 import { shareLink } from '@/lobby/format';
-import { isMine, pairingText, tournamentStatusText } from '@/pro/format';
+import { isMine, pairingText, roundsOf, tournamentStatusText } from '@/pro/format';
 import { usePlayPairing, useTournament, useTournamentAction } from '@/pro/hooks';
 import { colors, spacing } from '@/theme';
 
@@ -38,7 +38,9 @@ function Details({ tournament: t }: { tournament: Tournament }) {
   const host = t.host.id === me.id;
   const playing = t.players.some((p) => p.id === me.id);
   const error = action.error ?? play.error;
-  const mine = t.pairings.filter((p) => isMine(p, me.id));
+  // My game this round (the earlier ones are under the rounds below).
+  const mine = t.pairings.filter((p) => p.round === t.round && isMine(p, me.id));
+  const sitting = t.byes.some((b) => b.round === t.round && b.player.id === me.id);
   return (
     <>
       <Text style={styles.muted}>
@@ -87,6 +89,7 @@ function Details({ tournament: t }: { tournament: Tournament }) {
                 <Text
                   style={styles.text}
                 >{`${s.points} ${s.points === 1 ? 'point' : 'points'}`}</Text>
+                <Text style={styles.muted}>{`Tie-break ${s.buchholz}`}</Text>
                 <Text style={styles.muted}>{`${s.played} played`}</Text>
               </View>
             ))}
@@ -94,9 +97,12 @@ function Details({ tournament: t }: { tournament: Tournament }) {
         </>
       )}
 
+      {t.status === 'running' && sitting && (
+        <Notice tone="info">You have the bye this round: a point, and a rest.</Notice>
+      )}
       {t.status === 'running' && mine.length > 0 && (
         <>
-          <SectionTitle>Your games</SectionTitle>
+          <SectionTitle>{`Your game, round ${t.round}`}</SectionTitle>
           <Hint>Start a game when your opponent is online; it opens for both of you.</Hint>
           {mine.map((p) => (
             <PairingRow
@@ -109,17 +115,24 @@ function Details({ tournament: t }: { tournament: Tournament }) {
         </>
       )}
 
-      {t.pairings.length > 0 && (
-        <>
-          <SectionTitle>All games</SectionTitle>
+      {roundsOf(t).map(({ round, games, bye }) => (
+        <View key={round} style={styles.round}>
+          <SectionTitle>{`Round ${round}`}</SectionTitle>
           <Card>
-            {t.pairings.map((p) => (
+            {games.map((p) => (
               <Text key={p.id} style={styles.muted}>
                 {pairingText(p)}
               </Text>
             ))}
+            {bye !== null && <Text style={styles.muted}>{`${bye} has the bye (a point)`}</Text>}
           </Card>
-        </>
+        </View>
+      ))}
+      {t.status !== 'open' && (
+        <Hint>
+          Standings: a point for each win or bye; ties go to whoever met the stronger opponents (the
+          tie-break adds up their points).
+        </Hint>
       )}
 
       {host && t.status === 'running' && (
@@ -175,4 +188,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   rank: { width: 24, fontSize: 15, fontWeight: '700', color: colors.text },
   grow: { flex: 1 },
+  round: { gap: spacing.sm },
 });

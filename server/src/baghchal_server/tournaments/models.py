@@ -8,7 +8,7 @@ from baghchal_server.db import MYSQL_TABLE_ARGS, Base, UTCDateTime
 
 
 class Tournament(Base):
-    """A small round robin among friends, hosted by a Pro player and joined by invitation."""
+    """A Swiss tournament among friends, hosted by a Pro player and joined by invitation."""
 
     __tablename__ = "tournaments"
     __table_args__ = MYSQL_TABLE_ARGS
@@ -20,6 +20,11 @@ class Tournament(Base):
     time_control: Mapped[str] = mapped_column(String(8))
     max_players: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(10))
+    rounds: Mapped[int] = mapped_column(Integer, server_default="1")
+    """How many rounds, set when it starts (tournaments from before Swiss: their one round
+    robin, as round 1)."""
+    round: Mapped[int] = mapped_column(Integer, server_default="1")
+    """The round being played (0 before the start)."""
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
     started_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
@@ -44,8 +49,9 @@ class Entry(Base):
 
 
 class Pairing(Base):
-    """One game of the round robin: who plays goats, who plays tigers, and the game once
-    started (an aborted game leaves the pairing to be played again)."""
+    """One game of a round: who plays goats, who plays tigers, and the game once started (an
+    aborted game leaves the pairing to be played again). With no tiger, it is a bye: the
+    player in ``goat_id`` sits the round out and scores a point."""
 
     __tablename__ = "tournament_pairings"
     __table_args__ = (
@@ -57,8 +63,11 @@ class Pairing(Base):
     tournament_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("tournaments.id", ondelete="CASCADE")
     )
+    round: Mapped[int] = mapped_column(Integer, server_default="1")
     goat_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"))
-    tiger_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"))
+    tiger_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE")
+    )
     game_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("games.id", ondelete="SET NULL")
     )
