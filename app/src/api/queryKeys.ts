@@ -1,5 +1,7 @@
 /** Query-cache keys shared by screens and by realtime events, which write into the same cache. */
 export const queryKeys = {
+  legalVersions: ['legal'] as const,
+  legalDocument: (document: string) => ['legal', document] as const,
   challenges: ['challenges'] as const,
   friends: ['friends'] as const,
   notifications: ['notifications'] as const,

@@ -11,7 +11,7 @@ from sqlalchemy import update
 from baghchal_server.deps import AppState
 from baghchal_server.lobby.models import Challenge
 
-from .conftest import ORIGIN, Clock, Player, PlayerFactory
+from .conftest import AGREE, ORIGIN, Clock, Player, PlayerFactory
 from .test_games import _online, _start
 
 URL = "/api/v1/challenges"
@@ -72,7 +72,12 @@ async def test_a_guest_accepts(app: FastAPI, players: PlayerFactory) -> None:
         ) as friend,
         AsyncExitStack() as stack,
     ):
-        await friend.post("/api/v1/auth/guest", json={})
+        await friend.post(
+            "/api/v1/auth/guest",
+            json={
+                **AGREE,
+            },
+        )
         await _online(app, stack, alice)
         r = await _accept(friend, code)
         assert r.status_code == 200, r.text

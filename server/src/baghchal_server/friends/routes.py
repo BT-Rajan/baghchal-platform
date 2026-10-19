@@ -3,7 +3,15 @@ from typing import Final
 from fastapi import APIRouter, status
 
 from baghchal_server.accounts.models import User
-from baghchal_server.deps import DB, AppState, CurrentUser, Member, State, enforce_limit
+from baghchal_server.deps import (
+    DB,
+    AppState,
+    CurrentUser,
+    Member,
+    PeoplePlayer,
+    State,
+    enforce_limit,
+)
 from baghchal_server.errors import AppError
 from baghchal_server.friends import service
 from baghchal_server.friends.schemas import FriendsOut, RelationOut
@@ -40,7 +48,9 @@ async def friends(user: CurrentUser, state: State, db: DB) -> FriendsOut:
 
 
 @router.post("/friends/{username}")
-async def add_friend(username: UsernameQuery, user: Member, state: State, db: DB) -> RelationOut:
+async def add_friend(
+    username: UsernameQuery, user: Member, _: PeoplePlayer, state: State, db: DB
+) -> RelationOut:
     """Ask a player to be friends, or accept their request. They hear of it at once."""
     await enforce_limit(state, FRIENDS_PER_USER, str(user.id))
     other = await _player(state, db, username)

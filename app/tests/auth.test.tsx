@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { renderApp, savedToken } from './support/app';
-import { LINK_TOKEN, ME, error } from './support/fakeServer';
+import { AGREED, LINK_TOKEN, ME, error } from './support/fakeServer';
 import { FakeSocket } from './support/fakeSocket';
 
 const SIGNED_IN = { 'GET /api/v1/me': { status: 200, body: ME } };
@@ -90,6 +90,8 @@ describe('sign up', () => {
     await type('Username', username);
     await type('Email', email);
     await type('Password', password);
+    await type('Month of birth', '1');
+    await type('Year of birth', '1990');
     await press('Create account');
   }
 
@@ -99,7 +101,7 @@ describe('sign up', () => {
     expect(screen.getByText(/3–20 letters/)).toBeOnTheScreen();
     expect(screen.getByText('Enter a valid email address.')).toBeOnTheScreen();
     expect(screen.getByText('Use at least 10 characters.')).toBeOnTheScreen();
-    expect(server.requests).toHaveLength(0);
+    expect(server.requests.map((r) => r.path)).toEqual(['/api/v1/legal']);
   });
 
   test('puts a taken username on the username field', async () => {
@@ -119,6 +121,7 @@ describe('sign up', () => {
     await fill('alice', ' alice@example.com ', 'correct horse');
     expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/auth/register').body).toEqual({
+      ...AGREED,
       username: 'alice',
       email: 'alice@example.com',
       password: 'correct horse',

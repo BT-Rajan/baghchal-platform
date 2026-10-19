@@ -18,6 +18,7 @@ import { useFormErrors } from '@/components/form';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
+import { TextLink } from '@/components/TextLink';
 import { colors, spacing } from '@/theme';
 
 /**
@@ -57,6 +58,9 @@ export default function SettingsScreen() {
           <DeleteSection />
         </>
       )}
+      <SectionTitle>Terms and privacy</SectionTitle>
+      <TextLink href="/terms">Terms of service</TextLink>
+      <TextLink href="/privacy">Privacy policy</TextLink>
       <SectionTitle>Sign out</SectionTitle>
       <Button
         title={guest ? 'Sign out (this guest account will be lost)' : 'Sign out'}

@@ -10,7 +10,7 @@ from fastapi import FastAPI
 
 from baghchal_server.mail import MemoryMailer
 
-from .conftest import ORIGIN, PASSWORD, PlayerFactory, last_token
+from .conftest import AGREE, ORIGIN, PASSWORD, PlayerFactory, last_token
 from .test_games import _online
 
 GUEST = "/api/v1/auth/guest"
@@ -26,7 +26,12 @@ def _browser(app: FastAPI) -> httpx.AsyncClient:
 
 
 async def _guest(http: httpx.AsyncClient) -> dict[str, Any]:
-    r = await http.post(GUEST, json={})
+    r = await http.post(
+        GUEST,
+        json={
+            **AGREE,
+        },
+    )
     assert r.status_code == 200, r.text
     return r.json()["user"]  # type: ignore[no-any-return]
 
@@ -68,7 +73,7 @@ async def test_a_guest_plays_at_once(app: FastAPI) -> None:
 
 
 async def test_native_apps_get_a_token(app_client: httpx.AsyncClient) -> None:
-    r = await app_client.post(GUEST, json={"transport": "bearer"})
+    r = await app_client.post(GUEST, json={**AGREE, "transport": "bearer"})
     token = r.json()["token"]
     r = await app_client.get("/api/v1/me", headers={"Authorization": f"Bearer {token}"})
     assert r.json()["role"] == "guest"
@@ -93,7 +98,7 @@ async def test_making_an_account_keeps_the_games(app: FastAPI, mailer: MemoryMai
         game = (await http.post("/api/v1/games/computer", json={"level": "easy"})).json()
         await http.post(f"/api/v1/games/{game['id']}/resign")
 
-        claim = {"username": "Sita", "email": "sita@example.com", "password": PASSWORD}
+        claim = {**AGREE, "username": "Sita", "email": "sita@example.com", "password": PASSWORD}
         r = await http.post(CLAIM, json=claim)
         assert r.status_code == 200, r.text
         assert (r.json()["id"], r.json()["username"], r.json()["role"]) == (
@@ -135,7 +140,8 @@ async def test_what_a_guest_cannot_claim(
     async with _browser(app) as http:
         await _guest(http)
         r = await http.post(
-            CLAIM, json={"username": username, "email": "x@example.com", "password": password}
+            CLAIM,
+            json={**AGREE, "username": username, "email": "x@example.com", "password": password},
         )
         assert r.json()["error"]["code"] == code
         assert (await http.get("/api/v1/me")).json()["role"] == "guest"
@@ -145,7 +151,7 @@ async def test_registering_a_guest_name(app: FastAPI) -> None:
     async with _browser(app) as http:
         r = await http.post(
             "/api/v1/auth/register",
-            json={"username": "guest-1", "email": "g@example.com", "password": PASSWORD},
+            json={**AGREE, "username": "guest-1", "email": "g@example.com", "password": PASSWORD},
         )
         assert r.json()["error"]["code"] == "username_unavailable"
 
@@ -155,5 +161,10 @@ async def test_names_run_out(app: FastAPI, monkeypatch: pytest.MonkeyPatch) -> N
     async with _browser(app) as http:
         await _guest(http)
     async with _browser(app) as http:
-        r = await http.post(GUEST, json={})
+        r = await http.post(
+            GUEST,
+            json={
+                **AGREE,
+            },
+        )
         assert (r.status_code, r.json()["error"]["code"]) == (503, "try_again")

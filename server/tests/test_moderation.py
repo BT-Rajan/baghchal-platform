@@ -17,7 +17,7 @@ from baghchal_server.mail import MemoryMailer
 from baghchal_server.moderation import service as moderation_service
 from baghchal_server.moderators import USAGE, main, run
 
-from .conftest import PASSWORD, Clock, Player, PlayerFactory
+from .conftest import AGREE, PASSWORD, Clock, Player, PlayerFactory
 from .test_games import _event, _online, _start
 
 MOD = "/api/v1/mod"
@@ -365,7 +365,7 @@ class TestWithAWordList:
     async def test_registration_checks_it(self, client: httpx.AsyncClient) -> None:
         r = await client.post(
             "/api/v1/auth/register",
-            json={"username": "VeryRude", "email": "v@example.com", "password": PASSWORD},
+            json={**AGREE, "username": "VeryRude", "email": "v@example.com", "password": PASSWORD},
         )
         assert (r.status_code, r.json()["error"]["code"]) == (409, "username_unavailable")
 

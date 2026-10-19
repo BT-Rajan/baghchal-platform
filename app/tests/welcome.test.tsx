@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { renderApp, savedToken } from './support/app';
-import { ME, error, type Route } from './support/fakeServer';
+import { AGREED, ME, error, type Route } from './support/fakeServer';
 import { game } from './support/games';
 
 const GUEST = {
@@ -36,8 +36,15 @@ describe('the welcome page', () => {
     expect(screen.getByText('Goats trap')).toBeOnTheScreen();
     expect(screen.getByText('Play your way')).toBeOnTheScreen();
     await press('Play now, no sign-up');
+    await screen.findByRole('heading', { name: 'Your first game' });
+    await fireEvent.changeText(screen.getByLabelText('Month of birth'), '01');
+    await fireEvent.changeText(screen.getByLabelText('Year of birth'), '1990');
+    await press('Start playing');
     await waitFor(() => expect(app.getPathname()).toBe('/game/g1'));
-    expect(server.lastTo('POST /api/v1/auth/guest').body).toEqual({ transport: 'bearer' });
+    expect(server.lastTo('POST /api/v1/auth/guest').body).toEqual({
+      ...AGREED,
+      transport: 'bearer',
+    });
     expect(savedToken()).toBe('guest-tok');
     // The Easy computer, with the goats, who move first: the coach says what to do.
     expect(server.lastTo('POST /api/v1/games/computer').body).toEqual({
@@ -49,11 +56,30 @@ describe('the welcome page', () => {
   });
 
   test('the closing button plays too, and a refusal is shown', async () => {
-    await renderApp('/welcome', {
+    const { server } = await renderApp('/welcome', {
       routes: { 'POST /api/v1/auth/guest': error(429, 'rate_limited', 'Slow down.') },
     });
     await fireEvent.press(await screen.findByRole('button', { name: 'Start playing' }));
+    await screen.findByRole('button', { name: 'Start playing', busy: false });
+    await press('Start playing');
+    expect(screen.getByText('Enter the month and year you were born.')).toBeOnTheScreen();
+    await fireEvent.changeText(screen.getByLabelText('Month of birth'), '5');
+    await fireEvent.changeText(
+      screen.getByLabelText('Year of birth'),
+      String(new Date().getFullYear() - 10),
+    );
+    await press('Start playing');
+    expect(screen.getByText('You must be at least 13 to play on ClawPlay.')).toBeOnTheScreen();
+    await fireEvent.changeText(
+      screen.getByLabelText('Year of birth'),
+      String(new Date().getFullYear() - 15),
+    );
+    // A young guest may play the computer; no parent is asked until they make an account.
+    expect(screen.getByText(/^Under 18, you can play the computer as a guest/)).toBeOnTheScreen();
+    expect(screen.queryByLabelText("Parent's or guardian's email")).toBeNull();
+    await press('Start playing');
     expect(await screen.findByText('Slow down.')).toBeOnTheScreen();
+    expect(server.lastTo('POST /api/v1/auth/guest').body).not.toHaveProperty('parent_email');
   });
 
   test('leads to sign in and sign up', async () => {
@@ -97,9 +123,12 @@ describe('a guest', () => {
     await fireEvent.changeText(screen.getByLabelText('Username'), 'Sita');
     await fireEvent.changeText(screen.getByLabelText('Email'), ' sita@example.com ');
     await fireEvent.changeText(screen.getByLabelText('Password'), 'correct horse');
+    await fireEvent.changeText(screen.getByLabelText('Month of birth'), '1');
+    await fireEvent.changeText(screen.getByLabelText('Year of birth'), '1990');
     await press('Make my account');
     expect(await screen.findByRole('heading', { name: 'Welcome, Sita!' })).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/me/claim').body).toEqual({
+      ...AGREED,
       username: 'Sita',
       email: 'sita@example.com',
       password: 'correct horse',
@@ -113,12 +142,14 @@ describe('a guest', () => {
     await asGuest('/claim', {
       'POST /api/v1/me/claim': error(409, 'username_taken', 'That username is taken.'),
     });
-    await screen.findByRole('heading', { name: 'Make your free account' });
+    await screen.findByRole('button', { name: 'Make my account', busy: false });
     await press('Make my account');
     expect(screen.getByText('Choose a username.', { exact: false })).toBeDefined();
     await fireEvent.changeText(screen.getByLabelText('Username'), 'bob');
     await fireEvent.changeText(screen.getByLabelText('Email'), 'b@example.com');
     await fireEvent.changeText(screen.getByLabelText('Password'), 'correct horse');
+    await fireEvent.changeText(screen.getByLabelText('Month of birth'), '1');
+    await fireEvent.changeText(screen.getByLabelText('Year of birth'), '1990');
     await press('Make my account');
     expect(await screen.findByText('That username is taken.')).toBeOnTheScreen();
   });

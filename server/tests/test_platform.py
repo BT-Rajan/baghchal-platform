@@ -11,11 +11,11 @@ from pydantic import ValidationError
 
 from baghchal_server.accounts import routes as account_routes
 from baghchal_server.app import create_app
-from baghchal_server.config import Settings
+from baghchal_server.config import LEGAL_DETAILS, Settings
 from baghchal_server.mail import MemoryMailer
 from baghchal_server.ratelimit import Limit, MemoryRateLimiter
 
-from .conftest import PASSWORD, sign_up
+from .conftest import AGREE, PASSWORD, sign_up
 
 LOGIN = "/api/v1/auth/login"
 
@@ -118,7 +118,7 @@ async def test_one_address_can_sign_in_many_people(
         await sign_up(client, mailer, name, f"{name}@example.com")
     r = await client.post(
         "/api/v1/auth/register",
-        json={"username": "dan", "email": "dan@example.com", "password": PASSWORD},
+        json={**AGREE, "username": "dan", "email": "dan@example.com", "password": PASSWORD},
     )
     assert r.status_code == 202  # dan never confirms his address
 
@@ -221,18 +221,23 @@ def test_production_refuses_unsafe_settings() -> None:
     with pytest.raises(ValidationError) as info:
         Settings(environment="production")
     message = str(info.value)
-    for problem in ("SQLite", "redis_url", "smtp", "https"):
+    for problem in ("SQLite", "redis_url", "smtp", "https", "privacy policy and terms need"):
         assert problem in message
 
 
 def test_production_accepts_safe_settings() -> None:
-    s = Settings(
-        environment="production",
-        database_url="mysql+asyncmy://u:p@db/baghchal",
-        redis_url="redis://cache:6379/0",
-        mail_backend="smtp",
-        smtp_host="smtp.example.com",
-        public_base_url="https://baghchal.example",
-        allowed_origins=("https://baghchal.example",),
+    s = Settings.model_validate(
+        {
+            "environment": "production",
+            "database_url": "mysql+asyncmy://u:p@db/baghchal",
+            "redis_url": "redis://cache:6379/0",
+            "mail_backend": "smtp",
+            "smtp_host": "smtp.example.com",
+            "public_base_url": "https://baghchal.example",
+            "allowed_origins": ("https://baghchal.example",),
+            **dict.fromkeys(LEGAL_DETAILS, "Set"),
+        }
     )
     assert s.session_cookie_name == "__Host-session"
+    with pytest.raises(ValidationError, match="need grievance_email"):
+        s.model_validate({**s.model_dump(), "grievance_email": " "})

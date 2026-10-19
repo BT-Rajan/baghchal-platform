@@ -33,13 +33,20 @@ test('every endpoint calls the right method, path and body', async () => {
   const api = createApi(client, 'bearer');
   const signal = new AbortController().signal;
 
-  await api.register({ username: 'alice', email: 'a@example.com', password: 'p' });
+  const agreed = { birth_month: '1990-01', terms_version: 't1', privacy_version: 'p1' };
+  await api.register({ ...agreed, username: 'alice', email: 'a@example.com', password: 'p' });
   await api.verifyEmail('tok');
   await api.login('alice', 'pw');
   await api.logout();
   await api.requestPasswordReset('a@example.com');
   await api.confirmPasswordReset('tok', 'new');
   await api.me(signal);
+  await api.playAsGuest(agreed);
+  await api.legalVersions(signal);
+  await api.legalDocument('privacy', signal);
+  await api.acceptConsents({ terms_version: 't1', privacy_version: 'p1' });
+  await api.parentLookUp('tok');
+  await api.parentDecide('tok', 'refuse');
   await api.searchPlayers('al', signal);
   await api.onlinePlayers();
   await api.profile('a b');
@@ -79,7 +86,7 @@ test('every endpoint calls the right method, path and body', async () => {
     [
       'POST',
       `${V}/auth/register`,
-      { body: { username: 'alice', email: 'a@example.com', password: 'p' } },
+      { body: { ...agreed, username: 'alice', email: 'a@example.com', password: 'p' } },
     ],
     ['POST', `${V}/auth/verify-email`, { body: { token: 'tok', transport: 'bearer' } }],
     ['POST', `${V}/auth/login`, { body: { login: 'alice', password: 'pw', transport: 'bearer' } }],
@@ -87,6 +94,12 @@ test('every endpoint calls the right method, path and body', async () => {
     ['POST', `${V}/auth/password-reset`, { body: { email: 'a@example.com' } }],
     ['POST', `${V}/auth/password-reset/confirm`, { body: { token: 'tok', password: 'new' } }],
     ['GET', `${V}/me`, { signal }],
+    ['POST', `${V}/auth/guest`, { body: { ...agreed, transport: 'bearer' } }],
+    ['GET', `${V}/legal`, { signal }],
+    ['GET', `${V}/legal/privacy`, { signal }],
+    ['POST', `${V}/me/consents`, { body: { terms_version: 't1', privacy_version: 'p1' } }],
+    ['POST', `${V}/parent-consent/look-up`, { body: { token: 'tok' } }],
+    ['POST', `${V}/parent-consent`, { body: { token: 'tok', decision: 'refuse' } }],
     ['GET', `${V}/players`, { query: { prefix: 'al' }, signal }],
     ['GET', `${V}/players/online`, { signal: undefined }],
     ['GET', `${V}/players/a%20b`, { signal: undefined }],

@@ -69,6 +69,13 @@ export type TrainerPuzzle = S['PuzzleOut'];
 export type TrainerAnswer = S['AnswerOut'];
 export type DailyPuzzle = S['DailyOut'];
 
+export type LegalVersions = S['VersionsOut'];
+export type LegalDocument = S['DocumentOut'];
+export type LegalDocumentName = S['Document'];
+export type ParentLink = S['ParentLinkOut'];
+/** What every sign-up gives besides the account: the age, and the documents accepted. */
+export type Agreement = Omit<S['GuestIn'], 'transport'>;
+
 export type ChallengeAnswer = 'accept' | 'decline' | 'cancel';
 export type GameAction = 'resign' | 'abort' | 'claim-abandonment';
 
@@ -82,7 +89,8 @@ export function createApi(client: Client, transport: Transport) {
       client.post<S['Accepted']>(`${V1}/auth/register`, { body }),
     verifyEmail: (token: string) =>
       client.post<Session>(`${V1}/auth/verify-email`, { body: { token, transport } }),
-    playAsGuest: () => client.post<Session>(`${V1}/auth/guest`, { body: { transport } }),
+    playAsGuest: (agreement: Agreement) =>
+      client.post<Session>(`${V1}/auth/guest`, { body: { ...agreement, transport } }),
     claimAccount: (body: S['RegisterIn']) => client.post<Me>(`${V1}/me/claim`, { body }),
     login: (login: string, password: string) =>
       client.post<Session>(`${V1}/auth/login`, { body: { login, password, transport } }),
@@ -92,6 +100,16 @@ export function createApi(client: Client, transport: Transport) {
     confirmPasswordReset: (token: string, password: string) =>
       client.post<void>(`${V1}/auth/password-reset/confirm`, { body: { token, password } }),
     me: (signal?: AbortSignal) => client.get<Me>(`${V1}/me`, { signal }),
+
+    // The terms, the privacy policy and a parent's agreement
+    legalVersions: (signal?: AbortSignal) => client.get<LegalVersions>(`${V1}/legal`, { signal }),
+    legalDocument: (document: LegalDocumentName, signal?: AbortSignal) =>
+      client.get<LegalDocument>(`${V1}/legal/${document}`, { signal }),
+    acceptConsents: (body: S['ConsentsIn']) => client.post<Me>(`${V1}/me/consents`, { body }),
+    parentLookUp: (token: string) =>
+      client.post<ParentLink>(`${V1}/parent-consent/look-up`, { body: { token } }),
+    parentDecide: (token: string, decision: 'agree' | 'refuse') =>
+      client.post<ParentLink>(`${V1}/parent-consent`, { body: { token, decision } }),
     changePassword: (currentPassword: string, newPassword: string) =>
       client.post<void>(`${V1}/me/password`, {
         body: { current_password: currentPassword, new_password: newPassword },

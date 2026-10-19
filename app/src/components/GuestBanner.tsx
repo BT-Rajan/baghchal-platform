@@ -6,9 +6,22 @@ import { colors, radius, spacing } from '@/theme';
 
 import { Button } from './Button';
 
-/** For guests: who they are playing as, and the way to keep it. */
+/**
+ * What holds the account back: for guests, who they are playing as and the way to keep it; for
+ * a player under 18, that a parent or guardian has yet to agree.
+ */
 export function GuestBanner() {
   const me = useMe();
+  if (me.parent_consent === 'pending') {
+    return (
+      <View style={styles.box}>
+        <Text style={styles.text}>
+          We emailed your parent or guardian. Until they agree you can play the computer and
+          puzzles, but not other people. Ask them to open the link in the email.
+        </Text>
+      </View>
+    );
+  }
   if (me.role !== 'guest') return null;
   return (
     <View style={styles.box}>
