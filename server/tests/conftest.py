@@ -108,6 +108,11 @@ async def app(
         state: AppState = app.state.ctx
         async with state.engine.begin() as conn:
             for table in (
+                "trainer_attempts",
+                "tournament_pairings",
+                "tournament_players",
+                "tournaments",
+                "rooms",
                 "analysis_uses",
                 "analyses",
                 "active_games",

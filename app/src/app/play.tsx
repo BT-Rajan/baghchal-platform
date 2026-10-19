@@ -43,6 +43,18 @@ export default function PlayNow() {
       />
       <FindOpponent timeControl={timeControl} />
       <PlayComputer timeControl={timeControl} />
+      <SectionTitle>More ways to play</SectionTitle>
+      <Button
+        title="Invite a friend (private room)"
+        variant="secondary"
+        onPress={() => router.push('/rooms')}
+      />
+      <Button title="Tournaments" variant="secondary" onPress={() => router.push('/tournaments')} />
+      <Button
+        title="Trainer: opening and endgame puzzles"
+        variant="secondary"
+        onPress={() => router.push('/trainer')}
+      />
     </Screen>
   );
 }

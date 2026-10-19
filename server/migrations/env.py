@@ -20,6 +20,9 @@ from baghchal_server.lobby import models as lobby_models  # noqa: F401
 from baghchal_server.moderation import models as moderation_models  # noqa: F401
 from baghchal_server.payments import models as payments_models  # noqa: F401
 from baghchal_server.ratings import models as rating_models  # noqa: F401
+from baghchal_server.rooms import models as rooms_models  # noqa: F401
+from baghchal_server.tournaments import models as tournaments_models  # noqa: F401
+from baghchal_server.trainer import models as trainer_models  # noqa: F401
 
 config = context.config
 if config.config_file_name and config.attributes.get("configure_logger", True):

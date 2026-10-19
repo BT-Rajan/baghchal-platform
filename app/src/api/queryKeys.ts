@@ -18,4 +18,9 @@ export const queryKeys = {
   analysis: (id: string) => ['analysis', id] as const,
   appearance: ['me', 'appearance'] as const,
   payments: ['me', 'payments'] as const,
+  rooms: ['rooms'] as const,
+  room: (code: string) => ['room', code] as const,
+  tournaments: ['tournaments'] as const,
+  tournament: (code: string) => ['tournament', code] as const,
+  trainer: (kind: string) => ['trainer', kind] as const,
 };

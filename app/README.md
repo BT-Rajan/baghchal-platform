@@ -98,6 +98,10 @@ scripts/        the Expo-cloud guardrail
   server takes payments. Razorpay's Checkout script is loaded on the first purchase
   (`src/payments/razorpay.ts`) and opens Razorpay's own window; the app never sees card
   details, and the server confirms the payment before the plan changes. Web only for now.
+- **Pro extras.** Play now → More ways to play: private rooms (make a link, share it; the
+  friend's "Join and play" starts the game), tournaments (host, join by link, standings, "Play
+  now" on my games) and the trainer (the puzzle on the real board, in the player's theme).
+  Each shows players without Pro what it does, and the way to the plans.
 - **Board, pieces and sounds.** Me → Board, pieces and sounds: board themes and piece sets
   (drawn by `Wood.tsx` and `Coin.tsx` from `src/appearance/catalog.ts`), sound packs (made live
   in `sound.ts`), and showing or hiding the badge. Free sees the choices it would get with Plus.

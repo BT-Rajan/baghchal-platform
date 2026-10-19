@@ -930,6 +930,263 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rooms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Rooms
+         * @description My open rooms.
+         */
+        get: operations["my_rooms_api_v1_rooms_get"];
+        put?: never;
+        /**
+         * Create Room
+         * @description Make a private room (Pro): a link to one casual game, for whoever opens it first.
+         */
+        post: operations["create_room_api_v1_rooms_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rooms/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Room
+         * @description A room, for someone who has its link.
+         */
+        get: operations["room_api_v1_rooms__code__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rooms/{code}/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Join Room
+         * @description Play the host: the game starts now (its id is in ``game_id``; both get a ``game``
+         *     event). The host must be online.
+         */
+        post: operations["join_room_api_v1_rooms__code__join_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rooms/{code}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close Room */
+        post: operations["close_room_api_v1_rooms__code__close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tournaments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Tournaments
+         * @description Tournaments I am in, newest first.
+         */
+        get: operations["my_tournaments_api_v1_tournaments_get"];
+        put?: never;
+        /**
+         * Create Tournament
+         * @description Host a small round robin (Pro); share its code for players to join.
+         */
+        post: operations["create_tournament_api_v1_tournaments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tournaments/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tournament */
+        get: operations["tournament_api_v1_tournaments__code__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tournaments/{code}/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Join Tournament */
+        post: operations["join_tournament_api_v1_tournaments__code__join_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tournaments/{code}/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Leave Tournament */
+        post: operations["leave_tournament_api_v1_tournaments__code__leave_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tournaments/{code}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Tournament
+         * @description The host closes entries and draws up the games.
+         */
+        post: operations["start_tournament_api_v1_tournaments__code__start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tournaments/{code}/finish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Finish Tournament
+         * @description The host ends the tournament now.
+         */
+        post: operations["finish_tournament_api_v1_tournaments__code__finish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tournaments/{code}/pairings/{pairing_id}/play": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Play Pairing
+         * @description Start one of my games; my opponent must be online (both get a ``game`` event).
+         */
+        post: operations["play_pairing_api_v1_tournaments__code__pairings__pairing_id__play_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trainer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Trainer
+         * @description My next puzzle of this kind (Pro), and how I am doing.
+         */
+        get: operations["trainer_api_v1_trainer_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trainer/{puzzle_id}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer
+         * @description Was this the best move? The answer says which was.
+         */
+        post: operations["answer_api_v1_trainer__puzzle_id__answer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -964,6 +1221,24 @@ export interface components {
             created_at: string;
             /** Left Today */
             left_today: number | null;
+        };
+        /** AnswerIn */
+        AnswerIn: {
+            /** Move */
+            move: string;
+        };
+        /** AnswerOut */
+        AnswerOut: {
+            /** Solved */
+            solved: number;
+            /** Total */
+            total: number;
+            /** Streak */
+            streak: number;
+            /** Correct */
+            correct: boolean;
+            /** Best */
+            best: string;
         };
         /** AppearanceIn */
         AppearanceIn: {
@@ -1430,6 +1705,11 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /**
+         * Kind
+         * @enum {string}
+         */
+        Kind: "opening" | "endgame";
         /** LeaderboardEntry */
         LeaderboardEntry: {
             /** Rank */
@@ -1580,6 +1860,25 @@ export interface components {
             /** Grants */
             grants: components["schemas"]["GrantOut"][];
         };
+        /** PairingOut */
+        PairingOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            goat: components["schemas"]["PlayerOut"];
+            tiger: components["schemas"]["PlayerOut"];
+            state: components["schemas"]["PairingState"];
+            /** Game Id */
+            game_id: string | null;
+            winner: components["schemas"]["PlayerOut"] | null;
+        };
+        /**
+         * PairingState
+         * @enum {string}
+         */
+        PairingState: "waiting" | "playing" | "done";
         /** PasswordChangeIn */
         PasswordChangeIn: {
             /** Current Password */
@@ -1741,6 +2040,21 @@ export interface components {
             /** Blocked */
             blocked: boolean;
         };
+        /** PuzzleOut */
+        PuzzleOut: {
+            /** Id */
+            id: string;
+            kind: components["schemas"]["Kind"];
+            /** Position */
+            position: string;
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "goat" | "tiger";
+            /** Legal Moves */
+            legal_moves: string[];
+        };
         /** RatingOut */
         RatingOut: {
             /** Rating */
@@ -1854,6 +2168,49 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** RoomIn */
+        RoomIn: {
+            /**
+             * Time Control
+             * @enum {string}
+             */
+            time_control: "3+2" | "5+3" | "10+5" | "15+10";
+            /**
+             * Side
+             * @default random
+             * @enum {string}
+             */
+            side: "goat" | "tiger" | "random";
+        };
+        /** RoomOut */
+        RoomOut: {
+            /** Code */
+            code: string;
+            host: components["schemas"]["PlayerOut"];
+            /**
+             * Time Control
+             * @enum {string}
+             */
+            time_control: "3+2" | "5+3" | "10+5" | "15+10";
+            /**
+             * Host Side
+             * @enum {string}
+             */
+            host_side: "goat" | "tiger" | "random";
+            status: components["schemas"]["RoomStatus"];
+            /** Game Id */
+            game_id: string | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /**
+         * RoomStatus
+         * @enum {string}
+         */
+        RoomStatus: "open" | "played" | "closed";
         /** SeekCountOut */
         SeekCountOut: {
             /** Time Control */
@@ -1905,12 +2262,78 @@ export interface components {
          * @enum {string}
          */
         SoundPack: "gentle" | "woodblock" | "bells" | "arcade";
+        /** StandingOut */
+        StandingOut: {
+            player: components["schemas"]["PlayerOut"];
+            /** Points */
+            points: number;
+            /** Played */
+            played: number;
+        };
         /** SuspendIn */
         SuspendIn: {
             /** Days */
             days: number | null;
             /** Reason */
             reason: string;
+        };
+        /** TournamentIn */
+        TournamentIn: {
+            /** Name */
+            name: string;
+            /**
+             * Time Control
+             * @enum {string}
+             */
+            time_control: "3+2" | "5+3" | "10+5" | "15+10";
+            /**
+             * Max Players
+             * @default 6
+             */
+            max_players: number;
+        };
+        /** TournamentOut */
+        TournamentOut: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            host: components["schemas"]["PlayerOut"];
+            /**
+             * Time Control
+             * @enum {string}
+             */
+            time_control: "3+2" | "5+3" | "10+5" | "15+10";
+            /** Max Players */
+            max_players: number;
+            status: components["schemas"]["TournamentStatus"];
+            /** Players */
+            players: components["schemas"]["PlayerOut"][];
+            /** Standings */
+            standings: components["schemas"]["StandingOut"][];
+            /** Pairings */
+            pairings: components["schemas"]["PairingOut"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * TournamentStatus
+         * @enum {string}
+         */
+        TournamentStatus: "open" | "running" | "finished";
+        /** TrainerOut */
+        TrainerOut: {
+            /** Solved */
+            solved: number;
+            /** Total */
+            total: number;
+            /** Streak */
+            streak: number;
+            kind: components["schemas"]["Kind"];
+            puzzle: components["schemas"]["PuzzleOut"] | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -3607,6 +4030,458 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaymentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_rooms_api_v1_rooms_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoomOut"][];
+                };
+            };
+        };
+    };
+    create_room_api_v1_rooms_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoomIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoomOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    room_api_v1_rooms__code__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoomOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    join_room_api_v1_rooms__code__join_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoomOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_room_api_v1_rooms__code__close_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoomOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_tournaments_api_v1_tournaments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TournamentOut"][];
+                };
+            };
+        };
+    };
+    create_tournament_api_v1_tournaments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TournamentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TournamentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tournament_api_v1_tournaments__code__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TournamentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    join_tournament_api_v1_tournaments__code__join_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TournamentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    leave_tournament_api_v1_tournaments__code__leave_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TournamentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_tournament_api_v1_tournaments__code__start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TournamentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finish_tournament_api_v1_tournaments__code__finish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TournamentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    play_pairing_api_v1_tournaments__code__pairings__pairing_id__play_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+                pairing_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trainer_api_v1_trainer_get: {
+        parameters: {
+            query?: {
+                kind?: components["schemas"]["Kind"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    answer_api_v1_trainer__puzzle_id__answer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                puzzle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnswerOut"];
                 };
             };
             /** @description Validation Error */

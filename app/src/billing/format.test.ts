@@ -46,7 +46,7 @@ test('plans and prices in words', () => {
 
 test('features, and the ones still being built', () => {
   expect(featureText('computer_hard')).toBe('Play the Hard computer');
-  expect(featureText('trainer')).toBe('Opening and endgame trainer (coming soon)');
+  expect(featureText('trainer')).toBe('Opening and endgame trainer');
   expect(has(PLUS_UNTIL, 'computer_hard')).toBe(true);
   expect(has(FREE, 'computer_hard')).toBe(false);
   expect(has(undefined, 'computer_hard')).toBe(false);
@@ -90,8 +90,8 @@ test('each plan lists what it adds', () => {
   expect(planLines(PLANS, 1)).toHaveLength(5);
   expect(planLines(PLANS, 2)).toEqual([
     'Everything in Plus, and:',
-    'Private rooms for friends (coming soon)',
-    'Host small tournaments (coming soon)',
-    'Opening and endgame trainer (coming soon)',
+    'Private rooms for friends',
+    'Host small tournaments',
+    'Opening and endgame trainer',
   ]);
 });
