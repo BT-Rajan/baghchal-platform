@@ -102,7 +102,7 @@ export class RealtimeClient {
     this.socket = socket;
     socket.onopen = () => {
       this.lastFrameAt = Date.now();
-      this.pingTimer = this.scheduler.setInterval(() => this.heartbeat(), PING_INTERVAL_MS);
+      this.pingTimer = this.scheduler.setInterval(() => this.heartbeat(socket), PING_INTERVAL_MS);
     };
     socket.onmessage = (event) => {
       this.lastFrameAt = Date.now();
@@ -123,14 +123,9 @@ export class RealtimeClient {
     this.everConnected = true;
   }
 
-  private heartbeat(): void {
-    if (Date.now() - this.lastFrameAt > SILENCE_LIMIT_MS) {
-      const socket = this.socket;
-      this.drop();
-      if (socket) this.closed(socket, 1006);
-      return;
-    }
-    this.socket?.send(JSON.stringify({ type: 'ping' }));
+  private heartbeat(socket: SocketLike): void {
+    if (Date.now() - this.lastFrameAt > SILENCE_LIMIT_MS) this.closed(socket, 1006);
+    else socket.send(JSON.stringify({ type: 'ping' }));
   }
 
   private drop(): void {
@@ -149,8 +144,8 @@ export class RealtimeClient {
   }
 
   private closed(socket: SocketLike, code: number): void {
-    if (this.socket === socket) this.drop();
-    if (!this.running) return;
+    if (this.socket !== socket) return; // Stopped, or a socket we already replaced.
+    this.drop();
     if (code === CLOSE.sessionEnded) {
       this.running = false;
       this.options.onStatus?.('offline');
@@ -163,7 +158,7 @@ export class RealtimeClient {
     this.attempt = Math.min(this.attempt + 1, 16);
     this.retryTimer = this.scheduler.setTimeout(() => {
       this.retryTimer = null;
-      if (this.running) this.connect();
+      this.connect();
     }, delay);
   }
 }

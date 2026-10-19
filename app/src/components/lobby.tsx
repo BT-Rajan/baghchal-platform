@@ -35,10 +35,8 @@ export function PlayerRow({ player }: { player: PlayerStatus }) {
       <Pressable
         accessibilityRole="link"
         accessibilityLabel={`${player.username}, ${player.playing ? 'playing' : player.online ? 'online' : 'offline'}`}
-        style={({ pressed }) => [
-          styles.playerRow,
-          { borderColor: palette.border, opacity: pressed ? 0.7 : 1 },
-        ]}
+        // Link passes this style through a Slot, which needs a flat object.
+        style={StyleSheet.flatten([styles.playerRow, { borderColor: palette.border }])}
       >
         <StatusDot online={player.online} playing={player.playing} />
         <Text style={[styles.name, { color: palette.text }]}>{player.username}</Text>
@@ -55,9 +53,13 @@ export function ratingText(rating: Rating | undefined): string {
   return `${rating.rating}${rating.provisional ? '?' : ''}`;
 }
 
+/** Challenges last 60 seconds; device clocks may disagree with the server's by a little. */
 function secondsLeft(challenge: Challenge, now: number): number {
-  return Math.max(0, Math.ceil((Date.parse(challenge.expires_at) - now) / 1000));
+  const left = Math.ceil((Date.parse(challenge.expires_at) - now) / 1000);
+  return Math.min(60, Math.max(0, left));
 }
+
+const SIDES = { goat: 'goats', tiger: 'tigers' } as const;
 
 export function ChallengeCard({ challenge, now }: { challenge: Challenge; now: number }) {
   const me = useMe();
@@ -67,7 +69,9 @@ export function ChallengeCard({ challenge, now }: { challenge: Challenge; now: n
   const left = secondsLeft(challenge, now);
   const kind = challenge.rated
     ? 'Rated match (2 games)'
-    : `Casual, ${challenge.side === 'random' ? 'random side' : `${incoming ? 'they play' : 'you play'} ${challenge.side}`}`;
+    : challenge.side === 'goat' || challenge.side === 'tiger'
+      ? `Casual, ${incoming ? `${other.username} plays` : 'you play'} ${SIDES[challenge.side]}`
+      : 'Casual, random sides';
   const act = (response: 'accept' | 'decline' | 'cancel') =>
     respond.mutate(
       { id: challenge.id, response },

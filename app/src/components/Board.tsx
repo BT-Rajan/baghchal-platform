@@ -153,10 +153,11 @@ export const Board = memo(function Board({
                 ) : isTarget ? (
                   <View
                     style={{
-                      width: cell * 0.32,
-                      height: cell * 0.32,
+                      width: cell * 0.26,
+                      height: cell * 0.26,
                       borderRadius: cell,
                       backgroundColor: palette.highlight,
+                      opacity: 0.85,
                     }}
                   />
                 ) : null}

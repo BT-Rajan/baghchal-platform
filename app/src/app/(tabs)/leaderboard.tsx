@@ -51,11 +51,11 @@ export default function Leaderboard() {
             <Pressable
               accessibilityRole="link"
               accessibilityLabel={`Rank ${entry.rank}, ${entry.player.username}, rating ${entry.rating}`}
-              style={[
+              style={StyleSheet.flatten([
                 styles.row,
                 { borderColor: palette.border },
                 entry.player.id === me.id && { backgroundColor: palette.lastMove },
-              ]}
+              ])}
             >
               <Text style={[styles.rank, { color: palette.muted }]}>{entry.rank}</Text>
               <Text style={[styles.name, { color: palette.text }]}>{entry.player.username}</Text>

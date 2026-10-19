@@ -18,10 +18,11 @@ The app must never talk to Expo's servers at runtime, and builds must not requir
 | Push notifications | Expo Push (`exp.host`) | `getDevicePushTokenAsync()` and sending through FCM / APNs from our backend |
 | Web hosting | EAS Hosting | Static export served from our CDN |
 
-Guardrails (added with the app in a later phase):
+Guardrails (in place since Phase 6, `app/scripts/guard-no-expo-cloud.mjs`):
 - CI fails if the app config or source references `u.expo.dev`, `exp.host`, an EAS project
   ID, or `getExpoPushTokenAsync`.
-- `EXPO_NO_TELEMETRY=1` in CI.
+- `EXPO_NO_TELEMETRY=1` and `EXPO_OFFLINE=1` in CI.
+- `expo-updates`, `eas-cli` and `expo-insights` may not be dependencies.
 
 ## Consequences
 We run a little more infrastructure ourselves (build pipeline, optional update server). The

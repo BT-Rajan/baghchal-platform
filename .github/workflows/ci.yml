@@ -102,3 +102,42 @@ jobs:
         run: >-
           uv run pytest server --cov=baghchal_server --cov-branch --cov-append
           --cov-report=term-missing --cov-fail-under=100
+
+  app:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      # docs/adr/0002: nothing in the pipeline talks to Expo's servers.
+      EXPO_NO_TELEMETRY: "1"
+      EXPO_OFFLINE: "1"
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.13"
+      - run: npm ci
+      - name: No Expo cloud services
+        run: npm run guard
+      - name: API types match the server
+        run: |
+          uv sync --locked
+          (cd ../server && uv run python -m baghchal_server.openapi) > src/api/openapi.json
+          npm run gen:api
+          git diff --exit-code -- src/api
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run test:ci
+      - name: Web build
+        run: npm run export:web

@@ -196,7 +196,7 @@ function MoveList({ moves }: { moves: readonly string[] }) {
       {pairs.map(([n, goat, tiger]) => (
         <Text key={n} style={[styles.move, { color: palette.text }]}>
           <Text style={{ color: palette.muted }}>{n}. </Text>
-          {goat} {tiger ?? ''}
+          {tiger ? `${goat} ${tiger}` : goat}
         </Text>
       ))}
     </View>

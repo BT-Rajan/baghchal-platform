@@ -33,7 +33,7 @@ const light: Palette = {
   tiger: '#d9822b',
   goat: '#fafafa',
   highlight: '#2e7dd7',
-  lastMove: 'rgba(46, 125, 215, 0.25)',
+  lastMove: 'rgba(255, 196, 0, 0.45)',
 };
 
 const dark: Palette = {
@@ -51,7 +51,7 @@ const dark: Palette = {
   tiger: '#e8913b',
   goat: '#f5f5f5',
   highlight: '#7ab4ff',
-  lastMove: 'rgba(122, 180, 255, 0.3)',
+  lastMove: 'rgba(255, 196, 0, 0.35)',
 };
 
 export function usePalette(): Palette {

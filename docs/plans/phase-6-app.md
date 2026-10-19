@@ -1,6 +1,6 @@
 # Phase 6 plan: the app
 
-Status: in progress, on branch `phase-6-app`.
+Status: delivered (see [app/README.md](../../app/README.md)).
 
 One Expo / React Native client for web, iOS, Android and tablets, in `app/`. It talks only
 to our own server (Phases 2–5). Per [ADR 0002](../adr/0002-no-dependency-on-expo-cloud.md),
