@@ -3311,9 +3311,11 @@
         "type": "string",
         "enum": [
           "blitz",
-          "rapid"
+          "rapid",
+          "sand"
         ],
-        "title": "Category"
+        "title": "Category",
+        "description": "The rating pools: Quick (blitz), Standard (rapid) and the sand clock."
       },
       "ChallengeIn": {
         "properties": {
@@ -3332,10 +3334,10 @@
           "time_control": {
             "type": "string",
             "enum": [
+              "2+1",
               "3+2",
               "5+3",
-              "10+5",
-              "15+10"
+              "sand"
             ],
             "title": "Time Control"
           },
@@ -3688,13 +3690,13 @@
           "time_control": {
             "type": "string",
             "enum": [
+              "2+1",
               "3+2",
               "5+3",
-              "10+5",
-              "15+10"
+              "sand"
             ],
             "title": "Time Control",
-            "default": "10+5"
+            "default": "5+3"
           }
         },
         "additionalProperties": false,
@@ -6557,10 +6559,10 @@
           "time_control": {
             "type": "string",
             "enum": [
+              "2+1",
               "3+2",
               "5+3",
-              "10+5",
-              "15+10"
+              "sand"
             ],
             "title": "Time Control"
           },
@@ -6739,10 +6741,10 @@
           "time_control": {
             "type": "string",
             "enum": [
+              "2+1",
               "3+2",
               "5+3",
-              "10+5",
-              "15+10"
+              "sand"
             ],
             "title": "Time Control"
           },
@@ -6777,12 +6779,6 @@
           },
           "time_control": {
             "type": "string",
-            "enum": [
-              "3+2",
-              "5+3",
-              "10+5",
-              "15+10"
-            ],
             "title": "Time Control"
           },
           "max_players": {

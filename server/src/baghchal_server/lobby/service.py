@@ -20,7 +20,7 @@ from baghchal_server.games.models import Game
 from baghchal_server.legal.age import plays_people
 from baghchal_server.lobby.models import Block, Challenge, ChallengeStatus
 from baghchal_server.lobby.schemas import ChallengeIn, ChallengeOut, PlayerOut
-from baghchal_server.lobby.time_controls import TIME_CONTROLS
+from baghchal_server.lobby.time_controls import TIME_CONTROLS, label_of
 from baghchal_server.notifications.models import Notification
 from baghchal_server.realtime.presence import Presence
 
@@ -492,7 +492,7 @@ async def describe(db: AsyncSession, challenges: Sequence[Challenge]) -> list[Ch
             if c.opponent_id is None
             else PlayerOut(id=c.opponent_id, username=names[c.opponent_id]),
             code=c.code,
-            time_control=f"{c.initial_seconds // 60}+{c.increment_seconds}",
+            time_control=label_of(c.initial_seconds, c.increment_seconds),
             rated=c.rated,
             side=c.challenger_side,
             status=ChallengeStatus(c.status),

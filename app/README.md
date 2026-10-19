@@ -81,7 +81,7 @@ scripts/        the Expo-cloud guardrail
   goats to place and the tigers' captures as a coin tray and five slots (`PieceCounts`).
 - **The front door.** Signed-out visitors land on `/welcome`: what Bagh Chal is, how it's
   played, and "Play now, no sign-up", which signs them in as a guest (`guest-3fa9c1`) and
-  starts their first game at once: goats, against the Easy computer, at 15+10.
+  starts their first game at once: goats, against the Easy computer, at 5+3.
   Guests play the computer and casual games; rated play, challenges, reports and payments ask
   for an account. A banner on Play and Me leads to `/claim`, which turns the guest into a real
   account and keeps its games.
@@ -116,6 +116,9 @@ scripts/        the Expo-cloud guardrail
   online. "More ways to play" is here, and only here: challenges by link, tournaments and the
   trainer, each a `FeatureLink` tile carrying the plan's badge when the player's plan lacks it.
   The daily puzzle shows the player's daily streak.
+- **Time controls.** One `TimeControlPicker` everywhere a time control is chosen (Play now,
+  challenges, tournaments): 2+1, 3+2, 5+3 and the sand clock, which it explains when picked. The
+  clocks (`src/game/clock.ts`) show sand moving to the waiting side as the other thinks.
 - **Play now.** The lobby's "Play now" opens a screen to pair with whoever wants the same game
   (casual or rated, with a live count of who is waiting; leaving the screen stops waiting) or
   to play the computer at a chosen strength and side.

@@ -1557,9 +1557,10 @@ export interface components {
         BoardTheme: "wood" | "walnut" | "slate" | "jade" | "night";
         /**
          * Category
+         * @description The rating pools: Quick (blitz), Standard (rapid) and the sand clock.
          * @enum {string}
          */
-        Category: "blitz" | "rapid";
+        Category: "blitz" | "rapid" | "sand";
         /** ChallengeIn */
         ChallengeIn: {
             /** Opponent */
@@ -1568,7 +1569,7 @@ export interface components {
              * Time Control
              * @enum {string}
              */
-            time_control: "3+2" | "5+3" | "10+5" | "15+10";
+            time_control: "2+1" | "3+2" | "5+3" | "sand";
             /**
              * Rated
              * @default false
@@ -1704,10 +1705,10 @@ export interface components {
             side: "goat" | "tiger" | "random";
             /**
              * Time Control
-             * @default 10+5
+             * @default 5+3
              * @enum {string}
              */
-            time_control: "3+2" | "5+3" | "10+5" | "15+10";
+            time_control: "2+1" | "3+2" | "5+3" | "sand";
         };
         /**
          * ConsentsIn
@@ -2738,7 +2739,7 @@ export interface components {
              * Time Control
              * @enum {string}
              */
-            time_control: "3+2" | "5+3" | "10+5" | "15+10";
+            time_control: "2+1" | "3+2" | "5+3" | "sand";
             /**
              * Rated
              * @default false
@@ -2797,7 +2798,7 @@ export interface components {
              * Time Control
              * @enum {string}
              */
-            time_control: "3+2" | "5+3" | "10+5" | "15+10";
+            time_control: "2+1" | "3+2" | "5+3" | "sand";
             /**
              * Max Players
              * @default 6
@@ -2811,11 +2812,8 @@ export interface components {
             /** Name */
             name: string;
             host: components["schemas"]["PlayerOut"];
-            /**
-             * Time Control
-             * @enum {string}
-             */
-            time_control: "3+2" | "5+3" | "10+5" | "15+10";
+            /** Time Control */
+            time_control: string;
             /** Max Players */
             max_players: number;
             status: components["schemas"]["TournamentStatus"];

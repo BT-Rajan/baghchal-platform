@@ -62,7 +62,7 @@ from baghchal_server.games.schemas import (
 )
 from baghchal_server.lobby.models import Challenge
 from baghchal_server.lobby.schemas import PlayerOut
-from baghchal_server.lobby.time_controls import category_of
+from baghchal_server.lobby.time_controls import category_of, is_sand, label_of
 from baghchal_server.ratings import service as ratings
 from baghchal_server.realtime.presence import Presence
 
@@ -119,15 +119,33 @@ def _charged_ms(game: Game, now: datetime) -> int:
     return max(0, _ms(now - game.turn_started_at) - game.lag_ms)
 
 
+def _is_sand(game: Game) -> bool:
+    return is_sand(game.initial_ms // 1000, game.increment_ms // 1000)
+
+
+def _clocks_after_move(game: Game, side: SideName, think_ms: int) -> tuple[int, int]:
+    """The mover's clock and the other side's once the move is made: the mover pays the time
+    taken and earns the increment; with the sand clock, the time taken goes to the other side.
+    The first move each side makes is free (the clocks have not started)."""
+    mine, other = getattr(game, f"{side}_ms"), getattr(game, f"{_other(side)}_ms")
+    if game.ply < 2:
+        return mine, other
+    return mine - think_ms + game.increment_ms, other + (think_ms if _is_sand(game) else 0)
+
+
 def clocks_at(game: Game, now: datetime) -> tuple[int, int]:
-    """(goat_ms, tiger_ms) as they stand at ``now``."""
+    """(goat_ms, tiger_ms) as they stand at ``now``. With the sand clock, what the side to move
+    spends is added to the other side's clock."""
     goat, tiger = game.goat_ms, game.tiger_ms
     if _clocks_running(game):
-        elapsed = _charged_ms(game, now)
         if side_to_move(game) == "goat":
-            goat = max(0, goat - elapsed)
+            spent = min(goat, _charged_ms(game, now))
+            goat -= spent
+            tiger += spent if _is_sand(game) else 0
         else:
-            tiger = max(0, tiger - elapsed)
+            spent = min(tiger, _charged_ms(game, now))
+            tiger -= spent
+            goat += spent if _is_sand(game) else 0
     return goat, tiger
 
 
@@ -492,7 +510,7 @@ async def describe(db: AsyncSession, game: Game, now: datetime) -> GameOut:
         tiger=PlayerOut(
             id=game.tiger_id, username=names[game.tiger_id], badge=shown.get(game.tiger_id)
         ),
-        time_control=f"{game.initial_ms // 60_000}+{game.increment_ms // 1000}",
+        time_control=label_of(game.initial_ms // 1000, game.increment_ms // 1000),
         rated=game.rated,
         status=GameStatus(game.status),
         result=None if active else ResultOut(winner=game.winner, reason=EndReason(game.end_reason)),  # type: ignore[arg-type]
@@ -571,7 +589,7 @@ async def history(
                 id=g.id,
                 opponent=PlayerOut(id=opponent, username=names[opponent]),
                 side=side,
-                time_control=f"{g.initial_ms // 60_000}+{g.increment_ms // 1000}",
+                time_control=label_of(g.initial_ms // 1000, g.increment_ms // 1000),
                 rated=g.rated,
                 computer=g.bot_level,
                 result=ResultOut(winner=g.winner, reason=EndReason(g.end_reason)),  # type: ignore[arg-type]
@@ -643,14 +661,13 @@ async def play(  # noqa: PLR0913 - the move, who plays it when, and their networ
 
     try:
         think_ms = _charged_ms(game, now)
-        clock_ms = getattr(game, f"{side}_ms")
-        if game.ply >= 2:
-            clock_ms = clock_ms - think_ms + game.increment_ms
+        clock_ms, other_ms = _clocks_after_move(game, side, think_ms)
         new_ply = game.ply + 1
         values: dict[str, object] = {
             "ply": new_ply,
             "position": format_position(engine_game.position),
             f"{side}_ms": clock_ms,
+            f"{_other(side)}_ms": other_ms,
             "turn_started_at": now,
             "lag_ms": 0,
         }
@@ -658,9 +675,7 @@ async def play(  # noqa: PLR0913 - the move, who plays it when, and their networ
             next_id = game.tiger_id if side == "goat" else game.goat_id
             lag_ms = await _lag_allowance(presence, next_id, new_ply)
             values["lag_ms"] = lag_ms
-            values["deadline_at"] = _deadline(
-                new_ply, now, getattr(game, f"{_other(side)}_ms"), lag_ms
-            )
+            values["deadline_at"] = _deadline(new_ply, now, other_ms, lag_ms)
         else:
             values.update(
                 status=GameStatus.FINISHED,

@@ -21,6 +21,22 @@ describe('remainingMs', () => {
     expect(remainingMs(running, 'tiger', T0 - 5_000)).toBe(90_000);
   });
 
+  test('with the sand clock, what one side spends the other gains', () => {
+    const sand = {
+      ...running,
+      time_control: 'sand',
+      clocks: { goat_ms: 50_000, tiger_ms: 70_000, running: 'tiger' as const },
+    };
+    expect(remainingMs(sand, 'tiger', T0 + 10_000)).toBe(60_000);
+    expect(remainingMs(sand, 'goat', T0 + 10_000)).toBe(60_000);
+    // Never more than the other side had to give.
+    expect(remainingMs(sand, 'goat', T0 + 100_000)).toBe(120_000);
+    const goats = { ...sand, clocks: { ...sand.clocks, running: 'goat' as const } };
+    expect(remainingMs(goats, 'tiger', T0 + 10_000)).toBe(80_000);
+    const before = { ...sand, clocks: { ...sand.clocks, running: null } };
+    expect(remainingMs(before, 'goat', T0 + 10_000)).toBe(50_000);
+  });
+
   test('a finished game shows its final clocks', () => {
     const over = { ...running, status: 'finished' as const };
     expect(remainingMs(over, 'tiger', T0 + 2_500)).toBe(90_000);

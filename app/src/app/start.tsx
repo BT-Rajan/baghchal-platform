@@ -13,9 +13,9 @@ import { useOpenStartedGame } from '@/lobby/hooks';
 
 /**
  * A newcomer's first game: the Easy computer, which coaches as they play, with the goats (who
- * move first, so there is something to do at once) and the longest time control.
+ * move first, so there is something to do at once) and an unhurried Standard time control.
  */
-const FIRST_GAME = { level: 'easy', side: 'goat', time_control: '15+10' } as const;
+const FIRST_GAME = { level: 'easy', side: 'goat', time_control: '5+3' } as const;
 
 /** Play at once as a guest: only the age and the agreement are asked first. */
 export default function Start() {

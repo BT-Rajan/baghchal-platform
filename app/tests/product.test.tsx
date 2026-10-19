@@ -37,21 +37,22 @@ describe('play now', () => {
   test('someone is waiting: the game opens at once', async () => {
     const started = game({ server_time: now() });
     const { server, app } = await signedIn('/play', {
-      [SEEKS]: { status: 200, body: [{ time_control: '10+5', rated: true, players: 1 }] },
+      [SEEKS]: { status: 200, body: [{ time_control: 'sand', rated: true, players: 1 }] },
       'POST /api/v1/seeks': {
         status: 200,
         body: { status: 'paired', game: started, expires_at: null },
       },
       'GET /api/v1/games/g1': { status: 200, body: started },
     });
-    await fireEvent.press(await screen.findByRole('radio', { name: '10+5' }));
+    await fireEvent.press(await screen.findByRole('radio', { name: 'Sand clock' }));
+    expect(screen.getByText(/^Sand clock: one minute each\./)).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('radio', { name: 'Rated' }));
     expect(screen.getByText(/^A rated match is two games/)).toBeOnTheScreen();
     expect(await screen.findByText('1 player is waiting.')).toBeOnTheScreen();
     await press('Find an opponent');
     await waitFor(() => expect(app.getPathname()).toBe('/game/g1'));
     expect(server.lastTo('POST /api/v1/seeks').body).toEqual({
-      time_control: '10+5',
+      time_control: 'sand',
       rated: true,
     });
   });

@@ -58,11 +58,11 @@ async def test_only_the_same_kind_of_game_pairs(app: FastAPI, players: PlayerFac
         await _online(app, stack, alice, bob, carol)
         await _seek(alice, "5+3")
         assert (await _seek(bob, "5+3", rated=True))["status"] == "waiting"
-        assert (await _seek(carol, "10+5"))["status"] == "waiting"
+        assert (await _seek(carol, "2+1"))["status"] == "waiting"
         assert (await alice.http.get(SEEKS)).json() == [
+            {"time_control": "2+1", "rated": False, "players": 1},
             {"time_control": "5+3", "rated": False, "players": 1},
             {"time_control": "5+3", "rated": True, "players": 1},
-            {"time_control": "10+5", "rated": False, "players": 1},
         ]
 
 
@@ -139,7 +139,7 @@ async def test_a_wait_lapses_and_can_be_cancelled(
         assert (await alice.http.delete(SEEKS)).status_code == 204  # nothing to cancel: fine
         assert (await bob.http.delete(SEEKS)).status_code == 204
         assert (await alice.http.get(SEEKS)).json() == []
-    assert (await alice.http.post(SEEKS, json={"time_control": "2+1"})).status_code == 422
+    assert (await alice.http.post(SEEKS, json={"time_control": "1+0"})).status_code == 422
 
 
 async def test_races(
@@ -188,8 +188,8 @@ async def test_races(
             other.add(
                 Seek(
                     user_id=viewer,
-                    initial_seconds=600,
-                    increment_seconds=5,
+                    initial_seconds=120,
+                    increment_seconds=1,
                     rated=False,
                     created_at=clock(),
                     expires_at=clock() + timedelta(minutes=2),
@@ -199,10 +199,10 @@ async def test_races(
         return await original(db, viewer)
 
     monkeypatch.setattr(seeks, "hidden_from", meanwhile)
-    assert (await _seek(carol, "10+5"))["status"] == "waiting"
+    assert (await _seek(carol, "2+1"))["status"] == "waiting"
     monkeypatch.undo()
     waiting = (await carol.http.get(SEEKS)).json()
-    assert {"time_control": "10+5", "rated": False, "players": 1} in waiting  # just one
+    assert {"time_control": "2+1", "rated": False, "players": 1} in waiting  # just one
 
 
 async def test_a_lost_race_moves_on_to_the_next_player(

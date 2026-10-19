@@ -14,12 +14,12 @@ import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
 import { ErrorState, Loading } from '@/components/States';
 import { TextField } from '@/components/TextField';
-import { TIME_CONTROLS } from '@/lobby/format';
+import { TimeControlPicker } from '@/components/TimeControlPicker';
+
 import { tournamentStatusText } from '@/pro/format';
 import { useCreateTournament, useTournaments } from '@/pro/hooks';
 import { colors } from '@/theme';
 
-const TIME_OPTIONS = TIME_CONTROLS.map(({ label }) => ({ value: label, label }));
 const SIZES = ['3', '4', '5', '6'].map((n) => ({ value: n, label: `${n} players` }));
 
 /** Small tournaments: hosting one (Pro), and the ones I am in. */
@@ -51,12 +51,7 @@ function NewTournament() {
     <>
       <SectionTitle>Host a tournament</SectionTitle>
       <TextField label="Name" value={name} onChangeText={setName} maxLength={60} />
-      <Segmented
-        label="Time control (minutes + seconds per move)"
-        options={TIME_OPTIONS}
-        value={timeControl}
-        onChange={setTimeControl}
-      />
+      <TimeControlPicker value={timeControl} onChange={setTimeControl} />
       <Segmented label="Up to" options={SIZES} value={size} onChange={setSize} />
       {create.error !== null && <Notice tone="error">{describeError(create.error)}</Notice>}
       <Button
