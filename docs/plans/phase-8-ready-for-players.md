@@ -1,6 +1,7 @@
 # Phase 8 plan: the rest of "Ready for players"
 
-Status: step 1 done (server and app); steps 2–4 to come. Rebased on `main` after PRs #29–#31
+Status: step 1 done (server and app); steps 2–3 to come. Push notifications are not planned
+for now (dropped 2026-10-19): the in-app notifications (the bell) stay the only kind. Rebased on `main` after PRs #29–#31
 (friends, in-app notifications, challenges by link replacing private rooms); the age rule covers
 every way to meet another player: challenges (by name and by link), quick pairing, tournaments
 and friend requests. In the app, step 1 extends `AccountForm` (sign-up and a guest's claim)
@@ -12,9 +13,7 @@ security-review parts of Phase 8 are already on `main`. What is left before a pu
 1. Privacy policy and terms of service, with the consent and age rules they promise.
 2. Store builds for Android and iOS, made on our own machines or in GitHub Actions, never in
    Expo's cloud ([ADR 0002](../adr/0002-no-dependency-on-expo-cloud.md)).
-3. Push notifications through Firebase Cloud Messaging and Apple Push Notification service,
-   sent from our server.
-4. Testing on real phones and tablets. This needs you and real devices; this phase prepares
+3. Testing on real phones and tablets. This needs you and real devices; this phase prepares
    the checklist and the builds to test.
 
 ## Decisions taken
@@ -49,7 +48,7 @@ checked against the models):
 - **Technical:** logs and error reports. Error reports carry no personal data.
 - **Also covered:**
   - purposes and legal grounds;
-  - who data is shared with: Razorpay, the email provider, hosting, FCM and APNs for push;
+  - who data is shared with: Razorpay, the email provider, hosting;
   - where it is stored, and transfers abroad;
   - how long each kind of data is kept (stated and enforced, see below);
   - player rights: access (export), correction, erasure (delete account), grievance, and
@@ -78,7 +77,7 @@ checked against the models):
 - **13 to 17:** the account starts in a `pending_parent` state. A parent or guardian's email is
   asked for, and they get a link to read the policy and consent, or refuse.
 - Until a parent consents, the young player can play only against the computer, with no chat,
-  no rated games, no leaderboard listing and no push. Without consent within 7 days, the
+  no rated games and no leaderboard listing. Without consent within 7 days, the
   account and its data are deleted.
 - A parent can withdraw consent later, which deletes the account.
 - Child accounts are never part of fair-play timing analysis beyond what rated play needs. We
@@ -109,45 +108,14 @@ confirmed):
   own update server stays a later option.)
 - **Guardrail:** CI also fails if an `eas.json` appears or a build step calls EAS.
 
-## 3. Push notifications
-*Extends the in-app notifications* (the bell, `notifications` module): every notification it
-records is also pushed to the player's phones when they are not in the app. One list of what
-counts as a notification, not two. It also gains "your turn" (after 30 s away, at most once per
-game turn), recorded like the others.
-
-There is never any marketing. Each kind of notification can be turned off on its own, in "Me"
-→ Notifications.
-
-**App:**
-- `expo-notifications` with `getDevicePushTokenAsync` (the raw FCM or APNs token, never
-  Expo's push service).
-- It asks for permission only after the player's first live game, not at launch.
-
-**Server:**
-- `push_devices` table: user, platform, token, created and last seen. A token is removed when
-  FCM or APNs reports it invalid, and at sign-out.
-- **Senders:**
-  - FCM HTTP v1, with a service-account key;
-  - APNs over HTTP/2, with a token-based `.p8` key.
-  - Both use `httpx`; credentials come from settings and are never logged.
-- **Sending:**
-  - from a queue (`push_outbox`), with retries and backoff;
-  - only to players with no open WebSocket (they are not in the app);
-  - rate-limited per player;
-  - notification text carries no personal data beyond the opponent's username.
-- **Monitoring:** metrics for sent, failed and invalid tokens, and an alert on failures.
-
-**Testing:** fake FCM and APNs servers in tests. A real check on devices is in the device
-checklist.
-
-## 4. Real devices
+## 3. Real devices
 `docs/device-testing.md` is a checklist to run on a recent and an old Android phone, an iPhone
 and an iPad. It covers:
 - install from the internal test track or TestFlight;
 - sign up (including the parent flow), play a live game on two devices, a challenge by link, a
   rated match and game 2;
 - reconnecting after flight mode or switching apps;
-- push in the background and when the app is closed;
+- notifications (the bell) after time away from the app;
 - payments in Razorpay's test mode;
 - accessibility (screen readers, font scaling), small and large screens, and dark rooms.
 
@@ -159,12 +127,10 @@ Each run's results go into the same file.
   keep).
 - Apple Developer Program membership, an App Store Connect API key and a private repository
   for `match`.
-- A Firebase project (FCM service-account JSON) and an APNs auth key (`.p8`).
 - A lawyer's review of the two pages and the children's-data approach.
 
 ## Delivery steps
 1. Legal pages and settings, consent records, the age and parent-consent flow, retention job.
-2. Push: device registration, senders, outbox, preferences, app permission flow.
-3. Build pipeline: prebuild, Android and iOS jobs, signing when secrets exist, guardrail.
-4. Store listing drafts and the device-testing checklist.
-5. Docs (README, operations, SECURITY), tests at 100% server and logic coverage, CI.
+2. Build pipeline: prebuild, Android and iOS jobs, signing when secrets exist, guardrail.
+3. Store listing drafts and the device-testing checklist.
+4. Docs (README, operations, SECURITY), tests at 100% server and logic coverage, CI.
