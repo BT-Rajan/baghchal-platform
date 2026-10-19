@@ -13,6 +13,7 @@ FREE = {
     "pieces": "classic",
     "sounds": "gentle",
     "sounds_on": True,
+    "emotes_on": True,
     "show_badge": True,
 }
 THEMED = {**FREE, "board": "walnut", "pieces": "porcelain", "sounds": "bells"}
@@ -56,7 +57,7 @@ async def test_choices_wait_out_a_lapse(app: FastAPI, players: PlayerFactory, cl
 
     # Muting the game meanwhile keeps the theme waiting.
     r = await alice.http.patch(URL, json={"sounds_on": False})
-    assert r.json() == {**FREE, "sounds_on": False, "show_badge": False}
+    assert r.json() == {**FREE, "sounds_on": False, "emotes_on": True, "show_badge": False}
 
     await boss.http.post(
         "/api/v1/admin/players/alice/grants", json={"plan": "plus", "days": 7, "reason": "Back"}
@@ -64,6 +65,7 @@ async def test_choices_wait_out_a_lapse(app: FastAPI, players: PlayerFactory, cl
     assert (await alice.http.get(URL)).json() == {
         **THEMED,
         "sounds_on": False,
+        "emotes_on": True,
         "show_badge": False,
     }
 

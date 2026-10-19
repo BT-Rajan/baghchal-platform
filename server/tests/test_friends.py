@@ -6,10 +6,13 @@ from typing import Any
 import httpx
 import pytest
 from fastapi import FastAPI
+from sqlalchemy import select
 
+from baghchal_server.accounts.models import User
+from baghchal_server.deps import AppState
 from baghchal_server.friends import service
 
-from .conftest import PASSWORD, Player, PlayerFactory
+from .conftest import PASSWORD, Clock, Player, PlayerFactory
 from .test_games import _event, _online
 
 URL = "/api/v1/friends"
@@ -131,9 +134,10 @@ async def test_limits(players: PlayerFactory, monkeypatch: pytest.MonkeyPatch) -
 
 
 async def test_asking_at_the_same_moment(
-    players: PlayerFactory, monkeypatch: pytest.MonkeyPatch
+    app: FastAPI, players: PlayerFactory, clock: Clock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    alice, bob = await players("alice"), await players("bob")
+    alice = await players("alice")
+    await players("bob")
     await alice.http.post(f"{URL}/bob")
 
     real = service._row
@@ -147,8 +151,11 @@ async def test_asking_at_the_same_moment(
     # bob's request does not see alice's yet, so it clashes with it when saved; it then
     # reports alice's request as it is.
     monkeypatch.setattr(service, "_row", late)
-    r = await bob.http.post(f"{URL}/alice")
-    assert r.json() == {"relation": "incoming"}
+    state: AppState = app.state.ctx
+    async with state.sessions() as db:
+        users = {u.username: u for u in await db.scalars(select(User))}
+        relation = await service.request(db, clock.now, users["bob"], users["alice"])
+    assert relation == "incoming"
 
 
 async def test_export_and_deletion(players: PlayerFactory) -> None:

@@ -13,7 +13,18 @@ import { TextLink } from '../TextLink';
 const LOW_TIME_MS = 20_000;
 
 /** One player: name, side, rating (and its change once rated), and their clock. */
-export function PlayerBar({ game, side, isMe }: { game: Game; side: Piece; isMe: boolean }) {
+export function PlayerBar({
+  game,
+  side,
+  isMe,
+  emote = null,
+}: {
+  game: Game;
+  side: Piece;
+  isMe: boolean;
+  /** A quick message this player just sent, shown for a moment. */
+  emote?: string | null;
+}) {
   const player = playerOf(game, side);
   const rating = game.ratings[side];
   const change = game.rated ? ratingChangeText(rating.change) : null;
@@ -34,6 +45,11 @@ export function PlayerBar({ game, side, isMe }: { game: Game; side: Piece; isMe:
         {toMove && (
           <Text style={styles.toMoveTag} aria-hidden>
             TO MOVE
+          </Text>
+        )}
+        {emote !== null && (
+          <Text style={styles.emote} aria-live="polite">
+            {emote}
           </Text>
         )}
         <Text style={styles.meta}>
@@ -72,6 +88,17 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   toMove: { borderColor: colors.accent, backgroundColor: colors.accentSurface },
+  emote: {
+    alignSelf: 'flex-start',
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.inkText,
+    backgroundColor: colors.ink,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
   toMoveTag: {
     alignSelf: 'flex-start',
     fontSize: 11,

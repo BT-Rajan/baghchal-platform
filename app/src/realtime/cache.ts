@@ -1,7 +1,7 @@
 /** How realtime events update the query cache that screens read from. */
 import type { QueryClient } from '@tanstack/react-query';
 
-import type { Challenge, ChallengeList, Game } from '@/api/endpoints';
+import type { Challenge, ChallengeList, Emote, Game } from '@/api/endpoints';
 import { queryKeys } from '@/api/queryKeys';
 import { serverClock } from '@/game/serverClock';
 
@@ -68,6 +68,7 @@ export function refetchAfterReconnect(queryClient: QueryClient): Promise<void> {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: queryKeys.challenges }),
     queryClient.invalidateQueries({ queryKey: queryKeys.friends }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.notifications }),
     queryClient.invalidateQueries({ queryKey: queryKeys.activeGames }),
     queryClient.invalidateQueries({ queryKey: ['game'] }),
   ]).then(() => undefined);
@@ -78,6 +79,22 @@ export interface Applied {
   startedGame: Game | null;
   /** The socket belongs to someone else (another tab signed in as a different user). */
   otherUser: boolean;
+}
+
+/** A quick message on the game screen: who sent it, what, and when (it shows briefly). */
+export interface ShownEmote {
+  side: 'goat' | 'tiger';
+  emote: Emote;
+  at: number;
+}
+
+export function showEmote(
+  queryClient: QueryClient,
+  gameId: string,
+  side: ShownEmote['side'],
+  emote: Emote,
+): void {
+  queryClient.setQueryData<ShownEmote>(queryKeys.emote(gameId), { side, emote, at: Date.now() });
 }
 
 /** Apply one server message to the cache. */
@@ -96,6 +113,12 @@ export function applyMessage(
       break;
     case 'game':
       if (applyGame(queryClient, message.game).started) applied.startedGame = message.game;
+      break;
+    case 'emote':
+      showEmote(queryClient, message.game_id, message.side, message.emote);
+      break;
+    case 'notification':
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
       break;
     case 'friends':
       // The lists, and how profiles show the friendship.

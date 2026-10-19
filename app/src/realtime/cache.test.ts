@@ -147,6 +147,19 @@ describe('applyMessage', () => {
     expect(applyMessage(qc, { type: 'game', game: game() }, ME.id).startedGame).toBeNull();
   });
 
+  test('a quick message is kept to show', () => {
+    const qc = testQueryClient();
+    applyMessage(qc, { type: 'emote', game_id: 'g1', side: 'tiger', emote: 'oops' }, ME.id);
+    expect(qc.getQueryData(queryKeys.emote('g1'))).toMatchObject({ side: 'tiger', emote: 'oops' });
+  });
+
+  test('a notification refreshes the list', () => {
+    const qc = testQueryClient();
+    qc.setQueryData(queryKeys.notifications, { unread: 0, items: [] });
+    applyMessage(qc, { type: 'notification' }, ME.id);
+    expect(qc.getQueryState(queryKeys.notifications)?.isInvalidated).toBe(true);
+  });
+
   test('news of friends refreshes the lists and profiles', async () => {
     const qc = testQueryClient();
     qc.setQueryData(queryKeys.friends, { friends: [], incoming: [], outgoing: [] });
@@ -180,6 +193,7 @@ test('after a reconnect, challenges, friends and games are fetched again', async
   expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
     queryKeys.challenges,
     queryKeys.friends,
+    queryKeys.notifications,
     queryKeys.activeGames,
     ['game'],
   ]);

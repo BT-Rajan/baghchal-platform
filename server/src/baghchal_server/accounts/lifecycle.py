@@ -16,6 +16,7 @@ from baghchal_server.accounts.schemas import (
     ExportAccount,
     ExportChallenge,
     ExportGame,
+    ExportNotification,
     ExportOut,
     ExportRating,
     ExportSession,
@@ -30,6 +31,7 @@ from baghchal_server.games.service import active_games
 from baghchal_server.lobby.models import Block, Challenge
 from baghchal_server.lobby.service import close_open_challenges
 from baghchal_server.mail import Mail
+from baghchal_server.notifications.models import Notification
 from baghchal_server.ratings.models import PlayerRating
 
 # ── Export ────────────────────────────────────────────────────────────────
@@ -129,6 +131,14 @@ async def export(db: AsyncSession, user: User, now: datetime) -> ExportOut:
         ],
         blocked_players=list(blocked),
         friends=await friends.friend_names(db, user.id),
+        notifications=[
+            ExportNotification(kind=n.kind, created_at=n.created_at, read_at=n.read_at)
+            for n in await db.scalars(
+                select(Notification)
+                .where(Notification.user_id == user.id)
+                .order_by(Notification.created_at)
+            )
+        ],
         sessions=[
             ExportSession(
                 created_at=s.created_at, last_used_at=s.last_used_at, expires_at=s.expires_at
@@ -196,6 +206,7 @@ async def delete_account(
     await db.execute(
         delete(Block).where(or_(Block.blocker_id == user.id, Block.blocked_id == user.id))
     )
+    await db.execute(delete(Notification).where(Notification.user_id == user.id))
     await db.execute(
         delete(Friendship).where(
             or_(Friendship.requester_id == user.id, Friendship.addressee_id == user.id)

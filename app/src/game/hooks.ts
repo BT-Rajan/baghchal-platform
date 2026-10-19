@@ -1,11 +1,13 @@
 /** A game's data, and the moves and actions that change it. The server's answer is the truth. */
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import type { Game, GameAction } from '@/api/endpoints';
+import type { Emote, Game, GameAction } from '@/api/endpoints';
 import { isApiError } from '@/api/errors';
 import { queryKeys } from '@/api/queryKeys';
 import { useApi } from '@/auth/session';
-import { applyGame, isNewer } from '@/realtime/cache';
+import { applyGame, isNewer, showEmote, type ShownEmote } from '@/realtime/cache';
+
+import type { Piece } from './bfen';
 
 import { sideOf } from './describe';
 import { serverClock } from './serverClock';
@@ -75,5 +77,23 @@ export function useGameAction(id: string) {
     mutationFn: (action: GameAction) => api.gameAction(id, action),
     onSuccess: (game) => void applyGame(queryClient, game),
     onError: useRefreshOnConflict(id),
+  });
+}
+
+/** The latest quick message in this game (mine or my opponent's), set by the realtime layer. */
+export function useShownEmote(gameId: string) {
+  return useQuery<ShownEmote | null>({
+    queryKey: queryKeys.emote(gameId),
+    queryFn: skipToken, // only ever set from messages, never fetched
+  }).data;
+}
+
+/** Send a quick message to my opponent; it shows on my own bar too. */
+export function useSendEmote(gameId: string, mine: Piece) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (emote: Emote) => api.emote(gameId, emote),
+    onSuccess: (_, emote) => showEmote(queryClient, gameId, mine, emote),
   });
 }

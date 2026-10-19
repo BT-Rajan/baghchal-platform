@@ -6,6 +6,8 @@ from fastapi import APIRouter, Path, status
 from baghchal_server.deps import DB, CurrentUser, State, enforce_limit
 from baghchal_server.games.events import notify as notify_game
 from baghchal_server.games.schemas import GameOut
+from baghchal_server.notifications import service as notifications
+from baghchal_server.notifications.schemas import NotificationKind
 from baghchal_server.ratelimit import Limit
 from baghchal_server.tournaments import service
 from baghchal_server.tournaments.schemas import TournamentIn, TournamentOut
@@ -56,7 +58,20 @@ async def leave_tournament(code: Code, user: CurrentUser, state: State, db: DB) 
 async def start_tournament(code: Code, user: CurrentUser, state: State, db: DB) -> TournamentOut:
     """The host closes entries and draws up the games."""
     now = state.clock()
-    return await service.describe(db, now, await service.start(db, now, user.id, code))
+    user_id = user.id
+    tournament = await service.start(db, now, user_id, code)
+    out = await service.describe(db, now, tournament)
+    for player in out.players:
+        if player.id != user_id:
+            await notifications.notify(
+                state,
+                db,
+                player.id,
+                NotificationKind.TOURNAMENT_STARTED,
+                actor_id=user_id,
+                ref=out.code,
+            )
+    return out
 
 
 @router.post("/tournaments/{code}/finish")

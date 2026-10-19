@@ -26,6 +26,8 @@ from baghchal_server.lobby.schemas import (
     UsernameQuery,
 )
 from baghchal_server.lobby.time_controls import Category
+from baghchal_server.notifications import service as notifications
+from baghchal_server.notifications.schemas import NotificationKind
 from baghchal_server.ratelimit import Limit
 from baghchal_server.ratings import service as ratings
 from baghchal_server.realtime.protocol import ChallengeEvent
@@ -141,7 +143,18 @@ async def list_challenges(user: CurrentUser, state: State, db: DB) -> ChallengeL
 async def create_challenge(data: ChallengeIn, user: Member, state: State, db: DB) -> ChallengeOut:
     await enforce_limit(state, CHALLENGES_PER_USER, str(user.id))
     challenge = await service.create_challenge(db, state.presence, state.clock(), user, data)
-    return await notify_challenge(state, db, challenge)
+    out = await notify_challenge(state, db, challenge)
+    if challenge.opponent_id is not None:
+        terms = f"{out.time_control} {'rated' if out.rated else 'casual'}"
+        await notifications.notify(
+            state,
+            db,
+            challenge.opponent_id,
+            NotificationKind.CHALLENGE,
+            actor_id=user.id,
+            ref=terms,
+        )
+    return out
 
 
 async def _respond(

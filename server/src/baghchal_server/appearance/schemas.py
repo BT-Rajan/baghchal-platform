@@ -35,6 +35,8 @@ class AppearanceIn(BaseModel):
     sounds: SoundPack | None = None
     sounds_on: bool | None = None
     """Whether game sounds play at all (on every device)."""
+    emotes_on: bool | None = None
+    """Whether the opponent's quick messages reach me in games."""
     show_badge: bool | None = None
 
 
@@ -45,4 +47,5 @@ class AppearanceOut(BaseModel):
     pieces: PieceSet
     sounds: SoundPack
     sounds_on: bool
+    emotes_on: bool
     show_badge: bool

@@ -11,6 +11,7 @@ export const FREE_APPEARANCE: Appearance = {
   pieces: 'classic',
   sounds: 'gentle',
   sounds_on: true,
+  emotes_on: true,
   show_badge: true,
 };
 

@@ -1201,6 +1201,50 @@
         }
       }
     },
+    "/api/v1/games/{game_id}/emote": {
+      "post": {
+        "summary": "Emote",
+        "description": "A quick message to my opponent, during the game or just after it. It reaches them\nunless they have turned quick messages off; nothing is kept.",
+        "operationId": "emote_api_v1_games__game_id__emote_post",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmoteIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/games/computer": {
       "post": {
         "summary": "Play The Computer",
@@ -2628,6 +2672,37 @@
         }
       }
     },
+    "/api/v1/notifications": {
+      "get": {
+        "summary": "Notifications",
+        "description": "My latest notifications, newest first, and how many are unread.",
+        "operationId": "notifications_api_v1_notifications_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/read": {
+      "post": {
+        "summary": "Read Notifications",
+        "description": "Mark them all read.",
+        "operationId": "read_notifications_api_v1_notifications_read_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
     "/api/v1/trainer": {
       "get": {
         "summary": "Trainer",
@@ -2896,6 +2971,17 @@
             ],
             "title": "Sounds On"
           },
+          "emotes_on": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emotes On"
+          },
           "show_badge": {
             "anyOf": [
               {
@@ -2928,6 +3014,10 @@
             "type": "boolean",
             "title": "Sounds On"
           },
+          "emotes_on": {
+            "type": "boolean",
+            "title": "Emotes On"
+          },
           "show_badge": {
             "type": "boolean",
             "title": "Show Badge"
@@ -2939,6 +3029,7 @@
           "pieces",
           "sounds",
           "sounds_on",
+          "emotes_on",
           "show_badge"
         ],
         "title": "AppearanceOut",
@@ -3473,6 +3564,27 @@
         ],
         "title": "EmailChangedOut"
       },
+      "EmoteIn": {
+        "properties": {
+          "emote": {
+            "type": "string",
+            "enum": [
+              "good_luck",
+              "good_move",
+              "oops",
+              "thanks",
+              "well_played"
+            ],
+            "title": "Emote"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "emote"
+        ],
+        "title": "EmoteIn"
+      },
       "EndReason": {
         "type": "string",
         "enum": [
@@ -3691,6 +3803,38 @@
         ],
         "title": "ExportGame"
       },
+      "ExportNotification": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "created_at",
+          "read_at"
+        ],
+        "title": "ExportNotification"
+      },
       "ExportOut": {
         "properties": {
           "exported_at": {
@@ -3736,6 +3880,13 @@
             "type": "array",
             "title": "Friends"
           },
+          "notifications": {
+            "items": {
+              "$ref": "#/components/schemas/ExportNotification"
+            },
+            "type": "array",
+            "title": "Notifications"
+          },
           "sessions": {
             "items": {
               "$ref": "#/components/schemas/ExportSession"
@@ -3753,6 +3904,7 @@
           "challenges",
           "blocked_players",
           "friends",
+          "notifications",
           "sessions"
         ],
         "title": "ExportOut",
@@ -4790,6 +4942,100 @@
           "grants"
         ],
         "title": "MyPlanOut"
+      },
+      "NotificationKind": {
+        "type": "string",
+        "enum": [
+          "challenge",
+          "friend_request",
+          "friend_accepted",
+          "tournament_started"
+        ],
+        "title": "NotificationKind"
+      },
+      "NotificationList": {
+        "properties": {
+          "unread": {
+            "type": "integer",
+            "title": "Unread"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "unread",
+          "items"
+        ],
+        "title": "NotificationList"
+      },
+      "NotificationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/NotificationKind"
+          },
+          "actor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlayerOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "tournament": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TournamentRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "read": {
+            "type": "boolean",
+            "title": "Read"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "actor",
+          "detail",
+          "tournament",
+          "created_at",
+          "read"
+        ],
+        "title": "NotificationOut"
       },
       "PairingOut": {
         "properties": {
@@ -6009,6 +6255,24 @@
           "created_at"
         ],
         "title": "TournamentOut"
+      },
+      "TournamentRef": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name"
+        ],
+        "title": "TournamentRef"
       },
       "TournamentStatus": {
         "type": "string",

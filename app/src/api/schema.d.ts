@@ -578,6 +578,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/games/{game_id}/emote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Emote
+         * @description A quick message to my opponent, during the game or just after it. It reaches them
+         *     unless they have turned quick messages off; nothing is kept.
+         */
+        post: operations["emote_api_v1_games__game_id__emote_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/games/computer": {
         parameters: {
             query?: never;
@@ -1209,6 +1230,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Notifications
+         * @description My latest notifications, newest first, and how many are unread.
+         */
+        get: operations["notifications_api_v1_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read Notifications
+         * @description Mark them all read.
+         */
+        post: operations["read_notifications_api_v1_notifications_read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trainer": {
         parameters: {
             query?: never;
@@ -1332,6 +1393,8 @@ export interface components {
             sounds?: components["schemas"]["SoundPack"] | null;
             /** Sounds On */
             sounds_on?: boolean | null;
+            /** Emotes On */
+            emotes_on?: boolean | null;
             /** Show Badge */
             show_badge?: boolean | null;
         };
@@ -1345,6 +1408,8 @@ export interface components {
             sounds: components["schemas"]["SoundPack"];
             /** Sounds On */
             sounds_on: boolean;
+            /** Emotes On */
+            emotes_on: boolean;
             /** Show Badge */
             show_badge: boolean;
         };
@@ -1553,6 +1618,14 @@ export interface components {
             /** Email */
             email: string;
         };
+        /** EmoteIn */
+        EmoteIn: {
+            /**
+             * Emote
+             * @enum {string}
+             */
+            emote: "good_luck" | "good_move" | "oops" | "thanks" | "well_played";
+        };
         /**
          * EndReason
          * @enum {string}
@@ -1639,6 +1712,18 @@ export interface components {
             /** Moves */
             moves: string[];
         };
+        /** ExportNotification */
+        ExportNotification: {
+            /** Kind */
+            kind: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Read At */
+            read_at: string | null;
+        };
         /**
          * ExportOut
          * @description Everything the server keeps about a player, for them to download.
@@ -1660,6 +1745,8 @@ export interface components {
             blocked_players: string[];
             /** Friends */
             friends: string[];
+            /** Notifications */
+            notifications: components["schemas"]["ExportNotification"][];
             /** Sessions */
             sessions: components["schemas"]["ExportSession"][];
         };
@@ -2047,6 +2134,38 @@ export interface components {
             features: components["schemas"]["Feature"][];
             /** Grants */
             grants: components["schemas"]["GrantOut"][];
+        };
+        /**
+         * NotificationKind
+         * @enum {string}
+         */
+        NotificationKind: "challenge" | "friend_request" | "friend_accepted" | "tournament_started";
+        /** NotificationList */
+        NotificationList: {
+            /** Unread */
+            unread: number;
+            /** Items */
+            items: components["schemas"]["NotificationOut"][];
+        };
+        /** NotificationOut */
+        NotificationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["NotificationKind"];
+            actor: components["schemas"]["PlayerOut"] | null;
+            /** Detail */
+            detail: string | null;
+            tournament: components["schemas"]["TournamentRef"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Read */
+            read: boolean;
         };
         /** PairingOut */
         PairingOut: {
@@ -2477,6 +2596,13 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** TournamentRef */
+        TournamentRef: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
         };
         /**
          * TournamentStatus
@@ -3591,6 +3717,39 @@ export interface operations {
             };
         };
     };
+    emote_api_v1_games__game_id__emote_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     play_the_computer_api_v1_games_computer_post: {
         parameters: {
             query?: never;
@@ -4678,6 +4837,44 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    notifications_api_v1_notifications_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationList"];
+                };
+            };
+        };
+    };
+    read_notifications_api_v1_notifications_read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

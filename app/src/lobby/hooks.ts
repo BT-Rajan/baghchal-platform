@@ -144,6 +144,23 @@ export function useAcceptLink(code: string) {
   });
 }
 
+export function useNotifications() {
+  const api = useApi();
+  return useQuery({
+    queryKey: queryKeys.notifications,
+    queryFn: ({ signal }) => api.notifications(signal),
+  });
+}
+
+export function useReadNotifications() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.readNotifications(),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.notifications }),
+  });
+}
+
 export function useFriends() {
   const api = useApi();
   return useQuery({ queryKey: queryKeys.friends, queryFn: ({ signal }) => api.friends(signal) });

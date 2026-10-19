@@ -1,19 +1,23 @@
 import uuid
+from datetime import timedelta
 from typing import Final
 
 from fastapi import APIRouter, status
 
 from baghchal_engine.ai import Level
+from baghchal_server.appearance import service as appearance
 from baghchal_server.billing import service as billing
 from baghchal_server.billing.plans import Feature
 from baghchal_server.deps import DB, AppState, CurrentUser, State, enforce_limit
+from baghchal_server.errors import AppError
 from baghchal_server.games import analysis, service
 from baghchal_server.games import computer as computer_players
 from baghchal_server.games.events import notify
 from baghchal_server.games.models import GameStatus
-from baghchal_server.games.schemas import AnalysisOut, ComputerGameIn, GameOut, MoveIn
+from baghchal_server.games.schemas import AnalysisOut, ComputerGameIn, EmoteIn, GameOut, MoveIn
 from baghchal_server.lobby.time_controls import TIME_CONTROLS
 from baghchal_server.ratelimit import Limit
+from baghchal_server.realtime.protocol import EmoteEvent
 
 router = APIRouter(prefix="/api/v1")
 
@@ -21,6 +25,9 @@ router = APIRouter(prefix="/api/v1")
 MOVES_PER_USER: Final = Limit("game-move", 300, 60)
 COMPUTER_GAMES_PER_USER: Final = Limit("computer-game", 60, 3600)
 ANALYSES_PER_USER: Final = Limit("analyse", 60, 3600)
+EMOTES_PER_USER: Final = Limit("emote", 20, 60)
+EMOTES_AFTER: Final = timedelta(minutes=5)
+"""Quick messages can still be sent this long after a game ends ("Well played!")."""
 """Asks for analysis an hour (whatever the plan allows), so nobody can flood the workers."""
 
 
@@ -61,6 +68,26 @@ async def play(
     if game.bot_level is not None and game.status == GameStatus.ACTIVE:
         state.computer.schedule(state, game_id)  # its reply
     return out
+
+
+@router.post("/games/{game_id}/emote", status_code=status.HTTP_204_NO_CONTENT)
+async def emote(game_id: uuid.UUID, data: EmoteIn, user: CurrentUser, state: State, db: DB) -> None:
+    """A quick message to my opponent, during the game or just after it. It reaches them
+    unless they have turned quick messages off; nothing is kept."""
+    await enforce_limit(state, EMOTES_PER_USER, str(user.id))
+    now = state.clock()
+    game = await service.get_game(db, game_id)
+    if user.id not in (game.goat_id, game.tiger_id):
+        raise AppError(403, "not_your_game", "You are not playing in this game.")
+    if game.bot_level is not None:
+        raise AppError(409, "nobody_to_hear", "The computer does not read messages.")
+    if game.finished_at is not None and now - game.finished_at > EMOTES_AFTER:
+        raise AppError(409, "game_over", "This game ended a while ago.")
+    side = "goat" if game.goat_id == user.id else "tiger"
+    opponent_id = game.tiger_id if side == "goat" else game.goat_id
+    if (await appearance.mine(db, opponent_id, now)).emotes_on:
+        event = EmoteEvent(game_id=game.id, side=side, emote=data.emote)
+        await state.hub.send(opponent_id, event.model_dump_json())
 
 
 @router.post("/games/computer", status_code=status.HTTP_201_CREATED)

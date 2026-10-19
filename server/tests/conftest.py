@@ -124,6 +124,7 @@ async def app(
                 "matches",
                 "ratings",
                 "challenges",
+                "notifications",
                 "friendships",
                 "blocks",
                 "seeks",

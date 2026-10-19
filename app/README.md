@@ -96,6 +96,14 @@ scripts/        the Expo-cloud guardrail
   players, moderation (staff) and signing out; for members it also changes the email address (confirmed by a link sent
   to the new one) or password, downloads your data (a file on the web, the share sheet in
   apps) and deletes the account.
+- **Quick messages.** In a game against a person, five set phrases (`src/game/emotes.ts`)
+  show for a moment on the sender's bar, the opponent's via an `emote` event. The chat button
+  beside them hides the opponent's; it is the same `emotes_on` setting as on the Board, pieces
+  and sounds page, kept on the server.
+- **Notifications.** The bell in the bar above the tabs counts unread notifications and opens
+  `/notifications`: challenges, friend requests and acceptances, tournaments starting, each
+  leading to the player or the tournament. Opening the list reads it; a `notification` event
+  updates the count.
 - **Friends.** A player's profile has the friend button (add, cancel, accept or decline,
   remove after `Confirm`). Home shows friend requests to answer, and the friends themselves,
   online first, above "Online now", each with a Challenge button. A `friends` event on the

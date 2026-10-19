@@ -91,6 +91,16 @@ class ComputerGameIn(BaseModel):
     time_control: Literal["3+2", "5+3", "10+5", "15+10"] = "10+5"
 
 
+Emote = Literal["good_luck", "good_move", "oops", "thanks", "well_played"]
+"""Quick messages in a game: a few set phrases, never free text."""
+
+
+class EmoteIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    emote: Emote
+
+
 class MoveIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
