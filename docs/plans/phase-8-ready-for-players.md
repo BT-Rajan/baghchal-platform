@@ -1,6 +1,8 @@
 # Phase 8 plan: the rest of "Ready for players"
 
-Status: planned. The accounts, moderation, operations, fair-play and security-review parts of
+Status: step 1 in progress. Rebased on `main` after PRs #29–#31 (friends, in-app notifications,
+challenges by link replacing private rooms); the age rule covers every way to meet another
+player: challenges (by name and by link), quick pairing, tournaments and friend requests. The accounts, moderation, operations, fair-play and security-review parts of
 Phase 8 are already on `main`. What is left before a public launch:
 
 1. Privacy policy and terms of service, with the consent and age rules they promise.
@@ -104,11 +106,10 @@ confirmed):
 - **Guardrail:** CI also fails if an `eas.json` appears or a build step calls EAS.
 
 ## 3. Push notifications
-**When:**
-- a challenge arrives while the app is closed;
-- it is your turn in a game while you are away (after 30 s, at most once per game turn);
-- game 2 of a match has started;
-- a tournament round has started.
+*Extends the in-app notifications* (the bell, `notifications` module): every notification it
+records is also pushed to the player's phones when they are not in the app. One list of what
+counts as a notification, not two. It also gains "your turn" (after 30 s away, at most once per
+game turn), recorded like the others.
 
 There is never any marketing. Each kind of notification can be turned off on its own, in "Me"
 → Notifications.
@@ -139,8 +140,8 @@ checklist.
 `docs/device-testing.md` is a checklist to run on a recent and an old Android phone, an iPhone
 and an iPad. It covers:
 - install from the internal test track or TestFlight;
-- sign up (including the parent flow), play a live game on two devices, rated match and
-  game 2;
+- sign up (including the parent flow), play a live game on two devices, a challenge by link, a
+  rated match and game 2;
 - reconnecting after flight mode or switching apps;
 - push in the background and when the app is closed;
 - payments in Razorpay's test mode;

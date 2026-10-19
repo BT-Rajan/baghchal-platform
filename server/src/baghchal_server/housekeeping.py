@@ -4,6 +4,7 @@ servers running it at once do no harm.
 """
 
 import asyncio
+import random
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Final
 
@@ -100,6 +101,8 @@ async def tidy(db: AsyncSession, settings: Settings, now: datetime) -> dict[str,
 
 
 async def run(state: "AppState") -> None:
+    # Start at a random point in the hour, so servers started together do not run at once.
+    await asyncio.sleep(random.uniform(0, INTERVAL_SECONDS))  # noqa: S311 - not security
     while True:
         try:
             async with state.sessions() as db:

@@ -226,15 +226,17 @@ def test_production_refuses_unsafe_settings() -> None:
 
 
 def test_production_accepts_safe_settings() -> None:
-    s = Settings(
-        environment="production",
-        database_url="mysql+asyncmy://u:p@db/baghchal",
-        redis_url="redis://cache:6379/0",
-        mail_backend="smtp",
-        smtp_host="smtp.example.com",
-        public_base_url="https://baghchal.example",
-        allowed_origins=("https://baghchal.example",),
-        **dict.fromkeys(LEGAL_DETAILS, "Set"),
+    s = Settings.model_validate(
+        {
+            "environment": "production",
+            "database_url": "mysql+asyncmy://u:p@db/baghchal",
+            "redis_url": "redis://cache:6379/0",
+            "mail_backend": "smtp",
+            "smtp_host": "smtp.example.com",
+            "public_base_url": "https://baghchal.example",
+            "allowed_origins": ("https://baghchal.example",),
+            **dict.fromkeys(LEGAL_DETAILS, "Set"),
+        }
     )
     assert s.session_cookie_name == "__Host-session"
     with pytest.raises(ValidationError, match="need grievance_email"):

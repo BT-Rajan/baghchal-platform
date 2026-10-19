@@ -21,7 +21,10 @@ Grievance Officer: [[grievance_officer]], [[grievance_email]].
 **Playing**
 
 - Your games: every move, how long you took over it, the clocks, results and ratings. Games are what the service is; your opponents see them too, and finished games appear in your public game history.
-- Challenges, quick-pairing requests, private rooms, tournaments, puzzles you tried, players you blocked, and your board and sound choices.
+- Challenges (by name or by link), quick-pairing requests, tournaments, puzzles you tried, your friends and friend requests, players you blocked, and your board, piece, sound and quick-message choices.
+- Notifications we show you in the app (someone challenged you, asked to be friends, a tournament started).
+- Achievements are worked out from your games and puzzles whenever they are shown; nothing extra is stored.
+- Quick messages in games (such as "Good luck") are passed to your opponent and not stored.
 - Whether you are online right now (kept only in short-lived memory, not stored).
 
 **Fair play and safety**
@@ -49,7 +52,7 @@ You can withdraw your consent at any time by deleting your account (see *Your ri
 
 ## Who else sees your data
 
-- **Other players** see your username, ratings, online status, your games and your game history. They never see your email address.
+- **Other players** see your username, ratings, online status, achievements, your games and your game history. Your friends see that you are friends. Nobody sees your email address.
 - **Moderators** see reports, moderation records and fair-play figures, to do their job.
 - **Service providers** who process data for us, only as we instruct:
   - Razorpay (payments, India);
@@ -72,6 +75,7 @@ Our servers are in [[hosting_location]]. Some providers above (Google, Apple) ma
 - **Accounts of 13-to-17-year-olds whose parent has not agreed**: deleted after 7 days.
 - **Sessions**: deleted when they expire, 30 days after you sign in.
 - **Email links** (confirmations, password resets): deleted 7 days after they expire or are used.
+- **Notifications**: your newest 100.
 - **Fair-play figures**: 1 year.
 - **Reports and moderation records**: 3 years after they were dealt with.
 - **Payment records**: 8 years, as Indian accounting and tax law requires.

@@ -80,14 +80,14 @@ def check(
 
 
 def apply(user: User, adult: datetime | None, parent_email: str | None, now: datetime) -> bool:
-    """Record a checked age on the account; returns whether a parent must now be emailed."""
+    """Record a checked age on the account; returns whether a parent must now be emailed.
+    Only asked before a parent could have agreed (sign-up, a guest's account, an older
+    account's first answer)."""
     user.age_checked_at = now
     user.adult_from = adult
     if adult is None:
         user.parent_consent = None
         user.parent_email = None
-        return False
-    if user.parent_consent == GIVEN:
         return False
     user.parent_consent = PENDING
     user.parent_email = parent_email
