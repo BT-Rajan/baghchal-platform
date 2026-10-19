@@ -14,6 +14,7 @@ from redis.asyncio import Redis
 from sqlalchemy.dialects import sqlite
 from starlette.types import Message, Receive, Scope, Send
 
+from baghchal_server import openapi
 from baghchal_server.app import create_app
 from baghchal_server.config import Settings
 from baghchal_server.db import UTCDateTime
@@ -213,3 +214,13 @@ def test_asgi_entry_point(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("BAGHCHAL_ENVIRONMENT", "test")
     asgi = importlib.import_module("baghchal_server.asgi")
     assert asgi.app.title == "Bagh Chal"
+
+
+# ── OpenAPI export ────────────────────────────────────────────────────────
+
+
+def test_openapi_export(capsys: pytest.CaptureFixture[str]) -> None:
+    openapi.main()
+    out = capsys.readouterr().out
+    assert out == openapi.schema()
+    assert '"/api/v1/games/{game_id}/moves"' in out
