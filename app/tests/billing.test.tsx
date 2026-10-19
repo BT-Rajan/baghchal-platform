@@ -32,10 +32,10 @@ describe('plans', () => {
     await waitFor(() => expect(app.getPathname()).toBe('/plans'));
     expect(await screen.findByRole('heading', { name: 'Plus' })).toBeOnTheScreen();
     expect(screen.getByText('₹149 a month · ₹1,490 a year')).toBeOnTheScreen();
-    expect(screen.getAllByText('✓ Play the Hard computer')).toHaveLength(1);
-    expect(screen.getByText('Everything in Plus, and:')).toBeOnTheScreen();
-    expect(screen.getByText('✓ Opening and endgame trainer')).toBeOnTheScreen();
-    expect(screen.getByText('Game analysis: 5 a day')).toBeOnTheScreen();
+    expect(screen.getByText('Opening and endgame trainer')).toBeOnTheScreen();
+    expect(screen.getAllByLabelText('Pro: included').length).toBeGreaterThan(3);
+    expect(screen.getAllByText('2 months free when you pay for a year')).toHaveLength(2);
+    expect(screen.getByLabelText('Plus: 5 a day')).toBeOnTheScreen();
     expect(screen.getByLabelText('Free, your plan')).toBeOnTheScreen();
   });
 

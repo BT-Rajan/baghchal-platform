@@ -9,7 +9,8 @@ import {
   has,
   myPlanText,
   planFor,
-  planLines,
+  comparisonRows,
+  yearlySaving,
   priceText,
 } from './format';
 
@@ -85,15 +86,23 @@ test('what an admin can grant, and for how long', () => {
   expect(DURATIONS.map((d) => d.days)).toEqual([7, 30, 90, 365, null]);
 });
 
-test('each plan lists what it adds', () => {
-  expect(planLines(PLANS, 0)).toEqual([]);
-  expect(planLines(PLANS, 1)[0]).toBe('Play the Hard computer');
-  expect(planLines(PLANS, 1)).toHaveLength(5);
-  expect(planLines(PLANS, 2)).toEqual([
-    'Everything in Plus, and:',
-    'Host small tournaments',
-    'Opening and endgame trainer',
-  ]);
+test('the plans side by side, from the server', () => {
+  const rows = comparisonRows(PLANS);
+  expect(rows[0]).toEqual({ label: 'Live and rated games, quick pairing', cells: ['✓', '✓', '✓'] });
+  const row = (label: string) => rows.find((r) => r.label === label)?.cells;
+  expect(row('Play the Hard computer')).toEqual(['—', '✓', '✓']);
+  expect(row('Your whole game history')).toEqual(['30 days', '✓', '✓']);
+  expect(row('The engine’s review of your finished games')).toEqual(['—', '5 a day', '✓']);
+  expect(row('Opening and endgame trainer')).toEqual(['—', '—', '✓']);
+});
+
+test('the yearly saving', () => {
+  expect(yearlySaving(PLANS[0]!)).toBeNull();
+  expect(yearlySaving(PLANS[1]!)).toBe('2 months free when you pay for a year');
+  expect(yearlySaving({ ...PLANS[1]!, yearly_paise: 163900 })).toBe(
+    '1 month free when you pay for a year',
+  );
+  expect(yearlySaving({ ...PLANS[1]!, yearly_paise: 178800 })).toBeNull();
 });
 
 test('the plan that has a feature: the cheapest, from the server’s list', () => {

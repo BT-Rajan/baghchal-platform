@@ -57,6 +57,10 @@ export const colors = {
   brandDeep: '#b44d17',
   brandInk: '#2a1608',
   brandCream: '#fff3df',
+  /** The leaderboard's top three. */
+  gold: '#b8860b',
+  silver: '#8a939c',
+  bronze: '#a0612c',
   /** Keyboard focus ring (web). */
   focus: '#1f5fbf',
 } as const;

@@ -1,22 +1,29 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { Category } from '@/api/endpoints';
+import type { Category, LeaderboardEntry } from '@/api/endpoints';
 import { useMe } from '@/auth/session';
 import { BadgePill } from '@/components/BadgePill';
+import { Button } from '@/components/Button';
 import { Card, Hint } from '@/components/Card';
+import { Icon } from '@/components/Icon';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
 import { Segmented } from '@/components/Segmented';
 import { TextLink } from '@/components/TextLink';
 import { CATEGORIES } from '@/lobby/format';
-import { useLeaderboard } from '@/lobby/hooks';
-import { colors, spacing } from '@/theme';
+import { useLeaderboard, useProfile } from '@/lobby/hooks';
+import { colors, radius, shadow, spacing, type } from '@/theme';
 
+const MEDALS = [colors.gold, colors.silver, colors.bronze] as const;
+
+/** The best players by time control: the top three on a podium, then everyone listed. */
 export default function Leaderboard() {
   const me = useMe();
   const [category, setCategory] = useState<Category>('blitz');
   const board = useLeaderboard(category);
+  const label = CATEGORIES.find((c) => c.value === category)?.label ?? '';
   return (
     <Screen title="Leaderboard" align="top">
       <Segmented
@@ -25,42 +32,145 @@ export default function Leaderboard() {
         value={category}
         onChange={setCategory}
       />
+      <MyStanding category={category} label={label} />
       {board.error !== null ? (
         <ErrorState error={board.error} onRetry={() => void board.refetch()} />
       ) : board.data === undefined ? (
         <Loading label="Loading the leaderboard" />
       ) : board.data.length === 0 ? (
-        <Hint>
-          Nobody is listed yet. Players appear once their rating has settled and they have played a
-          rated game in the last 30 days.
-        </Hint>
-      ) : (
         <Card>
-          {board.data.map((entry) => (
-            <View key={entry.player.id} style={styles.row}>
-              <Text style={styles.rank}>{`#${entry.rank}`}</Text>
-              <View style={styles.name}>
-                <TextLink href={`/player/${entry.player.username}`}>
-                  {entry.player.id === me.id
-                    ? `${entry.player.username} (you)`
-                    : entry.player.username}
-                </TextLink>
-                <BadgePill badge={entry.player.badge} />
-              </View>
-              <Text style={styles.rating}>{String(entry.rating)}</Text>
-              <Text style={styles.games}>{`${entry.games} games`}</Text>
-            </View>
-          ))}
+          <Hint>
+            Nobody is listed yet. Players appear once their rating has settled and they have played
+            a rated game in the last 30 days.
+          </Hint>
+          <Button
+            title="Play a rated game"
+            variant="secondary"
+            onPress={() => router.push('/play')}
+          />
         </Card>
+      ) : (
+        <>
+          <View style={styles.podium}>
+            {board.data.slice(0, 3).map((entry, i) => (
+              <Podium
+                key={entry.player.id}
+                entry={entry}
+                medal={MEDALS[i]!}
+                isMe={entry.player.id === me.id}
+              />
+            ))}
+          </View>
+          {board.data.length > 3 && (
+            <Card>
+              {board.data.slice(3).map((entry) => (
+                <Row key={entry.player.id} entry={entry} isMe={entry.player.id === me.id} />
+              ))}
+            </Card>
+          )}
+        </>
       )}
     </Screen>
   );
 }
 
+/** Where I stand in this time control, from my profile: my rank, or why I have none yet. */
+function MyStanding({ category, label }: { category: Category; label: string }) {
+  const me = useMe();
+  const profile = useProfile(me.username);
+  const rating = profile.data?.ratings[category];
+  if (profile.data === undefined) return null;
+  const text =
+    rating === undefined
+      ? `You have no ${label.toLowerCase()} rating yet: play a rated game to get one.`
+      : rating.rank !== null
+        ? `You are #${rating.rank}, rated ${rating.rating}.`
+        : `You are rated ${rating.rating}. You will be listed once your rating settles and you have played a rated game in the last 30 days.`;
+  return (
+    <View style={styles.mine}>
+      <Icon name="me" color={colors.accent} size={20} />
+      <Text style={styles.mineText}>{text}</Text>
+    </View>
+  );
+}
+
+function Name({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
+  return (
+    <View style={styles.name}>
+      <TextLink href={`/player/${entry.player.username}`}>
+        {isMe ? `${entry.player.username} (you)` : entry.player.username}
+      </TextLink>
+      <BadgePill badge={entry.player.badge} />
+    </View>
+  );
+}
+
+function Podium({ entry, medal, isMe }: { entry: LeaderboardEntry; medal: string; isMe: boolean }) {
+  return (
+    <View style={[styles.place, isMe && styles.meBox]}>
+      <View style={[styles.medal, { backgroundColor: medal }]}>
+        <Text style={styles.medalText}>{entry.rank}</Text>
+      </View>
+      <Name entry={entry} isMe={isMe} />
+      <Text style={styles.bigRating}>{String(entry.rating)}</Text>
+      <Text style={styles.games}>{`${entry.games} games`}</Text>
+    </View>
+  );
+}
+
+function Row({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
+  return (
+    <View style={[styles.row, isMe && styles.meRow]}>
+      <Text style={styles.rank}>{`#${entry.rank}`}</Text>
+      <Name entry={entry} isMe={isMe} />
+      <Text style={styles.rating}>{String(entry.rating)}</Text>
+      <Text style={styles.games}>{`${entry.games} games`}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  mine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.accentSurface,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  mineText: { flex: 1, fontSize: 15, lineHeight: 21, color: colors.text },
+  podium: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  place: {
+    flexGrow: 1,
+    flexBasis: 160,
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    ...shadow,
+  },
+  meBox: { borderWidth: 2, borderColor: colors.accent },
+  medal: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  medalText: { fontSize: 15, fontWeight: '800', color: colors.surface },
+  bigRating: { ...type.title, color: colors.text },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radius.sm,
+  },
+  meRow: { backgroundColor: colors.accentSurface },
   rank: { width: 44, fontSize: 15, color: colors.muted },
   name: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   rating: { fontSize: 16, fontWeight: '700', color: colors.text },
-  games: { width: 76, textAlign: 'right', fontSize: 13, color: colors.muted },
+  games: { minWidth: 76, fontSize: 13, color: colors.muted },
 });

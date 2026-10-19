@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { MyPlan, Period, PlanInfo } from '@/api/endpoints';
-import { myPlanText, PLAN_NAMES, planLines, priceText } from '@/billing/format';
+import { comparisonRows, myPlanText, PLAN_NAMES, priceText, yearlySaving } from '@/billing/format';
 import { useMyPlan, usePlans } from '@/billing/hooks';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
@@ -10,9 +10,9 @@ import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
 import { buyErrorText, buyLabel, paymentText, thanksText } from '@/payments/format';
 import { useBuy, usePayments } from '@/payments/hooks';
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius, spacing, type } from '@/theme';
 
-/** Free, Plus and Pro side by side, with what each includes and costs. */
+/** Free, Plus and Pro: what each costs, a way to buy it, and a table of what each includes. */
 export default function Plans() {
   const plans = usePlans();
   const mine = useMyPlan();
@@ -46,13 +46,12 @@ export default function Plans() {
             be bought: paid plans add extras, not advantages.
           </Hint>
           <View style={styles.grid}>
-            {plans.data.map((plan, i) => {
+            {plans.data.map((plan) => {
               const paid = plan.plan === 'free' ? null : plan.plan;
               return (
                 <PlanColumn
                   key={plan.plan}
                   plan={plan}
-                  lines={planLines(plans.data, i)}
                   mine={mine.data}
                   onBuy={
                     payments.data.enabled && paid !== null
@@ -64,6 +63,7 @@ export default function Plans() {
               );
             })}
           </View>
+          <Comparison plans={plans.data} mine={mine.data} />
           <Hint>
             {payments.data.enabled
               ? 'Payments are taken by Razorpay: cards, UPI, net banking and wallets. Plans are paid in advance for a month or a year and never renew by themselves; buying again adds on to the time you have.'
@@ -74,7 +74,7 @@ export default function Plans() {
               <SectionTitle>Your payments</SectionTitle>
               <Card>
                 {payments.data.payments.map((p) => (
-                  <Text key={p.id} style={styles.feature}>
+                  <Text key={p.id} style={styles.payment}>
                     {paymentText(p)}
                   </Text>
                 ))}
@@ -89,19 +89,18 @@ export default function Plans() {
 
 function PlanColumn({
   plan,
-  lines,
   mine,
   onBuy,
   buying,
 }: {
   plan: PlanInfo;
-  lines: string[];
   mine: MyPlan;
   /** Null where this plan cannot be bought (Free, or payments off). */
   onBuy: ((period: Period) => void) | null;
   buying: boolean;
 }) {
   const current = plan.plan === mine.plan;
+  const saving = yearlySaving(plan);
   return (
     <View
       style={[styles.column, current && styles.current]}
@@ -113,23 +112,9 @@ function PlanColumn({
         </Text>
         {current && <Text style={styles.badge}>Your plan</Text>}
         <Text style={styles.price}>{priceText(plan)}</Text>
-        {lines.length === 0 ? (
-          <Text style={styles.feature}>
-            Unlimited live and rated games, quick pairing, the Easy and Medium computer, and 30 days
-            of history
-          </Text>
-        ) : (
-          lines.map((line) => (
-            <Text key={line} style={line.endsWith(':') ? styles.lead : styles.feature}>
-              {line.endsWith(':') ? line : `✓ ${line}`}
-            </Text>
-          ))
-        )}
-        {plan.analyses_per_day !== null && plan.analyses_per_day > 0 && (
-          <Text style={styles.muted}>{`Game analysis: ${plan.analyses_per_day} a day`}</Text>
-        )}
+        {saving !== null && <Text style={styles.saving}>{saving}</Text>}
         {onBuy !== null &&
-          (['month', 'year'] as const).map((period) => (
+          (['year', 'month'] as const).map((period) => (
             <Button
               key={period}
               title={`Buy ClawPlay ${PLAN_NAMES[plan.plan]} for a ${period}`}
@@ -144,6 +129,41 @@ function PlanColumn({
   );
 }
 
+/** What each plan includes, row by row, from the server's plans. */
+function Comparison({ plans, mine }: { plans: readonly PlanInfo[]; mine: MyPlan }) {
+  return (
+    <>
+      <SectionTitle>What each plan includes</SectionTitle>
+      <Card>
+        <View style={styles.tableRow}>
+          <Text style={styles.feature} />
+          {plans.map((plan) => (
+            <Text key={plan.plan} style={[styles.head, plan.plan === mine.plan && styles.headMine]}>
+              {PLAN_NAMES[plan.plan]}
+            </Text>
+          ))}
+        </View>
+        {comparisonRows(plans).map((row) => (
+          <View key={row.label} style={[styles.tableRow, styles.divided]}>
+            <Text style={styles.feature}>{row.label}</Text>
+            {row.cells.map((cell, i) => (
+              <Text
+                key={plans[i]!.plan}
+                aria-label={`${PLAN_NAMES[plans[i]!.plan]}: ${
+                  cell === '✓' ? 'included' : cell === '—' ? 'not included' : cell
+                }`}
+                style={[styles.cell, cell === '✓' && styles.yes, cell === '—' && styles.no]}
+              >
+                {cell}
+              </Text>
+            ))}
+          </View>
+        ))}
+      </Card>
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   column: { flexGrow: 1, flexBasis: 260, borderRadius: radius.md },
@@ -151,7 +171,19 @@ const styles = StyleSheet.create({
   name: { fontSize: 22, fontWeight: '800', color: colors.brandInk },
   badge: { fontSize: 13, fontWeight: '700', color: colors.accent },
   price: { fontSize: 16, fontWeight: '600', color: colors.text },
-  feature: { fontSize: 15, color: colors.text },
-  lead: { fontSize: 15, fontWeight: '600', color: colors.text },
-  muted: { fontSize: 14, color: colors.muted },
+  saving: { ...type.label, color: colors.success },
+  payment: { fontSize: 15, color: colors.text },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  divided: { borderTopWidth: 1, borderTopColor: colors.subtle },
+  feature: { flex: 2, fontSize: 15, color: colors.text },
+  head: { flex: 1, ...type.label, color: colors.muted, textAlign: 'center' },
+  headMine: { color: colors.accent },
+  cell: { flex: 1, fontSize: 14, color: colors.text, textAlign: 'center' },
+  yes: { fontSize: 18, fontWeight: '700', color: colors.success },
+  no: { color: colors.muted },
 });

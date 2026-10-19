@@ -361,25 +361,47 @@ describe('profiles', () => {
 });
 
 describe('leaderboard', () => {
-  test('quick and standard tabs', async () => {
+  test('a podium, the rest below, and where I stand', async () => {
+    const carol = { id: 'c', username: 'carol' };
+    const dave = { id: 'd', username: 'dave' };
     await lobby({
       'GET /api/v1/leaderboards/blitz': {
         status: 200,
         body: [
           { rank: 1, player: BOB, rating: 1702, games: 40 },
-          { rank: 2, player: ALICE, rating: 1650, games: 31 },
+          { rank: 2, player: carol, rating: 1680, games: 12 },
+          { rank: 3, player: dave, rating: 1660, games: 9 },
+          { rank: 4, player: ALICE, rating: 1650, games: 31 },
         ],
       },
       'GET /api/v1/leaderboards/rapid': { status: 200, body: [] },
+      'GET /api/v1/players/alice': {
+        status: 200,
+        body: {
+          ...ALICE,
+          online: true,
+          playing: false,
+          blocked: false,
+          created_at: ME.created_at,
+          ratings: {
+            blitz: { rating: 1650, deviation: 60, games: 31, provisional: false, rank: 4 },
+          },
+        },
+      },
     });
     await screen.findByRole('heading', { name: 'Play' });
     await fireEvent.press(screen.getByRole('button', { name: /^Leaderboard, tab/ }));
     expect(await screen.findByText('1702')).toBeOnTheScreen();
     expect(screen.getByText('alice (you)')).toBeOnTheScreen();
-    expect(screen.getByText('#2')).toBeOnTheScreen();
+    expect(screen.getByText('#4')).toBeOnTheScreen();
+    expect(await screen.findByText('You are #4, rated 1650.')).toBeOnTheScreen();
 
     await fireEvent.press(screen.getByRole('radio', { name: 'Standard' }));
     expect(await screen.findByText(/Nobody is listed yet/)).toBeOnTheScreen();
+    expect(
+      screen.getByText('You have no standard rating yet: play a rated game to get one.'),
+    ).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Play a rated game' })).toBeOnTheScreen();
   });
 
   test('a failed leaderboard is reported', async () => {

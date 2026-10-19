@@ -116,9 +116,13 @@ scripts/        the Expo-cloud guardrail
 - **History and replay.** Profiles list the player's finished games, newest first and paged;
   each opens the game, where finished games step through every position. A game against the
   computer offers "Play the computer again" (sides swapped) instead of a rematch or report.
+- **Leaderboard.** The top three on a podium, the rest below, and a line saying where I stand
+  (my rank, or why I am not listed yet), from my own profile.
 - **Plans.** Settings → Your plan shows Free, Plus or Pro and leads to the plans. Paid features are
   shown with what unlocks them (Hard in the computer picker, the 30-day history note) rather
-  than hidden. Admins grant and revoke plans and features on a player's moderation page.
+  than hidden. The plans page shows each plan's price (with the yearly saving) and a table
+  of what each includes, built from the server's plans (`comparisonRows`). Admins grant and
+  revoke plans and features on a player's moderation page.
 - **Analysis.** A finished game has an Analysis section: "Analyse this game" (Plus and Pro;
   Free sees what Plus adds), then the verdict on the move being replayed with the engine's
   choice, "Next mistake", each side's tally, and ?!, ? and ?? marks in the move list.
