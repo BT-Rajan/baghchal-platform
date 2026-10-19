@@ -45,7 +45,7 @@ describe('players', () => {
 
   test('says when nobody is online', async () => {
     await lobby();
-    expect(await screen.findByText('Nobody else is online right now.')).toBeOnTheScreen();
+    expect(await screen.findByText(/^Nobody else is online right now\./)).toBeOnTheScreen();
   });
 
   test('searches by username prefix', async () => {
@@ -55,7 +55,7 @@ describe('players', () => {
         body: request.query.prefix === 'da' ? [{ ...DAVE, online: false, playing: false }] : [],
       }),
     });
-    await screen.findByText('Nobody else is online right now.');
+    await screen.findByText(/^Nobody else is online right now\./);
     await fireEvent.changeText(screen.getByLabelText('Find a player'), ' da');
     expect(await screen.findByText('dave')).toBeOnTheScreen();
     expect(screen.getByText('Players starting with “da”')).toBeOnTheScreen();

@@ -173,7 +173,7 @@ and the Caddyfile.
 | POST | `/api/v1/tournaments/{code}/join`, `/leave`, `/start`, `/finish` | Join or leave while open; the host starts it or ends it |
 | POST | `/api/v1/tournaments/{code}/pairings/{id}/play` | Start one of my tournament games (my opponent must be online) |
 | GET | `/api/v1/trainer?kind=opening\|endgame` | Pro: my next puzzle and progress |
-| GET | `/api/v1/trainer/daily` | Today's puzzle (the same for everyone, on every plan) and my first answer to it |
+| GET | `/api/v1/trainer/daily` | Today's puzzle (the same for everyone, on every plan), my first answer to it, and my daily streak |
 | POST | `/api/v1/trainer/{id}/answer` | Answer a puzzle with a `move`; says whether it was best, and which was (Pro, except today's puzzle) |
 | GET, PATCH | `/api/v1/me/appearance` | My `board`, `pieces` and `sounds` (beyond the first of each: Plus and Pro), `sounds_on` and `show_badge`; a change sends only what changes |
 | GET | `/api/v1/plans` | Free, Plus and Pro: features and prices |
@@ -283,4 +283,5 @@ challenges. It replaced the Pro private rooms.
   least a mistake's worth (`server/scripts/make_puzzles.py`, fixed by its seed). Answers are
   checked on the server, so solutions never reach the browser; progress and streaks are kept.
   One puzzle a day, picked by the date and the same for everyone, is free on every plan: the
-  daily puzzle on the home screen.
+  daily puzzle on the home screen, with a streak of the days in a row it was solved (first
+  answer right).

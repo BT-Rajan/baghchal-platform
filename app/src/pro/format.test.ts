@@ -2,6 +2,7 @@ import type { Pairing, Tournament } from '@/api/endpoints';
 
 import {
   answerText,
+  dailyStreakText,
   isMine,
   pairingText,
   progressText,
@@ -60,6 +61,12 @@ test('tournaments', () => {
     true,
     false,
   ]);
+});
+
+test('the daily streak', () => {
+  expect(dailyStreakText(0)).toBeNull();
+  expect(dailyStreakText(1)).toBe('Daily streak: 1 day');
+  expect(dailyStreakText(12)).toBe('Daily streak: 12 days');
 });
 
 test('the trainer', () => {

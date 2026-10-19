@@ -59,3 +59,6 @@ class DailyOut(BaseModel):
     puzzle: PuzzleOut
     answer: DailyAnswerOut | None
     """My first answer to it today, if I have given one."""
+    streak: int
+    """Days in a row I solved the daily puzzle (my first answer right), up to today, or up to
+    yesterday while today's is still to do."""

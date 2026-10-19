@@ -3199,13 +3199,18 @@
                 "type": "null"
               }
             ]
+          },
+          "streak": {
+            "type": "integer",
+            "title": "Streak"
           }
         },
         "type": "object",
         "required": [
           "date",
           "puzzle",
-          "answer"
+          "answer",
+          "streak"
         ],
         "title": "DailyOut"
       },

@@ -1,5 +1,4 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -31,7 +30,10 @@ const SIDES: readonly { value: Side; label: string }[] = [
   { value: 'tiger', label: 'Tigers' },
 ];
 
-/** Start a game now: with whoever wants the same game, or against the computer. */
+/**
+ * Start a game now: with whoever wants the same game, or against the computer. (The other ways
+ * to play are on the home screen.)
+ */
 export default function PlayNow() {
   const [timeControl, setTimeControl] = useState<TimeControl>('5+3');
   return (
@@ -44,25 +46,6 @@ export default function PlayNow() {
       />
       <FindOpponent timeControl={timeControl} />
       <PlayComputer timeControl={timeControl} />
-      <SectionTitle>More ways to play</SectionTitle>
-      <Button
-        title="Challenge a friend by link"
-        icon="link"
-        variant="secondary"
-        onPress={() => router.push('/invite')}
-      />
-      <Button
-        title="Tournaments"
-        icon="trophy"
-        variant="secondary"
-        onPress={() => router.push('/tournaments')}
-      />
-      <Button
-        title="Trainer: opening and endgame puzzles"
-        icon="puzzle"
-        variant="secondary"
-        onPress={() => router.push('/trainer')}
-      />
     </Screen>
   );
 }

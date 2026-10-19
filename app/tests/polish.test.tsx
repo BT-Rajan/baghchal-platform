@@ -45,7 +45,12 @@ test('a quiet lobby says what to do', async () => {
   const { app } = await renderApp('/', { token: 'tok', routes: SIGNED_IN });
   expect(await screen.findByText('Ready for a game?')).toBeOnTheScreen();
   // Nobody online: the next step is a friend, by link.
-  await fireEvent.press(await screen.findByRole('button', { name: 'Challenge a friend by link' }));
+  expect(
+    screen.getByText(
+      'Nobody else is online right now. Send a friend a challenge by link, or Play now.',
+    ),
+  ).toBeOnTheScreen();
+  await fireEvent.press(await screen.findByRole('link', { name: 'Challenge a friend by link' }));
   expect(app.getPathname()).toBe('/invite');
 });
 
@@ -61,7 +66,7 @@ test('when I am the only one online, the list says so', async () => {
     },
   });
   expect(await screen.findByText('You')).toBeOnTheScreen();
-  expect(screen.getByText('Nobody else is online right now.')).toBeOnTheScreen();
+  expect(screen.getByText(/^Nobody else is online right now\./)).toBeOnTheScreen();
 });
 
 test('on wide screens the lobby has two columns', async () => {

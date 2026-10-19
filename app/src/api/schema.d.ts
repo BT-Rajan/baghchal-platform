@@ -1437,6 +1437,8 @@ export interface components {
             date: string;
             puzzle: components["schemas"]["PuzzleOut"];
             answer: components["schemas"]["DailyAnswerOut"] | null;
+            /** Streak */
+            streak: number;
         };
         /** DeleteAccountIn */
         DeleteAccountIn: {

@@ -98,7 +98,9 @@ scripts/        the Expo-cloud guardrail
 - **Home.** The Play tab is a dashboard: a live game to continue first, challenges, "Play
   now", today's puzzle (`DailyPuzzle`, on the same `PuzzleBoard` as the trainer), the latest
   three results (`GameHistory` as a preview, with the rest on Me), and beside them the players
-  online. When nobody else is online, it offers a challenge by link.
+  online. "More ways to play" is here, and only here: challenges by link, tournaments and the
+  trainer, each a `FeatureLink` tile carrying the plan's badge when the player's plan lacks it.
+  The daily puzzle shows the player's daily streak.
 - **Play now.** The lobby's "Play now" opens a screen to pair with whoever wants the same game
   (casual or rated, with a live count of who is waiting; leaving the screen stops waiting) or
   to play the computer at a chosen strength and side.

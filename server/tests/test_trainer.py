@@ -115,7 +115,7 @@ async def test_the_daily_puzzle_is_for_everyone(players: PlayerFactory, clock: C
     alice, bob = await players("alice"), await players("bob")
     today = (await alice.http.get(f"{URL}/daily")).json()
     puzzle = today["puzzle"]
-    assert (today["date"], today["answer"]) == ("2026-01-01", None)
+    assert (today["date"], today["answer"], today["streak"]) == ("2026-01-01", None, 0)
     assert "best" not in puzzle
     # The same puzzle for everyone today.
     assert (await bob.http.get(f"{URL}/daily")).json()["puzzle"] == puzzle
@@ -139,3 +139,23 @@ async def test_the_daily_puzzle_is_for_everyone(players: PlayerFactory, clock: C
     tomorrow = (await alice.http.get(f"{URL}/daily")).json()
     assert (tomorrow["date"], tomorrow["answer"]) == ("2026-01-02", None)
     assert tomorrow["puzzle"]["id"] == service.daily_puzzle(clock.now.date()).id
+
+
+async def test_a_daily_streak(players: PlayerFactory, clock: Clock) -> None:
+    alice = await players("alice")
+
+    async def solve(right: bool) -> int:
+        puzzle = (await alice.http.get(f"{URL}/daily")).json()["puzzle"]
+        move = PUZZLES[puzzle["id"]].best if right else _wrong(puzzle)
+        await _answer(alice, puzzle["id"], move)
+        return int((await alice.http.get(f"{URL}/daily")).json()["streak"])
+
+    assert await solve(right=True) == 1
+    clock.advance(days=1)
+    # Today's puzzle still to do keeps yesterday's streak.
+    assert (await alice.http.get(f"{URL}/daily")).json()["streak"] == 1
+    assert await solve(right=True) == 2
+    clock.advance(days=1)
+    assert await solve(right=False) == 0
+    clock.advance(days=2)
+    assert await solve(right=True) == 1

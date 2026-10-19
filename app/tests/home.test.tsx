@@ -101,4 +101,26 @@ describe('home', () => {
     expect(await screen.findByText('Continue your game')).toBeOnTheScreen();
     expect(screen.queryByText('Ready for a game?')).toBeNull();
   });
+
+  test('more ways to play, with the plan a locked one needs; a streak to keep', async () => {
+    const { app } = await home({
+      [`GET ${DAILY_URL}`]: { status: 200, body: { ...DAILY, streak: 3 } },
+    });
+    expect(await screen.findByText('Daily streak: 3 days')).toBeOnTheScreen();
+    expect(screen.getByRole('link', { name: 'Trainer' })).toHaveTextContent(/PRO/);
+    expect(screen.getByRole('link', { name: 'Tournaments' })).not.toHaveTextContent(/PRO/);
+    await fireEvent.press(screen.getByRole('link', { name: 'Tournaments' }));
+    await waitFor(() => expect(app.getPathname()).toBe('/tournaments'));
+  });
+
+  test('guests are not offered challenges', async () => {
+    await home({
+      'GET /api/v1/me': { status: 200, body: { ...ME, username: 'guest-3fa9c1', role: 'guest' } },
+    });
+    expect(await screen.findByRole('link', { name: 'Tournaments' })).toBeOnTheScreen();
+    expect(screen.queryByRole('link', { name: 'Challenge a friend by link' })).toBeNull();
+    expect(
+      await screen.findByText(/^Nobody else is online right now\. Play now finds you/),
+    ).toBeOnTheScreen();
+  });
 });

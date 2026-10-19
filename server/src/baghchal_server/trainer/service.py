@@ -12,7 +12,7 @@ import hashlib
 import json
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 from importlib import resources
 from typing import Final
 
@@ -36,6 +36,8 @@ from baghchal_server.trainer.schemas import (
 
 WHAT: Final = "The trainer"
 STREAK_WINDOW: Final = 200
+DAILY_STREAK_DAYS: Final = 366
+"""How far back a daily streak is counted."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,25 +69,38 @@ def daily_puzzle(day: date) -> Puzzle:
 
 
 async def daily(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> DailyOut:
-    """Today's puzzle, for everyone, and my first answer to it today."""
+    """Today's puzzle, for everyone, my first answer to it today, and my daily streak."""
     day = now.astimezone(UTC).date()
     puzzle = daily_puzzle(day)
-    first = await db.scalar(
+    since = day - timedelta(days=DAILY_STREAK_DAYS)
+    attempts = await db.scalars(
         select(Attempt)
         .where(
             Attempt.user_id == user_id,
-            Attempt.puzzle_id == puzzle.id,
-            Attempt.created_at >= datetime.combine(day, time(), UTC),
+            Attempt.created_at >= datetime.combine(since, time(), UTC),
         )
         .order_by(Attempt.created_at, Attempt.id)
-        .limit(1)
     )
+    # My first answer to each day's puzzle, on that day.
+    firsts: dict[date, Attempt] = {}
+    for a in attempts:
+        on = a.created_at.astimezone(UTC).date()
+        if on not in firsts and a.puzzle_id == daily_puzzle(on).id:
+            firsts[on] = a
+    first = firsts.get(day)
+    # Today's puzzle still to do does not break the streak.
+    cursor = day if first is not None else day - timedelta(days=1)
+    streak = 0
+    while (solved := firsts.get(cursor)) is not None and solved.correct:
+        streak += 1
+        cursor -= timedelta(days=1)
     return DailyOut(
         date=day,
         puzzle=_out(puzzle),
         answer=None
         if first is None
         else DailyAnswerOut(move=first.move, correct=first.correct, best=puzzle.best),
+        streak=streak,
     )
 
 

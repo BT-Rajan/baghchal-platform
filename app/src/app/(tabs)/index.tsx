@@ -9,6 +9,7 @@ import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { ChallengeCard } from '@/components/ChallengeCard';
 import { DailyPuzzle } from '@/components/DailyPuzzle';
+import { FeatureLink } from '@/components/FeatureLink';
 import { GameHistory } from '@/components/GameHistory';
 import { GuestBanner } from '@/components/GuestBanner';
 import { Notice } from '@/components/Notice';
@@ -96,6 +97,7 @@ export default function Play() {
           <Button title="Play now" onPress={() => router.push('/play')} />
         </Card>
       )}
+      <MoreWaysToPlay guest={me.role === 'guest'} />
       <DailyPuzzle />
       <GameHistory username={me.username} preview />
     </View>
@@ -156,20 +158,45 @@ export default function Play() {
   );
 }
 
-/** Nobody to challenge here: the next step is a friend, by link (members only). */
+/** Nobody to challenge here: the next steps are Play now and the ways to play beside it. */
 function NobodyOnline({ guest }: { guest: boolean }) {
   return (
-    <Card>
-      <Hint>Nobody else is online right now.</Hint>
+    <Hint>
+      {guest
+        ? 'Nobody else is online right now. Play now finds you a game, with the computer if need be.'
+        : 'Nobody else is online right now. Send a friend a challenge by link, or Play now.'}
+    </Hint>
+  );
+}
+
+/** The app's other ways to play, where they are seen: challenges by link, tournaments, the trainer. */
+function MoreWaysToPlay({ guest }: { guest: boolean }) {
+  return (
+    <>
+      <SectionTitle>More ways to play</SectionTitle>
+      {/* Challenges need an account. */}
       {!guest && (
-        <Button
-          title="Challenge a friend by link"
+        <FeatureLink
           icon="link"
-          variant="secondary"
+          title="Challenge a friend by link"
+          text="Send a link; the game starts when your friend opens it."
           onPress={() => router.push('/invite')}
         />
       )}
-    </Card>
+      <FeatureLink
+        icon="trophy"
+        title="Tournaments"
+        text="Round robins with friends: join one by link, or host your own."
+        onPress={() => router.push('/tournaments')}
+      />
+      <FeatureLink
+        icon="puzzle"
+        title="Trainer"
+        text="Opening and endgame puzzles from real games, one best move each."
+        feature="trainer"
+        onPress={() => router.push('/trainer')}
+      />
+    </>
   );
 }
 

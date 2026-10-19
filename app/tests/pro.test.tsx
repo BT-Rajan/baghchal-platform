@@ -235,7 +235,7 @@ describe('the trainer', () => {
 
   test('find the best move, or be shown it', async () => {
     let answers = 0;
-    const { server } = await open('/play', {
+    const { server } = await open('/', {
       'GET /api/v1/seeks': { status: 200, body: [] },
       'GET /api/v1/trainer': (request) =>
         request.query.kind === 'endgame'
@@ -250,9 +250,7 @@ describe('the trainer', () => {
         };
       },
     });
-    await fireEvent.press(
-      await screen.findByRole('button', { name: 'Trainer: opening and endgame puzzles' }),
-    );
+    await fireEvent.press(await screen.findByRole('link', { name: 'Trainer' }));
     expect(await screen.findByText('Goats to play: find the best move.')).toBeOnTheScreen();
     expect(screen.getByText('Solved 0 of 60 · Streak 0')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'a2, empty, move here' }));

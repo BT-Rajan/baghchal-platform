@@ -1,10 +1,12 @@
 import { router } from 'expo-router';
+import { StyleSheet, Text } from 'react-native';
 
 import { describeError } from '@/api/errors';
 import { has } from '@/billing/format';
 import { useMyPlan } from '@/billing/hooks';
-import { answerText } from '@/pro/format';
+import { answerText, dailyStreakText } from '@/pro/format';
 import { useAnswerPuzzle, useDailyPuzzle } from '@/pro/hooks';
+import { colors, type } from '@/theme';
 
 import { Button } from './Button';
 import { Card, Hint, SectionTitle } from './Card';
@@ -22,6 +24,7 @@ export function DailyPuzzle() {
   const answer = useAnswerPuzzle();
   const plan = useMyPlan();
   const result = daily.data?.answer ?? null;
+  const streak = dailyStreakText(daily.data?.streak ?? 0);
   return (
     <>
       <SectionTitle>Daily puzzle</SectionTitle>
@@ -31,6 +34,7 @@ export function DailyPuzzle() {
         <Loading label="Loading today's puzzle" />
       ) : (
         <Card>
+          {streak !== null && <Text style={styles.streak}>{streak}</Text>}
           <PuzzleBoard
             puzzle={daily.data.puzzle}
             answered={result !== null}
@@ -69,3 +73,7 @@ export function DailyPuzzle() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  streak: { ...type.label, color: colors.accent },
+});

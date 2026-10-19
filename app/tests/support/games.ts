@@ -44,6 +44,7 @@ export const DAILY: DailyPuzzle = {
     legal_moves: ['a2', 'c3'],
   },
   answer: null,
+  streak: 0,
 };
 
 export function challenge(overrides: Partial<Challenge> = {}): Challenge {

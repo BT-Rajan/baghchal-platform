@@ -36,6 +36,12 @@ export function answerText(answer: Pick<TrainerAnswer, 'correct' | 'best'>): str
     : `Not quite. The best move was ${answer.best}.`;
 }
 
+/** "Daily streak: 3 days", or null before there is one. */
+export function dailyStreakText(days: number): string | null {
+  if (days === 0) return null;
+  return `Daily streak: ${days} ${days === 1 ? 'day' : 'days'}`;
+}
+
 /** "Solved 12 of 60 · Streak 3" */
 export function progressText(progress: Pick<Trainer, 'solved' | 'total' | 'streak'>): string {
   return `Solved ${progress.solved} of ${progress.total} · Streak ${progress.streak}`;
