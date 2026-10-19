@@ -279,7 +279,9 @@ async def test_a_guest_under_18_plays_the_computer_until_a_parent_agrees(
     app_client.headers["authorization"] = f"Bearer {r.json()['token']}"
     r = await app_client.post("/api/v1/seeks", json={"time_control": "5+3"})
     assert r.json()["error"]["code"] == "parent_consent_needed"
-    claim = {**AGREE, "birth_month": MINOR, "username": "Sita", "email": "sita@example.com"}
+    # The age the guest gave is kept: making the account asks only for a parent.
+    claim = {**AGREE, "username": "Sita", "email": "sita@example.com"}
+    del claim["birth_month"]
     r = await app_client.post("/api/v1/me/claim", json={**claim, "password": PASSWORD})
     assert r.json()["error"]["code"] == "parent_email_required"
     r = await app_client.post(
@@ -292,6 +294,32 @@ async def test_a_guest_under_18_plays_the_computer_until_a_parent_agrees(
         "/api/v1/auth/guest", json={**AGREE, "birth_month": "2015-01", "transport": "bearer"}
     )
     assert r.json()["error"]["code"] == "too_young"
+
+
+async def test_a_guest_who_gave_their_age_is_not_asked_again(
+    app: FastAPI, app_client: httpx.AsyncClient
+) -> None:
+    async def guest() -> uuid.UUID:
+        app_client.headers.pop("authorization", None)
+        r = await app_client.post("/api/v1/auth/guest", json={**AGREE, "transport": "bearer"})
+        app_client.headers["authorization"] = f"Bearer {r.json()['token']}"
+        return uuid.UUID(r.json()["user"]["id"])
+
+    claim = {k: v for k, v in AGREE.items() if k != "birth_month"}
+    await guest()
+    body = {**claim, "username": "Mira", "email": "mira@example.com", "password": PASSWORD}
+    r = await app_client.post("/api/v1/me/claim", json=body)
+    assert (r.status_code, r.json()["plays_people"]) == (200, True)
+    guest_id = await guest()
+    body = {**claim, "username": "Ravi", "email": "ravi@example.com", "password": PASSWORD}
+    async with _state(app).sessions() as db:  # a guest from before the age was asked
+        await db.execute(update(User).where(User.id == guest_id).values(age_checked_at=None))
+        await db.commit()
+    r = await app_client.post("/api/v1/me/claim", json=body)
+    assert r.json()["error"]["code"] == "birth_month_required"
+    r = await app_client.post("/api/v1/me/claim", json={**body, "birth_month": "1990-01"})
+    assert r.status_code == 200, r.text
+    assert r.json()["plays_people"] is True
 
 
 # ── Accepting again ───────────────────────────────────────────────────────

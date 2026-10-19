@@ -11,6 +11,7 @@ import { useApi } from '@/auth/session';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Notice } from '@/components/Notice';
+import { PeopleOnly } from '@/components/PeopleOnly';
 import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
 import { Upsell } from '@/components/Upsell';
@@ -39,7 +40,9 @@ export default function PlayNow() {
   return (
     <Screen align="top">
       <TimeControlPicker value={timeControl} onChange={setTimeControl} />
-      <FindOpponent timeControl={timeControl} />
+      <PeopleOnly>
+        <FindOpponent timeControl={timeControl} />
+      </PeopleOnly>
       <PlayComputer timeControl={timeControl} />
     </Screen>
   );

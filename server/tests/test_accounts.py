@@ -494,3 +494,21 @@ async def test_tokens_are_stored_hashed(
     assert cookie not in stored
     assert last_token(mailer) not in stored
     assert all(len(h) == 64 for h in stored)
+
+
+async def test_a_lost_confirmation_link_can_be_sent_again(
+    client: httpx.AsyncClient, mailer: MemoryMailer
+) -> None:
+    body = {**AGREE, "username": "zed", "email": "zed@example.com", "password": PASSWORD}
+    assert (await client.post("/api/v1/auth/register", json=body)).status_code == 202
+    resend = "/api/v1/auth/verify-email/resend"
+    r = await client.post(resend, json={"email": "ZED@example.com"})
+    assert r.status_code == 202
+    assert len(mailer.outbox) == 2
+    assert mailer.outbox[-1].subject == "Confirm your ClawPlay account"
+    r = await client.post("/api/v1/auth/verify-email", json={"token": last_token(mailer)})
+    assert r.status_code == 200
+    # Confirmed, or never registered: the same answer, and nothing sent.
+    for email in ("zed@example.com", "nobody@example.com"):
+        assert (await client.post(resend, json={"email": email})).status_code == 202
+    assert len(mailer.outbox) == 2

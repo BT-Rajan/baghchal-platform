@@ -12,7 +12,9 @@ import { Button } from './Button';
  */
 export function GuestBanner() {
   const me = useMe();
-  if (me.parent_consent === 'pending') {
+  // Guests under 18 are never asked for a parent (they play only the computer), so this is
+  // for accounts.
+  if (me.parent_consent === 'pending' && me.role !== 'guest') {
     return (
       <View style={styles.box}>
         <Text style={styles.text}>

@@ -122,6 +122,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/verify-email/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resend Verification
+         * @description Email a new confirmation link if the address has a sign-up waiting for one. Always
+         *     answers the same, so it tells nobody whether an address is registered.
+         */
+        post: operations["resend_verification_api_v1_auth_verify_email_resend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/password-reset": {
         parameters: {
             query?: never;
@@ -1680,6 +1701,30 @@ export interface components {
             /** Username */
             username: string;
         };
+        /**
+         * ClaimIn
+         * @description A guest's account: as for sign-up, but the month of birth the guest gave is kept, so
+         *     it is asked again only of guests who never gave one.
+         */
+        ClaimIn: {
+            /** Username */
+            username: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Password */
+            password: string;
+            /** Terms Version */
+            terms_version: string;
+            /** Privacy Version */
+            privacy_version: string;
+            /** Birth Month */
+            birth_month?: string | null;
+            /** Parent Email */
+            parent_email?: string | null;
+        };
         /** ClocksOut */
         ClocksOut: {
             /** Goat Ms */
@@ -2713,6 +2758,14 @@ export interface components {
             /** Suspended Until */
             suspended_until: string | null;
         };
+        /** ResendVerificationIn */
+        ResendVerificationIn: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+        };
         /** ResultOut */
         ResultOut: {
             /** Winner */
@@ -3048,7 +3101,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RegisterIn"];
+                "application/json": components["schemas"]["ClaimIn"];
             };
         };
         responses: {
@@ -3153,6 +3206,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    resend_verification_api_v1_auth_verify_email_resend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResendVerificationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Accepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

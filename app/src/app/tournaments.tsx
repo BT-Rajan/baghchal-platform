@@ -9,6 +9,7 @@ import { useMyPlan } from '@/billing/hooks';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Notice } from '@/components/Notice';
+import { PeopleOnly } from '@/components/PeopleOnly';
 import { Upsell } from '@/components/Upsell';
 import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
@@ -31,12 +32,14 @@ export default function Tournaments() {
         A round robin for 3 to 6 friends: everyone plays everyone, once with each side, in casual
         games. Anyone can join with the link.
       </Hint>
-      {plan.data !== undefined &&
-        (has(plan.data, 'tournaments') ? (
-          <NewTournament />
-        ) : (
-          <Upsell feature="tournaments">Host small tournaments for your friends.</Upsell>
-        ))}
+      <PeopleOnly>
+        {plan.data !== undefined &&
+          (has(plan.data, 'tournaments') ? (
+            <NewTournament />
+          ) : (
+            <Upsell feature="tournaments">Host small tournaments for your friends.</Upsell>
+          ))}
+      </PeopleOnly>
       <MyTournaments />
     </Screen>
   );

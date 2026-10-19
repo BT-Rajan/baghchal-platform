@@ -7,6 +7,7 @@ import { useMe } from '@/auth/session';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Notice } from '@/components/Notice';
+import { PeopleOnly } from '@/components/PeopleOnly';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
 import { shareLink } from '@/lobby/format';
@@ -54,7 +55,9 @@ function Details({ tournament: t }: { tournament: Tournament }) {
             {shareLink(`/tournament/${t.code}`)}
           </Text>
           {!playing && (
-            <Button title="Join" busy={action.isPending} onPress={() => action.mutate('join')} />
+            <PeopleOnly>
+              <Button title="Join" busy={action.isPending} onPress={() => action.mutate('join')} />
+            </PeopleOnly>
           )}
           {playing && !host && (
             <Button

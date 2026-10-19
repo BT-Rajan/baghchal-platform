@@ -2,10 +2,12 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { useSession } from '@/auth/session';
-import { checkSignIn } from '@/auth/validation';
+import { isApiError } from '@/api/errors';
+import { checkSignIn, emailProblem } from '@/auth/validation';
 import { Button } from '@/components/Button';
 import { useFormErrors } from '@/components/form';
 import { Notice } from '@/components/Notice';
+import { ResendConfirmation } from '@/components/ResendConfirmation';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { TextLink } from '@/components/TextLink';
@@ -28,6 +30,15 @@ export default function SignIn() {
   return (
     <Screen title="Sign in" brand>
       {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
+      {isApiError(signIn.error, 'email_not_verified') &&
+        (emailProblem(login.trim()) === undefined ? (
+          <ResendConfirmation email={login} />
+        ) : (
+          <Notice tone="info">
+            Did the email not come? Sign in with your email address instead of your username, and we
+            can send the link again.
+          </Notice>
+        ))}
       <TextField
         label="Username or email"
         value={login}

@@ -63,7 +63,14 @@ def check(
     Players under 18 must give a parent's email, unless they are guests (who play only the
     computer until they make an account)."""
     adult = adult_from(birth_month, now)
-    if adult is not None and not guest:
+    if not guest:
+        check_parent(adult, parent_email, own_email)
+    return adult
+
+
+def check_parent(adult: datetime | None, parent_email: str | None, own_email: str) -> None:
+    """A player under 18 making an account must name a parent or guardian, who is not them."""
+    if adult is not None:
         if parent_email is None:
             raise AppError(
                 422,
@@ -76,7 +83,6 @@ def check(
                 "parent_email_is_yours",
                 "Please give your parent's or guardian's email address, not yours.",
             )
-    return adult
 
 
 def apply(user: User, adult: datetime | None, parent_email: str | None, now: datetime) -> bool:
