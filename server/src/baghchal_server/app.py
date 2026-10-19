@@ -35,6 +35,9 @@ from baghchal_server.games.computer import ComputerPlayers
 from baghchal_server.games.routes import router as games_router
 from baghchal_server.games.sweeper import run as run_sweeper
 from baghchal_server.health import router as health_router
+from baghchal_server.housekeeping import run as run_housekeeping
+from baghchal_server.legal import models as _legal_models  # noqa: F401  (registers tables)
+from baghchal_server.legal.routes import router as legal_router
 from baghchal_server.lobby import models as _lobby_models  # noqa: F401  (registers tables)
 from baghchal_server.lobby.routes import router as lobby_router
 from baghchal_server.mail import Mailer, make_mailer
@@ -150,7 +153,11 @@ def create_app(
                 else None
             ),
         )
-        loops = [(settings.game_sweeper, run_sweeper), (settings.fair_play_checks, run_fair_play)]
+        loops = [
+            (settings.game_sweeper, run_sweeper),
+            (settings.fair_play_checks, run_fair_play),
+            (settings.housekeeping, run_housekeeping),
+        ]
         background = [asyncio.create_task(run(app.state.ctx)) for on, run in loops if on]
         log.info("startup", environment=settings.environment)
         try:
@@ -180,6 +187,7 @@ def create_app(
     install_handlers(app)
     for router in (
         accounts_router,
+        legal_router,
         lobby_router,
         achievements_router,
         games_router,

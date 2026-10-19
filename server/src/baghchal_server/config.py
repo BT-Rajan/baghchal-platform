@@ -10,6 +10,19 @@ from typing import Literal
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+LEGAL_DETAILS = (
+    "operator_name",
+    "operator_address",
+    "contact_email",
+    "grievance_officer",
+    "grievance_email",
+    "jurisdiction_city",
+    "hosting_provider",
+    "hosting_location",
+    "email_provider",
+)
+"""Settings the privacy policy and terms quote (see legal/texts)."""
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="BAGHCHAL_", extra="forbid", frozen=True)
@@ -44,6 +57,22 @@ class Settings(BaseSettings):
     smtp_password: SecretStr = SecretStr("")
     smtp_starttls: bool = True
 
+    # Who runs the service, for the privacy policy and terms (legal/texts). Unset values show
+    # as [PLACEHOLDERS] in development; production refuses to start without them.
+    operator_name: str = ""
+    """The company's registered name."""
+    operator_address: str = ""
+    contact_email: str = ""
+    grievance_officer: str = ""
+    """Name of the Grievance Officer (India's IT Rules and DPDP Act)."""
+    grievance_email: str = ""
+    jurisdiction_city: str = ""
+    """The city whose courts hear disputes (terms of service)."""
+    hosting_provider: str = ""
+    hosting_location: str = ""
+    """Where the servers and backups are, e.g. "Mumbai, India"."""
+    email_provider: str = ""
+
     blocked_username_words: tuple[str, ...] = ()
     """Usernames containing any of these (ignoring case, digits, ``_`` and ``-``) are refused,
     e.g. ``BAGHCHAL_BLOCKED_USERNAME_WORDS='["slur1", "slur2"]'``. Moderators can rename
@@ -58,6 +87,9 @@ class Settings(BaseSettings):
     computer opponent's). 0 reviews in a thread instead."""
     fair_play_checks: bool = True
     """Check finished rated games in the background (tests drive the checks by hand)."""
+
+    housekeeping: bool = True
+    """Delete data past the time the privacy policy keeps it, hourly (tests run it by hand)."""
 
     game_sweeper: bool = True
     """End games whose clock ran out in the background (tests drive it by hand)."""
@@ -111,6 +143,9 @@ class Settings(BaseSettings):
             not o.startswith("https://") for o in self.allowed_origins
         ):
             problems.append("allowed_origins must be https origins")
+        missing = [name for name in LEGAL_DETAILS if not getattr(self, name).strip()]
+        if missing:
+            problems.append(f"the privacy policy and terms need {', '.join(missing)}")
         if problems:
             raise ValueError("unsafe production settings: " + "; ".join(problems))
         return self

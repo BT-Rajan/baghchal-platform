@@ -15,6 +15,7 @@ from baghchal_server.accounts.models import EmailToken, Session, User
 from baghchal_server.accounts.schemas import (
     ExportAccount,
     ExportChallenge,
+    ExportConsent,
     ExportGame,
     ExportNotification,
     ExportOut,
@@ -28,6 +29,7 @@ from baghchal_server.friends import service as friends
 from baghchal_server.friends.models import Friendship
 from baghchal_server.games.models import Game, GameMove
 from baghchal_server.games.service import active_games
+from baghchal_server.legal import consents
 from baghchal_server.lobby.models import Block, Challenge
 from baghchal_server.lobby.service import close_open_challenges
 from baghchal_server.mail import Mail
@@ -102,7 +104,14 @@ async def export(db: AsyncSession, user: User, now: datetime) -> ExportOut:
             email=user.email,
             created_at=user.created_at,
             email_verified_at=user.email_verified_at,
+            adult_from=user.adult_from,
+            parent_email=user.parent_email,
+            parent_consented_at=user.parent_consented_at,
         ),
+        consents=[
+            ExportConsent(document=c.document, version=c.version, accepted_at=c.accepted_at)
+            for c in await consents.history(db, user.id)
+        ],
         ratings=[
             ExportRating(
                 category=r.category,
@@ -176,9 +185,10 @@ async def delete_account(
 ) -> tuple[Sequence[Challenge], Mail]:
     """Delete a player's account; returns the challenges it closed and a goodbye mail.
 
-    Personal data goes: email, password, sessions, links, blocks, friends. The row itself
-    stays under a meaningless name, so the games of the players they met keep an opponent, and
-    ratings stay as they were (deleted players are left out of leaderboards and the lobby).
+    Personal data goes: email, password, a parent's email, sessions, links, blocks,
+    friends. The row itself stays under a meaningless name, so the games of the players they
+    met keep an opponent, and ratings stay as they were (deleted players are left out of
+    leaderboards and the lobby).
     """
     if await active_games(db, user.id):
         raise AppError(
@@ -198,6 +208,7 @@ async def delete_account(
     user.username = user.username_key = anonymous
     user.email = user.email_key = f"{user.id.hex}@deleted.invalid"
     user.password_hash = "!"  # noqa: S105 - not a valid hash, so no password matches it
+    user.parent_email = None
     user.is_active = False
     user.deleted_at = now
     user.updated_at = now

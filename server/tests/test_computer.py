@@ -19,7 +19,7 @@ from baghchal_server.errors import AppError
 from baghchal_server.games import computer, service, sweeper
 from baghchal_server.games.computer import ComputerPlayers
 
-from .conftest import PASSWORD, Clock, Player, PlayerFactory
+from .conftest import AGREE, PASSWORD, Clock, Player, PlayerFactory
 from .test_billing import give_plan
 from .test_games import _online, _start
 
@@ -125,7 +125,7 @@ async def test_the_computer_cannot_be_found_challenged_or_impersonated(
     assert r.status_code in {404, 409}
     r = await client.post(
         "/api/v1/auth/register",
-        json={"username": "Computer-Pro", "email": "c@example.com", "password": PASSWORD},
+        json={**AGREE, "username": "Computer-Pro", "email": "c@example.com", "password": PASSWORD},
     )
     assert r.json()["error"]["code"] == "username_unavailable"
 
