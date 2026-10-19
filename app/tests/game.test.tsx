@@ -1,5 +1,6 @@
 import * as ReactNative from 'react-native';
 
+import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { renderApp } from './support/app';
@@ -392,4 +393,30 @@ test('on wide screens the board sits beside the panel', async () => {
   await openGame(game({ server_time: now() }));
   expect(await screen.findByText('Your move')).toBeOnTheScreen();
   jest.restoreAllMocks();
+});
+
+describe('leaving a live game', () => {
+  test('asks first, and leaves only when told to', async () => {
+    const { app } = await renderApp('/', {
+      token: 'tok',
+      routes: {
+        ...SIGNED_IN,
+        'GET /api/v1/games/g1': { status: 200, body: game({ server_time: now() }) },
+      },
+    });
+    await screen.findByText('Ready for a game?');
+    await act(() => router.push('/game/g1'));
+    expect(await screen.findByText('Your move')).toBeOnTheScreen();
+
+    await act(() => router.back());
+    const question = 'Leave the game? It goes on without you, and your clock keeps running.';
+    expect(await screen.findByText(question)).toBeOnTheScreen();
+    await press('Keep playing');
+    expect(screen.queryByText(question)).toBeNull();
+    expect(app.getPathname()).toBe('/game/g1');
+
+    await act(() => router.back());
+    await fireEvent.press(await screen.findByRole('button', { name: 'Leave the game' }));
+    await waitFor(() => expect(app.getPathname()).toBe('/'));
+  });
 });

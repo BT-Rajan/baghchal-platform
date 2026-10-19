@@ -72,7 +72,11 @@ describe('game analysis', () => {
     expect(screen.getByText('Goats (alice): 1 blunder')).toBeOnTheScreen();
     expect(screen.getByText('Tigers (bob): 1 best')).toBeOnTheScreen();
     expect(screen.getByText('4 analyses of new games left today.')).toBeOnTheScreen();
-    expect(screen.getByText(/a2\?\?\s+a1-b1/)).toBeOnTheScreen();
+    // The move list marks the blunder, and each move shows its position.
+    expect(screen.getByRole('button', { name: 'Show move 2: a1-b1' })).toBeOnTheScreen();
+    await press('Show move 1: a2??');
+    expect(screen.getByText('Blunder')).toBeOnTheScreen();
+    await press('Final position');
 
     await press('Start position');
     expect(

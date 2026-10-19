@@ -37,6 +37,8 @@
 - **Start a game with a particular person**: a challenge, by name (`/challenge/[username]`) or by
   link (`/invite`), both from `app/src/components/ChallengeForm.tsx` and `POST /challenges`.
 - **Share a link**: `shareLink` in `app/src/lobby/format.ts`.
+- **Confirm an action that is hard to undo** (resign, block, leave a live game):
+  `app/src/components/Confirm.tsx`, shown in place of the button that asked.
 - **Look and feel**: the tokens in `app/src/theme.ts` (colours by role, the `type` scale,
   `radius`, `shadow`) and the shared components (`Button`, `Segmented`, `Card`, `Notice`,
   `Screen`, `Icon`, `IconButton`). One `primary` button per screen for its main action; other

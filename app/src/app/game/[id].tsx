@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { router, Stack, useLocalSearchParams, useNavigation, usePreventRemove } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { annotate } from '@/analysis/format';
@@ -13,6 +13,7 @@ import { has } from '@/billing/format';
 import { useMyPlan } from '@/billing/hooks';
 import { Button } from '@/components/Button';
 import { Card, SectionTitle } from '@/components/Card';
+import { Confirm } from '@/components/Confirm';
 import { AnalysisPanel } from '@/components/game/AnalysisPanel';
 import { Board } from '@/components/game/Board';
 import { Coach } from '@/components/game/Coach';
@@ -66,6 +67,15 @@ export default function GameScreen() {
   const allowed = plan.data === undefined ? undefined : has(plan.data, 'analysis');
   const reviewable = game?.status === 'finished' && game.ply > 0;
   const analysis = useAnalysis(id, reviewable && allowed === true);
+  // Leaving a game of mine while it is on asks first: it goes on without me.
+  const navigation = useNavigation();
+  const playing = game?.status === 'active' && sideOf(game, me.id) !== null;
+  const [leaving, setLeaving] = useState<Parameters<typeof navigation.dispatch>[0] | null>(null);
+  const [mayLeave, setMayLeave] = useState(false);
+  usePreventRemove(playing && !mayLeave, ({ data }) => setLeaving(data.action));
+  useEffect(() => {
+    if (mayLeave && leaving !== null) navigation.dispatch(leaving);
+  }, [mayLeave, leaving, navigation]);
 
   if (game === undefined) {
     return (
@@ -118,6 +128,22 @@ export default function GameScreen() {
       {layout === 'short' && opponentBar}
       {layout === 'short' && myBar}
       <Status game={game} mine={mine} />
+      {game.status === 'finished' && (
+        // What next, straight after the result: play again, or back to the lobby.
+        <View style={styles.next}>
+          {mine !== null &&
+            (game.computer === null ? (
+              <Rematch game={game} mine={mine} />
+            ) : (
+              <PlayAgain game={game} mine={mine} />
+            ))}
+          <Button
+            title="Back to the lobby"
+            variant="secondary"
+            onPress={() => router.navigate('/')}
+          />
+        </View>
+      )}
       {tip !== null && <Coach tip={tip} />}
       {replaying && <Replay ply={ply} total={game.ply} onShow={setShown} />}
       {error !== null && <Notice tone="error">{describeError(error)}</Notice>}
@@ -157,37 +183,36 @@ export default function GameScreen() {
           onAction={(a) => action.mutate(a)}
         />
       )}
-      {game.status === 'finished' &&
-        mine !== null &&
-        (game.computer === null ? (
-          <Rematch game={game} mine={mine} />
-        ) : (
-          <PlayAgain game={game} mine={mine} />
-        ))}
+      <SectionTitle>Moves</SectionTitle>
+      <MoveList
+        moves={annotate(game.moves, analysis.data?.moves ?? [])}
+        {...(replaying && { current: ply, onShow: setShown })}
+      />
       {game.status === 'finished' && mine !== null && !isComputer(game, other(mine)) && (
         <Button
           title={`Report ${playerOf(game, other(mine)).username}`}
           variant="secondary"
+          compact
           onPress={() =>
             router.push(`/report/${playerOf(game, other(mine)).username}?game=${game.id}`)
           }
         />
       )}
-      {game.status === 'finished' && (
-        <Button
-          title="Back to the lobby"
-          variant="secondary"
-          onPress={() => router.navigate('/')}
-        />
-      )}
-      <SectionTitle>Moves</SectionTitle>
-      <MoveList moves={annotate(game.moves, analysis.data?.moves ?? [])} />
     </View>
   );
 
   return (
     <Screen align="top" wide={wide}>
       <Stack.Screen options={{ title: `${nameOf(game, 'goat')} vs ${nameOf(game, 'tiger')}` }} />
+      {leaving !== null && !mayLeave && (
+        <Confirm
+          question="Leave the game? It goes on without you, and your clock keeps running."
+          confirmTitle="Leave the game"
+          cancelTitle="Keep playing"
+          onConfirm={() => setMayLeave(true)}
+          onCancel={() => setLeaving(null)}
+        />
+      )}
       <View style={wide ? styles.row : styles.column}>
         <View style={wide ? styles.boardWide : styles.boardColumn}>
           {layout !== 'short' && opponentBar}
@@ -363,6 +388,7 @@ const styles = StyleSheet.create({
   boardColumn: { gap: spacing.sm },
   boardBox: { width: '100%', alignSelf: 'center' },
   panel: { flex: 1, gap: spacing.md, minWidth: 280 },
+  next: { gap: spacing.sm },
   turn: { fontSize: 18, fontWeight: '700', color: colors.text },
   counts: { fontSize: 14, color: colors.muted },
   countsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

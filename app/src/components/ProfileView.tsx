@@ -11,6 +11,7 @@ import { colors, spacing } from '@/theme';
 import { BadgePill } from './BadgePill';
 import { Button } from './Button';
 import { Card } from './Card';
+import { Confirm } from './Confirm';
 import { GameHistory } from './GameHistory';
 import { Notice } from './Notice';
 import { PresenceDot } from './PlayerRow';
@@ -99,24 +100,16 @@ function BlockControl({ username, blocked }: { username: string; blocked: boolea
           />
         </>
       ) : confirming ? (
-        <>
-          <Text style={styles.question}>
-            {`Block ${username}? Neither of you will be able to challenge the other, and you ` +
-              `will not see each other in the lobby.`}
-          </Text>
-          <View style={styles.row}>
-            <View style={styles.cell}>
-              <Button
-                title={`Yes, block ${username}`}
-                busy={change.isPending}
-                onPress={() => run(true)}
-              />
-            </View>
-            <View style={styles.cell}>
-              <Button title="Cancel" variant="secondary" onPress={() => setConfirming(false)} />
-            </View>
-          </View>
-        </>
+        <Confirm
+          question={
+            `Block ${username}? Neither of you will be able to challenge the other, and you ` +
+            `will not see each other in the lobby.`
+          }
+          confirmTitle={`Yes, block ${username}`}
+          busy={change.isPending}
+          onConfirm={() => run(true)}
+          onCancel={() => setConfirming(false)}
+        />
       ) : (
         <Button
           title={`Block ${username}`}
@@ -135,7 +128,4 @@ const styles = StyleSheet.create({
   rating: { flex: 1 },
   big: { fontSize: 28, fontWeight: '700', color: colors.text },
   block: { gap: spacing.sm, marginTop: spacing.md },
-  question: { fontSize: 15, color: colors.text },
-  row: { flexDirection: 'row', gap: spacing.sm },
-  cell: { flex: 1 },
 });

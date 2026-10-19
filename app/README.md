@@ -108,6 +108,10 @@ scripts/        the Expo-cloud guardrail
   placing and moving goats, captures on offer, a goat just lost, what to try after the game)
   and mark the goats in danger, which the server sends as `goats_in_danger`. Choosing Easy is
   choosing tips, so there is no separate setting.
+- **The game screen.** Leaving a live game of mine asks first (`usePreventRemove` with the
+  shared `Confirm`, also used to resign and to block). Once a game ends, the next step comes
+  straight after the result: a rematch or "Play the computer again", and back to the lobby.
+  In a finished game each move in the list is a button that shows the position after it.
 - **History and replay.** Profiles list the player's finished games, newest first and paged;
   each opens the game, where finished games step through every position. A game against the
   computer offers "Play the computer again" (sides swapped) instead of a rematch or report.
