@@ -1,0 +1,68 @@
+name: Android test build
+
+# An APK for testing on phones, built here rather than in Expo's cloud (docs/adr/0002). It is
+# signed with the debug key, so it installs from the file but cannot go to Google Play.
+# Run it by hand (Actions → Android test build → Run workflow) or push a tag android-test-*.
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: "The server the app talks to (https, or http for a test server)"
+        required: true
+        default: "http://169.58.13.213:7070"
+  push:
+    tags: ["android-test-*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: app
+    env:
+      EXPO_NO_TELEMETRY: "1"
+      # A tag has no inputs: it builds for the default test server.
+      EXPO_PUBLIC_API_URL: ${{ inputs.api_url || 'http://169.58.13.213:7070' }}
+      NODE_ENV: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Allow plain http only when the address asks for it
+        run: |
+          case "$EXPO_PUBLIC_API_URL" in
+            http://*) echo "EXPO_PUBLIC_ALLOW_PLAIN_HTTP=true" >> "$GITHUB_ENV" ;;
+            https://*) ;;
+            *) echo "api_url must start with https:// or http://" >&2; exit 1 ;;
+          esac
+      - run: npm ci
+      - run: npm run guardrails
+      - run: npx expo prebuild --platform android --no-install --clean
+      # 64-bit and 32-bit ARM: the phones of the last decade.
+      - name: Build the APK
+        working-directory: app/android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clawplay-test-apk
+          path: app/android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 14
+          if-no-files-found: error
