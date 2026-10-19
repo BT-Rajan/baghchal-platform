@@ -24,7 +24,7 @@ Code = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{1,16}$")]
 async def create_tournament(
     data: TournamentIn, user: PeoplePlayer, state: State, db: DB
 ) -> TournamentOut:
-    """Host a small round robin (Pro); share its code for players to join."""
+    """Host a Swiss tournament (Pro); share its code for players to join."""
     await enforce_limit(state, CREATES_PER_USER, str(user.id))
     now = state.clock()
     return await service.describe(db, now, await service.create(db, now, user, data))

@@ -1213,7 +1213,7 @@ export interface paths {
         put?: never;
         /**
          * Create Tournament
-         * @description Host a small round robin (Pro); share its code for players to join.
+         * @description Host a Swiss tournament (Pro); share its code for players to join.
          */
         post: operations["create_tournament_api_v1_tournaments_post"];
         delete?: never;
