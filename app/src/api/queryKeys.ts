@@ -4,6 +4,7 @@ export const queryKeys = {
   friends: ['friends'] as const,
   notifications: ['notifications'] as const,
   emote: (gameId: string) => ['emote', gameId] as const,
+  achievements: (username: string) => ['achievements', username] as const,
   linkChallenge: (code: string) => ['challenges', 'link', code] as const,
   activeGames: ['games', 'active'] as const,
   game: (id: string) => ['game', id] as const,

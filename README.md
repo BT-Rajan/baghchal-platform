@@ -77,6 +77,9 @@ Each phase ships complete — tested, documented and reviewed — before the nex
      requests, tournaments starting), each leading to where it happened.
    - ✅ **Quick messages**: five set phrases in any game against a person, rated included,
      which either player can hide (`emotes_on`, with the other appearance settings).
+   - ✅ **Achievements**: nine milestones on every profile (first win, each side, trapping the
+     tigers, five captures, the Medium and Hard computer, ten rated games, a 7-day puzzle
+     streak), worked out from games and daily puzzles.
    - Perhaps later: **private tables** for Pro, an extension of challenges by link (a table
      that stays open for a series of games with the same friends).
 
@@ -157,6 +160,7 @@ and the Caddyfile.
 | GET | `/api/v1/players/{username}` | A player's profile, with ratings and leaderboard rank |
 | GET | `/api/v1/blocks` | Players you have blocked |
 | PUT, DELETE | `/api/v1/blocks/{username}` | Block or unblock a player (see [rules](docs/rules.md#live-play-platform-rules)); a block ends any friendship |
+| GET | `/api/v1/players/{username}/achievements` | A player's achievements: every one, with when it was earned (worked out from their games and daily puzzles, never stored) |
 | GET | `/api/v1/notifications` | My latest notifications (challenges, friend requests and acceptances, tournaments starting), newest first, and the unread count |
 | POST | `/api/v1/notifications/read` | Mark them all read |
 | GET | `/api/v1/friends` | My friends (online first) and the friend requests waiting on either side |

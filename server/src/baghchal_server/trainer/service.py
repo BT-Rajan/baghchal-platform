@@ -68,25 +68,39 @@ def daily_puzzle(day: date) -> Puzzle:
     return PUZZLES[ids[index]]
 
 
+async def daily_firsts(
+    db: AsyncSession, user_id: uuid.UUID, since: date | None = None
+) -> dict[date, Attempt]:
+    """My first answer to each day's daily puzzle, on that day (from ``since``, or ever)."""
+    query = select(Attempt).where(Attempt.user_id == user_id)
+    if since is not None:
+        query = query.where(Attempt.created_at >= datetime.combine(since, time(), UTC))
+    firsts: dict[date, Attempt] = {}
+    for a in await db.scalars(query.order_by(Attempt.created_at, Attempt.id)):
+        on = a.created_at.astimezone(UTC).date()
+        if on not in firsts and a.puzzle_id == daily_puzzle(on).id:
+            firsts[on] = a
+    return firsts
+
+
+def first_streak(firsts: dict[date, Attempt], days: int) -> date | None:
+    """The first day that completed a run of ``days`` days solved in a row, if any."""
+    run = 0
+    previous: date | None = None
+    for day in sorted(firsts):
+        solved = firsts[day].correct
+        run = (run + 1 if previous == day - timedelta(days=1) else 1) if solved else 0
+        previous = day if solved else None
+        if run >= days:
+            return day
+    return None
+
+
 async def daily(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> DailyOut:
     """Today's puzzle, for everyone, my first answer to it today, and my daily streak."""
     day = now.astimezone(UTC).date()
     puzzle = daily_puzzle(day)
-    since = day - timedelta(days=DAILY_STREAK_DAYS)
-    attempts = await db.scalars(
-        select(Attempt)
-        .where(
-            Attempt.user_id == user_id,
-            Attempt.created_at >= datetime.combine(since, time(), UTC),
-        )
-        .order_by(Attempt.created_at, Attempt.id)
-    )
-    # My first answer to each day's puzzle, on that day.
-    firsts: dict[date, Attempt] = {}
-    for a in attempts:
-        on = a.created_at.astimezone(UTC).date()
-        if on not in firsts and a.puzzle_id == daily_puzzle(on).id:
-            firsts[on] = a
+    firsts = await daily_firsts(db, user_id, day - timedelta(days=DAILY_STREAK_DAYS))
     first = firsts.get(day)
     # Today's puzzle still to do does not break the streak.
     cursor = day if first is not None else day - timedelta(days=1)

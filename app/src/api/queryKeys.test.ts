@@ -13,6 +13,7 @@ test('keys are stable and distinct', () => {
     queryKeys.friends,
     queryKeys.notifications,
     queryKeys.emote('x'),
+    queryKeys.achievements('x'),
     queryKeys.activeGames,
     queryKeys.onlinePlayers,
     queryKeys.game('x'),

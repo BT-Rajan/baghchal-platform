@@ -144,6 +144,14 @@ export function useAcceptLink(code: string) {
   });
 }
 
+export function useAchievements(username: string) {
+  const api = useApi();
+  return useQuery({
+    queryKey: queryKeys.achievements(username),
+    queryFn: ({ signal }) => api.achievements(username, signal),
+  });
+}
+
 export function useNotifications() {
   const api = useApi();
   return useQuery({
