@@ -30,7 +30,7 @@ async def _accept(player: Player | httpx.AsyncClient, code: str) -> httpx.Respon
 
 async def test_a_link_for_anyone(app: FastAPI, players: PlayerFactory) -> None:
     alice, bob, carol = await players("alice"), await players("bob"), await players("carol")
-    link = await _link(alice, side="tiger", time_control="10+5")
+    link = await _link(alice, side="tiger", time_control="2+1")
     assert (link["opponent"], link["rated"], link["side"], link["status"]) == (
         None,
         False,
@@ -42,7 +42,7 @@ async def test_a_link_for_anyone(app: FastAPI, players: PlayerFactory) -> None:
     assert [c["code"] for c in (await alice.http.get(URL)).json()["outgoing"]] == [code]
     assert (await bob.http.get(URL)).json()["incoming"] == []
     seen = (await bob.http.get(f"{URL}/link/{code}")).json()
-    assert (seen["challenger"]["username"], seen["time_control"]) == ("alice", "10+5")
+    assert (seen["challenger"]["username"], seen["time_control"]) == ("alice", "2+1")
 
     r = await _accept(bob, code)
     assert (r.status_code, r.json()["error"]["code"]) == (409, "player_offline")
@@ -56,7 +56,7 @@ async def test_a_link_for_anyone(app: FastAPI, players: PlayerFactory) -> None:
         assert (accepted["status"], accepted["opponent"]["username"]) == ("accepted", "bob")
         game = (await bob.http.get(f"/api/v1/games/{accepted['game_id']}")).json()
         assert (game["goat"]["username"], game["tiger"]["username"]) == ("bob", "alice")
-        assert (game["rated"], game["time_control"]) == (False, "10+5")
+        assert (game["rated"], game["time_control"]) == (False, "2+1")
         r = await _accept(carol, code)
         assert (r.status_code, r.json()["error"]["code"]) == (409, "challenge_closed")
 

@@ -34,7 +34,7 @@ from baghchal_server.lobby.schemas import (
     RatingOut,
     UsernameQuery,
 )
-from baghchal_server.lobby.time_controls import Category
+from baghchal_server.lobby.time_controls import Category, label_of
 from baghchal_server.notifications import service as notifications
 from baghchal_server.notifications.schemas import NotificationKind
 from baghchal_server.ratelimit import Limit
@@ -301,6 +301,6 @@ async def stop_seeking(user: CurrentUser, db: DB) -> None:
 async def waiting_players(user: CurrentUser, state: State, db: DB) -> list[seeks.SeekCountOut]:
     """How many players are waiting for each kind of game."""
     return [
-        seeks.SeekCountOut(time_control=f"{a // 60}+{b}", rated=rated, players=n)
+        seeks.SeekCountOut(time_control=label_of(a, b), rated=rated, players=n)
         for a, b, rated, n in await seeks.counts(db, state.clock())
     ]

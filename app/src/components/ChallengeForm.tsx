@@ -4,7 +4,8 @@ import { useState } from 'react';
 import type { Challenge, Side, TimeControl } from '@/api/endpoints';
 import { describeError } from '@/api/errors';
 import { useMe } from '@/auth/session';
-import { TIME_CONTROLS } from '@/lobby/format';
+import { TimeControlPicker } from './TimeControlPicker';
+
 import { useAnswerChallenge, useCreateChallenge } from '@/lobby/hooks';
 
 import { Button } from './Button';
@@ -24,7 +25,6 @@ const SIDES: readonly { value: Side; label: string }[] = [
   { value: 'goat', label: 'Goats' },
   { value: 'tiger', label: 'Tigers' },
 ];
-const TIME_OPTIONS = TIME_CONTROLS.map(({ label }) => ({ value: label, label }));
 
 function leave() {
   if (router.canGoBack()) router.back();
@@ -66,12 +66,7 @@ export function ChallengeForm({ opponent }: { opponent?: string }) {
         </Hint>
       )}
       {create.error !== null && <Notice tone="error">{describeError(create.error)}</Notice>}
-      <Segmented
-        label="Time control (minutes + seconds per move)"
-        options={TIME_OPTIONS}
-        value={timeControl}
-        onChange={setTimeControl}
-      />
+      <TimeControlPicker value={timeControl} onChange={setTimeControl} />
       {!byLink && <Segmented label="Game" options={MODES} value={mode} onChange={setMode} />}
       {mode === 'rated' ? (
         <Hint>A rated match is two games: you each play goats once and tigers once.</Hint>

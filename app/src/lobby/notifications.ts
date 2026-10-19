@@ -1,12 +1,17 @@
 /** Words and links for notifications. */
 import type { Notification } from '@/api/endpoints';
 
+import { timeControlName } from './format';
+
 /** "alice challenged you to a 5+3 rated game." */
 export function notificationText(n: Notification): string {
   const who = n.actor?.username ?? 'A player';
   switch (n.kind) {
     case 'challenge':
-      return `${who} challenged you to a ${n.detail ?? ''} game.`.replace('  ', ' ');
+      return `${who} challenged you to a ${timeControlName(n.detail ?? '')} game.`.replace(
+        '  ',
+        ' ',
+      );
     case 'friend_request':
       return `${who} wants to be friends.`;
     case 'friend_accepted':

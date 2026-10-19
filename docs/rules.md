@@ -55,8 +55,11 @@ modern variant and are not used here.
 ## Live play (platform rules)
 These rules belong to the platform, not the board; the server enforces them.
 
-- **Time controls**: 3+2, 5+3, 10+5 and 15+10 (minutes per side + seconds added after each
-  move). The server keeps both clocks; only server time counts.
+- **Time controls**: 2+1, 3+2 and 5+3 (minutes per side + seconds added after each move), and
+  the **sand clock**: one minute each, no increment, and the time a player takes on a move is
+  added to the opponent's clock (the two always add up to two minutes), like sand running from
+  one end of an hourglass to the other. The server keeps both clocks; only server time counts.
+  10+5 and 15+10 are no longer offered; games already made with them finish as they started.
 - **First moves**: clocks start after each side's first move. Each side has 30 seconds to make
   its first move; if either does not, the game is **aborted** (no result). In the second game
   of a rated match a side that does not make its first move instead **loses on time**.
@@ -97,8 +100,9 @@ These rules belong to the platform, not the board; the server enforces them.
   are never analysed.
 
 ## Ratings
-- **Glicko-2**, separately for **quick** games (3+2, 5+3) and **standard** games (10+5, 15+10);
-  the API calls them `blitz` and `rapid`. Everyone starts at 1500 with deviation 350. Only
+- **Glicko-2**, separately for **quick** games (2+1, 3+2), **standard** games (5+3, and the
+  retired 10+5 and 15+10) and the **sand clock**; the API calls them `blitz`, `rapid` and
+  `sand`. Everyone starts at 1500 with deviation 350. Only
   rated games count; casual games never do.
 - **Rated games are two-game matches with sides swapped**: game 2 starts automatically when
   game 1 ends, so nobody's rating depends on which side they drew. Each game is rated on its

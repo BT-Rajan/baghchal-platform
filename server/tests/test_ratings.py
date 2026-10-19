@@ -99,7 +99,7 @@ async def _next_game(ws: AsyncWebSocketSession) -> dict[str, Any]:
 async def _accepted(challenger: Player, opponent: Player, **options: object) -> dict[str, Any]:
     r = await challenger.http.post(
         "/api/v1/challenges",
-        json={"opponent": opponent.username, "time_control": "5+3", **options},
+        json={"opponent": opponent.username, "time_control": "3+2", **options},
     )
     assert r.status_code == 201, r.text
     r = await opponent.http.post(f"/api/v1/challenges/{r.json()['id']}/accept")
@@ -241,7 +241,7 @@ async def test_the_second_game_cannot_be_aborted(
 async def _challenge(challenger: Player, opponent: Player, **options: object) -> httpx.Response:
     return await challenger.http.post(
         "/api/v1/challenges",
-        json={"opponent": opponent.username, "time_control": "5+3", **options},
+        json={"opponent": opponent.username, "time_control": "3+2", **options},
     )
 
 
@@ -301,7 +301,7 @@ async def test_time_controls_have_separate_ratings(app: FastAPI, players: Player
     async with AsyncExitStack() as stack:
         await stack.enter_async_context(open_socket(app, bob.auth))
         r = await alice.http.post(
-            "/api/v1/challenges", json={"opponent": "bob", "time_control": "10+5", "rated": True}
+            "/api/v1/challenges", json={"opponent": "bob", "time_control": "5+3", "rated": True}
         )
         game = (await bob.http.post(f"/api/v1/challenges/{r.json()['id']}/accept")).json()
     game = (await alice.http.get(f"/api/v1/games/{game['game_id']}")).json()

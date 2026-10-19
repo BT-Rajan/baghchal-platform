@@ -15,11 +15,11 @@ import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
 import { Upsell } from '@/components/Upsell';
 import { useServerNow } from '@/components/useNow';
-import { LEVELS, TIME_CONTROLS, secondsLeft, waitingText } from '@/lobby/format';
+import { TimeControlPicker } from '@/components/TimeControlPicker';
+import { LEVELS, secondsLeft, waitingText } from '@/lobby/format';
 import { PRESENCE_REFRESH_MS, useOpenStartedGame } from '@/lobby/hooks';
 import { colors, spacing } from '@/theme';
 
-const TIME_OPTIONS = TIME_CONTROLS.map(({ label }) => ({ value: label, label }));
 const MODES = [
   { value: 'casual', label: 'Casual' },
   { value: 'rated', label: 'Rated' },
@@ -38,12 +38,7 @@ export default function PlayNow() {
   const [timeControl, setTimeControl] = useState<TimeControl>('5+3');
   return (
     <Screen align="top">
-      <Segmented
-        label="Time control (minutes + seconds per move)"
-        options={TIME_OPTIONS}
-        value={timeControl}
-        onChange={setTimeControl}
-      />
+      <TimeControlPicker value={timeControl} onChange={setTimeControl} />
       <FindOpponent timeControl={timeControl} />
       <PlayComputer timeControl={timeControl} />
     </Screen>

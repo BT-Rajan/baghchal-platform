@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from baghchal_server.games.models import EndReason, GameStatus
-from baghchal_server.lobby.schemas import PlayerOut
+from baghchal_server.lobby.schemas import PlayerOut, TimeControlLabel
 
 SideName = Literal["goat", "tiger"]
 
@@ -88,7 +88,7 @@ class ComputerGameIn(BaseModel):
     level: Literal["easy", "medium", "hard"] = "medium"
     side: Literal["goat", "tiger", "random"] = "random"
     """The side you play."""
-    time_control: Literal["3+2", "5+3", "10+5", "15+10"] = "10+5"
+    time_control: TimeControlLabel = "5+3"
 
 
 Emote = Literal["good_luck", "good_move", "oops", "thanks", "well_played"]

@@ -2,17 +2,28 @@
 import type { GameSummary, Level, Category, Challenge, Side, TimeControl } from '@/api/endpoints';
 import { ratingChangeText } from '@/game/describe';
 
+/** The time controls on offer: minutes+increment, and the sand clock. */
 export const TIME_CONTROLS: readonly { label: TimeControl; category: Category }[] = [
+  { label: '2+1', category: 'blitz' },
   { label: '3+2', category: 'blitz' },
-  { label: '5+3', category: 'blitz' },
-  { label: '10+5', category: 'rapid' },
-  { label: '15+10', category: 'rapid' },
+  { label: '5+3', category: 'rapid' },
+  { label: 'sand', category: 'sand' },
 ];
 
-/** Players see Quick and Standard; the API keeps its names, blitz and rapid. */
+/** How the sand clock works, where a player picks it. */
+export const SAND_CLOCK_TEXT =
+  'Sand clock: one minute each. The time you take is added to your opponent’s clock, and theirs to yours.';
+
+/** "5+3", or "Sand clock" (the API calls it "sand"). Retired ones (10+5) read as they are. */
+export function timeControlName(label: string): string {
+  return label === 'sand' ? 'Sand clock' : label;
+}
+
+/** Players see Quick, Standard and Sand clock; the API keeps its names. */
 export const CATEGORIES: readonly { value: Category; label: string }[] = [
   { value: 'blitz', label: 'Quick' },
   { value: 'rapid', label: 'Standard' },
+  { value: 'sand', label: 'Sand clock' },
 ];
 
 export function categoryOf(timeControl: string): Category | undefined {
@@ -76,9 +87,9 @@ const OTHER: Record<Exclude<Side, 'random'>, Exclude<Side, 'random'>> = {
   tiger: 'goat',
 };
 
-/** "5+3 · rated match" or "10+5 · casual · you play goats", from my point of view. */
+/** "5+3 · rated match" or "Sand clock · casual · you play goats", from my point of view. */
 export function challengeTerms(challenge: Challenge, myId: string): string {
-  const parts = [challenge.time_control];
+  const parts = [timeControlName(challenge.time_control)];
   if (challenge.rated) {
     parts.push('rated match (2 games)');
   } else {
@@ -130,7 +141,7 @@ export function historyText(game: GameSummary): string {
     year: 'numeric',
     timeZone: 'UTC',
   });
-  return `${OUTCOMES[game.outcome]} · vs ${opponent} · ${game.time_control} ${kind}${change} · ${day}`;
+  return `${OUTCOMES[game.outcome]} · vs ${opponent} · ${timeControlName(game.time_control)} ${kind}${change} · ${day}`;
 }
 
 /** "Looking for 1 more player"-style wording for the number already waiting. */

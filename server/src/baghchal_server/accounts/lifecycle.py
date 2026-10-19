@@ -32,6 +32,7 @@ from baghchal_server.games.service import active_games
 from baghchal_server.legal import consents
 from baghchal_server.lobby.models import Block, Challenge
 from baghchal_server.lobby.service import close_open_challenges
+from baghchal_server.lobby.time_controls import label_of
 from baghchal_server.mail import Mail
 from baghchal_server.notifications.models import Notification
 from baghchal_server.ratings.models import PlayerRating
@@ -40,7 +41,7 @@ from baghchal_server.ratings.models import PlayerRating
 
 
 def _time_control(initial_seconds: int, increment_seconds: int) -> str:
-    return f"{initial_seconds // 60}+{increment_seconds}"
+    return label_of(initial_seconds, increment_seconds)
 
 
 async def export(db: AsyncSession, user: User, now: datetime) -> ExportOut:
