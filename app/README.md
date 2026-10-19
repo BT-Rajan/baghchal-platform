@@ -73,7 +73,8 @@ scripts/        the Expo-cloud guardrail
 ## How it works
 
 - **The front door.** Signed-out visitors land on `/welcome`: what Bagh Chal is, how it's
-  played, and "Play now, no sign-up", which signs them in as a guest (`guest-3fa9c1`) at once.
+  played, and "Play now, no sign-up", which signs them in as a guest (`guest-3fa9c1`) and
+  starts their first game at once: goats, against the Easy computer, at 15+10.
   Guests play the computer and casual games; rated play, challenges, reports and payments ask
   for an account. A banner on Play and Me leads to `/claim`, which turns the guest into a real
   account and keeps its games.
@@ -90,6 +91,10 @@ scripts/        the Expo-cloud guardrail
 - **Play now.** The lobby's "Play now" opens a screen to pair with whoever wants the same game
   (casual or rated, with a live count of who is waiting; leaving the screen stops waiting) or
   to play the computer at a chosen strength and side.
+- **The coach.** Games against the Easy computer show a tip for the moment (`src/game/coach.ts`:
+  placing and moving goats, captures on offer, a goat just lost, what to try after the game)
+  and mark the goats in danger, which the server sends as `goats_in_danger`. Choosing Easy is
+  choosing tips, so there is no separate setting.
 - **History and replay.** Profiles list the player's finished games, newest first and paged;
   each opens the game, where finished games step through every position. A game against the
   computer offers "Play the computer again" (sides swapped) instead of a rematch or report.

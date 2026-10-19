@@ -1601,6 +1601,11 @@ export interface components {
             moves: string[];
             /** Legal Moves */
             legal_moves: string[];
+            /**
+             * Goats In Danger
+             * @default []
+             */
+            goats_in_danger: string[];
             clocks: components["schemas"]["ClocksOut"];
             ratings: components["schemas"]["RatingsOut"];
             match: components["schemas"]["MatchOut"] | null;

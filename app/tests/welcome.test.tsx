@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { renderApp, savedToken } from './support/app';
 import { ME, error, type Route } from './support/fakeServer';
+import { game } from './support/games';
 
 const GUEST = {
   ...ME,
@@ -15,24 +16,36 @@ async function press(name: string | RegExp) {
 }
 
 describe('the welcome page', () => {
-  test('says what ClawPlay is, and plays at once as a guest', async () => {
+  test('says what ClawPlay is, and starts a first game at once as a guest', async () => {
+    const first = game({
+      goat: { id: GUEST.id, username: GUEST.username },
+      tiger: { id: 'cpu', username: 'computer-easy' },
+      computer: 'easy',
+      time_control: '15+10',
+      server_time: new Date().toISOString(),
+    });
     const { server, app } = await renderApp('/', {
       routes: {
         'POST /api/v1/auth/guest': { status: 200, body: { user: GUEST, token: 'guest-tok' } },
         'GET /api/v1/me': { status: 200, body: GUEST },
+        'POST /api/v1/games/computer': { status: 201, body: first },
+        'GET /api/v1/games/g1': { status: 200, body: first },
       },
     });
     expect(await screen.findByText(/^Tigers hunt\./)).toBeOnTheScreen();
     expect(screen.getByText('Goats trap')).toBeOnTheScreen();
     expect(screen.getByText('Play your way')).toBeOnTheScreen();
     await press('Play now, no sign-up');
-    expect(
-      await screen.findByText(/^You are playing as guest-3fa9c1\. Make a free account/),
-    ).toBeOnTheScreen();
+    await waitFor(() => expect(app.getPathname()).toBe('/game/g1'));
     expect(server.lastTo('POST /api/v1/auth/guest').body).toEqual({ transport: 'bearer' });
     expect(savedToken()).toBe('guest-tok');
-    await press('Make a free account');
-    await waitFor(() => expect(app.getPathname()).toBe('/claim'));
+    // The Easy computer, with the goats, who move first: the coach says what to do.
+    expect(server.lastTo('POST /api/v1/games/computer').body).toEqual({
+      level: 'easy',
+      side: 'goat',
+      time_control: '15+10',
+    });
+    expect(await screen.findByText('Place a goat')).toBeOnTheScreen();
   });
 
   test('the closing button plays too, and a refusal is shown', async () => {
@@ -61,6 +74,15 @@ describe('a guest', () => {
       routes: { 'GET /api/v1/me': { status: 200, body: GUEST }, ...routes },
     });
   }
+
+  test('is offered an account in the lobby', async () => {
+    const { app } = await asGuest('/');
+    expect(
+      await screen.findByText(/^You are playing as guest-3fa9c1\. Make a free account/),
+    ).toBeOnTheScreen();
+    await press('Make a free account');
+    await waitFor(() => expect(app.getPathname()).toBe('/claim'));
+  });
 
   test('makes an account and keeps playing', async () => {
     let me: typeof GUEST | typeof ME = GUEST;

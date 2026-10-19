@@ -3624,6 +3624,14 @@
             "type": "array",
             "title": "Legal Moves"
           },
+          "goats_in_danger": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Goats In Danger",
+            "default": []
+          },
           "clocks": {
             "$ref": "#/components/schemas/ClocksOut"
           },

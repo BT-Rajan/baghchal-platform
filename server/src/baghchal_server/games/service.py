@@ -28,9 +28,12 @@ from baghchal_engine import (
     IllegalMove,
     NotationError,
     Position,
+    Side,
     format_move,
+    format_point,
     format_position,
     parse_move,
+    threats,
 )
 from baghchal_server.accounts.models import User
 from baghchal_server.appearance import service as appearance
@@ -496,6 +499,7 @@ async def describe(db: AsyncSession, game: Game, now: datetime) -> GameOut:
         side_to_move=side_to_move(game),
         moves=[format_move(m) for m in engine_game.moves],
         legal_moves=[format_move(m) for m in engine_game.legal_moves()] if active else [],
+        goats_in_danger=_in_danger(engine_game.position) if active else [],
         clocks=ClocksOut(
             goat_ms=goat_ms,
             tiger_ms=tiger_ms,
@@ -513,6 +517,13 @@ async def describe(db: AsyncSession, game: Game, now: datetime) -> GameOut:
         created_at=game.created_at,
         finished_at=game.finished_at,
     )
+
+
+def _in_danger(position: Position) -> list[str]:
+    """On the goats' turn, the goats a tiger could capture next, each once."""
+    if position.side is not Side.GOAT:
+        return []
+    return sorted({format_point(m.over) for m in threats(position) if m.over is not None})
 
 
 def _positions(engine_game: EngineGame) -> list[str]:

@@ -8,7 +8,15 @@ from baghchal_engine.errors import (
     NotationError,
 )
 from baghchal_engine.game import Game, Outcome, Reason
-from baghchal_engine.moves import Move, apply_unchecked, has_legal_move, legal_moves, perft, play
+from baghchal_engine.moves import (
+    Move,
+    apply_unchecked,
+    has_legal_move,
+    legal_moves,
+    perft,
+    play,
+    threats,
+)
 from baghchal_engine.notation import (
     format_move,
     format_point,
@@ -45,4 +53,5 @@ __all__ = [
     "parse_position",
     "perft",
     "play",
+    "threats",
 ]

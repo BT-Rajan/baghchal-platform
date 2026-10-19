@@ -19,6 +19,7 @@ export function game(overrides: Partial<Game> = {}): Game {
     side_to_move: 'goat',
     moves: [],
     legal_moves: ['a2'],
+    goats_in_danger: [],
     clocks: { goat_ms: 300_000, tiger_ms: 300_000, running: null },
     ratings: { goat: { rating: 1500, change: null }, tiger: { rating: 1500, change: null } },
     match: null,

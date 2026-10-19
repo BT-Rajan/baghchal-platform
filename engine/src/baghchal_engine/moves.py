@@ -49,6 +49,14 @@ def legal_moves(pos: Position) -> list[Move]:
     return moves
 
 
+def threats(pos: Position) -> list[Move]:
+    """The captures the tigers could make next, if it were their move now.
+
+    For showing goats in danger: on the goats' turn, these are what their move should answer.
+    """
+    return [m for m in legal_moves(pos._replace(side=Side.TIGER)) if m.is_capture]
+
+
 def has_legal_move(pos: Position) -> bool:
     """Equivalent to ``bool(legal_moves(pos))`` but stops at the first move found."""
     if pos.captured >= CAPTURES_TO_WIN:

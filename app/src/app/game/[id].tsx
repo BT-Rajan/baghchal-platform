@@ -15,6 +15,7 @@ import { Button } from '@/components/Button';
 import { Card, SectionTitle } from '@/components/Card';
 import { AnalysisPanel } from '@/components/game/AnalysisPanel';
 import { Board } from '@/components/game/Board';
+import { Coach } from '@/components/game/Coach';
 import { GameActions } from '@/components/game/GameActions';
 import { MoveList } from '@/components/game/MoveList';
 import { PlayerBar } from '@/components/game/PlayerBar';
@@ -27,6 +28,7 @@ import { ErrorState, Loading } from '@/components/States';
 import { useServerNow } from '@/components/useNow';
 import { parseBfen, type Piece } from '@/game/bfen';
 import { firstMoveSecondsLeft } from '@/game/clock';
+import { coachTip, isCoached } from '@/game/coach';
 import {
   isComputer,
   lastMoveText,
@@ -87,6 +89,8 @@ export default function GameScreen() {
   const error = move.error ?? action.error;
   const layout = gameLayout(width, height);
   const wide = layout !== 'stacked';
+  // Games against the Easy computer come with tips, and goats in danger marked on the board.
+  const tip = isCoached(game, mine) ? coachTip(game, mine) : null;
 
   const board =
     position === null ? (
@@ -100,6 +104,7 @@ export default function GameScreen() {
         onMove={(m) => move.mutate({ ply: game.ply, move: m })}
         theme={look.board}
         pieces={look.pieces}
+        danger={tip !== null && myTurn && ply === game.ply ? game.goats_in_danger : []}
       />
     );
 
@@ -111,6 +116,7 @@ export default function GameScreen() {
       {layout === 'short' && opponentBar}
       {layout === 'short' && myBar}
       <Status game={game} mine={mine} />
+      {tip !== null && <Coach tip={tip} />}
       {replaying && <Replay ply={ply} total={game.ply} onShow={setShown} />}
       {error !== null && <Notice tone="error">{describeError(error)}</Notice>}
       {position !== null && (

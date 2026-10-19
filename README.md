@@ -40,7 +40,9 @@ Each phase ships complete — tested, documented and reviewed — before the nex
 7. **More to play** ✅ — a computer opponent at three strengths (easy, medium, hard; casual
    games only, searched in worker processes), quick pairing (play whoever is waiting for the
    same game; rated pairings are side-swapped matches), and game history on every profile with
-   move-by-move replay. Still to come: automatic fair-play checks.
+   move-by-move replay. The Easy computer coaches newcomers: a tip for each moment of the game,
+   and goats in danger marked on the board; "Play now" on the welcome page starts that game at
+   once. Still to come: automatic fair-play checks.
 8. **Ready for players** — what a public service needs:
    - ✅ **Accounts**: change the email address or password, download your data, delete the
      account ([API](#api-v1)).
@@ -157,7 +159,7 @@ and the Caddyfile.
 | POST | `/api/v1/challenges/{id}/accept`, `/decline`, `/cancel` | Answer or withdraw a challenge; accepting starts the game |
 | GET | `/api/v1/games` | Your live games (to resume after a reconnect) |
 | POST | `/api/v1/games/computer` | Play the computer (`level` easy, medium or hard; `side`; `time_control`); never rated |
-| GET | `/api/v1/games/{id}` | A game: position, moves, legal moves, clocks, result; finished games add every position, for replay |
+| GET | `/api/v1/games/{id}` | A game: position, moves, legal moves, goats in danger (on the goats' turn), clocks, result; finished games add every position, for replay |
 | POST | `/api/v1/games/{id}/moves` | Play `{"ply": n, "move": "a1-b2"}` (`ply` = moves you have seen) |
 | POST | `/api/v1/games/{id}/resign`, `/abort`, `/claim-abandonment` | End the game (see [rules](docs/rules.md#live-play-platform-rules)) |
 | GET, POST | `/api/v1/games/{id}/analysis` | Plus and Pro: a finished game's analysis; `POST` works it out if nobody has yet (counts against today's allowance) |

@@ -163,7 +163,10 @@ function PlayComputer({ timeControl }: { timeControl: TimeControl }) {
           <Segmented label="Strength" options={LEVELS} value={level} onChange={setLevel} />
           <Segmented label="You play" options={SIDES} value={side} onChange={setSide} />
         </View>
-        <Hint>Casual: games against the computer never change your rating.</Hint>
+        <Hint>
+          Casual: games against the computer never change your rating. Easy gives you tips as you
+          play.
+        </Hint>
         {start.error !== null && <Notice tone="error">{describeError(start.error)}</Notice>}
         {locked && (
           <Upsell feature="computer_hard">Play the Hard computer, the strongest opponent.</Upsell>
