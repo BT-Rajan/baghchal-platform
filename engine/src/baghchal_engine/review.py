@@ -112,3 +112,15 @@ def review(moves: Iterable[Move], *, depth: int = 3, seconds: float = 0.25) -> l
         )
         game.play(played)
     return out
+
+
+def unique_best(
+    game: Game, *, depth: int = 3, seconds: float = 0.5, margin: int = 700
+) -> Move | None:
+    """The one move clearly better than every other, by at least ``margin`` (a mistake's
+    worth), or None when there is no such move: a puzzle with a single answer."""
+    scores = _scores(game, depth, seconds)
+    ranked = sorted(scores.values(), reverse=True)
+    if len(ranked) < 2 or ranked[0] - ranked[1] < margin:
+        return None
+    return max(scores, key=scores.__getitem__)

@@ -1,0 +1,722 @@
+[
+ {
+  "id": "e004",
+  "kind": "endgame",
+  "position": "GGGGT/G2GG/G1T1G/GGGTG/GGGGT t 0 3",
+  "best": "c3-c4"
+ },
+ {
+  "id": "e005",
+  "kind": "endgame",
+  "position": "GG3/GGTTG/GGGTG/GGG1G/GG1GT t 0 4",
+  "best": "e1xc1"
+ },
+ {
+  "id": "e010",
+  "kind": "endgame",
+  "position": "GGGGT/1GGGG/GGGTG/GG1TG/TGGGG g 0 1",
+  "best": "a5-a4"
+ },
+ {
+  "id": "e011",
+  "kind": "endgame",
+  "position": "1GGGT/GGGGG/GGGTG/GGT1G/TGGGG g 0 1",
+  "best": "e1-d2"
+ },
+ {
+  "id": "e018",
+  "kind": "endgame",
+  "position": "GGGG1/G1GTG/G1TTG/2TGG/GGGGG t 0 4",
+  "best": "d4xb4"
+ },
+ {
+  "id": "e020",
+  "kind": "endgame",
+  "position": "GGGGG/GGGTG/G1TGG/G1GTG/GGGTG t 0 1",
+  "best": "d2xb2"
+ },
+ {
+  "id": "e021",
+  "kind": "endgame",
+  "position": "GGGGG/GGGTG/G1TGG/GT1G1/GGGTG t 0 2",
+  "best": "b2-c2"
+ },
+ {
+  "id": "e022",
+  "kind": "endgame",
+  "position": "GGGGG/GGGTG/G1TGG/G1T1G/GGGTG t 0 2",
+  "best": "d4xd2"
+ },
+ {
+  "id": "e023",
+  "kind": "endgame",
+  "position": "GGGGG/1GGT1/G1GGT/GGT1G/GGGTG t 0 3",
+  "best": "d4xd2"
+ },
+ {
+  "id": "e024",
+  "kind": "endgame",
+  "position": "G1GGT/1GGG1/GGG1T/GGTGG/GGGT1 g 0 4",
+  "best": "d2-e1"
+ },
+ {
+  "id": "e025",
+  "kind": "endgame",
+  "position": "G1GGT/GGG2/1GG1T/GGTGG/GGGTG g 0 4",
+  "best": "d2-d3"
+ },
+ {
+  "id": "e026",
+  "kind": "endgame",
+  "position": "G1GGT/GGG2/1GGGT/GGT1G/GGGTG t 0 4",
+  "best": "e5-d4"
+ },
+ {
+  "id": "e032",
+  "kind": "endgame",
+  "position": "GGGGG/GGTGG/G1GTT/GTGGG/GGGGG g 0 0",
+  "best": "a3-b3"
+ },
+ {
+  "id": "e033",
+  "kind": "endgame",
+  "position": "GGGGG/GGTGG/TGGTT/G1GGG/GGGGG g 0 0",
+  "best": "b1-b2"
+ },
+ {
+  "id": "e038",
+  "kind": "endgame",
+  "position": "GGGTG/GGGGG/GGTTG/G1GGG/TGGGG t 0 0",
+  "best": "a1-b2"
+ },
+ {
+  "id": "e039",
+  "kind": "endgame",
+  "position": "GGGTG/GGGGG/GG1TG/GGTGG/GTGGG g 0 0",
+  "best": "b4-c3"
+ },
+ {
+  "id": "e056",
+  "kind": "endgame",
+  "position": "GGGGG/GTTGG/GGTGG/G1GGG/2GGT t 0 2",
+  "best": "b4xb2"
+ },
+ {
+  "id": "e057",
+  "kind": "endgame",
+  "position": "GGGGG/GGT1G/G1TGG/GTGGG/2GGT t 0 3",
+  "best": "c3-b3"
+ },
+ {
+  "id": "e058",
+  "kind": "endgame",
+  "position": "GGG1G/GGTGG/GT1GG/GTGGG/2GGT t 0 3",
+  "best": "e1xc3"
+ },
+ {
+  "id": "e059",
+  "kind": "endgame",
+  "position": "GGG1G/GGTGG/GTTGG/1TG1G/G1GG1 t 0 4",
+  "best": "b2xd2"
+ },
+ {
+  "id": "e070",
+  "kind": "endgame",
+  "position": "GGG1G/GGGTG/GG1GG/GT2G/GTGGT g 0 3",
+  "best": "d3-c3"
+ },
+ {
+  "id": "e071",
+  "kind": "endgame",
+  "position": "GGG1G/GGGTG/GGG1G/GT2G/GTGGT t 0 3",
+  "best": "d4-d3"
+ },
+ {
+  "id": "e072",
+  "kind": "endgame",
+  "position": "GGG1G/GGG1G/GG1TG/GTG1G/GTGGT t 0 3",
+  "best": "b2xd2"
+ },
+ {
+  "id": "e073",
+  "kind": "endgame",
+  "position": "GGG2/1GGGG/1GGTG/GGT1G/GTGGT g 0 4",
+  "best": "c5-d5"
+ },
+ {
+  "id": "e076",
+  "kind": "endgame",
+  "position": "GGGGG/G1GGG/GGTGG/TTTGG/GGGGG t 0 0",
+  "best": "b2xb4"
+ },
+ {
+  "id": "e077",
+  "kind": "endgame",
+  "position": "GGGGG/GTGGG/GT1GG/TTGG1/GGGGG g 0 1",
+  "best": "c4-c3"
+ },
+ {
+  "id": "e078",
+  "kind": "endgame",
+  "position": "GGGGG/G1TGG/GTGGG/TTGG1/GGGGG g 0 1",
+  "best": "a5-b4"
+ },
+ {
+  "id": "e082",
+  "kind": "endgame",
+  "position": "GTGGG/G1GGG/TGGGT/GGTGG/GGGGG g 0 0",
+  "best": "a4-b4"
+ },
+ {
+  "id": "e083",
+  "kind": "endgame",
+  "position": "GGGGT/GGTGG/GTGGG/GGGT1/GGGGG g 0 0",
+  "best": "e1-e2"
+ },
+ {
+  "id": "e088",
+  "kind": "endgame",
+  "position": "GG1GG/GTGGT/GGGTG/GGGGG/GTGGG g 0 0",
+  "best": "b5-c5"
+ },
+ {
+  "id": "e091",
+  "kind": "endgame",
+  "position": "GGTGG/G2GG/GG1TG/G1GG1/TGGTG t 0 4",
+  "best": "c5-b4"
+ },
+ {
+  "id": "e092",
+  "kind": "endgame",
+  "position": "GG1GG/GT1GG/GGGTG/G2G1/TGGTG t 0 4",
+  "best": "b4xb2"
+ },
+ {
+  "id": "e093",
+  "kind": "endgame",
+  "position": "T1GGG/GGGGG/GG1GG/1T2G/GGTTG t 0 4",
+  "best": "a5xc3"
+ },
+ {
+  "id": "e094",
+  "kind": "endgame",
+  "position": "GGGGG/GGGGG/1G1GG/1GTTG/1T1TG t 0 4",
+  "best": "c2xa2"
+ },
+ {
+  "id": "e095",
+  "kind": "endgame",
+  "position": "GGGGG/GGTGT/TGG1G/GGGTG/GGGGG g 0 0",
+  "best": "e3-d3"
+ },
+ {
+  "id": "e096",
+  "kind": "endgame",
+  "position": "GGGGG/GGTGT/TGGG1/GGGTG/GGGGG t 0 0",
+  "best": "e4-e3"
+ },
+ {
+  "id": "e097",
+  "kind": "endgame",
+  "position": "GGGGG/GGT1G/TGGTT/GGGG1/GGGGG g 0 1",
+  "best": "d2-e2"
+ },
+ {
+  "id": "e098",
+  "kind": "endgame",
+  "position": "GGGGG/GGT1G/TGG1T/GGGTG/GGGGG g 0 1",
+  "best": "d5-d4"
+ },
+ {
+  "id": "e099",
+  "kind": "endgame",
+  "position": "GGGTG/GG2G/TGGGT/GGGTG/GGGGG g 0 1",
+  "best": "e4-d4"
+ },
+ {
+  "id": "e100",
+  "kind": "endgame",
+  "position": "GGGTG/GG2T/TGGGG/GGGTG/GGGGG t 0 1",
+  "best": "d2xd4"
+ },
+ {
+  "id": "e101",
+  "kind": "endgame",
+  "position": "GGGTT/GGT1G/TGG1G/GGGG1/GGGGG g 0 2",
+  "best": "d2-d3"
+ },
+ {
+  "id": "e102",
+  "kind": "endgame",
+  "position": "GGGTG/GGT2/TGGGT/GGGGG/GGG1G g 0 2",
+  "best": "d2-d1"
+ },
+ {
+  "id": "e103",
+  "kind": "endgame",
+  "position": "GGGTG/GGT2/TGGG1/GGGTG/GGGGG g 0 2",
+  "best": "d3-e3"
+ },
+ {
+  "id": "e104",
+  "kind": "endgame",
+  "position": "GGG1G/GGTTG/TGG2/GGGTG/GGGGG t 0 2",
+  "best": "d4-e3"
+ },
+ {
+  "id": "e105",
+  "kind": "endgame",
+  "position": "GGGG1/GGT2/TGGTG/GGGTG/GGGGG g 0 2",
+  "best": "e3-e4"
+ },
+ {
+  "id": "e106",
+  "kind": "endgame",
+  "position": "GGGGG/G1GGT/TGTT1/GGG2/GGGGG t 0 3",
+  "best": "c3-b4"
+ },
+ {
+  "id": "e107",
+  "kind": "endgame",
+  "position": "G1GGG/GTGG1/GTT1G/GG2T/GGGGG g 0 4",
+  "best": "e3-e4"
+ },
+ {
+  "id": "e108",
+  "kind": "endgame",
+  "position": "GGGGG/GTGTG/GG1GG/GGTGG/GTGGG g 0 0",
+  "best": "d3-c3"
+ },
+ {
+  "id": "e109",
+  "kind": "endgame",
+  "position": "GGGGG/GTGGG/GG1TG/TGGGT/GGGGG g 0 0",
+  "best": "c4-c3"
+ },
+ {
+  "id": "e110",
+  "kind": "endgame",
+  "position": "GGGGG/GTTGG/GGGT1/TGGGG/GGGGG g 0 0",
+  "best": "e2-e3"
+ },
+ {
+  "id": "e111",
+  "kind": "endgame",
+  "position": "T1GGG/GGGGG/GTGTG/GGGGG/TGGGG g 0 0",
+  "best": "b4-b5"
+ },
+ {
+  "id": "e112",
+  "kind": "endgame",
+  "position": "GTGGG/1TGGG/TGGTG/1GGGG/1GGGG g 0 2",
+  "best": "b1-a1"
+ },
+ {
+  "id": "e113",
+  "kind": "endgame",
+  "position": "GTGGG/1TGGG/1GGTG/1GGGG/TGGGG g 0 2",
+  "best": "a5-a4"
+ },
+ {
+  "id": "e114",
+  "kind": "endgame",
+  "position": "T1GGG/GTGGG/1GGTG/1GGGG/TGGGG g 0 2",
+  "best": "a4-a3"
+ },
+ {
+  "id": "e115",
+  "kind": "endgame",
+  "position": "TGGGG/1T1GG/1GGTG/TGGGG/GG1GG g 0 3",
+  "best": "c3-c4"
+ },
+ {
+  "id": "e116",
+  "kind": "endgame",
+  "position": "TGGGG/1TGGG/3TG/1TGGG/GGGGG g 0 4",
+  "best": "a1-a2"
+ },
+ {
+  "id": "e117",
+  "kind": "endgame",
+  "position": "TGGGG/1TGGG/3TG/G1GGG/TGGGG g 0 4",
+  "best": "a2-a3"
+ },
+ {
+  "id": "e118",
+  "kind": "endgame",
+  "position": "G1GGT/GGTGG/GG2G/GTGGG/GTGGG g 0 2",
+  "best": "b3-c3"
+ },
+ {
+  "id": "e119",
+  "kind": "endgame",
+  "position": "GTGGT/GT1GG/GGGGG/TGGGG/GG3 g 0 3",
+  "best": "e2-e1"
+ },
+ {
+  "id": "e120",
+  "kind": "endgame",
+  "position": "GTGGT/GT1GG/GGGGG/TGGG1/1GGG1 g 0 3",
+  "best": "d1-e1"
+ },
+ {
+  "id": "o001",
+  "kind": "opening",
+  "position": "2GG1/1T2T/4G/1T3/4T g 17 0",
+  "best": "e2"
+ },
+ {
+  "id": "o002",
+  "kind": "opening",
+  "position": "G1GG1/GG1T1/1TT1G/3TG/GG3 t 11 0",
+  "best": "b3xb5"
+ },
+ {
+  "id": "o003",
+  "kind": "opening",
+  "position": "G1GG1/GT1T1/2T1G/1GT1G/GGG2 g 9 1",
+  "best": "a2"
+ },
+ {
+  "id": "o006",
+  "kind": "opening",
+  "position": "GG3/T2T1/4G/4T/T4 g 17 0",
+  "best": "e4"
+ },
+ {
+  "id": "o007",
+  "kind": "opening",
+  "position": "GG3/T2TG/4G/5/T1GT1 g 15 0",
+  "best": "b1"
+ },
+ {
+  "id": "o008",
+  "kind": "opening",
+  "position": "GGG2/1GGTG/GG1TG/GGT1G/TGGGG g 3 1",
+  "best": "c3"
+ },
+ {
+  "id": "o009",
+  "kind": "opening",
+  "position": "GGG1T/1GGGG/GGGTG/GGT1G/TGGGG g 1 1",
+  "best": "d5"
+ },
+ {
+  "id": "o012",
+  "kind": "opening",
+  "position": "4T/5/1G3/1T3/T3T g 17 2",
+  "best": "b4"
+ },
+ {
+  "id": "o013",
+  "kind": "opening",
+  "position": "4T/GT3/T2GG/5/T4 g 13 4",
+  "best": "a5"
+ },
+ {
+  "id": "o014",
+  "kind": "opening",
+  "position": "G1GG1/G2TG/2T1T/1T3/2GG1 g 11 2",
+  "best": "e5"
+ },
+ {
+  "id": "o015",
+  "kind": "opening",
+  "position": "GGGG1/G2TG/2T1T/1T3/2GG1 t 10 2",
+  "best": "e3xe5"
+ },
+ {
+  "id": "o016",
+  "kind": "opening",
+  "position": "GGGGT/G2TG/G2GT/2TGG/2GGG t 4 3",
+  "best": "e3xc3"
+ },
+ {
+  "id": "o017",
+  "kind": "opening",
+  "position": "GGGGT/G2TG/G1T2/2TGG/2GGG g 4 4",
+  "best": "e3"
+ },
+ {
+  "id": "o019",
+  "kind": "opening",
+  "position": "GGGGG/GGTTG/T3G/2G1G/GGGTG t 5 0",
+  "best": "a3-b2"
+ },
+ {
+  "id": "o027",
+  "kind": "opening",
+  "position": "1GG2/GTGG1/G1T2/G2T1/1TG2 t 10 2",
+  "best": "c3xe5"
+ },
+ {
+  "id": "o028",
+  "kind": "opening",
+  "position": "1GG1T/GTG2/GG3/G2T1/1TG2 t 9 3",
+  "best": "b1xd1"
+ },
+ {
+  "id": "o029",
+  "kind": "opening",
+  "position": "TG2T/G4/G1T2/5/T2G1 g 16 0",
+  "best": "c5"
+ },
+ {
+  "id": "o030",
+  "kind": "opening",
+  "position": "TGGGT/G4/G3T/GT2G/2GG1 g 11 0",
+  "best": "e1"
+ },
+ {
+  "id": "o031",
+  "kind": "opening",
+  "position": "GGGGG/G1TGG/G2TT/GTGGG/GGGGG g 2 0",
+  "best": "b4"
+ },
+ {
+  "id": "o034",
+  "kind": "opening",
+  "position": "G3T/T4/5/5/1TG1T g 18 0",
+  "best": "d1"
+ },
+ {
+  "id": "o035",
+  "kind": "opening",
+  "position": "GGGTG/G3G/2T1G/G2TG/T1GGG g 8 0",
+  "best": "a3"
+ },
+ {
+  "id": "o036",
+  "kind": "opening",
+  "position": "GGGTG/G3G/GG2G/GTTTG/2GGG g 6 0",
+  "best": "b4"
+ },
+ {
+  "id": "o037",
+  "kind": "opening",
+  "position": "GGG1G/GG1TG/GGTTG/GTG1G/1GGGG g 3 0",
+  "best": "d2"
+ },
+ {
+  "id": "o040",
+  "kind": "opening",
+  "position": "2G2/G3G/TGG2/3T1/T2T1 t 14 1",
+  "best": "d2xb4"
+ },
+ {
+  "id": "o041",
+  "kind": "opening",
+  "position": "2G2/GT2G/TG3/G4/T2T1 t 13 2",
+  "best": "a3xa5"
+ },
+ {
+  "id": "o042",
+  "kind": "opening",
+  "position": "1TGGG/GTTGG/GGGGG/TGG2/2G1G t 1 4",
+  "best": "b4xd2"
+ },
+ {
+  "id": "o043",
+  "kind": "opening",
+  "position": "G1G1T/T1GT1/G4/G4/G3T g 14 0",
+  "best": "b4"
+ },
+ {
+  "id": "o044",
+  "kind": "opening",
+  "position": "G1GT1/TGGT1/G4/G4/G3T g 13 0",
+  "best": "b5"
+ },
+ {
+  "id": "o045",
+  "kind": "opening",
+  "position": "GGGT1/TGG2/G2T1/G4/G1GT1 g 11 0",
+  "best": "b1"
+ },
+ {
+  "id": "o046",
+  "kind": "opening",
+  "position": "GGG2/TGGTG/GG2T/G4/GGG1T g 8 0",
+  "best": "e5"
+ },
+ {
+  "id": "o047",
+  "kind": "opening",
+  "position": "GGG1G/TGGTG/GGG1G/GGTGT/GGGGG g 1 0",
+  "best": "d5"
+ },
+ {
+  "id": "o048",
+  "kind": "opening",
+  "position": "T4/3T1/2G2/4T/T1G2 g 18 0",
+  "best": "b2"
+ },
+ {
+  "id": "o049",
+  "kind": "opening",
+  "position": "T4/3G1/4T/1T3/T1GG1 g 16 1",
+  "best": "c5"
+ },
+ {
+  "id": "o050",
+  "kind": "opening",
+  "position": "1TG2/3G1/4T/1T3/T1GG1 g 15 1",
+  "best": "d5"
+ },
+ {
+  "id": "o051",
+  "kind": "opening",
+  "position": "1TG1G/3G1/4T/1T3/T1GG1 t 14 1",
+  "best": "b5xd5"
+ },
+ {
+  "id": "o052",
+  "kind": "opening",
+  "position": "3TG/3G1/5/1T3/T1GGT g 13 3",
+  "best": "d3"
+ },
+ {
+  "id": "o053",
+  "kind": "opening",
+  "position": "G1GGG/GT1T1/G3G/GT2T/2GG1 g 10 0",
+  "best": "e4"
+ },
+ {
+  "id": "o054",
+  "kind": "opening",
+  "position": "G1GGG/GT1GG/G1G1G/G1TGG/1TGGT t 5 0",
+  "best": "c2xc4"
+ },
+ {
+  "id": "o055",
+  "kind": "opening",
+  "position": "GGGGG/GTTGG/GG1GG/GG1GG/T1GGT t 1 1",
+  "best": "a1xc3"
+ },
+ {
+  "id": "o060",
+  "kind": "opening",
+  "position": "T3T/3T1/3G1/3G1/4T t 17 1",
+  "best": "e1xc3"
+ },
+ {
+  "id": "o061",
+  "kind": "opening",
+  "position": "3T1/5/G1T1G/T2TG/G4 g 12 4",
+  "best": "a4"
+ },
+ {
+  "id": "o062",
+  "kind": "opening",
+  "position": "T3T/3G1/2G2/T2T1/5 g 18 0",
+  "best": "b4"
+ },
+ {
+  "id": "o063",
+  "kind": "opening",
+  "position": "T3T/1G1G1/1GGT1/GT3/5 t 15 0",
+  "best": "d3xd5"
+ },
+ {
+  "id": "o064",
+  "kind": "opening",
+  "position": "T2TT/1G3/1GG1G/GT3/5 t 14 1",
+  "best": "b2xd4"
+ },
+ {
+  "id": "o065",
+  "kind": "opening",
+  "position": "2T1T/3TG/GG2G/GT3/G4 g 11 3",
+  "best": "b4"
+ },
+ {
+  "id": "o066",
+  "kind": "opening",
+  "position": "2T1T/1GT1G/GG2G/GT3/G4 g 10 3",
+  "best": "a4"
+ },
+ {
+  "id": "o067",
+  "kind": "opening",
+  "position": "2T1T/GG2G/GGT1G/GT3/G4 g 9 3",
+  "best": "a5"
+ },
+ {
+  "id": "o068",
+  "kind": "opening",
+  "position": "GGGTG/GG2G/GGT1G/G2TG/GTG2 g 3 3",
+  "best": "d1"
+ },
+ {
+  "id": "o069",
+  "kind": "opening",
+  "position": "GGGTG/GGG1G/GG2G/GT2G/GTGGT g 1 3",
+  "best": "d3"
+ },
+ {
+  "id": "o074",
+  "kind": "opening",
+  "position": "1TG1G/5/3TG/1T2G/4T g 16 0",
+  "best": "d5"
+ },
+ {
+  "id": "o075",
+  "kind": "opening",
+  "position": "GTGGG/3T1/G3G/T3G/3T1 g 13 0",
+  "best": "a4"
+ },
+ {
+  "id": "o079",
+  "kind": "opening",
+  "position": "GG2T/G2TG/T1T2/G3G/GGGGG t 8 1",
+  "best": "e5xe3"
+ },
+ {
+  "id": "o080",
+  "kind": "opening",
+  "position": "GG2G/G2T1/TGG1T/GG1TG/GGGGG t 3 3",
+  "best": "d2xb4"
+ },
+ {
+  "id": "o081",
+  "kind": "opening",
+  "position": "GG1GG/G2TG/TGG1T/GG1TG/GGGGG t 1 3",
+  "best": "d2xb4"
+ },
+ {
+  "id": "o084",
+  "kind": "opening",
+  "position": "2G2/1T1T1/3G1/G4/T3T t 17 0",
+  "best": "a1xa3"
+ },
+ {
+  "id": "o085",
+  "kind": "opening",
+  "position": "1GG2/1T1T1/3G1/1T1G1/4T t 15 1",
+  "best": "e1xc3"
+ },
+ {
+  "id": "o086",
+  "kind": "opening",
+  "position": "1GG2/1T1T1/4T/1TGG1/5 t 13 3",
+  "best": "e3xc1"
+ },
+ {
+  "id": "o087",
+  "kind": "opening",
+  "position": "GT3/2GTG/2T1G/3G1/T4 t 12 3",
+  "best": "c3xe1"
+ },
+ {
+  "id": "o089",
+  "kind": "opening",
+  "position": "5/1T3/1GGT1/1G1G1/T3T t 16 0",
+  "best": "d3xd1"
+ },
+ {
+  "id": "o090",
+  "kind": "opening",
+  "position": "5/1T3/1GG2/1G3/T1GTT t 15 1",
+  "best": "b4xd2"
+ }
+]

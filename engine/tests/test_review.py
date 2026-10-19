@@ -1,8 +1,8 @@
 import pytest
 
-from baghchal_engine import IllegalMove, parse_move
+from baghchal_engine import Game, IllegalMove, parse_move
 from baghchal_engine.position import Side
-from baghchal_engine.review import SCORE_LIMIT, Verdict, review, verdict
+from baghchal_engine.review import SCORE_LIMIT, Verdict, review, unique_best, verdict
 
 # The tigers take five goats; every goat move hands one over.
 FIVE_CAPTURES = ["b2", "a1xc3", "e2", "e1xe3", "c4", "c3xc5", "b4", "c5xa3", "b2", "a3xc1"]
@@ -52,3 +52,10 @@ def test_out_of_time_still_reviews() -> None:
 def test_an_illegal_move_is_refused() -> None:
     with pytest.raises(IllegalMove, match="move 3 is not legal: c3-c2"):
         _review(["c3", "a5-a4", "c3-c2"])  # goats cannot move while some are still in hand
+
+
+def test_a_puzzle_has_one_clearly_best_move() -> None:
+    game = Game()
+    assert unique_best(game) is None  # the first goat can go almost anywhere
+    game.play(parse_move("b5"))
+    assert unique_best(game) == parse_move("a5xc5")  # the goat hangs: take it

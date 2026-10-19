@@ -51,6 +51,15 @@ export type Period = S['Period'];
 export type Payment = S['PaymentOut'];
 export type Payments = S['PaymentsOut'];
 export type PaymentProof = S['VerifyIn'];
+export type Room = S['RoomOut'];
+export type RoomRequest = S['RoomIn'];
+export type Tournament = S['TournamentOut'];
+export type TournamentRequest = S['TournamentIn'];
+export type Pairing = S['PairingOut'];
+export type Trainer = S['TrainerOut'];
+export type TrainerKind = S['Kind'];
+export type TrainerPuzzle = S['PuzzleOut'];
+export type TrainerAnswer = S['AnswerOut'];
 
 export type ChallengeAnswer = 'accept' | 'decline' | 'cancel';
 export type GameAction = 'resign' | 'abort' | 'claim-abandonment';
@@ -159,6 +168,32 @@ export function createApi(client: Client, transport: Transport) {
     payments: (signal?: AbortSignal) => client.get<Payments>(`${V1}/me/payments`, { signal }),
     checkout: (body: CheckoutRequest) => client.post<Checkout>(`${V1}/payments/checkout`, { body }),
     verifyPayment: (body: PaymentProof) => client.post<Payment>(`${V1}/payments/verify`, { body }),
+
+    // Private rooms
+    rooms: (signal?: AbortSignal) => client.get<Room[]>(`${V1}/rooms`, { signal }),
+    room: (code: string, signal?: AbortSignal) =>
+      client.get<Room>(`${V1}/rooms/${seg(code)}`, { signal }),
+    createRoom: (body: RoomRequest) => client.post<Room>(`${V1}/rooms`, { body }),
+    joinRoom: (code: string) => client.post<Room>(`${V1}/rooms/${seg(code)}/join`),
+    closeRoom: (code: string) => client.post<Room>(`${V1}/rooms/${seg(code)}/close`),
+
+    // Tournaments
+    tournaments: (signal?: AbortSignal) =>
+      client.get<Tournament[]>(`${V1}/tournaments`, { signal }),
+    tournament: (code: string, signal?: AbortSignal) =>
+      client.get<Tournament>(`${V1}/tournaments/${seg(code)}`, { signal }),
+    createTournament: (body: TournamentRequest) =>
+      client.post<Tournament>(`${V1}/tournaments`, { body }),
+    tournamentAction: (code: string, action: 'join' | 'leave' | 'start' | 'finish') =>
+      client.post<Tournament>(`${V1}/tournaments/${seg(code)}/${action}`),
+    playPairing: (code: string, pairingId: string) =>
+      client.post<Game>(`${V1}/tournaments/${seg(code)}/pairings/${seg(pairingId)}/play`),
+
+    // Trainer
+    trainer: (kind: TrainerKind, signal?: AbortSignal) =>
+      client.get<Trainer>(`${V1}/trainer`, { query: { kind }, signal }),
+    answerPuzzle: (id: string, move: string) =>
+      client.post<TrainerAnswer>(`${V1}/trainer/${seg(id)}/answer`, { body: { move } }),
 
     // Appearance
     appearance: (signal?: AbortSignal) => client.get<Appearance>(`${V1}/me/appearance`, { signal }),

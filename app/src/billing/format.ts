@@ -14,17 +14,8 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   trainer: 'Opening and endgame trainer',
 };
 
-/** Features on sale that are still being built: plans say so, honestly. */
-export const COMING_SOON: ReadonlySet<Feature> = new Set([
-  'private_rooms',
-  'tournaments',
-  'trainer',
-]);
-
 export function featureText(feature: Feature): string {
-  return COMING_SOON.has(feature)
-    ? `${FEATURE_LABELS[feature]} (coming soon)`
-    : FEATURE_LABELS[feature];
+  return FEATURE_LABELS[feature];
 }
 
 function rupees(paise: number): string {

@@ -231,6 +231,33 @@ async def _create_game(  # noqa: PLR0913 - every field of a new game
     return game
 
 
+async def start_casual_game(  # noqa: PLR0913 - who plays which side, how fast
+    db: AsyncSession,
+    now: datetime,
+    *,
+    goat_id: uuid.UUID,
+    tiger_id: uuid.UUID,
+    initial_seconds: int,
+    increment_seconds: int,
+) -> Game:
+    """Start an unrated game between two players (private rooms, tournaments; caller commits).
+
+    Raises IntegrityError if either player is already in a live game.
+    """
+    return await _create_game(
+        db,
+        now,
+        goat_id=goat_id,
+        tiger_id=tiger_id,
+        rated=False,
+        initial_ms=initial_seconds * 1000,
+        increment_ms=increment_seconds * 1000,
+        challenge_id=None,
+        match_id=None,
+        match_game=None,
+    )
+
+
 async def start_computer_game(  # noqa: PLR0913 - who plays whom, which side, how fast
     db: AsyncSession,
     now: datetime,

@@ -2022,6 +2022,592 @@
           }
         }
       }
+    },
+    "/api/v1/rooms": {
+      "get": {
+        "summary": "My Rooms",
+        "description": "My open rooms.",
+        "operationId": "my_rooms_api_v1_rooms_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RoomOut"
+                  },
+                  "type": "array",
+                  "title": "Response My Rooms Api V1 Rooms Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Room",
+        "description": "Make a private room (Pro): a link to one casual game, for whoever opens it first.",
+        "operationId": "create_room_api_v1_rooms_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoomIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rooms/{code}": {
+      "get": {
+        "summary": "Room",
+        "description": "A room, for someone who has its link.",
+        "operationId": "room_api_v1_rooms__code__get",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,16}$",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rooms/{code}/join": {
+      "post": {
+        "summary": "Join Room",
+        "description": "Play the host: the game starts now (its id is in ``game_id``; both get a ``game``\nevent). The host must be online.",
+        "operationId": "join_room_api_v1_rooms__code__join_post",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,16}$",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rooms/{code}/close": {
+      "post": {
+        "summary": "Close Room",
+        "operationId": "close_room_api_v1_rooms__code__close_post",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,16}$",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tournaments": {
+      "get": {
+        "summary": "My Tournaments",
+        "description": "Tournaments I am in, newest first.",
+        "operationId": "my_tournaments_api_v1_tournaments_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TournamentOut"
+                  },
+                  "type": "array",
+                  "title": "Response My Tournaments Api V1 Tournaments Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Tournament",
+        "description": "Host a small round robin (Pro); share its code for players to join.",
+        "operationId": "create_tournament_api_v1_tournaments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TournamentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TournamentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tournaments/{code}": {
+      "get": {
+        "summary": "Tournament",
+        "operationId": "tournament_api_v1_tournaments__code__get",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,16}$",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TournamentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tournaments/{code}/join": {
+      "post": {
+        "summary": "Join Tournament",
+        "operationId": "join_tournament_api_v1_tournaments__code__join_post",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,16}$",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TournamentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tournaments/{code}/leave": {
+      "post": {
+        "summary": "Leave Tournament",
+        "operationId": "leave_tournament_api_v1_tournaments__code__leave_post",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,16}$",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TournamentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tournaments/{code}/start": {
+      "post": {
+        "summary": "Start Tournament",
+        "description": "The host closes entries and draws up the games.",
+        "operationId": "start_tournament_api_v1_tournaments__code__start_post",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,16}$",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TournamentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tournaments/{code}/finish": {
+      "post": {
+        "summary": "Finish Tournament",
+        "description": "The host ends the tournament now.",
+        "operationId": "finish_tournament_api_v1_tournaments__code__finish_post",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,16}$",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TournamentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tournaments/{code}/pairings/{pairing_id}/play": {
+      "post": {
+        "summary": "Play Pairing",
+        "description": "Start one of my games; my opponent must be online (both get a ``game`` event).",
+        "operationId": "play_pairing_api_v1_tournaments__code__pairings__pairing_id__play_post",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,16}$",
+              "title": "Code"
+            }
+          },
+          {
+            "name": "pairing_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Pairing Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trainer": {
+      "get": {
+        "summary": "Trainer",
+        "description": "My next puzzle of this kind (Pro), and how I am doing.",
+        "operationId": "trainer_api_v1_trainer_get",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Kind",
+              "default": "opening"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainerOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trainer/{puzzle_id}/answer": {
+      "post": {
+        "summary": "Answer",
+        "description": "Was this the best move? The answer says which was.",
+        "operationId": "answer_api_v1_trainer__puzzle_id__answer_post",
+        "parameters": [
+          {
+            "name": "puzzle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9]{1,8}$",
+              "title": "Puzzle Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnswerOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2089,6 +2675,54 @@
           "left_today"
         ],
         "title": "AnalysisOut"
+      },
+      "AnswerIn": {
+        "properties": {
+          "move": {
+            "type": "string",
+            "maxLength": 16,
+            "title": "Move"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "move"
+        ],
+        "title": "AnswerIn"
+      },
+      "AnswerOut": {
+        "properties": {
+          "solved": {
+            "type": "integer",
+            "title": "Solved"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "streak": {
+            "type": "integer",
+            "title": "Streak"
+          },
+          "correct": {
+            "type": "boolean",
+            "title": "Correct"
+          },
+          "best": {
+            "type": "string",
+            "title": "Best"
+          }
+        },
+        "type": "object",
+        "required": [
+          "solved",
+          "total",
+          "streak",
+          "correct",
+          "best"
+        ],
+        "title": "AnswerOut"
       },
       "AppearanceIn": {
         "properties": {
@@ -3309,6 +3943,14 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "Kind": {
+        "type": "string",
+        "enum": [
+          "opening",
+          "endgame"
+        ],
+        "title": "Kind"
+      },
       "LeaderboardEntry": {
         "properties": {
           "rank": {
@@ -3695,6 +4337,65 @@
           "grants"
         ],
         "title": "MyPlanOut"
+      },
+      "PairingOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "goat": {
+            "$ref": "#/components/schemas/PlayerOut"
+          },
+          "tiger": {
+            "$ref": "#/components/schemas/PlayerOut"
+          },
+          "state": {
+            "$ref": "#/components/schemas/PairingState"
+          },
+          "game_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Game Id"
+          },
+          "winner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlayerOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "goat",
+          "tiger",
+          "state",
+          "game_id",
+          "winner"
+        ],
+        "title": "PairingOut"
+      },
+      "PairingState": {
+        "type": "string",
+        "enum": [
+          "waiting",
+          "playing",
+          "done"
+        ],
+        "title": "PairingState"
       },
       "PasswordChangeIn": {
         "properties": {
@@ -4139,6 +4840,45 @@
         ],
         "title": "ProfileOut"
       },
+      "PuzzleOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/Kind"
+          },
+          "position": {
+            "type": "string",
+            "title": "Position"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "goat",
+              "tiger"
+            ],
+            "title": "Side"
+          },
+          "legal_moves": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Legal Moves"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "position",
+          "side",
+          "legal_moves"
+        ],
+        "title": "PuzzleOut"
+      },
       "RatingOut": {
         "properties": {
           "rating": {
@@ -4475,6 +5215,106 @@
         ],
         "title": "RevokeIn"
       },
+      "RoomIn": {
+        "properties": {
+          "time_control": {
+            "type": "string",
+            "enum": [
+              "3+2",
+              "5+3",
+              "10+5",
+              "15+10"
+            ],
+            "title": "Time Control"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "goat",
+              "tiger",
+              "random"
+            ],
+            "title": "Side",
+            "default": "random"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "time_control"
+        ],
+        "title": "RoomIn"
+      },
+      "RoomOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "host": {
+            "$ref": "#/components/schemas/PlayerOut"
+          },
+          "time_control": {
+            "type": "string",
+            "enum": [
+              "3+2",
+              "5+3",
+              "10+5",
+              "15+10"
+            ],
+            "title": "Time Control"
+          },
+          "host_side": {
+            "type": "string",
+            "enum": [
+              "goat",
+              "tiger",
+              "random"
+            ],
+            "title": "Host Side"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RoomStatus"
+          },
+          "game_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Game Id"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "host",
+          "time_control",
+          "host_side",
+          "status",
+          "game_id",
+          "expires_at"
+        ],
+        "title": "RoomOut"
+      },
+      "RoomStatus": {
+        "type": "string",
+        "enum": [
+          "open",
+          "played",
+          "closed"
+        ],
+        "title": "RoomStatus"
+      },
       "SeekCountOut": {
         "properties": {
           "time_control": {
@@ -4622,6 +5462,28 @@
         ],
         "title": "SoundPack"
       },
+      "StandingOut": {
+        "properties": {
+          "player": {
+            "$ref": "#/components/schemas/PlayerOut"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points"
+          },
+          "played": {
+            "type": "integer",
+            "title": "Played"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player",
+          "points",
+          "played"
+        ],
+        "title": "StandingOut"
+      },
       "SuspendIn": {
         "properties": {
           "days": {
@@ -4651,6 +5513,159 @@
           "reason"
         ],
         "title": "SuspendIn"
+      },
+      "TournamentIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "time_control": {
+            "type": "string",
+            "enum": [
+              "3+2",
+              "5+3",
+              "10+5",
+              "15+10"
+            ],
+            "title": "Time Control"
+          },
+          "max_players": {
+            "type": "integer",
+            "maximum": 6.0,
+            "minimum": 3.0,
+            "title": "Max Players",
+            "default": 6
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "time_control"
+        ],
+        "title": "TournamentIn"
+      },
+      "TournamentOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "host": {
+            "$ref": "#/components/schemas/PlayerOut"
+          },
+          "time_control": {
+            "type": "string",
+            "enum": [
+              "3+2",
+              "5+3",
+              "10+5",
+              "15+10"
+            ],
+            "title": "Time Control"
+          },
+          "max_players": {
+            "type": "integer",
+            "title": "Max Players"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TournamentStatus"
+          },
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/PlayerOut"
+            },
+            "type": "array",
+            "title": "Players"
+          },
+          "standings": {
+            "items": {
+              "$ref": "#/components/schemas/StandingOut"
+            },
+            "type": "array",
+            "title": "Standings"
+          },
+          "pairings": {
+            "items": {
+              "$ref": "#/components/schemas/PairingOut"
+            },
+            "type": "array",
+            "title": "Pairings"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "host",
+          "time_control",
+          "max_players",
+          "status",
+          "players",
+          "standings",
+          "pairings",
+          "created_at"
+        ],
+        "title": "TournamentOut"
+      },
+      "TournamentStatus": {
+        "type": "string",
+        "enum": [
+          "open",
+          "running",
+          "finished"
+        ],
+        "title": "TournamentStatus"
+      },
+      "TrainerOut": {
+        "properties": {
+          "solved": {
+            "type": "integer",
+            "title": "Solved"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "streak": {
+            "type": "integer",
+            "title": "Streak"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/Kind"
+          },
+          "puzzle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PuzzleOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "solved",
+          "total",
+          "streak",
+          "kind",
+          "puzzle"
+        ],
+        "title": "TrainerOut"
       },
       "ValidationError": {
         "properties": {

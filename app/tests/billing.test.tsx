@@ -34,7 +34,7 @@ describe('plans', () => {
     expect(screen.getByText('₹149 a month · ₹1,490 a year')).toBeOnTheScreen();
     expect(screen.getAllByText('✓ Play the Hard computer')).toHaveLength(1);
     expect(screen.getByText('Everything in Plus, and:')).toBeOnTheScreen();
-    expect(screen.getByText('✓ Opening and endgame trainer (coming soon)')).toBeOnTheScreen();
+    expect(screen.getByText('✓ Opening and endgame trainer')).toBeOnTheScreen();
     expect(screen.getByText('Game analysis: 5 a day')).toBeOnTheScreen();
     expect(screen.getByLabelText('Free, your plan')).toBeOnTheScreen();
   });

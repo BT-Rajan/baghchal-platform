@@ -1,0 +1,127 @@
+"""The trainer (a Pro feature): opening and endgame puzzles with one clearly best move.
+
+Puzzles come from the computer's games (``server/scripts/make_puzzles.py``) and ship in
+``puzzles.json``. Answers are checked here, so the solutions never reach the browser. Each
+player meets the puzzles in their own order, and a missed puzzle comes back later.
+"""
+
+import hashlib
+import json
+import uuid
+from dataclasses import dataclass
+from datetime import datetime
+from importlib import resources
+from typing import Final
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from baghchal_engine import Game, NotationError, Side, format_move, parse_move, parse_position
+from baghchal_server.billing import service as billing
+from baghchal_server.billing.plans import Feature
+from baghchal_server.errors import AppError
+from baghchal_server.trainer.models import Attempt
+from baghchal_server.trainer.schemas import AnswerOut, Kind, Progress, PuzzleOut, TrainerOut
+
+WHAT: Final = "The trainer"
+STREAK_WINDOW: Final = 200
+
+
+@dataclass(frozen=True, slots=True)
+class Puzzle:
+    id: str
+    kind: Kind
+    position: str
+    best: str
+
+
+def _load() -> dict[str, Puzzle]:
+    raw = json.loads(resources.files(__package__).joinpath("puzzles.json").read_text())
+    return {p["id"]: Puzzle(p["id"], Kind(p["kind"]), p["position"], p["best"]) for p in raw}
+
+
+PUZZLES: Final = _load()
+
+
+def _order(user_id: uuid.UUID, puzzle_id: str) -> str:
+    """Each player's own shuffle of the puzzles, the same every time."""
+    return hashlib.sha256(f"{user_id}:{puzzle_id}".encode()).hexdigest()
+
+
+def _out(puzzle: Puzzle) -> PuzzleOut:
+    game = Game(parse_position(puzzle.position))
+    return PuzzleOut(
+        id=puzzle.id,
+        kind=puzzle.kind,
+        position=puzzle.position,
+        side="goat" if game.position.side == Side.GOAT else "tiger",
+        legal_moves=[format_move(m) for m in game.legal_moves()],
+    )
+
+
+async def _progress(
+    db: AsyncSession, user_id: uuid.UUID, kind: Kind
+) -> tuple[Progress, set[str], str | None]:
+    """Progress, the puzzles solved, and the one answered last."""
+    attempts = list(
+        await db.scalars(
+            select(Attempt)
+            .where(Attempt.user_id == user_id)
+            .order_by(Attempt.created_at.desc(), Attempt.id)
+            .limit(STREAK_WINDOW)
+        )
+    )
+    solved = set(
+        await db.scalars(
+            select(Attempt.puzzle_id).where(Attempt.user_id == user_id, Attempt.correct)
+        )
+    )
+    streak = next((i for i, a in enumerate(attempts) if not a.correct), len(attempts))
+    mine = {p for p in solved if p in PUZZLES and PUZZLES[p].kind == kind}
+    total = sum(1 for p in PUZZLES.values() if p.kind == kind)
+    last = attempts[0].puzzle_id if attempts else None
+    return Progress(solved=len(mine), total=total, streak=streak), solved, last
+
+
+async def next_puzzle(
+    db: AsyncSession, user_id: uuid.UUID, now: datetime, kind: Kind
+) -> TrainerOut:
+    await billing.require(db, user_id, now, Feature.TRAINER, WHAT)
+    progress, solved, last = await _progress(db, user_id, kind)
+    left = sorted(
+        (p for p in PUZZLES.values() if p.kind == kind and p.id not in solved),
+        key=lambda p: _order(user_id, p.id),
+    )
+    # A missed puzzle waits until another has been tried.
+    if len(left) > 1 and left[0].id == last:
+        left.append(left.pop(0))
+    return TrainerOut(**progress.model_dump(), kind=kind, puzzle=_out(left[0]) if left else None)
+
+
+async def answer(
+    db: AsyncSession, user_id: uuid.UUID, now: datetime, puzzle_id: str, move: str
+) -> AnswerOut:
+    await billing.require(db, user_id, now, Feature.TRAINER, WHAT)
+    puzzle = PUZZLES.get(puzzle_id)
+    if puzzle is None:
+        raise AppError(404, "puzzle_not_found", "No such puzzle.")
+    try:
+        played = parse_move(move)
+    except NotationError:
+        played = None
+    if played is None or played not in Game(parse_position(puzzle.position)).legal_moves():
+        raise AppError(400, "illegal_move", "That move is not legal here.")
+    correct = played == parse_move(puzzle.best)
+    db.add(
+        Attempt(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            puzzle_id=puzzle.id,
+            move=format_move(played),
+            correct=correct,
+            created_at=now,
+        )
+    )
+    await db.commit()
+    progress, _, _ = await _progress(db, user_id, puzzle.kind)
+    return AnswerOut(**progress.model_dump(), correct=correct, best=puzzle.best)

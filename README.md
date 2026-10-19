@@ -64,7 +64,8 @@ Each phase ships complete — tested, documented and reviewed — before the nex
      (the first of each free), and a Plus or Pro badge by the player's name.
    - ✅ **Payments with Razorpay**: Plus and Pro for a month or a year, confirmed by signature and
      webhook.
-   - Next: private rooms, tournaments and the trainer for Pro.
+   - ✅ **Pro extras**: private rooms (an invitation link to a game), small round-robin
+     tournaments among friends, and an opening and endgame puzzle trainer.
 
 ## Development
 Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
@@ -158,6 +159,15 @@ and the Caddyfile.
 | POST | `/api/v1/payments/checkout` | Start buying a `plan` (plus, pro) for a `period` (month, year): a Razorpay order |
 | POST | `/api/v1/payments/verify` | Confirm a payment with what Razorpay Checkout returned (`order_id`, `payment_id`, `signature`) |
 | POST | `/api/v1/payments/webhook` | Razorpay's webhook (`payment.captured`, `order.paid`, `payment.failed`), checked by its signature |
+| GET, POST | `/api/v1/rooms` | Pro: my open private rooms; make one (`time_control`, `side`) |
+| GET | `/api/v1/rooms/{code}` | A private room, for whoever has its link |
+| POST | `/api/v1/rooms/{code}/join`, `/close` | Play the host now (they must be online), or (the host) close the room |
+| GET, POST | `/api/v1/tournaments` | Tournaments I am in; host one (Pro: `name`, `time_control`, `max_players` 3–6) |
+| GET | `/api/v1/tournaments/{code}` | A tournament: players, standings and every pairing |
+| POST | `/api/v1/tournaments/{code}/join`, `/leave`, `/start`, `/finish` | Join or leave while open; the host starts it or ends it |
+| POST | `/api/v1/tournaments/{code}/pairings/{id}/play` | Start one of my tournament games (my opponent must be online) |
+| GET | `/api/v1/trainer?kind=opening\|endgame` | Pro: my next puzzle and progress |
+| POST | `/api/v1/trainer/{id}/answer` | Answer a puzzle with a `move`; says whether it was best, and which was |
 | GET, PUT | `/api/v1/me/appearance` | My `board`, `pieces` and `sounds` (beyond the first of each: Plus and Pro), and `show_badge` |
 | GET | `/api/v1/plans` | Free, Plus and Pro: features and prices |
 | GET | `/api/v1/me/plan` | My plan, my features, and the grants behind them |
@@ -204,7 +214,7 @@ for everyone.
 | History and replay | Last 30 days | Everything | Everything |
 | Post-game analysis | — | 5 new games a day | Unlimited |
 | Board and piece themes, sound packs, badge | — | ✅ | ✅ |
-| Private rooms, tournaments, trainer *(coming)* | — | — | ✅ |
+| Private rooms, hosting tournaments, the trainer | — | — | ✅ |
 
 A player's features are their plan's plus whatever admins have **granted**. Admins grant a plan
 or one feature for 7, 30, 90 or 365 days or until revoked, always with a reason; the player is
@@ -247,3 +257,18 @@ To take payments:
    `bhagchal2.env` (or `BAGHCHAL_RAZORPAY_…` elsewhere) and restart. Until they are set, the
    plans page says paying online is coming soon.
 4. Try a payment with Razorpay's test cards, then switch to live keys.
+
+**Pro extras.** Only the host needs Pro; anyone can join.
+
+- **Private rooms** (`rooms/`): a link to one casual game, with the host's time control and
+  side. Whoever opens it first, signed in, plays the host, who must be online. A room lasts a
+  day, or until played or closed; a host has at most 5 open.
+- **Tournaments** (`tournaments/`): a round robin for 3 to 6 players, joined by link. Once the
+  host starts it, each player plays each other twice, once with each side, in casual games
+  (ratings cannot be farmed). Either player starts a pairing whenever the other is online; an
+  aborted game can be played again. A point per win; it ends when every game is played, or
+  when the host ends it.
+- **Trainer** (`trainer/`): 120 puzzles, half openings (goats still being placed) and half
+  endgames, each a position from the computer's games where one move beats every other by at
+  least a mistake's worth (`server/scripts/make_puzzles.py`, fixed by its seed). Answers are
+  checked on the server, so solutions never reach the browser; progress and streaks are kept.
