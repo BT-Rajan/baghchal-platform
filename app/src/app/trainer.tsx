@@ -29,7 +29,7 @@ export default function TrainerScreen() {
   const plan = useMyPlan();
   const [kind, setKind] = useState<TrainerKind>('opening');
   return (
-    <Screen title="Trainer" align="top">
+    <Screen align="top">
       {plan.error !== null ? (
         <ErrorState error={plan.error} onRetry={() => void plan.refetch()} />
       ) : plan.data === undefined ? (

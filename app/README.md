@@ -72,6 +72,13 @@ scripts/        the Expo-cloud guardrail
 
 ## How it works
 
+- **The visual system.** `src/theme.ts` holds the tokens: colours by role (`accent` only for
+  a screen's main action, `ink` for what is selected or current, `link`, success, danger), a
+  type scale, radii and a soft shadow. The shared components draw everything with them: chips
+  for choices (`Segmented`), lifted cards, neutral secondary buttons, one line-icon set
+  (`Icon`, also on `IconButton` for utility toggles like sound). Wide screens get a sidebar
+  instead of the bottom tab bar. The game shows whose move it is on the player's bar, and the
+  goats to place and the tigers' captures as a coin tray and five slots (`PieceCounts`).
 - **The front door.** Signed-out visitors land on `/welcome`: what Bagh Chal is, how it's
   played, and "Play now, no sign-up", which signs them in as a guest (`guest-3fa9c1`) and
   starts their first game at once: goats, against the Easy computer, at 15+10.

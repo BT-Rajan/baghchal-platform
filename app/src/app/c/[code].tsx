@@ -28,7 +28,7 @@ export default function LinkChallenge() {
   // Only the two players can open the game.
   const myGame = mine || c?.opponent?.id === me.id ? gameId : null;
   return (
-    <Screen title="Challenge" align="top">
+    <Screen align="top">
       {link.error !== null ? (
         <ErrorState error={link.error} onRetry={() => void link.refetch()} />
       ) : c === undefined ? (

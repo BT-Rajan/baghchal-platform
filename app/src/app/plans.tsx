@@ -21,7 +21,7 @@ export default function Plans() {
   const error = plans.error ?? mine.error ?? payments.error;
   const buyError = buy.error === null ? null : buyErrorText(buy.error);
   return (
-    <Screen title="ClawPlay plans" align="top" wide>
+    <Screen align="top" wide>
       {error !== null ? (
         <ErrorState
           error={error}

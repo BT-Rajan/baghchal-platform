@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius, spacing, type } from '@/theme';
 
 import { focusRing } from './focus';
 
@@ -13,7 +13,7 @@ export interface SegmentedProps<T extends string> {
   vertical?: boolean;
 }
 
-/** A row (or column) of mutually exclusive choices (a radio group). */
+/** Mutually exclusive choices (a radio group), drawn as chips; the chosen one is ink. */
 export function Segmented<T extends string>({
   label,
   options,
@@ -34,7 +34,13 @@ export function Segmented<T extends string>({
               aria-checked={selected}
               aria-label={option.label}
               onPress={() => onChange(option.value)}
-              style={(state) => [styles.option, selected && styles.selected, focusRing(state)]}
+              style={(state) => [
+                styles.option,
+                vertical && styles.optionVertical,
+                selected && styles.selected,
+                state.pressed && !selected && styles.pressed,
+                focusRing(state),
+              ]}
             >
               <Text style={[styles.text, selected && styles.selectedText]}>{option.label}</Text>
             </Pressable>
@@ -47,25 +53,25 @@ export function Segmented<T extends string>({
 
 const styles = StyleSheet.create({
   field: { gap: spacing.xs },
-  label: { fontSize: 14, fontWeight: '600', color: colors.text },
-  row: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    padding: 2,
-    gap: 2,
-  },
+  label: { ...type.label, color: colors.muted },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   column: { flexDirection: 'column' },
   option: {
-    flex: 1,
+    flexGrow: 1,
     minHeight: 44,
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.md - 2,
+    borderRadius: radius.pill,
+    backgroundColor: colors.subtle,
   },
-  selected: { backgroundColor: colors.accent },
-  text: { fontSize: 15, color: colors.text },
-  selectedText: { color: colors.accentText, fontWeight: '600' },
+  optionVertical: {
+    borderRadius: radius.md,
+    alignItems: 'flex-start',
+    paddingVertical: spacing.sm,
+  },
+  selected: { backgroundColor: colors.ink },
+  pressed: { backgroundColor: colors.border },
+  text: { fontSize: 15, color: colors.text, fontWeight: '500' },
+  selectedText: { color: colors.inkText, fontWeight: '700' },
 });

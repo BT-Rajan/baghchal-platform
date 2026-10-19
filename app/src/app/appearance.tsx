@@ -28,7 +28,7 @@ export default function AppearanceScreen() {
 
   if (error !== null) {
     return (
-      <Screen title="Board, pieces and sounds" align="top">
+      <Screen align="top">
         <ErrorState
           error={error}
           onRetry={() => {
@@ -41,7 +41,7 @@ export default function AppearanceScreen() {
   }
   if (look.data === undefined || plan.data === undefined) {
     return (
-      <Screen title="Board, pieces and sounds" align="top">
+      <Screen align="top">
         <Loading label="Loading your board and pieces" />
       </Screen>
     );
@@ -56,7 +56,7 @@ export default function AppearanceScreen() {
   const locked = (free: boolean) => !themes && !free;
 
   return (
-    <Screen title="Board, pieces and sounds" align="top" wide>
+    <Screen align="top" wide>
       {!themes && (
         <Upsell feature="themes">
           More boards, pieces and sound packs, and a badge by your name.

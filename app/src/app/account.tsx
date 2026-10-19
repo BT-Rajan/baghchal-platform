@@ -17,7 +17,7 @@ import { colors, spacing } from '@/theme';
 /** Change the email address or password, download your data, or delete the account. */
 export default function AccountScreen() {
   return (
-    <Screen title="Account" align="top">
+    <Screen align="top">
       <EmailSection />
       <PasswordSection />
       <DataSection />

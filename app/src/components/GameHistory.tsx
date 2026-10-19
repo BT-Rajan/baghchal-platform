@@ -1,6 +1,6 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { GameSummary } from '@/api/endpoints';
 import { queryKeys } from '@/api/queryKeys';
@@ -12,6 +12,7 @@ import { colors, spacing } from '@/theme';
 
 import { Button } from './Button';
 import { Card, Hint, SectionTitle } from './Card';
+import { Icon } from './Icon';
 import { Upsell } from './Upsell';
 import { focusRing } from './focus';
 import { ErrorState, Loading } from './States';
@@ -42,15 +43,23 @@ export function GameHistory({ username }: { username: string }) {
         <Hint>No finished games yet.</Hint>
       ) : (
         <Card>
-          {games.map((game) => (
+          {games.map((game, i) => (
             <Pressable
               key={game.id}
               role="link"
               aria-label={`Replay: ${historyText(game)}`}
               onPress={() => router.push(`/game/${game.id}`)}
-              style={(state) => [styles.row, focusRing(state)]}
+              style={(state) => [
+                styles.row,
+                i > 0 && styles.divided,
+                state.pressed && styles.pressed,
+                focusRing(state),
+              ]}
             >
+              {/* The result at a glance: green won, red lost, grey aborted. */}
+              <View style={[styles.mark, { backgroundColor: OUTCOME_COLORS[game.outcome] }]} />
               <Text style={styles.text}>{historyText(game)}</Text>
+              <Icon name="chevron" color={colors.muted} size={18} />
             </Pressable>
           ))}
         </Card>
@@ -72,7 +81,22 @@ export function GameHistory({ username }: { username: string }) {
   );
 }
 
+const OUTCOME_COLORS: Record<GameSummary['outcome'], string> = {
+  won: colors.success,
+  lost: colors.danger,
+  aborted: colors.offline,
+};
+
 const styles = StyleSheet.create({
-  row: { minHeight: 44, justifyContent: 'center', paddingVertical: spacing.xs },
-  text: { fontSize: 15, color: colors.text },
+  row: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  divided: { borderTopWidth: 1, borderTopColor: colors.subtle },
+  pressed: { opacity: 0.7 },
+  mark: { width: 4, alignSelf: 'stretch', borderRadius: 2 },
+  text: { flex: 1, fontSize: 15, lineHeight: 21, color: colors.text },
 });

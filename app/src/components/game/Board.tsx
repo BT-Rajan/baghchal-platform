@@ -101,11 +101,11 @@ export function Board({
                 <Circle
                   cx={50}
                   cy={50}
-                  r={piece === undefined ? 13 : 46}
+                  r={piece === undefined ? 11 : 46}
                   fill={piece === undefined ? colors.highlight : 'none'}
-                  stroke={colors.highlight}
-                  strokeWidth={piece === undefined ? 0 : 6}
-                  opacity={piece === undefined ? 0.6 : 0.85}
+                  stroke={piece === undefined ? colors.highlightRing : colors.danger}
+                  strokeWidth={piece === undefined ? 3 : 6}
+                  opacity={0.9}
                 />
               )}
               {(isSelected || (canPick && selected === null)) && (
@@ -114,7 +114,7 @@ export function Board({
                   cy={50}
                   r={46}
                   fill="none"
-                  stroke={colors.highlight}
+                  stroke={isSelected ? colors.highlightRing : colors.highlight}
                   strokeWidth={isSelected ? 8 : 3}
                   {...(!isSelected && { strokeDasharray: '8 6' })}
                 />

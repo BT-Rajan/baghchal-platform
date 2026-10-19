@@ -38,7 +38,7 @@ describe('the board', () => {
     expect(screen.getByText('Goats · 1500')).toBeOnTheScreen();
     expect(screen.getByLabelText('Goats clock 5:00')).toBeOnTheScreen();
     expect(screen.getByLabelText('Tigers clock 5:00')).toBeOnTheScreen();
-    expect(screen.getByText('Goats to place: 20 · Goats captured: 0 of 5')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Goats to place: 20 · Goats captured: 0 of 5')).toBeOnTheScreen();
     expect(screen.getByText('No moves yet. Goats move first.')).toBeOnTheScreen();
   });
 

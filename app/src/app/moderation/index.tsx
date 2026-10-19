@@ -37,7 +37,7 @@ export default function ModerationScreen() {
     if (player !== null) router.push(`/moderation/${player}`);
   };
   return (
-    <Screen title="Moderation" align="top">
+    <Screen align="top">
       <TextField
         label="Look up a player"
         value={name}

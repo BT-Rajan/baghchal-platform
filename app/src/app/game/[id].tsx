@@ -18,10 +18,12 @@ import { Board } from '@/components/game/Board';
 import { Coach } from '@/components/game/Coach';
 import { GameActions } from '@/components/game/GameActions';
 import { MoveList } from '@/components/game/MoveList';
+import { PieceCounts } from '@/components/game/PieceCounts';
 import { PlayerBar } from '@/components/game/PlayerBar';
 import { soundSupported } from '@/components/game/sound';
 import { useEnding, useMoveSounds } from '@/components/game/useMoveSounds';
 import { Victory } from '@/components/game/Victory';
+import { IconButton } from '@/components/IconButton';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
@@ -120,9 +122,23 @@ export default function GameScreen() {
       {replaying && <Replay ply={ply} total={game.ply} onShow={setShown} />}
       {error !== null && <Notice tone="error">{describeError(error)}</Notice>}
       {position !== null && (
-        <Text style={styles.counts}>
-          {`Goats to place: ${position.inHand} · Goats captured: ${position.captured} of 5`}
-        </Text>
+        <View style={styles.countsRow}>
+          <View style={styles.grow}>
+            <PieceCounts
+              inHand={position.inHand}
+              captured={position.captured}
+              pieces={look.pieces}
+            />
+          </View>
+          {soundSupported() && game.status === 'active' && (
+            <IconButton
+              icon={soundOn ? 'sound' : 'mute'}
+              title={soundOn ? 'Turn sounds off' : 'Turn sounds on'}
+              selected={soundOn}
+              onPress={() => chooseLook.mutate({ sounds_on: !soundOn })}
+            />
+          )}
+        </View>
       )}
       {reviewable && (
         <AnalysisPanel
@@ -131,14 +147,6 @@ export default function GameScreen() {
           analysis={analysis}
           ply={ply}
           onShow={setShown}
-        />
-      )}
-      {soundSupported() && game.status === 'active' && (
-        <Button
-          title={soundOn ? 'Turn sounds off' : 'Turn sounds on'}
-          variant="secondary"
-          compact
-          onPress={() => chooseLook.mutate({ sounds_on: !soundOn })}
         />
       )}
       {mine !== null && game.status === 'active' && (
@@ -357,6 +365,8 @@ const styles = StyleSheet.create({
   panel: { flex: 1, gap: spacing.md, minWidth: 280 },
   turn: { fontSize: 18, fontWeight: '700', color: colors.text },
   counts: { fontSize: 14, color: colors.muted },
+  countsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  grow: { flex: 1 },
   matchTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
   matchScore: { fontSize: 20, fontWeight: '700', color: colors.text },
 });

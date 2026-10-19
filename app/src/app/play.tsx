@@ -35,7 +35,7 @@ const SIDES: readonly { value: Side; label: string }[] = [
 export default function PlayNow() {
   const [timeControl, setTimeControl] = useState<TimeControl>('5+3');
   return (
-    <Screen title="Play now" align="top">
+    <Screen align="top">
       <Segmented
         label="Time control (minutes + seconds per move)"
         options={TIME_OPTIONS}
@@ -47,12 +47,19 @@ export default function PlayNow() {
       <SectionTitle>More ways to play</SectionTitle>
       <Button
         title="Challenge a friend by link"
+        icon="link"
         variant="secondary"
         onPress={() => router.push('/invite')}
       />
-      <Button title="Tournaments" variant="secondary" onPress={() => router.push('/tournaments')} />
+      <Button
+        title="Tournaments"
+        icon="trophy"
+        variant="secondary"
+        onPress={() => router.push('/tournaments')}
+      />
       <Button
         title="Trainer: opening and endgame puzzles"
+        icon="puzzle"
         variant="secondary"
         onPress={() => router.push('/trainer')}
       />

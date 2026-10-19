@@ -37,3 +37,9 @@
 - **Start a game with a particular person**: a challenge, by name (`/challenge/[username]`) or by
   link (`/invite`), both from `app/src/components/ChallengeForm.tsx` and `POST /challenges`.
 - **Share a link**: `shareLink` in `app/src/lobby/format.ts`.
+- **Look and feel**: the tokens in `app/src/theme.ts` (colours by role, the `type` scale,
+  `radius`, `shadow`) and the shared components (`Button`, `Segmented`, `Card`, `Notice`,
+  `Screen`, `Icon`, `IconButton`). One `primary` button per screen for its main action; other
+  actions are `secondary`, utility toggles are an `IconButton`. No one-off colours, font sizes or
+  icons in a screen; add a token or an icon to the shared set instead. A screen with a header bar
+  does not repeat its title.

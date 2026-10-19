@@ -1,33 +1,54 @@
 import { Tabs } from 'expo-router';
-import type { ColorValue } from 'react-native';
+import { useWindowDimensions, type ColorValue } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BrandBar } from '@/components/brand/Logo';
-import { TabIcon, type TabIconName } from '@/components/TabIcon';
+import { Icon, type IconName } from '@/components/Icon';
 import { colors } from '@/theme';
 
-function icon(name: TabIconName) {
+/** From this width the tabs are a sidebar, not a bar stretched along the bottom. */
+const SIDEBAR_WIDTH = 900;
+
+function icon(name: IconName) {
   return function TabBarIcon({ color }: { color: ColorValue }) {
-    return <TabIcon name={name} color={color} />;
+    return <Icon name={name} color={color} />;
   };
 }
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const sidebar = width >= SIDEBAR_WIDTH;
   return (
     <Tabs
       screenOptions={{
         header: () => <TabsHeader />,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
-        tabBarLabelStyle: { fontSize: 13, lineHeight: 18, fontWeight: '600' },
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          // Room for the icon and a whole label, above the home indicator.
-          height: 66 + insets.bottom,
-          paddingBottom: insets.bottom,
-        },
+        tabBarLabelStyle: { fontSize: sidebar ? 15 : 13, lineHeight: 18, fontWeight: '600' },
+        ...(sidebar
+          ? {
+              tabBarPosition: 'left',
+              tabBarVariant: 'material',
+              tabBarLabelPosition: 'beside-icon',
+              tabBarActiveBackgroundColor: colors.accentSurface,
+              tabBarStyle: {
+                width: 220,
+                minWidth: 220,
+                backgroundColor: colors.surface,
+                borderRightColor: colors.border,
+                paddingTop: 16,
+              },
+            }
+          : {
+              tabBarStyle: {
+                backgroundColor: colors.surface,
+                borderTopColor: colors.border,
+                // Room for the icon and a whole label, above the home indicator.
+                height: 66 + insets.bottom,
+                paddingBottom: insets.bottom,
+              },
+            }),
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Play', tabBarIcon: icon('play') }} />

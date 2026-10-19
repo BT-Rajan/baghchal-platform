@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius, shadow, spacing, type } from '@/theme';
 
-export function Card({ children }: { children: ReactNode }) {
-  return <View style={styles.card}>{children}</View>;
+/** A group of related things, lifted off the page. `tone="accent"` marks the one that matters now. */
+export function Card({ children, tone }: { children: ReactNode; tone?: 'accent' }) {
+  return <View style={[styles.card, tone === 'accent' && styles.accent]}>{children}</View>;
 }
 
 export function SectionTitle({ children }: { children: string }) {
@@ -23,12 +24,12 @@ export function Hint({ children }: { children: string }) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: radius.lg,
     padding: spacing.md,
     gap: spacing.sm,
+    ...shadow,
   },
-  section: { fontSize: 18, fontWeight: '700', color: colors.text, marginTop: spacing.sm },
-  hint: { fontSize: 15, color: colors.muted },
+  accent: { borderLeftWidth: 4, borderLeftColor: colors.accent },
+  section: { ...type.heading, color: colors.text, marginTop: spacing.sm },
+  hint: { fontSize: 15, lineHeight: 22, color: colors.muted },
 });
