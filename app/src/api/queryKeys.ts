@@ -10,6 +10,7 @@ export const queryKeys = {
   blocks: ['blocks'] as const,
   modReports: (status: string) => ['mod', 'reports', status] as const,
   modPlayer: (username: string) => ['mod', 'player', username] as const,
+  modFairPlay: (username: string) => ['mod', 'fair-play', username] as const,
   seekCounts: ['seeks'] as const,
   playerGames: (username: string) => ['player-games', username] as const,
   plans: ['plans'] as const,

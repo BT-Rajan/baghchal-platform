@@ -1,6 +1,6 @@
 # Phase 7 plan: automatic fair-play checks
 
-Status: planned, on branch `phase-7-fair-play`. This is the last open item of Phase 7. The
+Status: built on branch `phase-7-fair-play`. This is the last open item of Phase 7. The
 computer opponent, quick pairing and game history with replay are already on `main`.
 
 ## Goal
@@ -27,28 +27,42 @@ them in the moderators' report queue with the evidence.
 - **Background loop:** the sweeper's Redis lease pattern, which keeps background work to one
   server at a time.
 
-## The measurement problem (found while planning)
-Agreement with our own reviewer is not the same as engine assistance. In an early calibration
-sample, bot against bot, each move reviewed exactly as the server does:
-
-| Player | Positions with one clearly best move (gap > 60) | Played the reviewer's choice | Average loss there |
-|---|---|---|---|
-| Medium bot (depth 3, the reviewer's own depth) | ~9 a game | 93–100% | 0–5 |
-| Hard bot (depth 6) | ~4–12 a game | 75–100% | 0–150 |
-| Easy bot | ~2–8 a game | 0–25% | 250–1000 |
-
-A player helped by a deeper engine than the reviewer can look *less* perfect than one who
+## The measurement problem, and the calibration
+Agreement with our own reviewer is not the same as engine assistance. A player helped by an
+engine that searches deeper than the reviewer can look *less* perfect to it than one who
 happens to think like the reviewer. A single game also has only a handful of positions that
 tell anything. So the checks:
 
 1. are aggregated over many games, never judged on one;
-2. use two stages, a cheap screen on every rated game and a deep review (at least as deep as
-   the strongest engine we know of) only for players the screen picks out;
-3. have thresholds that come from a calibration run that is committed to the repo and can be
-   repeated, not from guesses. They are settings and can be tightened later.
+2. use two stages, a cheap screen on every rated game and a deep review (as deep as our Hard
+   engine) only for players the screen picks out;
+3. have thresholds that come from a calibration run, `tools/fair_play_calibrate.py`, which is
+   committed and can be repeated. They are settings in
+   `server/src/baghchal_server/fair_play/thresholds.py` and can be tightened later.
 
-The full calibration (16 games for each pairing of Easy, Medium and Hard) is running. Its
-numbers will replace the sample above before any threshold is set.
+**Calibration**: 64 bot games, 8 for each pairing of Easy, Medium and Hard. Every move was
+reviewed by both stages. Each row averages windows of 8 games, with the range across windows
+in brackets.
+
+| Bot (stands in for) | Quick review: engine's move / loss / mistakes | Deep review: engine's move / loss / mistakes |
+|---|---|---|
+| Easy (a person who makes mistakes) | 38% (0–67) / 453 (158–844) / 12% (6–21) | 22% / 570 / 20% |
+| Medium (a weak engine, as deep as the quick review) | 99.7% (97–100) / 0.2 (0–2) / 0% | 74% (54–90) / 119 (33–228) / 5% (1–9) |
+| Hard (a strong engine, as deep as the deep review) | 85% (72–96) / 37 (4–67) / 1.3% (0–2.7) | 100% / 0 / 0% |
+
+The calibration gives two ways to be reported, each well clear of the bots that play like
+people:
+- **Matches the quick review exactly** (engine's move at least 97%, average loss at most 3,
+  mistakes at most 0.2%). Only an engine as deep as the quick review does this; even Hard
+  does not. No deep review is needed.
+- **Screened, then confirmed.** The screen needs at least 70% of the engine's moves, an
+  average loss of at most 80 and mistakes of at most 3%. That catches Hard, and Easy is far
+  off. The deep review then needs at least 95%, a loss of at most 15 and mistakes of at most
+  0.5%. Medium does not reach this; Hard does.
+
+Bots are not people. Strong people sit somewhere between these bots, and real data will
+show where. Until then the bars stay this far out, and every report is only a reason for a
+moderator to look.
 
 ## Design
 
@@ -59,9 +73,11 @@ numbers will replace the sample above before any threshold is set.
   games under 20 plies.
 
 ### 2. Worker
-- A background loop, like the sweeper, holds a Redis lease so one server works at a time. A
-  claimed row also carries `claimed_at`, so a check whose server died is taken again after 10
-  minutes. At most 3 attempts are made, then the row is marked `failed`, logged and counted.
+- Every server runs a background loop that takes checks from the shared queue. A conditional
+  UPDATE claims each one, so no two servers ever check the same game, and more servers mean
+  more checks done. A claimed row carries `claimed_at`, refreshed during a long deep review,
+  so a check whose server died is taken again after 10 minutes. At most 3 attempts are made,
+  then the row is marked `failed`, logged and counted.
 - Reviews run in their **own** process pool (`BAGHCHAL_FAIR_PLAY_WORKERS`, default 1; 0 turns
   the checks off). They therefore never queue behind, or hold up, the computer opponent.
 - Backlog policy: a check still pending after 7 days is marked `skipped`. A queue-depth gauge
@@ -80,13 +96,15 @@ For each player in the game, `fair_play_sides` stores:
   share of moves under 1 s. Timing is shown to moderators but never used to flag on its own.
 
 ### 4. Window and the stage 2 confirmation
-- A player's window is their last 20 checked rated games within 90 days.
-- **Screen bar:** the window must have at least 8 games and 80 decisive positions, with
-  aggregated figures beyond the calibrated screen thresholds.
-- **Stage 2:** a deep review (depth 6, 1 s per position, Hard's strength) of the player's
-  moves in the window's games. This costs about 100 s for each game, and runs only for
-  screened players.
-- **Confirm bar:** the deep figures must also pass the calibrated confirm thresholds.
+- A player's window is their last 20 checked rated games within 90 days, and must have at
+  least 8 games and 80 decisive positions before anything is judged.
+- **Exact bar:** a window that matches the quick review move for move is reported straight
+  away.
+- **Screen bar:** otherwise, a window clean enough for an engine earns stage 2.
+- **Stage 2:** a deep review (depth 6, 1 s per position, Hard's strength) of the player's own
+  moves in the window's games. It costs about 100 s for each game, and each game is reviewed
+  once; the result is kept.
+- **Confirm bar:** the deep figures must pass it for a report.
 
 ### 5. The automatic report
 - Reason `cheating`, with no reporter (`reporter_id` becomes nullable; the API shows
@@ -106,9 +124,10 @@ For each player in the game, `fair_play_sides` stores:
 Migration `0017_fair_play`:
 - `fair_play_checks`: `game_id` PK/FK, `status` (pending/done/failed/skipped), `attempts`,
   `claimed_at`, `checked_at`, `created_at`. Index on (`status`, `created_at`).
-- `fair_play_sides`: (`game_id`, `user_id`) PK, `depth`, `moves`, `decisive`, `agreement`,
-  `average_loss`, `mistakes`, `blunders`, `think_median_ms`, `think_spread`, `fast_moves`,
-  `created_at`. Index on (`user_id`, `created_at`).
+- `fair_play_sides`: (`game_id`, `user_id`, `stage`) PK, `side`, `moves`, `decisive`,
+  `agreed`, `decisive_loss`, `mistakes`, `blunders`, `think_median_ms`, `think_spread`,
+  `fast_moves`, `created_at`. Stored as counts so figures add up across games. Index on
+  (`user_id`, `stage`, `created_at`).
 - `reports.reporter_id` becomes nullable.
 
 Deleting an account removes its rows (cascade). Fair-play figures are moderation data, like

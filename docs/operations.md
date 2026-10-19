@@ -107,6 +107,14 @@ takes up to a second of one core and an easy one at most 50 ms, so give each rep
 core per worker on top of its own, and add workers or replicas if computer moves start to
 arrive late (the sweeper replays any computer turn left waiting more than 3 s).
 
+Finished rated games are given a fair-play check in another pool of worker processes on each
+replica (`BAGHCHAL_FAIR_PLAY_WORKERS`, default 1; `0` reviews in a thread). Every replica takes
+checks from the shared queue. A check takes about 25 s of one core for a 100-move game, so one
+worker handles about 3,000 rated games a day; a player picked out for a deep review costs up
+to 20 more games' worth, about 100 s each. Checks never hold up play. If the queue grows
+(`baghchal_fair_play_queue`), add workers or replicas; checks waiting more than 7 days are
+skipped.
+
 To load-test a deployment of your own (never production: it creates accounts directly in the
 database):
 
@@ -130,6 +138,9 @@ it to the internet). Prometheus finds the replicas through Docker's DNS.
 | `baghchal_games_ended_on_time_total` | Games it ended |
 | `baghchal_mail_total{result}` | Emails sent and failed |
 | `baghchal_rate_limited_total{limit}` | Requests refused by each rate limit |
+| `baghchal_fair_play_queue` | Rated games waiting for their fair-play check |
+| `baghchal_fair_play_checked_total`, `_failures_total`, `_skipped_total` | Checks done, failed, skipped |
+| `baghchal_fair_play_reports_total` | Automatic fair-play reports filed |
 
 **Errors**: set `SENTRY_DSN` to send unexpected errors to Sentry (or a self-hosted GlitchTip),
 with no personal data. Without it, every error is a `request.unhandled` line (JSON) in
@@ -150,6 +161,8 @@ Defined in `deploy/monitoring/alerts.yml` (tested by `promtool test rules alerts
 | `BaghchalSweeperFailing` | warning | The sweeper errors. `sweeper.failed` traceback. |
 | `BaghchalMailFailing` | warning | Emails fail: nobody can sign up or reset a password. SMTP. |
 | `BaghchalSignInAttack` | warning | Many sign-ins refused: likely password guessing. Block the source. |
+| `BaghchalFairPlayBacklog` | warning | Over 500 games waiting for checks for an hour. Add fair-play workers. |
+| `BaghchalFairPlayFailing` | warning | Checks keep failing. `fair_play.failed` traceback. |
 
 ## Backups
 

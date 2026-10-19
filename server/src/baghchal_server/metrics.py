@@ -44,6 +44,23 @@ class Metrics:
         self.expired = Counter(
             "baghchal_games_ended_on_time", "Games the sweeper ended on time.", registry=r
         )
+        self.fair_play_queue = Gauge(
+            "baghchal_fair_play_queue", "Rated games waiting for their fair-play check.", registry=r
+        )
+        self.fair_play_checked = Counter(
+            "baghchal_fair_play_checked", "Games given a fair-play check.", registry=r
+        )
+        self.fair_play_failures = Counter(
+            "baghchal_fair_play_failures", "Fair-play checks that raised an error.", registry=r
+        )
+        self.fair_play_skipped = Counter(
+            "baghchal_fair_play_skipped",
+            "Fair-play checks skipped after waiting too long in the queue.",
+            registry=r,
+        )
+        self.fair_play_reports = Counter(
+            "baghchal_fair_play_reports", "Automatic fair-play reports filed.", registry=r
+        )
         self.mail = Counter(
             "baghchal_mail", "Emails handed to the mail server, by result.", ["result"], registry=r
         )

@@ -23,7 +23,8 @@ class ReportStatus(StrEnum):
 
 
 class Report(Base):
-    """A player's report about another player, for moderators to look at.
+    """A report about a player, for moderators to look at: from another player, or automatic
+    (the fair-play checks, with no reporter).
 
     ``open_key`` is set only while the report is open and is unique, so a player has at most
     one open report about the same person.
@@ -37,9 +38,10 @@ class Report(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    reporter_id: Mapped[uuid.UUID] = mapped_column(
+    reporter_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
+    """None for an automatic report (the fair-play checks)."""
     target_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"))
     game_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("games.id", ondelete="SET NULL")

@@ -184,6 +184,10 @@ describe('admins', () => {
         'GET /api/v1/admin/players/bob/plan': () =>
           fail ? error(400, 'bad', 'Plans are down.') : { status: 200, body: bobPlan([]) },
         'POST /api/v1/admin/players/bob/grants': error(409, 'account_deleted', 'Deleted.'),
+        'GET /api/v1/mod/players/bob/fair-play': {
+          status: 200,
+          body: { games: [], screen: null, confirm: null, screen_passed: false },
+        },
       },
     });
     expect(await screen.findByText('Plans are down.')).toBeOnTheScreen();
