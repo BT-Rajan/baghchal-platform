@@ -8,7 +8,7 @@ from baghchal_engine.review import SCORE_LIMIT, Verdict, review, unique_best, ve
 FIVE_CAPTURES = ["b2", "a1xc3", "e2", "e1xe3", "c4", "c3xc5", "b4", "c5xa3", "b2", "a3xc1"]
 
 
-def _review(moves: list[str], **kwargs: float) -> list:  # type: ignore[type-arg]
+def _review(moves: list[str], **kwargs: object) -> list:  # type: ignore[type-arg]
     return review((parse_move(m) for m in moves), **kwargs)  # type: ignore[arg-type]
 
 
@@ -59,3 +59,19 @@ def test_a_puzzle_has_one_clearly_best_move() -> None:
     assert unique_best(game) is None  # the first goat can go almost anywhere
     game.play(parse_move("b5"))
     assert unique_best(game) == parse_move("a5xc5")  # the goat hangs: take it
+
+
+def test_margins_tell_decisive_positions_apart() -> None:
+    first, second = _review(["b5", "a5xc5"])
+    assert first.margin is not None
+    assert first.margin <= 60  # many first goats are as good as each other
+    assert second.margin is not None
+    assert second.margin > 700  # taking the hanging goat is the one right answer
+
+
+def test_one_sides_moves_only() -> None:
+    tigers = _review(FIVE_CAPTURES, only=Side.TIGER)
+    assert [r.ply for r in tigers] == [2, 4, 6, 8, 10]
+    assert all(r.side is Side.TIGER for r in tigers)
+    with pytest.raises(IllegalMove, match="move 3 is not legal"):
+        _review(["c3", "a5-a4", "c3-c2"], only=Side.TIGER)
