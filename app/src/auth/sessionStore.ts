@@ -9,7 +9,7 @@ import type { QueryClient } from '@tanstack/react-query';
 
 import { createClient, type Transport } from '@/api/client';
 import { ApiError, BAD_RESPONSE, isApiError } from '@/api/errors';
-import { createApi, type Api, type Me, type Session } from '@/api/endpoints';
+import { createApi, type Agreement, type Api, type Me, type Session } from '@/api/endpoints';
 
 import type { TokenStore } from './tokenStore';
 
@@ -95,8 +95,8 @@ export class SessionStore {
   }
 
   /** Play at once without signing up: a guest account, which can be made a real one later. */
-  async playAsGuest(): Promise<void> {
-    await this.start(await this.api.playAsGuest());
+  async playAsGuest(agreement: Agreement): Promise<void> {
+    await this.start(await this.api.playAsGuest(agreement));
   }
 
   async signOut(): Promise<void> {

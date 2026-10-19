@@ -1,9 +1,13 @@
 # Phase 8 plan: the rest of "Ready for players"
 
-Status: step 1 in progress. Rebased on `main` after PRs #29–#31 (friends, in-app notifications,
-challenges by link replacing private rooms); the age rule covers every way to meet another
-player: challenges (by name and by link), quick pairing, tournaments and friend requests. The accounts, moderation, operations, fair-play and security-review parts of
-Phase 8 are already on `main`. What is left before a public launch:
+Status: step 1 done (server and app); steps 2–4 to come. Rebased on `main` after PRs #29–#31
+(friends, in-app notifications, challenges by link replacing private rooms); the age rule covers
+every way to meet another player: challenges (by name and by link), quick pairing, tournaments
+and friend requests. In the app, step 1 extends `AccountForm` (sign-up and a guest's claim)
+with the age and agreement fields, moves "Play now" from one tap to a short `/start` form (the
+age is needed first), extends `GuestBanner` with the waiting-for-a-parent notice, and uses
+`Confirm` for a parent's refusal. The accounts, moderation, operations, fair-play and
+security-review parts of Phase 8 are already on `main`. What is left before a public launch:
 
 1. Privacy policy and terms of service, with the consent and age rules they promise.
 2. Store builds for Android and iOS, made on our own machines or in GitHub Actions, never in

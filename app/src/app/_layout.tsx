@@ -63,12 +63,15 @@ function Routes() {
     );
   }
   const signedIn = state.status === 'signedIn';
+  // An account with something to agree to (its age, or changed terms) sees only that until done.
+  const agreeing = signedIn && (state.user.age_needed || state.user.consents_needed.length > 0);
+  const playing = signedIn && !agreeing;
   return (
     <View style={styles.app}>
-      {signedIn && <ConnectionBanner />}
-      {signedIn && <ChallengeBanner />}
+      {playing && <ConnectionBanner />}
+      {playing && <ChallengeBanner />}
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Protected guard={signedIn} redirectTo="/welcome">
+        <Stack.Protected guard={playing} redirectTo={agreeing ? '/agree' : '/welcome'}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="player/[username]" options={{ headerShown: true, title: '' }} />
           <Stack.Screen name="challenge/[username]" options={{ presentation: 'modal' }} />
@@ -103,8 +106,12 @@ function Routes() {
             options={{ headerShown: true, title: 'Moderation' }}
           />
         </Stack.Protected>
+        <Stack.Protected guard={agreeing} redirectTo="/welcome">
+          <Stack.Screen name="agree" />
+        </Stack.Protected>
         <Stack.Protected guard={!signedIn}>
           <Stack.Screen name="welcome" />
+          <Stack.Screen name="start" />
           <Stack.Screen name="sign-in" />
           <Stack.Screen name="sign-up" />
           <Stack.Screen name="forgot-password" />
@@ -113,6 +120,10 @@ function Routes() {
         <Stack.Screen name="verify-email" />
         <Stack.Screen name="reset-password" />
         <Stack.Screen name="confirm-email" />
+        <Stack.Screen name="parent-consent" />
+        {/* The terms and privacy policy can be read by anyone, from anywhere. */}
+        <Stack.Screen name="terms" options={{ headerShown: true, title: 'Terms of service' }} />
+        <Stack.Screen name="privacy" options={{ headerShown: true, title: 'Privacy policy' }} />
       </Stack>
     </View>
   );

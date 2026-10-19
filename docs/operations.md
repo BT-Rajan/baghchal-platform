@@ -44,7 +44,10 @@ the session cookie is first-party and needs no CORS.
    that alerts arrive (stop one API replica for five minutes: `BaghchalReplicaDown`).
 
 The server refuses to start in production with unsafe settings (SQLite, no Redis, no SMTP,
-non-https addresses), and says which.
+non-https addresses) or without the operator's details the privacy policy and terms quote
+(`OPERATOR_NAME` … `EMAIL_PROVIDER`), and says which. Have a lawyer read both texts
+(`server/src/baghchal_server/legal/texts`) before launch; changing either means a new version
+in `legal/documents.py`, which every player is asked to agree to on their next visit.
 
 ## A single server with pm2
 
@@ -141,6 +144,14 @@ it to the internet). Prometheus finds the replicas through Docker's DNS.
 | `baghchal_fair_play_queue` | Rated games waiting for their fair-play check |
 | `baghchal_fair_play_checked_total`, `_failures_total`, `_skipped_total` | Checks done, failed, skipped |
 | `baghchal_fair_play_reports_total` | Automatic fair-play reports filed |
+| `baghchal_housekeeping_deleted_total{kind}` | Data deleted on the privacy policy's schedule (below) |
+
+**Housekeeping**: once an hour each replica deletes what the privacy policy says is no longer
+kept: expired sessions; email links a week past use or expiry; sign-ups never confirmed after
+7 days; accounts of players under 18 whose parent did not answer within 7 days (not while they
+are in a live game); fair-play figures and checks after a year; closed reports and the
+moderation log after 3 years; payment records after 8 years. The periods are in
+`housekeeping.py` and tested against the policy; change both together.
 
 **Errors**: set `SENTRY_DSN` to send unexpected errors to Sentry (or a self-hosted GlitchTip),
 with no personal data. Without it, every error is a `request.unhandled` line (JSON) in
