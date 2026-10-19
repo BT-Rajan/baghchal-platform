@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from baghchal_server.accounts.models import User
 from baghchal_server.accounts.service import BOT_ROLE, in_good_standing
 from baghchal_server.errors import AppError
+from baghchal_server.friends.models import Friendship
 from baghchal_server.games import service as games
 from baghchal_server.games.models import Game
 from baghchal_server.lobby.models import Block, Challenge, ChallengeStatus
@@ -118,6 +119,10 @@ async def block(
     if it was for the blocker, cancelled if it was theirs. Returns the challenges closed."""
     if blocker_id == blocked_id:
         raise AppError(422, "cannot_block_self", "You cannot block yourself.")
+    # A block ends any friendship or friend request between the two.
+    await db.execute(
+        delete(Friendship).where(Friendship.pair_key == pair_key(blocker_id, blocked_id))
+    )
     if not await has_blocked(db, blocker_id, blocked_id):
         db.add(Block(blocker_id=blocker_id, blocked_id=blocked_id, created_at=now))
         try:

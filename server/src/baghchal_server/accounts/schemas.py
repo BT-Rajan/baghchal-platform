@@ -155,4 +155,5 @@ class ExportOut(BaseModel):
     games: list[ExportGame]
     challenges: list[ExportChallenge]
     blocked_players: list[str]
+    friends: list[str]
     sessions: list[ExportSession]

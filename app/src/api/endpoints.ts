@@ -15,6 +15,8 @@ export type ChallengeList = S['ChallengeList'];
 export type ChallengeRequest = S['ChallengeIn'];
 export type Game = S['GameOut'];
 export type LeaderboardEntry = S['LeaderboardEntry'];
+export type Friends = S['FriendsOut'];
+export type FriendRelation = S['RelationOut']['relation'];
 export type Category = S['Category'];
 export type TimeControl = S['ChallengeIn']['time_control'];
 export type Side = NonNullable<S['ChallengeIn']['side']>;
@@ -107,6 +109,10 @@ export function createApi(client: Client, transport: Transport) {
     challenge: (body: ChallengeRequest) => client.post<Challenge>(`${V1}/challenges`, { body }),
     answerChallenge: (id: string, answer: ChallengeAnswer) =>
       client.post<Challenge>(`${V1}/challenges/${seg(id)}/${answer}`),
+    friends: (signal?: AbortSignal) => client.get<Friends>(`${V1}/friends`, { signal }),
+    addFriend: (username: string) =>
+      client.post<S['RelationOut']>(`${V1}/friends/${seg(username)}`),
+    removeFriend: (username: string) => client.delete<void>(`${V1}/friends/${seg(username)}`),
     linkChallenge: (code: string, signal?: AbortSignal) =>
       client.get<Challenge>(`${V1}/challenges/link/${seg(code)}`, { signal }),
     acceptLink: (code: string) =>

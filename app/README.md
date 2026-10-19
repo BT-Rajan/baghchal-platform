@@ -96,6 +96,10 @@ scripts/        the Expo-cloud guardrail
   players, moderation (staff) and signing out; for members it also changes the email address (confirmed by a link sent
   to the new one) or password, downloads your data (a file on the web, the share sheet in
   apps) and deletes the account.
+- **Friends.** A player's profile has the friend button (add, cancel, accept or decline,
+  remove after `Confirm`). Home shows friend requests to answer, and the friends themselves,
+  online first, above "Online now", each with a Challenge button. A `friends` event on the
+  socket refreshes them. Guests have no friends.
 - **Home.** The Play tab is a dashboard: a live game to continue first, challenges, "Play
   now", today's puzzle (`DailyPuzzle`, on the same `PuzzleBoard` as the trainer), the latest
   three results (`GameHistory` as a preview, with the rest on Me), and beside them the players

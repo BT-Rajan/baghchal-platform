@@ -1145,6 +1145,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/friends": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Friends
+         * @description My friends (with who is online), and the friend requests waiting on either side.
+         */
+        get: operations["friends_api_v1_friends_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/friends/{username}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Friend
+         * @description Ask a player to be friends, or accept their request. They hear of it at once.
+         */
+        post: operations["add_friend_api_v1_friends__username__post"];
+        /**
+         * Remove Friend
+         * @description Unfriend a player, or decline or cancel a friend request.
+         */
+        delete: operations["remove_friend_api_v1_friends__username__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trainer": {
         parameters: {
             query?: never;
@@ -1570,6 +1614,8 @@ export interface components {
             challenges: components["schemas"]["ExportChallenge"][];
             /** Blocked Players */
             blocked_players: string[];
+            /** Friends */
+            friends: string[];
             /** Sessions */
             sessions: components["schemas"]["ExportSession"][];
         };
@@ -1614,6 +1660,15 @@ export interface components {
          * @enum {string}
          */
         Feature: "computer_hard" | "full_history" | "analysis" | "themes" | "badge" | "tournaments" | "trainer";
+        /** FriendsOut */
+        FriendsOut: {
+            /** Friends */
+            friends: components["schemas"]["PlayerStatusOut"][];
+            /** Incoming */
+            incoming: components["schemas"]["PlayerOut"][];
+            /** Outgoing */
+            outgoing: components["schemas"]["PlayerOut"][];
+        };
         /** GameOut */
         GameOut: {
             /**
@@ -2101,6 +2156,12 @@ export interface components {
             };
             /** Blocked */
             blocked: boolean;
+            /**
+             * Friend
+             * @default none
+             * @enum {string}
+             */
+            friend: "none" | "friends" | "requested" | "incoming";
         };
         /** PuzzleOut */
         PuzzleOut: {
@@ -2151,6 +2212,14 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** RelationOut */
+        RelationOut: {
+            /**
+             * Relation
+             * @enum {string}
+             */
+            relation: "none" | "friends" | "requested" | "incoming";
         };
         /** RenameIn */
         RenameIn: {
@@ -4418,6 +4487,86 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["GameOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    friends_api_v1_friends_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendsOut"];
+                };
+            };
+        };
+    };
+    add_friend_api_v1_friends__username__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RelationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_friend_api_v1_friends__username__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

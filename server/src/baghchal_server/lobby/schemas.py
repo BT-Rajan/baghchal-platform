@@ -34,7 +34,7 @@ class RatingOut(BaseModel):
     """Uncertainty; it grows while a player is away and shrinks as they play."""
     games: int
     provisional: bool
-    """Still settling: shown with a "?" and kept off the leaderboard."""
+    """Still settling: shown as provisional and kept off the leaderboard."""
     rank: int | None
     """Place on the leaderboard, if listed."""
 
@@ -45,6 +45,8 @@ class ProfileOut(PlayerStatusOut):
     """By time-control category (``blitz``, ``rapid``)."""
     blocked: bool
     """The viewer has blocked this player."""
+    friend: Literal["none", "friends", "requested", "incoming"] = "none"
+    """How the viewer stands with this player: friends, a request sent or received, or none."""
 
 
 class ChallengeIn(BaseModel):

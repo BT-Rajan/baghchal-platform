@@ -144,6 +144,29 @@ export function useAcceptLink(code: string) {
   });
 }
 
+export function useFriends() {
+  const api = useApi();
+  return useQuery({ queryKey: queryKeys.friends, queryFn: ({ signal }) => api.friends(signal) });
+}
+
+/** Ask a player to be friends (or accept their request), or unfriend, decline or cancel. */
+export function useFriendship() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ username, add }: { username: string; add: boolean }) => {
+      if (add) await api.addFriend(username);
+      else await api.removeFriend(username);
+    },
+    onSuccess: (_, { username }) =>
+      Promise.all(
+        [queryKeys.friends, queryKeys.profile(username)].map((queryKey) =>
+          queryClient.invalidateQueries({ queryKey }),
+        ),
+      ),
+  });
+}
+
 export function useBlocks() {
   const api = useApi();
   return useQuery({ queryKey: queryKeys.blocks, queryFn: ({ signal }) => api.blocks(signal) });
@@ -164,6 +187,7 @@ export function useBlock() {
           queryKeys.onlinePlayers,
           ['players', 'search'],
           queryKeys.challenges,
+          queryKeys.friends,
         ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
       ),
   });

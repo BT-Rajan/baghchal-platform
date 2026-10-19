@@ -147,6 +147,15 @@ describe('applyMessage', () => {
     expect(applyMessage(qc, { type: 'game', game: game() }, ME.id).startedGame).toBeNull();
   });
 
+  test('news of friends refreshes the lists and profiles', async () => {
+    const qc = testQueryClient();
+    qc.setQueryData(queryKeys.friends, { friends: [], incoming: [], outgoing: [] });
+    qc.setQueryData(queryKeys.profile('bob'), { username: 'bob' });
+    applyMessage(qc, { type: 'friends' }, ME.id);
+    expect(qc.getQueryState(queryKeys.friends)?.isInvalidated).toBe(true);
+    expect(qc.getQueryState(queryKeys.profile('bob'))?.isInvalidated).toBe(true);
+  });
+
   test('pongs change nothing; errors are logged', () => {
     const qc = testQueryClient();
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -164,12 +173,13 @@ describe('applyMessage', () => {
   });
 });
 
-test('after a reconnect, challenges and games are fetched again', async () => {
+test('after a reconnect, challenges, friends and games are fetched again', async () => {
   const qc = testQueryClient();
   const invalidate = jest.spyOn(qc, 'invalidateQueries');
   await refetchAfterReconnect(qc);
   expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
     queryKeys.challenges,
+    queryKeys.friends,
     queryKeys.activeGames,
     ['game'],
   ]);

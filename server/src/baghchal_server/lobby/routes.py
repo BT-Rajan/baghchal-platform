@@ -9,6 +9,7 @@ from baghchal_server.billing import service as billing
 from baghchal_server.billing.plans import FREE_HISTORY_DAYS, Feature
 from baghchal_server.deps import DB, AppState, CurrentUser, Member, State, enforce_limit, get_member
 from baghchal_server.errors import AppError
+from baghchal_server.friends import service as friends
 from baghchal_server.games import service as games
 from baghchal_server.games.events import notify as notify_game
 from baghchal_server.games.schemas import GameSummaryOut
@@ -40,7 +41,7 @@ LINK_ACCEPTS_PER_USER: Final = Limit("challenge-link-accept", 60, 3600)
 LinkCode = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{1,16}$")]
 
 
-async def _with_status(
+async def with_status(
     state: AppState, db: DB, users: list[tuple[uuid.UUID, str]]
 ) -> list[PlayerStatusOut]:
     online = await state.presence.online(uid for uid, _ in users)
@@ -79,7 +80,7 @@ async def search_players(
     """Players whose username starts with ``prefix`` (case-insensitive)."""
     await enforce_limit(state, SEARCH_PER_USER, str(user.id))
     found = await service.search_players(db, prefix, limit, user.id, state.clock())
-    return await _with_status(state, db, [(u.id, u.username) for u in found])
+    return await with_status(state, db, [(u.id, u.username) for u in found])
 
 
 @router.get("/players/online")
@@ -89,7 +90,7 @@ async def online_players(
     ids = await state.presence.list_online(limit)
     users = await service.users_by_id(db, ids, state.clock())
     hidden = await service.hidden_from(db, user.id)
-    return await _with_status(
+    return await with_status(
         state,
         db,
         [(uid, users[uid].username) for uid in ids if uid in users and uid not in hidden],
@@ -103,7 +104,7 @@ async def player_profile(
     player = await service.find_player(db, username, state.clock())
     if player is None:
         raise AppError(404, "player_not_found", "No such player.")
-    (status,) = await _with_status(state, db, [(player.id, player.username)])
+    (status,) = await with_status(state, db, [(player.id, player.username)])
     now = state.clock()
     rows = await ratings.rows_of(db, player.id)
     profile_ratings = {}
@@ -122,6 +123,7 @@ async def player_profile(
         created_at=player.created_at,
         ratings=profile_ratings,
         blocked=await service.has_blocked(db, user.id, player.id),
+        friend=await friends.relation(db, user.id, player.id),
     )
 
 

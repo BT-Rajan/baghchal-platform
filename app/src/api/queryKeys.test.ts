@@ -10,6 +10,7 @@ test('keys are stable and distinct', () => {
   expect(queryKeys.playerGames('bob')).toEqual(['player-games', 'bob']);
   const all = [
     queryKeys.challenges,
+    queryKeys.friends,
     queryKeys.activeGames,
     queryKeys.onlinePlayers,
     queryKeys.game('x'),

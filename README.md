@@ -69,6 +69,8 @@ Each phase ships complete — tested, documented and reviewed — before the nex
    - ✅ **Pro extras**: small round-robin tournaments among friends, and an opening and
      endgame puzzle trainer. (Inviting a friend by link is a free challenge, for everyone, and
      so is the trainer's daily puzzle.)
+   - ✅ **Friends**: a request and an answer, then friends on the home screen with their
+     presence and a Challenge button.
    - Perhaps later: **private tables** for Pro, an extension of challenges by link (a table
      that stays open for a series of games with the same friends).
 
@@ -148,7 +150,9 @@ and the Caddyfile.
 | GET | `/api/v1/players/online` | Players online now |
 | GET | `/api/v1/players/{username}` | A player's profile, with ratings and leaderboard rank |
 | GET | `/api/v1/blocks` | Players you have blocked |
-| PUT, DELETE | `/api/v1/blocks/{username}` | Block or unblock a player (see [rules](docs/rules.md#live-play-platform-rules)) |
+| PUT, DELETE | `/api/v1/blocks/{username}` | Block or unblock a player (see [rules](docs/rules.md#live-play-platform-rules)); a block ends any friendship |
+| GET | `/api/v1/friends` | My friends (online first) and the friend requests waiting on either side |
+| POST, DELETE | `/api/v1/friends/{username}` | Ask a player to be friends (or accept their request); unfriend, decline or cancel. Members only; the other player gets a `friends` event |
 | POST | `/api/v1/players/{username}/report` | Report a player to the moderators (`reason`, `details`, optional `game_id`) |
 | GET | `/api/v1/players/{username}/games?before=&limit=` | A player's finished games, newest first (page back with `before` = the last `finished_at`) |
 | GET | `/api/v1/seeks` | How many players are waiting, per time control and rated or casual |

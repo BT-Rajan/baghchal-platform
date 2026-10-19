@@ -6,17 +6,20 @@ import type { Profile } from '@/api/endpoints';
 import { describeError } from '@/api/errors';
 import { CATEGORIES, canChallenge, joinedText, presenceText } from '@/lobby/format';
 import { useBlock } from '@/lobby/hooks';
+import { useMe } from '@/auth/session';
 import { colors, spacing } from '@/theme';
 
 import { BadgePill } from './BadgePill';
 import { Button } from './Button';
 import { Card, Hint } from './Card';
 import { Confirm } from './Confirm';
+import { FriendControl } from './FriendControl';
 import { GameHistory } from './GameHistory';
 import { Notice } from './Notice';
 import { PresenceDot } from './PlayerRow';
 
 export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean }) {
+  const guestViewer = useMe().role === 'guest';
   return (
     <>
       <View style={styles.presence}>
@@ -61,6 +64,13 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
       {Object.values(profile.ratings).some((r) => r?.provisional) && (
         <Hint>A provisional rating is still settling: it moves faster over the first games.</Hint>
       )}
+      {/* Guests have no friends; their names start with "guest-". */}
+      {!isMe &&
+        !profile.blocked &&
+        guestViewer === false &&
+        !profile.username.startsWith('guest-') && (
+          <FriendControl username={profile.username} relation={profile.friend ?? 'none'} />
+        )}
       {!isMe && !profile.blocked && (
         <Button
           title={`Challenge ${profile.username}`}

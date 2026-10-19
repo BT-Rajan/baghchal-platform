@@ -23,6 +23,8 @@ from baghchal_server.config import Settings
 from baghchal_server.db import create_engine, session_factory
 from baghchal_server.deps import AppState
 from baghchal_server.errors import install_handlers
+from baghchal_server.friends import models as _friends_models  # noqa: F401  (registers tables)
+from baghchal_server.friends.routes import router as friends_router
 from baghchal_server.games import models as _game_models  # noqa: F401  (registers tables)
 from baghchal_server.games.computer import ComputerPlayers
 from baghchal_server.games.routes import router as games_router
@@ -175,6 +177,7 @@ def create_app(
     app.include_router(appearance_router)
     app.include_router(payments_router)
     app.include_router(tournaments_router)
+    app.include_router(friends_router)
     app.include_router(trainer_router)
     app.include_router(health_router)
     app.include_router(ws_router)

@@ -120,6 +120,7 @@ async def app(
                 "matches",
                 "ratings",
                 "challenges",
+                "friendships",
                 "blocks",
                 "seeks",
                 "reports",

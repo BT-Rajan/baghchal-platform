@@ -25,6 +25,7 @@ test('parses every server message', () => {
     type: 'challenge',
     challenge: byLink,
   });
+  expect(parseServerMessage(text({ type: 'friends' }))).toEqual({ type: 'friends' });
   const g = game();
   expect(parseServerMessage(text({ type: 'game', game: g }))).toEqual({ type: 'game', game: g });
   expect(

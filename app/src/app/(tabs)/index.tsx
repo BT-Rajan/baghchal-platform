@@ -10,6 +10,7 @@ import { Card, Hint, SectionTitle } from '@/components/Card';
 import { ChallengeCard } from '@/components/ChallengeCard';
 import { DailyPuzzle } from '@/components/DailyPuzzle';
 import { FeatureLink } from '@/components/FeatureLink';
+import { FriendList, FriendRequests } from '@/components/Friends';
 import { GameHistory } from '@/components/GameHistory';
 import { GuestBanner } from '@/components/GuestBanner';
 import { Notice } from '@/components/Notice';
@@ -90,6 +91,7 @@ export default function Play() {
           onAnswer={(a) => answer.mutate({ id: c.id, answer: a })}
         />
       ))}
+      <FriendRequests />
       {games.data?.length === 0 && (
         <Card>
           <Text style={styles.cardTitle}>Ready for a game?</Text>
@@ -105,6 +107,7 @@ export default function Play() {
 
   const playerList = (
     <View style={styles.column}>
+      <FriendList myId={me.id} />
       <SectionTitle>
         {prefix === null ? 'Online now' : `Players starting with “${prefix}”`}
       </SectionTitle>
