@@ -106,7 +106,8 @@ scripts/        the Expo-cloud guardrail
 - **Pro extras.** Play now → More ways to play: private rooms (make a link, share it; the
   friend's "Join and play" starts the game), tournaments (host, join by link, standings, "Play
   now" on my games) and the trainer (the puzzle on the real board, in the player's theme).
-  Each shows players without Pro what it does, and the way to the plans.
+  Players without Pro see what each does in the one `Upsell` component, as everywhere a
+  paid feature is locked.
 - **Board, pieces and sounds.** Me → Board, pieces and sounds: board themes and piece sets
   (drawn by `Wood.tsx` and `Coin.tsx` from `src/appearance/catalog.ts`), sound packs (made live
   in `sound.ts`), game sounds on or off, and showing or hiding the badge. Free sees the choices

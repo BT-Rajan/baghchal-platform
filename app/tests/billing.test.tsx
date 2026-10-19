@@ -60,9 +60,10 @@ describe('plans', () => {
   test('Hard asks for Plus, and the history says how far back it goes', async () => {
     const { app } = await open('/play');
     await fireEvent.press(await screen.findByRole('radio', { name: 'Hard' }));
-    expect(screen.getByText('The Hard computer comes with ClawPlay Plus.')).toBeOnTheScreen();
+    expect(screen.getByText('Play the Hard computer, the strongest opponent.')).toBeOnTheScreen();
+    expect(await screen.findByLabelText('ClawPlay Plus')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Play the computer' })).toBeDisabled();
-    await press('See plans');
+    await press('Get ClawPlay Plus');
     await waitFor(() => expect(app.getPathname()).toBe('/plans'));
   });
 
@@ -81,9 +82,7 @@ describe('plans', () => {
       },
     });
     expect(
-      await screen.findByText(
-        'The Free plan shows games from the last 30 days. Plus keeps every game.',
-      ),
+      await screen.findByText('Your history shows games from the last 30 days. Keep every game.'),
     ).toBeOnTheScreen();
   });
 });
@@ -206,4 +205,12 @@ describe('admins', () => {
     expect(await screen.findByText('In good standing')).toBeOnTheScreen();
     expect(screen.queryByText('Plan')).toBeNull();
   });
+});
+
+test('an upsell still leads to the plans when they cannot be loaded', async () => {
+  const { app } = await open('/rooms', {
+    'GET /api/v1/plans': error(400, 'bad', 'Plans are down.'),
+  });
+  await fireEvent.press(await screen.findByRole('button', { name: 'See plans' }));
+  await waitFor(() => expect(app.getPathname()).toBe('/plans'));
 });

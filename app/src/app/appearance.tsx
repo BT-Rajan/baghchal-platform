@@ -1,5 +1,4 @@
-import { router } from 'expo-router';
-import { type ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Appearance, BoardTheme, PieceSet, SoundPack } from '@/api/endpoints';
@@ -9,24 +8,22 @@ import { useAppearanceQuery, useChooseAppearance } from '@/appearance/hooks';
 import { has } from '@/billing/format';
 import { useMyPlan } from '@/billing/hooks';
 import { Button } from '@/components/Button';
-import { Hint, SectionTitle } from '@/components/Card';
+import { SectionTitle } from '@/components/Card';
 import { focusRing } from '@/components/focus';
 import { BoardPreview } from '@/components/game/BoardPreview';
 import { playSound, soundSupported } from '@/components/game/sound';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
+import { Upsell } from '@/components/Upsell';
 import { ErrorState, Loading } from '@/components/States';
 import { colors, radius, spacing } from '@/theme';
-
-const LOCKED = 'A choice of boards, pieces and sounds comes with ClawPlay Plus.';
 
 /** Choose a board, pieces and sounds (Plus and Pro), and whether others see my badge. */
 export default function AppearanceScreen() {
   const look = useAppearanceQuery();
   const plan = useMyPlan();
   const choose = useChooseAppearance();
-  const [refused, setRefused] = useState(false);
   const error = look.error ?? plan.error;
 
   if (error !== null) {
@@ -52,28 +49,18 @@ export default function AppearanceScreen() {
 
   const current = look.data;
   const themes = has(plan.data, 'themes');
+  // Locked choices are shown, marked Plus, and do nothing: the Upsell above says why.
   const pick = (change: Partial<Appearance>) => {
-    if (!themes && isThemed({ ...current, ...change })) {
-      setRefused(true);
-      return;
-    }
-    setRefused(false);
-    choose.mutate(change);
+    if (themes || !isThemed({ ...current, ...change })) choose.mutate(change);
   };
   const locked = (free: boolean) => !themes && !free;
 
   return (
     <Screen title="Board, pieces and sounds" align="top" wide>
       {!themes && (
-        <Notice tone="info">
-          Free has the Wood board, Classic pieces and Gentle sounds. More come with ClawPlay Plus.
-        </Notice>
-      )}
-      {refused && (
-        <>
-          <Notice tone="error">{LOCKED}</Notice>
-          <Button title="See plans" variant="secondary" onPress={() => router.push('/plans')} />
-        </>
+        <Upsell feature="themes">
+          More boards, pieces and sound packs, and a badge by your name.
+        </Upsell>
       )}
       {choose.error !== null && <Notice tone="error">{describeError(choose.error)}</Notice>}
 
@@ -139,19 +126,19 @@ export default function AppearanceScreen() {
         />
       )}
 
-      <SectionTitle>Badge</SectionTitle>
-      {has(plan.data, 'badge') ? (
-        <Segmented
-          label="Next to my name, others see"
-          value={current.show_badge ? 'show' : 'hide'}
-          onChange={(value) => pick({ show_badge: value === 'show' })}
-          options={[
-            { value: 'show', label: 'My badge' },
-            { value: 'hide', label: 'Nothing' },
-          ]}
-        />
-      ) : (
-        <Hint>Plus and Pro players can show a badge next to their name.</Hint>
+      {has(plan.data, 'badge') && (
+        <>
+          <SectionTitle>Badge</SectionTitle>
+          <Segmented
+            label="Next to my name, others see"
+            value={current.show_badge ? 'show' : 'hide'}
+            onChange={(value) => pick({ show_badge: value === 'show' })}
+            options={[
+              { value: 'show', label: 'My badge' },
+              { value: 'hide', label: 'Nothing' },
+            ]}
+          />
+        </>
       )}
     </Screen>
   );
@@ -175,8 +162,15 @@ function Tile({
       role="radio"
       aria-checked={selected}
       aria-label={locked ? `${name}, comes with Plus` : name}
+      aria-disabled={locked}
+      disabled={locked}
       onPress={onPress}
-      style={(state) => [styles.tile, selected && styles.selected, focusRing(state)]}
+      style={(state) => [
+        styles.tile,
+        selected && styles.selected,
+        locked && styles.locked,
+        focusRing(state),
+      ]}
     >
       <View style={styles.preview}>{children}</View>
       <Text style={styles.name}>{locked ? `${name} · Plus` : name}</Text>
@@ -197,6 +191,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   selected: { borderColor: colors.accent },
+  locked: { opacity: 0.6 },
   preview: { width: 112, height: 112 },
   name: { fontSize: 14, fontWeight: '600', color: colors.text, textAlign: 'center' },
 });

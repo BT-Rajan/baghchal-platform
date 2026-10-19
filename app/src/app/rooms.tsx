@@ -9,7 +9,7 @@ import { useMyPlan } from '@/billing/hooks';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Notice } from '@/components/Notice';
-import { ProGate } from '@/components/ProGate';
+import { Upsell } from '@/components/Upsell';
 import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
 import { ErrorState, Loading } from '@/components/States';
@@ -44,7 +44,9 @@ export default function Rooms() {
           <OpenRooms />
         </>
       ) : (
-        <ProGate>Private rooms come with ClawPlay Pro.</ProGate>
+        <Upsell feature="private_rooms">
+          Make private rooms: a link to a game, for the friend you send it to.
+        </Upsell>
       )}
     </Screen>
   );

@@ -1,5 +1,5 @@
 /** Words for plans, features, prices and grants. */
-import type { Feature, Grant, MyPlan, Plan, PlanInfo } from '@/api/endpoints';
+import type { Feature, Grant, MyPlan, PaidPlan, Plan, PlanInfo } from '@/api/endpoints';
 
 export const PLAN_NAMES: Record<Plan, string> = { free: 'Free', plus: 'Plus', pro: 'Pro' };
 
@@ -83,6 +83,15 @@ export function planLines(plans: readonly PlanInfo[], index: number): string[] {
   );
   const lines = added.map(featureText);
   return before.length > 0 ? [`Everything in ${PLAN_NAMES[below.plan]}, and:`, ...lines] : lines;
+}
+
+/** The cheapest paid plan that includes a feature (plans as the server lists them, cheapest
+ * first), or null if none does. */
+export function planFor(plans: readonly PlanInfo[], feature: Feature): PaidPlan | null {
+  const found = plans.find(
+    (p): p is PlanInfo & { plan: PaidPlan } => p.plan !== 'free' && p.features.includes(feature),
+  );
+  return found?.plan ?? null;
 }
 
 export function has(mine: MyPlan | undefined, feature: Feature): boolean {

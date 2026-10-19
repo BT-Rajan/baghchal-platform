@@ -52,7 +52,13 @@ const room = (overrides: Partial<Room> = {}): Room => ({
 describe('private rooms', () => {
   test('need Pro', async () => {
     await open('/rooms', {}, null);
-    expect(await screen.findByText('Private rooms come with ClawPlay Pro.')).toBeOnTheScreen();
+    expect(
+      await screen.findByText(
+        'Make private rooms: a link to a game, for the friend you send it to.',
+      ),
+    ).toBeOnTheScreen();
+    expect(screen.getByLabelText('ClawPlay Pro')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Get ClawPlay Pro' })).toBeOnTheScreen();
   });
 
   test('make one, share it, close it', async () => {
@@ -215,9 +221,7 @@ describe('tournaments', () => {
       },
       null,
     );
-    expect(
-      await screen.findByText('Hosting a tournament comes with ClawPlay Pro.'),
-    ).toBeOnTheScreen();
+    expect(await screen.findByText('Host small tournaments for your friends.')).toBeOnTheScreen();
     expect(
       await screen.findByText('5+3 · hosted by bob · Waiting for players: 2 of 6'),
     ).toBeOnTheScreen();
@@ -372,7 +376,7 @@ describe('the trainer', () => {
   test('needs Pro', async () => {
     await open('/trainer', {}, null);
     expect(
-      await screen.findByText(/^The opening and endgame trainer comes with ClawPlay Pro/),
+      await screen.findByText(/^Train with opening and endgame puzzles from real games/),
     ).toBeOnTheScreen();
   });
 

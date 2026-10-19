@@ -50,12 +50,10 @@ describe('game analysis', () => {
   test('Free players see what Plus adds', async () => {
     const { app, server } = await open();
     expect(
-      await screen.findByText(
-        'The engine’s review of every move, and where the game turned, comes with ClawPlay Plus.',
-      ),
+      await screen.findByText('See the engine’s review of every move, and where the game turned.'),
     ).toBeOnTheScreen();
     expect(server.requests.some((r) => r.path === URL)).toBe(false);
-    await press('See plans');
+    await press('Get ClawPlay Plus');
     await waitFor(() => expect(app.getPathname()).toBe('/plans'));
   });
 

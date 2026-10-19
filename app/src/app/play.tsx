@@ -14,6 +14,7 @@ import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
+import { Upsell } from '@/components/Upsell';
 import { useServerNow } from '@/components/useNow';
 import { LEVELS, TIME_CONTROLS, secondsLeft, waitingText } from '@/lobby/format';
 import { PRESENCE_REFRESH_MS, useOpenStartedGame } from '@/lobby/hooks';
@@ -165,10 +166,7 @@ function PlayComputer({ timeControl }: { timeControl: TimeControl }) {
         <Hint>Casual: games against the computer never change your rating.</Hint>
         {start.error !== null && <Notice tone="error">{describeError(start.error)}</Notice>}
         {locked && (
-          <>
-            <Notice tone="info">The Hard computer comes with ClawPlay Plus.</Notice>
-            <Button title="See plans" variant="secondary" onPress={() => router.push('/plans')} />
-          </>
+          <Upsell feature="computer_hard">Play the Hard computer, the strongest opponent.</Upsell>
         )}
         <Button
           title="Play the computer"

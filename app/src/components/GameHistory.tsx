@@ -12,7 +12,7 @@ import { colors, spacing } from '@/theme';
 
 import { Button } from './Button';
 import { Card, Hint, SectionTitle } from './Card';
-import { TextLink } from './TextLink';
+import { Upsell } from './Upsell';
 import { focusRing } from './focus';
 import { ErrorState, Loading } from './States';
 
@@ -56,10 +56,9 @@ export function GameHistory({ username }: { username: string }) {
         </Card>
       )}
       {limited && (
-        <>
-          <Hint>The Free plan shows games from the last 30 days. Plus keeps every game.</Hint>
-          <TextLink href="/plans">See plans</TextLink>
-        </>
+        <Upsell feature="full_history">
+          Your history shows games from the last 30 days. Keep every game.
+        </Upsell>
       )}
       {history.hasNextPage && (
         <Button

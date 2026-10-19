@@ -8,6 +8,7 @@ import {
   grantText,
   has,
   myPlanText,
+  planFor,
   planLines,
   priceText,
 } from './format';
@@ -94,4 +95,10 @@ test('each plan lists what it adds', () => {
     'Host small tournaments',
     'Opening and endgame trainer',
   ]);
+});
+
+test('the plan that has a feature: the cheapest, from the server’s list', () => {
+  expect(planFor(PLANS, 'analysis')).toBe('plus');
+  expect(planFor(PLANS, 'trainer')).toBe('pro');
+  expect(planFor([], 'analysis')).toBeNull();
 });

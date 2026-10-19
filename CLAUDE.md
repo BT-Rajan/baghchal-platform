@@ -24,3 +24,11 @@
   and remove what it replaces, in the same change. Never leave both.
 - **The PR description states** which existing feature the change extends (or that it is new)
   and anything it replaces.
+
+## The patterns that exist (use these)
+
+- **Upsell** a paid feature: `app/src/components/Upsell.tsx` (`<Upsell feature="…">what it
+  does</Upsell>`). It names the plan from the server's plans; never write your own notice,
+  card or "See plans" link.
+- **Appearance and sound settings**: the server's appearance (`PATCH /me/appearance`, sending
+  only what changes); nothing about them is kept on the device.

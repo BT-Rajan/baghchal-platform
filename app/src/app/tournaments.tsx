@@ -9,7 +9,7 @@ import { useMyPlan } from '@/billing/hooks';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Notice } from '@/components/Notice';
-import { ProGate } from '@/components/ProGate';
+import { Upsell } from '@/components/Upsell';
 import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
 import { ErrorState, Loading } from '@/components/States';
@@ -29,13 +29,13 @@ export default function Tournaments() {
     <Screen title="Tournaments" align="top">
       <Hint>
         A round robin for 3 to 6 friends: everyone plays everyone, once with each side, in casual
-        games. Anyone can join with the link; hosting one comes with ClawPlay Pro.
+        games. Anyone can join with the link.
       </Hint>
       {plan.data !== undefined &&
         (has(plan.data, 'tournaments') ? (
           <NewTournament />
         ) : (
-          <ProGate>Hosting a tournament comes with ClawPlay Pro.</ProGate>
+          <Upsell feature="tournaments">Host small tournaments for your friends.</Upsell>
         ))}
       <MyTournaments />
     </Screen>

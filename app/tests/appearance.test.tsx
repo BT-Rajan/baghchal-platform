@@ -35,22 +35,17 @@ describe('board, pieces and sounds', () => {
     await fireEvent.press(await screen.findByRole('button', { name: 'Board, pieces and sounds' }));
     await waitFor(() => expect(app.getPathname()).toBe('/appearance'));
     expect(
-      await screen.findByText(
-        'Free has the Wood board, Classic pieces and Gentle sounds. More come with ClawPlay Plus.',
-      ),
+      await screen.findByText('More boards, pieces and sound packs, and a badge by your name.'),
     ).toBeOnTheScreen();
     expect(radio('Wood')).toBeChecked();
-    expect(
-      screen.getByText('Plus and Pro players can show a badge next to their name.'),
-    ).toBeOnTheScreen();
+    expect(screen.queryByText('Badge')).toBeNull();
 
-    await fireEvent.press(radio('Walnut, comes with Plus'));
-    expect(
-      screen.getByText('A choice of boards, pieces and sounds comes with ClawPlay Plus.'),
-    ).toBeOnTheScreen();
+    // Locked choices are marked and do nothing; the one upsell above says why.
+    expect(radio('Walnut, comes with Plus')).toBeDisabled();
+    await fireEvent.press(radio(/^Temple bells \(Plus\)/));
     expect(radio('Wood')).toBeChecked();
     expect(server.requests.some((r) => r.method === 'PATCH')).toBe(false);
-    await fireEvent.press(screen.getByRole('button', { name: 'See plans' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Get ClawPlay Plus' }));
     await waitFor(() => expect(app.getPathname()).toBe('/plans'));
   });
 
@@ -66,7 +61,7 @@ describe('board, pieces and sounds', () => {
     });
     await fireEvent.press(await screen.findByRole('radio', { name: 'Walnut' }));
     await waitFor(() => expect(saved.board).toBe('walnut'));
-    expect(radio('Walnut')).toBeChecked();
+    await waitFor(() => expect(radio('Walnut')).toBeChecked());
     await fireEvent.press(radio('Porcelain'));
     await fireEvent.press(radio(/^Temple bells/));
     // Only what changed is sent; the rest stays as it was.
@@ -80,7 +75,7 @@ describe('board, pieces and sounds', () => {
 
     await fireEvent.press(radio('Off'));
     await waitFor(() => expect(saved.sounds_on).toBe(false));
-    expect(radio('Off')).toBeChecked();
+    await waitFor(() => expect(radio('Off')).toBeChecked());
 
     played.mockClear();
     await fireEvent.press(screen.getByRole('button', { name: 'Hear Temple bells' }));

@@ -10,7 +10,7 @@ import { Button } from '@/components/Button';
 import { Hint } from '@/components/Card';
 import { Board } from '@/components/game/Board';
 import { Notice } from '@/components/Notice';
-import { ProGate } from '@/components/ProGate';
+import { Upsell } from '@/components/Upsell';
 import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
 import { ErrorState, Loading } from '@/components/States';
@@ -44,10 +44,9 @@ export default function TrainerScreen() {
           <Puzzles key={kind} kind={kind} />
         </>
       ) : (
-        <ProGate>
-          The opening and endgame trainer comes with ClawPlay Pro: puzzles from real games, each
-          with one best move to find.
-        </ProGate>
+        <Upsell feature="trainer">
+          Train with opening and endgame puzzles from real games, each with one best move to find.
+        </Upsell>
       )}
     </Screen>
   );
