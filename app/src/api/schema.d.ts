@@ -76,7 +76,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Verify Email */
+        /**
+         * Verify Email
+         * @description Confirm the address and sign in. For a player under 18, this is when their parent is
+         *     emailed to agree.
+         */
         post: operations["verify_email_api_v1_auth_verify_email_post"];
         delete?: never;
         options?: never;
@@ -112,6 +116,27 @@ export interface paths {
         put?: never;
         /** Logout */
         post: operations["logout_api_v1_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/verify-email/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resend Verification
+         * @description Email a new confirmation link if the address has a sign-up waiting for one. Always
+         *     answers the same, so it tells nobody whether an address is registered.
+         */
+        post: operations["resend_verification_api_v1_auth_verify_email_resend_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -266,6 +291,108 @@ export interface paths {
          * @description Delete your account for good. Every device is signed out.
          */
         post: operations["delete_account_api_v1_me_delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/legal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Versions
+         * @description The current versions of the terms and the privacy policy (what sign-up must accept).
+         */
+        get: operations["versions_api_v1_legal_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/legal/{document}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Document
+         * @description The terms or the privacy policy, for anyone to read.
+         */
+        get: operations["document_api_v1_legal__document__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/consents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept
+         * @description Accept the current terms and privacy policy (asked again after they change), and give
+         *     the month of birth if the account predates that question.
+         */
+        post: operations["accept_api_v1_me_consents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/parent-consent/look-up": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Look Up
+         * @description Who a parent's link is about, before they decide.
+         */
+        post: operations["look_up_api_v1_parent_consent_look_up_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/parent-consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide
+         * @description A parent or guardian agrees, refuses, or withdraws an earlier agreement (which deletes
+         *     the account).
+         */
+        post: operations["decide_api_v1_parent_consent_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1583,6 +1710,30 @@ export interface components {
             /** Username */
             username: string;
         };
+        /**
+         * ClaimIn
+         * @description A guest's account: as for sign-up, but the month of birth the guest gave is kept, so
+         *     it is asked again only of guests who never gave one.
+         */
+        ClaimIn: {
+            /** Username */
+            username: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Password */
+            password: string;
+            /** Terms Version */
+            terms_version: string;
+            /** Privacy Version */
+            privacy_version: string;
+            /** Birth Month */
+            birth_month?: string | null;
+            /** Parent Email */
+            parent_email?: string | null;
+        };
         /** ClocksOut */
         ClocksOut: {
             /** Goat Ms */
@@ -1613,6 +1764,21 @@ export interface components {
              */
             time_control: "2+1" | "3+2" | "5+3" | "sand";
         };
+        /**
+         * ConsentsIn
+         * @description Accepting the current documents again, after they changed; an account made before we
+         *     asked for the month of birth gives it here too.
+         */
+        ConsentsIn: {
+            /** Terms Version */
+            terms_version: string;
+            /** Privacy Version */
+            privacy_version: string;
+            /** Birth Month */
+            birth_month?: string | null;
+            /** Parent Email */
+            parent_email?: string | null;
+        };
         /** DailyAnswerOut */
         DailyAnswerOut: {
             /** Move */
@@ -1638,6 +1804,19 @@ export interface components {
         DeleteAccountIn: {
             /** Password */
             password: string;
+        };
+        /**
+         * Document
+         * @enum {string}
+         */
+        Document: "terms" | "privacy";
+        /** DocumentOut */
+        DocumentOut: {
+            document: components["schemas"]["Document"];
+            /** Version */
+            version: string;
+            /** Text */
+            text: string;
         };
         /** EmailChangeConfirmIn */
         EmailChangeConfirmIn: {
@@ -1690,6 +1869,12 @@ export interface components {
             created_at: string;
             /** Email Verified At */
             email_verified_at: string | null;
+            /** Adult From */
+            adult_from: string | null;
+            /** Parent Email */
+            parent_email: string | null;
+            /** Parent Consented At */
+            parent_consented_at: string | null;
         };
         /** ExportChallenge */
         ExportChallenge: {
@@ -1716,6 +1901,18 @@ export interface components {
             rated: boolean;
             /** Status */
             status: string;
+        };
+        /** ExportConsent */
+        ExportConsent: {
+            /** Document */
+            document: string;
+            /** Version */
+            version: string;
+            /**
+             * Accepted At
+             * Format: date-time
+             */
+            accepted_at: string;
         };
         /** ExportGame */
         ExportGame: {
@@ -1776,6 +1973,8 @@ export interface components {
              */
             exported_at: string;
             account: components["schemas"]["ExportAccount"];
+            /** Consents */
+            consents: components["schemas"]["ExportConsent"][];
             /** Ratings */
             ratings: components["schemas"]["ExportRating"][];
             /** Games */
@@ -2009,6 +2208,12 @@ export interface components {
         };
         /** GuestIn */
         GuestIn: {
+            /** Birth Month */
+            birth_month: string;
+            /** Terms Version */
+            terms_version: string;
+            /** Privacy Version */
+            privacy_version: string;
             /**
              * Transport
              * @default cookie
@@ -2090,6 +2295,14 @@ export interface components {
              * @enum {string}
              */
             role: "guest" | "player" | "moderator" | "admin";
+            /** Plays People */
+            plays_people: boolean;
+            /** Parent Consent */
+            parent_consent: ("pending" | "given") | null;
+            /** Age Needed */
+            age_needed: boolean;
+            /** Consents Needed */
+            consents_needed: ("terms" | "privacy")[];
         };
         /** ModActionOut */
         ModActionOut: {
@@ -2229,6 +2442,33 @@ export interface components {
          * @enum {string}
          */
         PairingState: "waiting" | "playing" | "done";
+        /** ParentDecisionIn */
+        ParentDecisionIn: {
+            /** Token */
+            token: string;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "agree" | "refuse";
+        };
+        /** ParentLinkIn */
+        ParentLinkIn: {
+            /** Token */
+            token: string;
+        };
+        /** ParentLinkOut */
+        ParentLinkOut: {
+            /** Username */
+            username: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "given" | "deleted";
+            /** Adult From */
+            adult_from: string | null;
+        };
         /** PasswordChangeIn */
         PasswordChangeIn: {
             /** Current Password */
@@ -2436,6 +2676,12 @@ export interface components {
         };
         /** RegisterIn */
         RegisterIn: {
+            /** Birth Month */
+            birth_month: string;
+            /** Terms Version */
+            terms_version: string;
+            /** Privacy Version */
+            privacy_version: string;
             /** Username */
             username: string;
             /**
@@ -2445,6 +2691,8 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+            /** Parent Email */
+            parent_email?: string | null;
         };
         /** RelationOut */
         RelationOut: {
@@ -2520,6 +2768,14 @@ export interface components {
             badge?: ("plus" | "pro") | null;
             /** Suspended Until */
             suspended_until: string | null;
+        };
+        /** ResendVerificationIn */
+        ResendVerificationIn: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
         };
         /** ResultOut */
         ResultOut: {
@@ -2704,6 +2960,16 @@ export interface components {
             /** Signature */
             signature: string;
         };
+        /**
+         * VersionsOut
+         * @description The current version (the date it took effect) of each document.
+         */
+        VersionsOut: {
+            /** Terms */
+            terms: string;
+            /** Privacy */
+            privacy: string;
+        };
         /** ChallengeEvent */
         ChallengeEvent: {
             /**
@@ -2854,7 +3120,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RegisterIn"];
+                "application/json": components["schemas"]["ClaimIn"];
             };
         };
         responses: {
@@ -2959,6 +3225,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    resend_verification_api_v1_auth_verify_email_resend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResendVerificationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Accepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };
@@ -3182,6 +3481,156 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    versions_api_v1_legal_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionsOut"];
+                };
+            };
+        };
+    };
+    document_api_v1_legal__document__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document: components["schemas"]["Document"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_api_v1_me_consents_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    look_up_api_v1_parent_consent_look_up_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParentLinkIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParentLinkOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_api_v1_parent_consent_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParentDecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParentLinkOut"];
+                };
             };
             /** @description Validation Error */
             422: {

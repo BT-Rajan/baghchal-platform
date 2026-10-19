@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Notification } from '@/api/endpoints';
 import { Card, Hint } from '@/components/Card';
 import { focusRing } from '@/components/focus';
+import { ripple } from '@/components/press';
 import { Icon, type IconName } from '@/components/Icon';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
@@ -32,7 +33,7 @@ export default function Notifications() {
     if (unread > 0) mutate();
   }, [unread, mutate]);
   return (
-    <Screen align="top">
+    <Screen align="top" refreshable>
       {notifications.error !== null ? (
         <ErrorState error={notifications.error} onRetry={() => void notifications.refetch()} />
       ) : notifications.data === undefined ? (
@@ -50,6 +51,7 @@ export default function Notifications() {
                 aria-label={notificationText(n)}
                 disabled={link === null}
                 onPress={() => link !== null && router.push(link)}
+                {...ripple()}
                 style={(state) => [styles.row, i > 0 && styles.divided, focusRing(state)]}
               >
                 <View style={[styles.icon, !n.read && styles.unread]}>

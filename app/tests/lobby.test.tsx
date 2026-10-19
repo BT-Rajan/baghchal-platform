@@ -361,6 +361,29 @@ describe('profiles', () => {
 });
 
 describe('leaderboard', () => {
+  test('pulling the page down asks again', async () => {
+    let calls = 0;
+    const { server } = await lobby({
+      'GET /api/v1/leaderboards/blitz': () => {
+        calls += 1;
+        return {
+          status: 200,
+          body: calls === 1 ? [] : [{ rank: 1, player: BOB, rating: 1702, games: 40 }],
+        };
+      },
+    });
+    await screen.findByRole('heading', { name: 'Play' });
+    await fireEvent.press(screen.getByRole('button', { name: /^Leaderboard, tab/ }));
+    expect(await screen.findByText(/Nobody is listed yet/)).toBeOnTheScreen();
+    // The page on top: the leaderboard (the Play tab stays mounted behind it).
+    const page = screen.getAllByTestId('page').at(-1)!;
+    await act(async () => {
+      await page.props.refreshControl.props.onRefresh();
+    });
+    expect(await screen.findByText('1702')).toBeOnTheScreen();
+    expect(server.requests.filter((r) => r.path === '/api/v1/leaderboards/blitz').length).toBe(2);
+  });
+
   test('a podium, the rest below, and where I stand', async () => {
     const carol = { id: 'c', username: 'carol' };
     const dave = { id: 'd', username: 'dave' };

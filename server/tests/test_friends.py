@@ -12,7 +12,7 @@ from baghchal_server.accounts.models import User
 from baghchal_server.deps import AppState
 from baghchal_server.friends import service
 
-from .conftest import PASSWORD, Clock, Player, PlayerFactory
+from .conftest import AGREE, PASSWORD, Clock, Player, PlayerFactory
 from .test_games import _event, _online
 
 URL = "/api/v1/friends"
@@ -89,7 +89,9 @@ async def test_who_cannot_be_added(app_client: httpx.AsyncClient, players: Playe
     for username, code in (("alice", "cannot_friend_self"), ("nobody", "player_not_found")):
         r = await alice.http.post(f"{URL}/{username}")
         assert r.json()["error"]["code"] == code
-    guest = (await app_client.post("/api/v1/auth/guest", json={"transport": "bearer"})).json()
+    guest = (
+        await app_client.post("/api/v1/auth/guest", json={**AGREE, "transport": "bearer"})
+    ).json()
     r = await alice.http.post(f"{URL}/{guest['user']['username']}")
     assert (r.status_code, r.json()["error"]["code"]) == (409, "guest_has_no_friends")
     # Guests have no friends to list, and cannot ask.

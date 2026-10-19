@@ -11,7 +11,7 @@ from baghchal_server.accounts.models import EmailToken, Session, User
 from baghchal_server.deps import AppState
 from baghchal_server.mail import MemoryMailer
 
-from .conftest import PASSWORD, Clock, last_token, sign_up
+from .conftest import AGREE, PASSWORD, Clock, last_token, sign_up
 
 REGISTER = "/api/v1/auth/register"
 VERIFY = "/api/v1/auth/verify-email"
@@ -37,7 +37,8 @@ async def _users(app: FastAPI) -> list[User]:
 
 async def test_sign_up_flow(client: httpx.AsyncClient, mailer: MemoryMailer) -> None:
     r = await client.post(
-        REGISTER, json={"username": "Alice", "email": "Alice@Example.com", "password": PASSWORD}
+        REGISTER,
+        json={**AGREE, "username": "Alice", "email": "Alice@Example.com", "password": PASSWORD},
     )
     assert r.status_code == 202
     assert r.json() == {"status": "accepted"}
@@ -66,15 +67,30 @@ async def test_sign_up_flow(client: httpx.AsyncClient, mailer: MemoryMailer) -> 
 @pytest.mark.parametrize(
     ("payload", "field"),
     [
-        ({"username": "ab", "email": "a@example.com", "password": PASSWORD}, "username"),
-        ({"username": "_alice", "email": "a@example.com", "password": PASSWORD}, "username"),
-        ({"username": "al ice", "email": "a@example.com", "password": PASSWORD}, "username"),
-        ({"username": "a" * 21, "email": "a@example.com", "password": PASSWORD}, "username"),
-        ({"username": "alice", "email": "not-an-email", "password": PASSWORD}, "email"),
-        ({"username": "alice", "email": "a@example.com", "password": "short"}, "password"),
-        ({"username": "alice", "email": "a@example.com", "password": "x" * 129}, "password"),
-        ({"username": "alice", "email": "a@example.com", "password": 1234567890}, "password"),
-        ({"username": "alice", "email": "a@example.com"}, "password"),
+        ({**AGREE, "username": "ab", "email": "a@example.com", "password": PASSWORD}, "username"),
+        (
+            {**AGREE, "username": "_alice", "email": "a@example.com", "password": PASSWORD},
+            "username",
+        ),
+        (
+            {**AGREE, "username": "al ice", "email": "a@example.com", "password": PASSWORD},
+            "username",
+        ),
+        (
+            {**AGREE, "username": "a" * 21, "email": "a@example.com", "password": PASSWORD},
+            "username",
+        ),
+        ({**AGREE, "username": "alice", "email": "not-an-email", "password": PASSWORD}, "email"),
+        ({**AGREE, "username": "alice", "email": "a@example.com", "password": "short"}, "password"),
+        (
+            {**AGREE, "username": "alice", "email": "a@example.com", "password": "x" * 129},
+            "password",
+        ),
+        (
+            {**AGREE, "username": "alice", "email": "a@example.com", "password": 1234567890},
+            "password",
+        ),
+        ({**AGREE, "username": "alice", "email": "a@example.com"}, "password"),
     ],
 )
 async def test_registration_validation(
@@ -91,14 +107,21 @@ async def test_registration_validation(
 async def test_unknown_fields_are_rejected(client: httpx.AsyncClient) -> None:
     r = await client.post(
         REGISTER,
-        json={"username": "alice", "email": "a@example.com", "password": PASSWORD, "admin": True},
+        json={
+            **AGREE,
+            "username": "alice",
+            "email": "a@example.com",
+            "password": PASSWORD,
+            "admin": True,
+        },
     )
     assert r.status_code == 422
 
 
 async def test_reserved_username(client: httpx.AsyncClient) -> None:
     r = await client.post(
-        REGISTER, json={"username": "Admin", "email": "a@example.com", "password": PASSWORD}
+        REGISTER,
+        json={**AGREE, "username": "Admin", "email": "a@example.com", "password": PASSWORD},
     )
     assert r.status_code == 409
     assert r.json()["error"]["code"] == "username_unavailable"
@@ -107,7 +130,12 @@ async def test_reserved_username(client: httpx.AsyncClient) -> None:
 async def test_password_must_differ_from_username(client: httpx.AsyncClient) -> None:
     r = await client.post(
         REGISTER,
-        json={"username": "alicealice", "email": "a@example.com", "password": "AliceAlice"},
+        json={
+            **AGREE,
+            "username": "alicealice",
+            "email": "a@example.com",
+            "password": "AliceAlice",
+        },
     )
     assert r.status_code == 422
     assert r.json()["error"]["code"] == "weak_password"
@@ -118,7 +146,8 @@ async def test_usernames_are_unique_ignoring_case(
 ) -> None:
     await sign_up(client, mailer)
     r = await client.post(
-        REGISTER, json={"username": "ALICE", "email": "other@example.com", "password": PASSWORD}
+        REGISTER,
+        json={**AGREE, "username": "ALICE", "email": "other@example.com", "password": PASSWORD},
     )
     assert r.status_code == 409
     assert r.json()["error"]["code"] == "username_taken"
@@ -129,7 +158,8 @@ async def test_registering_a_known_email_does_not_reveal_it(
 ) -> None:
     await sign_up(client, mailer)
     r = await client.post(
-        REGISTER, json={"username": "bob", "email": "ALICE@example.com", "password": PASSWORD}
+        REGISTER,
+        json={**AGREE, "username": "bob", "email": "ALICE@example.com", "password": PASSWORD},
     )
     assert r.status_code == 202
     assert r.json() == {"status": "accepted"}
@@ -140,7 +170,7 @@ async def test_registering_a_known_email_does_not_reveal_it(
 async def test_re_registering_unverified_email_resends_a_fresh_link(
     client: httpx.AsyncClient, mailer: MemoryMailer
 ) -> None:
-    payload = {"username": "alice", "email": "alice@example.com", "password": PASSWORD}
+    payload = {**AGREE, "username": "alice", "email": "alice@example.com", "password": PASSWORD}
     await client.post(REGISTER, json=payload)
     first = last_token(mailer)
     await client.post(REGISTER, json=payload)
@@ -154,12 +184,14 @@ async def test_unverified_registrations_expire(
     client: httpx.AsyncClient, mailer: MemoryMailer, clock: Clock, app: FastAPI
 ) -> None:
     await client.post(
-        REGISTER, json={"username": "alice", "email": "first@example.com", "password": PASSWORD}
+        REGISTER,
+        json={**AGREE, "username": "alice", "email": "first@example.com", "password": PASSWORD},
     )
     stale = last_token(mailer)
     clock.advance(hours=25)
     r = await client.post(
-        REGISTER, json={"username": "alice", "email": "second@example.com", "password": PASSWORD}
+        REGISTER,
+        json={**AGREE, "username": "alice", "email": "second@example.com", "password": PASSWORD},
     )
     assert r.status_code == 202
     assert [u.email for u in await _users(app)] == ["second@example.com"]
@@ -171,7 +203,8 @@ async def test_registration_race_is_handled(
 ) -> None:
     """Two sign-ups for one name at once: the loser gets username_taken, not a crash."""
     await client.post(
-        REGISTER, json={"username": "alice", "email": "first@example.com", "password": PASSWORD}
+        REGISTER,
+        json={**AGREE, "username": "alice", "email": "first@example.com", "password": PASSWORD},
     )
     real_scalar = AsyncSession.scalar
     calls = 0
@@ -185,14 +218,16 @@ async def test_registration_race_is_handled(
 
     monkeypatch.setattr(AsyncSession, "scalar", blind_scalar)
     r = await client.post(
-        REGISTER, json={"username": "alice", "email": "second@example.com", "password": PASSWORD}
+        REGISTER,
+        json={**AGREE, "username": "alice", "email": "second@example.com", "password": PASSWORD},
     )
     assert r.status_code == 409
     assert r.json()["error"]["code"] == "username_taken"
 
     calls = 0
     r = await client.post(
-        REGISTER, json={"username": "carol", "email": "first@example.com", "password": PASSWORD}
+        REGISTER,
+        json={**AGREE, "username": "carol", "email": "first@example.com", "password": PASSWORD},
     )
     assert r.status_code == 202  # same email raced: answer as usual, send nothing
 
@@ -213,7 +248,8 @@ async def test_verification_link_expires(
     client: httpx.AsyncClient, mailer: MemoryMailer, clock: Clock
 ) -> None:
     await client.post(
-        REGISTER, json={"username": "alice", "email": "a@example.com", "password": PASSWORD}
+        REGISTER,
+        json={**AGREE, "username": "alice", "email": "a@example.com", "password": PASSWORD},
     )
     clock.advance(hours=24, seconds=1)
     r = await client.post(VERIFY, json={"token": last_token(mailer)})
@@ -458,3 +494,21 @@ async def test_tokens_are_stored_hashed(
     assert cookie not in stored
     assert last_token(mailer) not in stored
     assert all(len(h) == 64 for h in stored)
+
+
+async def test_a_lost_confirmation_link_can_be_sent_again(
+    client: httpx.AsyncClient, mailer: MemoryMailer
+) -> None:
+    body = {**AGREE, "username": "zed", "email": "zed@example.com", "password": PASSWORD}
+    assert (await client.post("/api/v1/auth/register", json=body)).status_code == 202
+    resend = "/api/v1/auth/verify-email/resend"
+    r = await client.post(resend, json={"email": "ZED@example.com"})
+    assert r.status_code == 202
+    assert len(mailer.outbox) == 2
+    assert mailer.outbox[-1].subject == "Confirm your ClawPlay account"
+    r = await client.post("/api/v1/auth/verify-email", json={"token": last_token(mailer)})
+    assert r.status_code == 200
+    # Confirmed, or never registered: the same answer, and nothing sent.
+    for email in ("zed@example.com", "nobody@example.com"):
+        assert (await client.post(resend, json={"email": email})).status_code == 202
+    assert len(mailer.outbox) == 2

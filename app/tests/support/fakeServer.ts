@@ -22,8 +22,21 @@ export function error(status: number, code: string, message = code, fields?: unk
   return { status, body: { error: { code, message, ...(fields !== undefined && { fields }) } } };
 }
 
+/** The versions of the terms and privacy policy the server has now. */
+export const LEGAL = { terms: '2026-10-19', privacy: '2026-10-19' };
+
+/** What a form sends for an adult who agrees to the current texts. */
+export const AGREED = {
+  birth_month: '1990-01',
+  terms_version: '2026-10-19',
+  privacy_version: '2026-10-19',
+};
+
 export function fakeServer(routes: Record<string, Route> = {}) {
-  const table = new Map(Object.entries(routes));
+  // Every sign-up form asks for the current versions.
+  const table = new Map<string, Route>(
+    Object.entries({ 'GET /api/v1/legal': { status: 200, body: LEGAL }, ...routes }),
+  );
   const requests: FakeRequest[] = [];
 
   const fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
@@ -79,6 +92,10 @@ export const ME = {
   email: 'alice@example.com',
   created_at: '2026-01-01T12:00:00Z',
   role: 'player' as const,
+  plays_people: true,
+  parent_consent: null as 'pending' | 'given' | null,
+  age_needed: false,
+  consents_needed: [] as ('terms' | 'privacy')[],
 };
 
 /** A well-formed emailed-link token (43 URL-safe characters). */

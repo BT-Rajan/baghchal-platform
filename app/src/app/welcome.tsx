@@ -1,26 +1,15 @@
-import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg from 'react-native-svg';
 
-import { describeError } from '@/api/errors';
-import { useApi, useSession } from '@/auth/session';
 import { Brand } from '@/components/brand/Logo';
 import { Button } from '@/components/Button';
 import { BoardPreview } from '@/components/game/BoardPreview';
 import { Coin } from '@/components/game/Coin';
-import { Notice } from '@/components/Notice';
-import { useOpenStartedGame } from '@/lobby/hooks';
 import type { Piece } from '@/game/bfen';
 import { colors, radius, spacing } from '@/theme';
-
-/**
- * A newcomer's first game: the Easy computer, which coaches as they play, with the goats (who
- * move first, so there is something to do at once) and the longest time control.
- */
-const FIRST_GAME = { level: 'easy', side: 'goat', time_control: '5+3' } as const;
 
 /** Wide enough to put the board beside the words. */
 const WIDE = 880;
@@ -50,32 +39,55 @@ const FEATURES: readonly { title: string; text: string }[] = [
   { title: 'Get better', text: 'The engine reviews your games; puzzles sharpen your openings.' },
 ];
 
-/** The front door: what ClawPlay is, and a first game in one tap, without signing up. */
+/**
+ * The front door: what ClawPlay is, and a first game without signing up (`/start`). The web
+ * has a landing page; the phone apps open on a start screen, as apps do.
+ */
 export default function Welcome() {
-  const { session } = useSession();
+  return Platform.OS === 'web' ? <LandingPage /> : <StartScreen />;
+}
+
+/** The apps' first screen: the board, and the ways in. Nothing to scroll. */
+function StartScreen() {
+  return (
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.start}>
+        <Brand size={36} onDark />
+        <View style={styles.startBoard} aria-hidden>
+          <BoardPreview theme="wood" pieces="classic" />
+        </View>
+        <View style={styles.startWords}>
+          <Text role="heading" style={styles.startHeadline}>
+            Tigers hunt.{'\n'}Goats trap.
+          </Text>
+          <Text style={styles.lede}>Bagh Chal, the strategy game of the Himalayas.</Text>
+        </View>
+        <View style={styles.actions}>
+          <Button
+            title="Play now, no sign-up"
+            variant="bright"
+            onPress={() => router.push('/start')}
+          />
+          <Button title="Sign in" variant="light" onPress={() => router.push('/sign-in')} />
+          <Button
+            title="Create a free account"
+            variant="light"
+            onPress={() => router.push('/sign-up')}
+          />
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+function LandingPage() {
   const { width } = useWindowDimensions();
   const wide = width >= WIDE;
-  const api = useApi();
-  const openStarted = useOpenStartedGame();
-  const play = useMutation({
-    mutationFn: async () => {
-      await session.playAsGuest();
-      const game = await api.playComputer(FIRST_GAME);
-      // Open it once the screens for signed-in players are in place, or their guard would send
-      // the game back to the welcome page.
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      openStarted(game);
-    },
-  });
+  const play = () => router.push('/start');
 
   const actions = (
     <View style={[styles.actions, wide && styles.actionsWide]}>
-      <Button
-        title="Play now, no sign-up"
-        variant="bright"
-        busy={play.isPending}
-        onPress={() => play.mutate()}
-      />
+      <Button title="Play now, no sign-up" variant="bright" onPress={play} />
       <Button title="Sign in" variant="light" onPress={() => router.push('/sign-in')} />
     </View>
   );
@@ -94,7 +106,6 @@ export default function Welcome() {
                 Bagh Chal, the strategy game of the Himalayas, played live. Four tigers against
                 twenty goats: which side will you take?
               </Text>
-              {play.error !== null && <Notice tone="error">{describeError(play.error)}</Notice>}
               {actions}
               <Text style={styles.small}>
                 New here?{' '}
@@ -102,6 +113,15 @@ export default function Welcome() {
                   Create a free account
                 </Text>{' '}
                 to keep your rating.
+              </Text>
+              <Text style={styles.small}>
+                <Text role="link" style={styles.smallLink} onPress={() => router.push('/terms')}>
+                  Terms of service
+                </Text>
+                {'  ·  '}
+                <Text role="link" style={styles.smallLink} onPress={() => router.push('/privacy')}>
+                  Privacy policy
+                </Text>
               </Text>
             </View>
             <View style={[styles.boardBox, wide && styles.half]} aria-hidden>
@@ -142,15 +162,10 @@ export default function Welcome() {
         <View style={styles.closing}>
           <View style={styles.inner}>
             <Text role="heading" style={styles.closingTitle}>
-              Your first game is one tap away.
+              Your first game is a moment away.
             </Text>
             <View style={wide ? styles.actionsWide : styles.actions}>
-              <Button
-                title="Start playing"
-                variant="bright"
-                busy={play.isPending}
-                onPress={() => play.mutate()}
-              />
+              <Button title="Start playing" variant="bright" onPress={play} />
             </View>
           </View>
         </View>
@@ -174,6 +189,24 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.brandInk },
+  start: {
+    flex: 1,
+    padding: spacing.lg,
+    gap: spacing.lg,
+    justifyContent: 'space-between',
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+  },
+  startBoard: { width: '100%', maxWidth: 360, aspectRatio: 1, alignSelf: 'center', flexShrink: 1 },
+  startWords: { gap: spacing.sm },
+  startHeadline: {
+    fontSize: 36,
+    lineHeight: 42,
+    fontWeight: '800',
+    color: colors.brandCream,
+    letterSpacing: -0.5,
+  },
   page: { flexGrow: 1, backgroundColor: colors.background },
   inner: { width: '100%', maxWidth: 1100, alignSelf: 'center', gap: spacing.lg },
   row: { flexDirection: 'row', alignItems: 'center' },

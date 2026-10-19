@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { PlayerStatus } from '@/api/endpoints';
+import { useMe } from '@/auth/session';
 import { canChallenge, presenceText } from '@/lobby/format';
 import { colors, spacing } from '@/theme';
 
@@ -20,6 +21,7 @@ export function PresenceDot({ online }: { online: boolean }) {
 
 /** A player in a list: name (to their profile), presence, and a Challenge button. */
 export function PlayerRow({ player, isMe }: { player: PlayerStatus; isMe: boolean }) {
+  const me = useMe();
   return (
     <View style={styles.row}>
       <View style={styles.who}>
@@ -38,7 +40,7 @@ export function PlayerRow({ player, isMe }: { player: PlayerStatus; isMe: boolea
           label="Challenge"
           variant="secondary"
           compact
-          disabled={!canChallenge(player)}
+          disabled={!me.plays_people || !canChallenge(player)}
           onPress={() => router.push(`/challenge/${player.username}`)}
         />
       )}

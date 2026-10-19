@@ -4,6 +4,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
 
+from baghchal_server.legal.age import BirthMonth
+
 Username = Annotated[
     str, StringConstraints(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{2,19}$", strict=True)
 ]
@@ -11,6 +13,7 @@ Password = Annotated[str, StringConstraints(min_length=10, max_length=128, stric
 Token = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_-]{43}$", strict=True)]
 CurrentPassword = Annotated[str, StringConstraints(min_length=1, max_length=128, strict=True)]
 Email = Annotated[EmailStr, Field(max_length=254)]
+LegalVersion = Annotated[str, StringConstraints(min_length=1, max_length=16, strict=True)]
 Transport = Literal["cookie", "bearer"]
 """Browsers use a cookie; native apps ask for a bearer token in the response body."""
 
@@ -19,10 +22,36 @@ class Strict(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class RegisterIn(Strict):
+class Agreement(Strict):
+    """What sign-up asks besides the account: the player's month of birth (see legal/age.py)
+    and the versions of the terms and privacy policy they accepted (GET /legal)."""
+
+    birth_month: BirthMonth
+    """``YYYY-MM``."""
+    terms_version: LegalVersion
+    privacy_version: LegalVersion
+
+
+class RegisterIn(Agreement):
     username: Username
     email: Email
     password: Password
+    parent_email: Email | None = None
+    """Required for players under 18: their parent or guardian is asked to agree."""
+
+
+class ClaimIn(Strict):
+    """A guest's account: as for sign-up, but the month of birth the guest gave is kept, so
+    it is asked again only of guests who never gave one."""
+
+    username: Username
+    email: Email
+    password: Password
+    terms_version: LegalVersion
+    privacy_version: LegalVersion
+    birth_month: BirthMonth | None = None
+    parent_email: Email | None = None
+    """Required for players under 18: their parent or guardian is asked to agree."""
 
 
 class VerifyEmailIn(Strict):
@@ -38,6 +67,10 @@ class LoginIn(Strict):
 
 
 class PasswordResetRequestIn(Strict):
+    email: Email
+
+
+class ResendVerificationIn(Strict):
     email: Email
 
 
@@ -78,9 +111,17 @@ class MeOut(UserOut):
     email: str
     """A guest's is a placeholder until they claim the account."""
     role: Literal["guest", "player", "moderator", "admin"]
+    plays_people: bool
+    """False while a parent's agreement is awaited (players under 18): the computer only."""
+    parent_consent: Literal["pending", "given"] | None
+    """For players under 18."""
+    age_needed: bool
+    """The account predates the age question: ask it (POST /me/consents)."""
+    consents_needed: list[Literal["terms", "privacy"]]
+    """Documents changed since the player last accepted them: ask again (POST /me/consents)."""
 
 
-class GuestIn(Strict):
+class GuestIn(Agreement):
     transport: Transport = "cookie"
 
 
@@ -103,6 +144,10 @@ class ExportAccount(BaseModel):
     email: str
     created_at: datetime
     email_verified_at: datetime | None
+    adult_from: datetime | None
+    """When you are surely 18, if you were not when you signed up (we keep only this)."""
+    parent_email: str | None
+    parent_consented_at: datetime | None
 
 
 class ExportRating(BaseModel):
@@ -152,11 +197,18 @@ class ExportNotification(BaseModel):
     read_at: datetime | None
 
 
+class ExportConsent(BaseModel):
+    document: str
+    version: str
+    accepted_at: datetime
+
+
 class ExportOut(BaseModel):
     """Everything the server keeps about a player, for them to download."""
 
     exported_at: datetime
     account: ExportAccount
+    consents: list[ExportConsent]
     ratings: list[ExportRating]
     games: list[ExportGame]
     challenges: list[ExportChallenge]

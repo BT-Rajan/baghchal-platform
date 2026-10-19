@@ -57,6 +57,19 @@ export default function SettingsScreen() {
           <DeleteSection />
         </>
       )}
+      <SectionTitle>Terms and privacy</SectionTitle>
+      <FeatureLink
+        icon="document"
+        title="Terms of service"
+        text="The rules of using ClawPlay."
+        onPress={() => router.push('/terms')}
+      />
+      <FeatureLink
+        icon="document"
+        title="Privacy policy"
+        text="What we keep about you, why, and for how long."
+        onPress={() => router.push('/privacy')}
+      />
       <SectionTitle>Sign out</SectionTitle>
       <Button
         title={guest ? 'Sign out (this guest account will be lost)' : 'Sign out'}

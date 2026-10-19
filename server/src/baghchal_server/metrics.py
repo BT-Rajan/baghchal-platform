@@ -61,6 +61,12 @@ class Metrics:
         self.fair_play_reports = Counter(
             "baghchal_fair_play_reports", "Automatic fair-play reports filed.", registry=r
         )
+        self.housekeeping_deleted = Counter(
+            "baghchal_housekeeping_deleted",
+            "Rows deleted because their time was up (privacy policy), by kind.",
+            ["kind"],
+            registry=r,
+        )
         self.mail = Counter(
             "baghchal_mail", "Emails handed to the mail server, by result.", ["result"], registry=r
         )

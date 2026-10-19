@@ -12,7 +12,7 @@ from baghchal_server.deps import AppState
 from baghchal_server.lobby.models import Block
 from baghchal_server.mail import MemoryMailer
 
-from .conftest import PASSWORD, Clock, Player, PlayerFactory, last_token, sign_up
+from .conftest import AGREE, PASSWORD, Clock, Player, PlayerFactory, last_token, sign_up
 from .test_games import FIVE_CAPTURES, _event, _online, _play, _start
 
 NEW_PASSWORD = "a brand new passphrase"
@@ -194,7 +194,7 @@ async def test_an_abandoned_sign_up_does_not_hold_the_address(
     alice = await players("alice")
     await client.post(
         "/api/v1/auth/register",
-        json={"username": "ghost", "email": "new@example.org", "password": PASSWORD},
+        json={**AGREE, "username": "ghost", "email": "new@example.org", "password": PASSWORD},
     )
     clock.advance(hours=23)
     r = await alice.http.post(EMAIL_CHANGE, json={"password": PASSWORD, "email": "new@example.org"})
@@ -338,7 +338,12 @@ async def test_deleting_my_account(
     await sign_up(client, mailer, "alice", "alice@example.com")
     r = await client.post(
         "/api/v1/auth/register",
-        json={"username": old["goat"]["username"], "email": "x@example.com", "password": PASSWORD},
+        json={
+            **AGREE,
+            "username": old["goat"]["username"],
+            "email": "x@example.com",
+            "password": PASSWORD,
+        },
     )
     assert r.json()["error"]["code"] == "username_unavailable"
 

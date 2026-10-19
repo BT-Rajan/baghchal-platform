@@ -15,7 +15,7 @@ from baghchal_server.games import service as game_service
 from baghchal_server.lobby import service as lobby_service
 from baghchal_server.mail import MemoryMailer
 
-from .conftest import PASSWORD, Clock, Player, PlayerFactory, open_socket
+from .conftest import AGREE, PASSWORD, Clock, Player, PlayerFactory, open_socket
 
 CHALLENGES = "/api/v1/challenges"
 
@@ -65,7 +65,7 @@ async def test_player_search(
     # Unverified sign-ups are not listed.
     await app_client.post(
         "/api/v1/auth/register",
-        json={"username": "alpha", "email": "alpha@example.com", "password": PASSWORD},
+        json={**AGREE, "username": "alpha", "email": "alpha@example.com", "password": PASSWORD},
     )
 
     r = await me.http.get("/api/v1/players", params={"prefix": "AL"})

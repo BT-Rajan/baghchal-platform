@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 from typing import Final
 
 from fastapi import APIRouter, BackgroundTasks, Request, Response, status
@@ -7,6 +8,7 @@ from baghchal_server.accounts import lifecycle, service
 from baghchal_server.accounts.models import User
 from baghchal_server.accounts.schemas import (
     Accepted,
+    ClaimIn,
     DeleteAccountIn,
     EmailChangeConfirmIn,
     EmailChangedOut,
@@ -19,6 +21,7 @@ from baghchal_server.accounts.schemas import (
     PasswordResetConfirmIn,
     PasswordResetRequestIn,
     RegisterIn,
+    ResendVerificationIn,
     SessionOut,
     Transport,
     VerifyEmailIn,
@@ -34,6 +37,7 @@ from baghchal_server.deps import (
     session_token,
 )
 from baghchal_server.errors import AppError
+from baghchal_server.legal import age, consents
 from baghchal_server.lobby.routes import notify_challenge
 from baghchal_server.mail import Mail, deliver
 from baghchal_server.ratelimit import Limit
@@ -65,20 +69,30 @@ def _send(tasks: BackgroundTasks, state: AppState, mail: Mail | None) -> None:
         tasks.add_task(deliver, state.mailer, mail)
 
 
-def _me(user: User) -> MeOut:
+async def describe_me(db: DB, user: User, now: datetime) -> MeOut:
     return MeOut(
         id=user.id,
         username=user.username,
         email=user.email,
         created_at=user.created_at,
         role=user.role if user.role in {*service.STAFF, service.GUEST} else "player",
+        plays_people=age.plays_people(user, now),
+        parent_consent=user.parent_consent,
+        age_needed=user.age_checked_at is None,
+        consents_needed=await consents.needed(db, user.id),
     )
 
 
-def _session_response(
-    response: Response, state: AppState, user: User, token: str, transport: Transport
+async def _session_response(  # noqa: PLR0913 - the session and how to hand it over
+    response: Response,
+    state: AppState,
+    db: DB,
+    user: User,
+    token: str,
+    *,
+    transport: Transport,
 ) -> SessionOut:
-    me = _me(user)
+    me = await describe_me(db, user, state.clock())
     if transport == "bearer":
         return SessionOut(user=me, token=token)
     s = state.settings
@@ -114,30 +128,39 @@ async def play_as_guest(
     and casual games; anything rated or social asks them to make an account (``/me/claim``),
     which keeps their games."""
     await enforce_limit(state, GUESTS_PER_IP, client_ip(request))
-    user, token = await service.create_guest(db, state.hasher, state.settings, state.clock())
-    return _session_response(response, state, user, token, data.transport)
+    user, token = await service.create_guest(db, state.hasher, state.settings, state.clock(), data)
+    return await _session_response(response, state, db, user, token, transport=data.transport)
 
 
 @router.post("/me/claim")
 async def claim_guest(
-    data: RegisterIn, user: CurrentUser, tasks: BackgroundTasks, state: State, db: DB
+    data: ClaimIn, user: CurrentUser, tasks: BackgroundTasks, state: State, db: DB
 ) -> MeOut:
     """Make my guest account a real one: the username and password work at once; the email
     address once the link sent to it is opened."""
     await enforce_limit(state, ACCOUNT_CHANGES_PER_USER, str(user.id))
     await enforce_limit(state, MAIL_PER_ADDRESS, service.email_key(data.email))
-    mail = await service.claim_guest(db, state.hasher, state.settings, state.clock(), user, data)
-    _send(tasks, state, mail)
-    return _me(user)
+    mails = await service.claim_guest(db, state.hasher, state.settings, state.clock(), user, data)
+    for mail in mails:
+        _send(tasks, state, mail)
+    return await describe_me(db, user, state.clock())
 
 
 @router.post("/auth/verify-email")
-async def verify_email(
-    data: VerifyEmailIn, request: Request, response: Response, state: State, db: DB
+async def verify_email(  # noqa: PLR0913, PLR0917 - a route's dependencies
+    data: VerifyEmailIn,
+    request: Request,
+    response: Response,
+    tasks: BackgroundTasks,
+    state: State,
+    db: DB,
 ) -> SessionOut:
+    """Confirm the address and sign in. For a player under 18, this is when their parent is
+    emailed to agree."""
     await enforce_limit(state, TOKEN_PER_IP, client_ip(request))
-    user, token = await service.verify_email(db, state.settings, state.clock(), data.token)
-    return _session_response(response, state, user, token, data.transport)
+    user, token, mail = await service.verify_email(db, state.settings, state.clock(), data.token)
+    _send(tasks, state, mail)
+    return await _session_response(response, state, db, user, token, transport=data.transport)
 
 
 @router.post("/auth/login")
@@ -159,7 +182,7 @@ async def login(
             await state.limiter.undo(LOGIN_FAILURES_PER_IP, ip, counted_at)
         raise
     await state.limiter.undo(LOGIN_FAILURES_PER_IP, ip, counted_at)
-    return _session_response(response, state, user, token, data.transport)
+    return await _session_response(response, state, db, user, token, transport=data.transport)
 
 
 def _clear_cookie(response: Response, state: AppState) -> None:
@@ -179,6 +202,19 @@ async def logout(request: Request, response: Response, state: State, db: DB) -> 
         await service.revoke_session(db, token)
     if transport == "cookie":
         _clear_cookie(response, state)
+
+
+@router.post("/auth/verify-email/resend", status_code=status.HTTP_202_ACCEPTED)
+async def resend_verification(
+    data: ResendVerificationIn, request: Request, tasks: BackgroundTasks, state: State, db: DB
+) -> Accepted:
+    """Email a new confirmation link if the address has a sign-up waiting for one. Always
+    answers the same, so it tells nobody whether an address is registered."""
+    await enforce_limit(state, RESET_PER_IP, client_ip(request))
+    await enforce_limit(state, MAIL_PER_ADDRESS, service.email_key(data.email))
+    mail = await service.resend_verification(db, state.settings, state.clock(), data.email)
+    _send(tasks, state, mail)
+    return Accepted()
 
 
 @router.post("/auth/password-reset", status_code=status.HTTP_202_ACCEPTED)
@@ -202,8 +238,8 @@ async def confirm_password_reset(
 
 
 @router.get("/me")
-async def me(user: CurrentUser) -> MeOut:
-    return _me(user)
+async def me(user: CurrentUser, state: State, db: DB) -> MeOut:
+    return await describe_me(db, user, state.clock())
 
 
 # ── The signed-in player's account ────────────────────────────────────────

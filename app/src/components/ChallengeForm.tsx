@@ -12,6 +12,7 @@ import { Button } from './Button';
 import { Hint } from './Card';
 import { ChallengeCard } from './ChallengeCard';
 import { Notice } from './Notice';
+import { whyNotPeople } from './PeopleOnly';
 import { Screen } from './Screen';
 import { Segmented } from './Segmented';
 import { useServerNow } from './useNow';
@@ -36,6 +37,7 @@ function leave() {
  * it is sent to. A link is shown once made, to copy and send.
  */
 export function ChallengeForm({ opponent }: { opponent?: string }) {
+  const me = useMe();
   const byLink = opponent === undefined;
   const [timeControl, setTimeControl] = useState<TimeControl>('5+3');
   const [mode, setMode] = useState<'rated' | 'casual'>(byLink ? 'casual' : 'rated');
@@ -56,6 +58,15 @@ export function ChallengeForm({ opponent }: { opponent?: string }) {
       },
       { onSuccess: (challenge) => (byLink ? setMade(challenge) : leave()) },
     );
+
+  const notYet = whyNotPeople(me);
+  if (notYet !== null) {
+    return (
+      <Screen title={title}>
+        <Notice tone="info">{notYet}</Notice>
+      </Screen>
+    );
+  }
 
   return (
     <Screen title={title}>

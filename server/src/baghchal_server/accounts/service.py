@@ -15,9 +15,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from baghchal_server.accounts.models import EmailToken, Session, User
-from baghchal_server.accounts.schemas import LoginIn, RegisterIn
+from baghchal_server.accounts.schemas import Agreement, ClaimIn, LoginIn, RegisterIn
 from baghchal_server.config import Settings
 from baghchal_server.errors import AppError
+from baghchal_server.legal import age
+from baghchal_server.legal import consents as legal
 from baghchal_server.mail import Mail
 from baghchal_server.security import PasswordHasher, hash_token, new_token
 
@@ -101,6 +103,8 @@ async def register(
     owner of an existing address gets a "you already have an account" mail instead.
     """
     ukey, ekey = username_key(data.username), email_key(data.email)
+    legal.check_versions(data.terms_version, data.privacy_version)
+    adult = age.check(data.birth_month, data.parent_email, data.email, now)
     if not username_allowed(settings, data.username):
         raise AppError(409, "username_unavailable", "That username is not available.")
     if data.password.lower() == ukey:
@@ -125,7 +129,9 @@ async def register(
         if existing.email_verified_at is not None:
             await db.commit()
             return _account_exists_mail(settings, existing)
-        token = await _issue_token(db, existing.id, VERIFY, now + settings.verify_email_ttl, now)
+        age.apply(existing, adult, data.parent_email, now)  # the latest answers count
+        await legal.record(db, existing.id, now)
+        token = await issue_token(db, existing.id, VERIFY, now + settings.verify_email_ttl, now)
         await db.commit()
         return _verify_mail(settings, existing, token)
 
@@ -137,9 +143,11 @@ async def register(
         email_key=ekey,
         password_hash=password_hash,
         is_active=True,
+        role="player",
         created_at=now,
         updated_at=now,
     )
+    age.apply(user, adult, data.parent_email, now)  # the parent is emailed once this is verified
     db.add(user)
     try:
         await db.flush()
@@ -149,34 +157,40 @@ async def register(
         if await db.scalar(select(User.id).where(User.username_key == ukey)):
             raise AppError(409, "username_taken", "That username is taken.") from None
         return None
-    token = await _issue_token(db, user.id, VERIFY, now + settings.verify_email_ttl, now)
+    await legal.record(db, user.id, now)
+    token = await issue_token(db, user.id, VERIFY, now + settings.verify_email_ttl, now)
     await db.commit()
     return _verify_mail(settings, user, token)
 
 
 async def verify_email(
     db: AsyncSession, settings: Settings, now: datetime, token: str
-) -> tuple[User, str]:
-    """Mark the address verified and sign the user in; returns (user, session token)."""
+) -> tuple[User, str, Mail | None]:
+    """Mark the address verified and sign the user in; returns (user, session token, and the
+    email asking a parent to agree, for players under 18)."""
     user = await _active_user(db, await _consume_token(db, token, VERIFY, now))
     user.email_verified_at = user.email_verified_at or now
     user.updated_at = now
     session_token = await create_session(db, user.id, now, settings.session_ttl)
+    ask = user.parent_consent == age.PENDING and user.parent_email is not None
+    mail = await ask_parent(db, settings, user, now) if ask else None
     await db.commit()
-    return user, session_token
+    return user, session_token, mail
 
 
 # ── Guests ────────────────────────────────────────────────────────────────
 
 
 async def create_guest(
-    db: AsyncSession, hasher: PasswordHasher, settings: Settings, now: datetime
+    db: AsyncSession, hasher: PasswordHasher, settings: Settings, now: datetime, data: Agreement
 ) -> tuple[User, str]:
     """A guest account and its session, to play at once without signing up.
 
     Its password is random and never told, so nobody can sign in to it; its email is a
-    placeholder that no mail is sent to.
+    placeholder that no mail is sent to. A guest under 18 plays only the computer.
     """
+    legal.check_versions(data.terms_version, data.privacy_version)
+    adult = age.check(data.birth_month, None, "", now, guest=True)
     password_hash = await hasher.hash(secrets.token_urlsafe(32))
     for _ in range(5):
         username = f"{GUEST_PREFIX}{secrets.token_hex(3)}"
@@ -193,12 +207,14 @@ async def create_guest(
             created_at=now,
             updated_at=now,
         )
+        age.apply(user, adult, None, now)
         db.add(user)
         try:
             await db.flush()
         except IntegrityError:
             await db.rollback()
             continue
+        await legal.record(db, user.id, now)
         token = await create_session(db, user.id, now, settings.session_ttl)
         await db.commit()
         return user, token
@@ -211,13 +227,22 @@ async def claim_guest(  # noqa: PLR0913, PLR0917 - who, and the account they wan
     settings: Settings,
     now: datetime,
     user: User,
-    data: RegisterIn,
-) -> Mail | None:
+    data: ClaimIn,
+) -> list[Mail]:
     """Turn a guest into an account, keeping its games: the username and password work at
     once; the email address once its confirmation link is opened (as for a change of email,
-    so nobody can take an address they cannot read)."""
+    so nobody can take an address they cannot read). A player under 18 now needs a parent's
+    agreement, asked at once."""
     if user.role != GUEST:
         raise AppError(409, "not_a_guest", "You already have an account.")
+    legal.check_versions(data.terms_version, data.privacy_version)
+    if data.birth_month is not None:
+        adult = age.adult_from(data.birth_month, now)
+    elif user.age_checked_at is not None:  # given when the guest started playing
+        adult = user.adult_from if user.adult_from is not None and user.adult_from > now else None
+    else:
+        raise AppError(422, "birth_month_required", "Please give your month and year of birth.")
+    age.check_parent(adult, data.parent_email, data.email)
     ukey = username_key(data.username)
     if not username_allowed(settings, data.username):
         raise AppError(409, "username_unavailable", "That username is not available.")
@@ -231,7 +256,11 @@ async def claim_guest(  # noqa: PLR0913, PLR0917 - who, and the account they wan
     except IntegrityError:
         await db.rollback()
         raise AppError(409, "username_taken", "That username is taken.") from None
-    return await request_email_change(db, settings, now, user, data.email)
+    ask = age.apply(user, adult, data.parent_email, now)
+    await legal.record(db, user.id, now)
+    parent = await ask_parent(db, settings, user, now) if ask else None
+    confirm = await request_email_change(db, settings, now, user, data.email)
+    return [m for m in (parent, confirm) if m is not None]
 
 
 # ── Login and sessions ────────────────────────────────────────────────────
@@ -314,6 +343,19 @@ async def revoke_session(db: AsyncSession, token: str) -> None:
 # ── Password reset ────────────────────────────────────────────────────────
 
 
+async def resend_verification(
+    db: AsyncSession, settings: Settings, now: datetime, email: str
+) -> Mail | None:
+    """A fresh confirmation link for a sign-up not yet confirmed, or None (nothing to send).
+    The earlier links keep working until they expire."""
+    user = await db.scalar(select(User).where(User.email_key == email_key(email)))
+    if user is None or not user.is_active or user.email_verified_at is not None:
+        return None
+    token = await issue_token(db, user.id, VERIFY, now + settings.verify_email_ttl, now)
+    await db.commit()
+    return _verify_mail(settings, user, token)
+
+
 async def request_password_reset(
     db: AsyncSession, settings: Settings, now: datetime, email: str
 ) -> Mail | None:
@@ -321,7 +363,7 @@ async def request_password_reset(
     user = await db.scalar(select(User).where(User.email_key == email_key(email)))
     if user is None or not user.is_active or user.email_verified_at is None:
         return None
-    token = await _issue_token(db, user.id, RESET, now + settings.password_reset_ttl, now)
+    token = await issue_token(db, user.id, RESET, now + settings.password_reset_ttl, now)
     await db.commit()
     return Mail(
         user.email,
@@ -403,7 +445,7 @@ async def request_email_change(
     if owner is not None and owner.email_verified_at is not None:
         await db.commit()
         return _account_exists_mail(settings, owner)
-    token = await _issue_token(
+    token = await issue_token(
         db, user.id, EMAIL_CHANGE, now + settings.verify_email_ttl, now, new_email=new_email
     )
     await db.commit()
@@ -470,7 +512,7 @@ async def _cancel_tokens(db: AsyncSession, user_id: uuid.UUID, purpose: str, now
     )
 
 
-async def _issue_token(  # noqa: PLR0913 - what the token is for, and until when
+async def issue_token(  # noqa: PLR0913 - what the token is for, and until when
     db: AsyncSession,
     user_id: uuid.UUID,
     purpose: str,
@@ -510,7 +552,7 @@ async def _consume_token(db: AsyncSession, token: str, purpose: str, now: dateti
     )
     if result.rowcount != 1:  # type: ignore[attr-defined]
         await db.rollback()
-        raise _invalid_token()
+        raise invalid_token()
     user_id = await db.scalar(select(EmailToken.user_id).where(EmailToken.token_hash == token_hash))
     assert user_id is not None  # noqa: S101 - the row was just updated
     return user_id
@@ -520,11 +562,17 @@ async def _active_user(db: AsyncSession, user_id: uuid.UUID) -> User:
     user = await db.get(User, user_id)
     if user is None or not user.is_active:
         await db.rollback()
-        raise _invalid_token()
+        raise invalid_token()
     return user
 
 
-def _invalid_token() -> AppError:
+async def ask_parent(db: AsyncSession, settings: Settings, user: User, now: datetime) -> Mail:
+    """Issue a parent's link and return the email carrying it (the caller commits)."""
+    token = await issue_token(db, user.id, legal.PARENT, now + legal.PARENT_DEADLINE, now)
+    return legal.parent_mail(settings, user, token)
+
+
+def invalid_token() -> AppError:
     return AppError(400, "invalid_token", "This link is invalid or has expired.")
 
 

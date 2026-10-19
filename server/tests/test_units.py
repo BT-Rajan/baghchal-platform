@@ -140,7 +140,12 @@ async def test_smtp_mailer(monkeypatch: pytest.MonkeyPatch) -> None:
     assert captured["hostname"] == "smtp.example.com"
     assert captured["username"] == "user"
     assert captured["password"] == "secret"
-    assert captured["start_tls"] is True
+    assert (captured["start_tls"], captured["use_tls"]) == (True, False)
+    # Port 465 (SMTPS) is TLS from the start, with no STARTTLS.
+    await SmtpMailer(settings.model_copy(update={"smtp_port": 465})).send(
+        Mail("a@example.com", "Hello", "Body text")
+    )
+    assert (captured["start_tls"], captured["use_tls"]) == (False, True)
 
 
 async def test_delivery_failures_are_logged_not_raised() -> None:

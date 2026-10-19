@@ -29,6 +29,15 @@ class User(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     """When the player deleted the account. The row stays, without personal data, so the
     games of the players they met keep their opponent."""
+    age_checked_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    """When the player told us their month of birth (None: never asked, an older account)."""
+    adult_from: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    """When the player is surely 18, if they were not when asked. We keep this, not the birth
+    month: it is all the rules need (see legal/age.py)."""
+    parent_consent: Mapped[str | None] = mapped_column(String(8))
+    """For players under 18: ``pending`` until a parent or guardian agrees, then ``given``."""
+    parent_email: Mapped[str | None] = mapped_column(String(254))
+    parent_consented_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime)
 

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, type } from '@/theme';
 
 import { focusRing } from './focus';
+import { pressedLook, ripple } from './press';
 
 export interface SegmentedProps<T extends string> {
   label: string;
@@ -34,11 +35,12 @@ export function Segmented<T extends string>({
               aria-checked={selected}
               aria-label={option.label}
               onPress={() => onChange(option.value)}
+              {...ripple(selected)}
               style={(state) => [
                 styles.option,
                 vertical && styles.optionVertical,
                 selected && styles.selected,
-                state.pressed && !selected && styles.pressed,
+                pressedLook(state.pressed && !selected, styles.pressed),
                 focusRing(state),
               ]}
             >

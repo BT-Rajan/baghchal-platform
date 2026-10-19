@@ -13,6 +13,7 @@ const FULLY_COVERED = [
   'src/appearance',
   'src/payments',
   'src/pro',
+  'src/legal',
   'src/apiUrl.js',
 ];
 const full = { branches: 100, functions: 100, lines: 100, statements: 100 };

@@ -49,13 +49,7 @@ API_PORT=7071
 # Processes thinking for the computer opponent (about one CPU core each).
 COMPUTER_WORKERS=2
 
-# Email (sign-up confirmations, password resets). Without SMTP_HOST the emails, links
-# included, are only written to the log: pm2 logs bhagchal2
-SMTP_HOST=
-SMTP_PORT=587
-SMTP_USERNAME=
-SMTP_PASSWORD=
-MAIL_FROM='ClawPlay <no-reply@localhost>'
+# Email (sign-up confirmations, password resets) is set in .env, beside this file.
 
 # Payments (Razorpay Dashboard -> Account & Settings -> API Keys; and Webhooks, sending to
 # PUBLIC_URL/api/v1/payments/webhook). Empty: "Paying online is coming soon".
@@ -66,6 +60,28 @@ EOF
 fi
 # shellcheck source=/dev/null
 source "$CONFIG"
+
+# --- Email provider (kept in .env, never committed) ------------------------------------------
+MAIL_CONFIG="$ROOT/.env"
+if [[ ! -f "$MAIL_CONFIG" ]]; then
+  step "Writing the email settings to .env (fill them in to send real emails)"
+  # A value in single quotes, safe to read back with "source".
+  quote() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"; }
+  # Any email settings an older bhagchal2.env had are carried over.
+  (umask 077 && cat >"$MAIL_CONFIG") <<EOF
+# Email for ClawPlay: sign-up confirmations, password resets and parents' links.
+# Fill in your email provider's SMTP details (one with SPF and DKIM set up for the sending
+# domain, or the links land in spam), then restart: ./start.sh
+# Without SMTP_HOST the emails, links included, are only written to: pm2 logs bhagchal2
+SMTP_HOST=$(quote "${SMTP_HOST:-}")
+# 587 (STARTTLS) or 465 (TLS from the start), as your provider says.
+SMTP_PORT=${SMTP_PORT:-587}
+SMTP_USERNAME=$(quote "${SMTP_USERNAME:-}")
+SMTP_PASSWORD=$(quote "${SMTP_PASSWORD:-}")
+# The sender players see; its domain must be one your provider may send for.
+MAIL_FROM=$(quote "${MAIL_FROM:-ClawPlay <no-reply@example.com>}")
+EOF
+fi
 
 # --- Database --------------------------------------------------------------------------------
 step "Creating database $DB_NAME (if it does not exist)"

@@ -5,6 +5,7 @@ import { colors, radius, spacing } from '@/theme';
 
 import { Hint } from '../Card';
 import { focusRing } from '../focus';
+import { ripple } from '../press';
 
 /**
  * The moves in pairs ("1. a2  a1-b1"). With `onShow` (a finished game), each move is a button
@@ -30,6 +31,7 @@ export function MoveList({
         aria-label={`Show move ${ply}: ${text}`}
         aria-pressed={selected}
         onPress={() => onShow(ply)}
+        {...ripple(selected)}
         style={(state) => [styles.tap, selected && styles.selected, focusRing(state)]}
       >
         <Text style={[styles.move, selected && styles.selectedText]}>{text}</Text>

@@ -17,6 +17,7 @@ from baghchal_server.errors import AppError
 from baghchal_server.friends.models import Friendship
 from baghchal_server.games import service as games
 from baghchal_server.games.models import Game
+from baghchal_server.legal.age import plays_people
 from baghchal_server.lobby.models import Block, Challenge, ChallengeStatus
 from baghchal_server.lobby.schemas import ChallengeIn, ChallengeOut, PlayerOut
 from baghchal_server.lobby.time_controls import TIME_CONTROLS, label_of
@@ -263,7 +264,7 @@ async def create_challenge(
             "player_blocked",
             f"You have blocked {opponent.username}. Unblock them to challenge them.",
         )
-    if await has_blocked(db, opponent.id, challenger.id):
+    if await has_blocked(db, opponent.id, challenger.id) or not plays_people(opponent, now):
         raise AppError(403, "challenge_refused", f"You cannot challenge {opponent.username}.")
     await check_abort_cooldown(db, challenger.id, now)
     if not await presence.online([opponent.id]):

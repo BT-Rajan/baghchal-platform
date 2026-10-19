@@ -56,6 +56,8 @@ def settings(database_url: str) -> Settings:
         allowed_origins=(ORIGIN,),
         game_sweeper=False,
         computer_workers=0,
+        fair_play_checks=False,
+        housekeeping=False,
         razorpay_key_id=FakeGateway.key_id,
         razorpay_key_secret=KEY_SECRET,
         razorpay_webhook_secret=WEBHOOK_SECRET,

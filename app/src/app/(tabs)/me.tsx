@@ -13,7 +13,7 @@ export default function MeScreen() {
   const me = useMe();
   const profile = useProfile(me.username);
   return (
-    <Screen title={me.username} align="top">
+    <Screen title={me.username} align="top" refreshable>
       <GuestBanner />
       <Button
         title="Settings"

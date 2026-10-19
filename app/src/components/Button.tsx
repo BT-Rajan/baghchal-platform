@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { colors, radius, spacing, type } from '@/theme';
 
 import { focusRing } from './focus';
+import { pressedLook, ripple } from './press';
 import { Icon, type IconName } from './Icon';
 
 export interface ButtonProps {
@@ -43,11 +44,12 @@ export function Button({
       aria-disabled={inactive}
       disabled={inactive}
       onPress={onPress}
+      {...ripple(variant !== 'secondary')}
       style={(state) => [
         styles.button,
         compact && styles.compact,
         styles[variant],
-        state.pressed && styles.pressed,
+        pressedLook(state.pressed, styles.pressed),
         inactive && styles.dim,
         focusRing(state),
       ]}
@@ -80,6 +82,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
+    // Keeps Android's ripple inside the rounded corners.
+    overflow: 'hidden',
   },
   // 44 points: the smallest comfortable touch target.
   compact: { minHeight: 44, paddingHorizontal: spacing.md },

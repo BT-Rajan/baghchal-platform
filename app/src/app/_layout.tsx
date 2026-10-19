@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { router, Stack, type ErrorBoundaryProps } from 'expo-router';
+import { router, Stack, usePathname, type ErrorBoundaryProps } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { describeError } from '@/api/errors';
@@ -14,10 +15,25 @@ import { ChallengeBanner } from '@/components/ChallengeBanner';
 import { ConnectionBanner } from '@/components/ConnectionBanner';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
+import { statusBarStyle } from '@/components/statusBar';
 import { API_URL } from '@/config';
 import { socketUrl } from '@/realtime/connection';
 import { RealtimeProvider } from '@/realtime/RealtimeProvider';
 import { colors } from '@/theme';
+
+// The splash screen (the icon on the brand colour) stays until we know whether someone is signed
+// in, so the app opens straight onto the right screen.
+void SplashScreen.preventAutoHideAsync().catch(() => {});
+
+/** In the apps, every screen's bar is the brand's dark bar, as Android and iOS apps have. */
+const APP_BAR =
+  Platform.OS === 'web'
+    ? {}
+    : {
+        headerStyle: { backgroundColor: colors.brandInk },
+        headerTintColor: colors.brandCream,
+        headerTitleStyle: { color: colors.brandCream },
+      };
 
 export default function RootLayout() {
   const [queryClient] = useState(
@@ -31,7 +47,6 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <SessionProvider baseUrl={API_URL} queryClient={queryClient}>
           <RealtimeProvider url={socketUrl(API_URL)} onGameStarted={openGame}>
-            <StatusBar style="auto" />
             <Routes />
           </RealtimeProvider>
         </SessionProvider>
@@ -47,7 +62,12 @@ function openGame(game: { id: string }) {
 
 function Routes() {
   const { state, session } = useSession();
-  if (state.status === 'loading') {
+  const pathname = usePathname();
+  const loading = state.status === 'loading';
+  useEffect(() => {
+    if (!loading) void SplashScreen.hideAsync().catch(() => {});
+  }, [loading]);
+  if (loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={colors.accent} size="large" />
@@ -63,12 +83,16 @@ function Routes() {
     );
   }
   const signedIn = state.status === 'signedIn';
+  // An account with something to agree to (its age, or changed terms) sees only that until done.
+  const agreeing = signedIn && (state.user.age_needed || state.user.consents_needed.length > 0);
+  const playing = signedIn && !agreeing;
   return (
     <View style={styles.app}>
-      {signedIn && <ConnectionBanner />}
-      {signedIn && <ChallengeBanner />}
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Protected guard={signedIn} redirectTo="/welcome">
+      <StatusBar style={statusBarStyle(pathname)} />
+      {playing && <ConnectionBanner />}
+      {playing && <ChallengeBanner />}
+      <Stack screenOptions={{ headerShown: false, ...APP_BAR }}>
+        <Stack.Protected guard={playing} redirectTo={agreeing ? '/agree' : '/welcome'}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="player/[username]" options={{ headerShown: true, title: '' }} />
           <Stack.Screen name="challenge/[username]" options={{ presentation: 'modal' }} />
@@ -103,8 +127,12 @@ function Routes() {
             options={{ headerShown: true, title: 'Moderation' }}
           />
         </Stack.Protected>
+        <Stack.Protected guard={agreeing} redirectTo="/welcome">
+          <Stack.Screen name="agree" />
+        </Stack.Protected>
         <Stack.Protected guard={!signedIn}>
           <Stack.Screen name="welcome" />
+          <Stack.Screen name="start" />
           <Stack.Screen name="sign-in" />
           <Stack.Screen name="sign-up" />
           <Stack.Screen name="forgot-password" />
@@ -113,6 +141,10 @@ function Routes() {
         <Stack.Screen name="verify-email" />
         <Stack.Screen name="reset-password" />
         <Stack.Screen name="confirm-email" />
+        <Stack.Screen name="parent-consent" />
+        {/* The terms and privacy policy can be read by anyone, from anywhere. */}
+        <Stack.Screen name="terms" options={{ headerShown: true, title: 'Terms of service' }} />
+        <Stack.Screen name="privacy" options={{ headerShown: true, title: 'Privacy policy' }} />
       </Stack>
     </View>
   );

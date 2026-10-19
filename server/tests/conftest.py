@@ -24,6 +24,7 @@ from sqlalchemy import text
 from baghchal_server.app import create_app
 from baghchal_server.config import Settings
 from baghchal_server.deps import AppState
+from baghchal_server.legal.documents import VERSIONS, Document
 from baghchal_server.mail import MemoryMailer
 from baghchal_server.payments.gateway import Gateway
 from baghchal_server.ratelimit import MemoryRateLimiter
@@ -31,6 +32,12 @@ from baghchal_server.ratelimit import MemoryRateLimiter
 SERVER_DIR = Path(__file__).resolve().parents[1]
 ORIGIN = "http://localhost:8081"
 PASSWORD = "correct horse battery"
+AGREE = {
+    "birth_month": "1990-01",
+    "terms_version": VERSIONS[Document.TERMS],
+    "privacy_version": VERSIONS[Document.PRIVACY],
+}
+"""What sign-up asks besides the account: an adult who accepts the current documents."""
 
 
 @pytest.fixture(scope="session")
@@ -88,6 +95,7 @@ def settings(database_url: str) -> Settings:
         game_sweeper=False,  # tests call the sweeper directly
         computer_workers=0,  # think in a thread: no processes to start
         fair_play_checks=False,  # tests run the checks directly
+        housekeeping=False,  # tests run it directly
         fair_play_workers=0,
     )
 
@@ -110,6 +118,7 @@ async def app(
         state: AppState = app.state.ctx
         async with state.engine.begin() as conn:
             for table in (
+                "consents",
                 "fair_play_sides",
                 "fair_play_checks",
                 "trainer_attempts",
@@ -175,7 +184,8 @@ async def sign_up(
 ) -> httpx.Response:
     """Register and verify an account; returns the verify response (which signs in)."""
     r = await client.post(
-        "/api/v1/auth/register", json={"username": username, "email": email, "password": password}
+        "/api/v1/auth/register",
+        json={**AGREE, "username": username, "email": email, "password": password},
     )
     assert r.status_code == 202, r.text
     r = await client.post("/api/v1/auth/verify-email", json={"token": last_token(mailer)})
@@ -225,7 +235,12 @@ async def players(app: FastAPI, mailer: MemoryMailer) -> AsyncIterator[PlayerFac
         clients.append(http)
         r = await http.post(
             "/api/v1/auth/register",
-            json={"username": username, "email": f"{username}@example.com", "password": PASSWORD},
+            json={
+                **AGREE,
+                "username": username,
+                "email": f"{username}@example.com",
+                "password": PASSWORD,
+            },
         )
         assert r.status_code == 202, r.text
         r = await http.post(

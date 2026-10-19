@@ -14,6 +14,7 @@ from baghchal_server.accounts.models import User
 from baghchal_server.accounts.service import resolve_session
 from baghchal_server.config import Settings
 from baghchal_server.errors import AppError
+from baghchal_server.legal.age import plays_people
 from baghchal_server.mail import Mailer
 from baghchal_server.metrics import Metrics
 from baghchal_server.payments.gateway import Gateway
@@ -91,6 +92,22 @@ async def get_member(user: CurrentUser) -> User:
 
 
 Member = Annotated[User, Depends(get_member)]
+
+
+async def get_people_player(user: CurrentUser, state: State) -> User:
+    """A signed-in player who may play other people: not a player under 18 whose parent has
+    not agreed yet (they play the computer meanwhile)."""
+    if not plays_people(user, state.clock()):
+        raise AppError(
+            403,
+            "parent_consent_needed",
+            "A parent or guardian needs to agree before you play other people. You can play "
+            "the computer meanwhile.",
+        )
+    return user
+
+
+PeoplePlayer = Annotated[User, Depends(get_people_player)]
 
 
 def client_ip(request: Request) -> str:
