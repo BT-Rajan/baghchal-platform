@@ -124,7 +124,7 @@ describe('a guest', () => {
   });
 
   test('has no account settings, and is warned before signing out', async () => {
-    await asGuest('/me', {
+    await asGuest('/settings', {
       'GET /api/v1/players/guest-3fa9c1': {
         status: 200,
         body: { ...GUEST, online: true, playing: false, blocked: false, ratings: {} },
@@ -135,8 +135,8 @@ describe('a guest', () => {
     expect(
       await screen.findByRole('button', { name: 'Sign out (this guest account will be lost)' }),
     ).toBeOnTheScreen();
-    expect(screen.queryByText('guest-3fa9c1@guest.invalid')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Account settings' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Moderation' })).toBeNull();
+    expect(screen.queryByText(/guest-3fa9c1@guest\.invalid/)).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Email address' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Moderation' })).toBeNull();
   });
 });

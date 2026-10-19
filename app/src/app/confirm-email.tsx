@@ -18,7 +18,7 @@ export default function ConfirmEmail() {
   const confirm = useMutation({
     mutationFn: async (linkToken: string) => {
       const changed = await session.api.confirmEmailChange(linkToken);
-      // Signed in here: show the new address on the Me tab.
+      // Signed in here: show the new address in Settings.
       await session.refresh().catch(() => {});
       return changed;
     },

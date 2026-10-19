@@ -9,7 +9,7 @@ import { Button } from './Button';
 import { Card, SectionTitle } from './Card';
 import { ErrorState, Loading } from './States';
 
-/** My plan, on the Me tab, with the way to the plans. */
+/** My plan, in Settings, with the way to the plans. */
 export function PlanCard() {
   const mine = useMyPlan();
   return (

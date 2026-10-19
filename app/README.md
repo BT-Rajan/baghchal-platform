@@ -92,7 +92,8 @@ scripts/        the Expo-cloud guardrail
   for a bearer token and keep it in the Keychain / Keystore (`expo-secure-store`). On start the
   app asks `GET /me`; any `401 not_authenticated` signs out, ignoring late answers that belong
   to an earlier session.
-- **Your account.** Me → Account settings changes the email address (confirmed by a link sent
+- **Settings.** Me → Settings is the one place for settings: the plan, board and sounds, blocked
+  players, moderation (staff) and signing out; for members it also changes the email address (confirmed by a link sent
   to the new one) or password, downloads your data (a file on the web, the share sheet in
   apps) and deletes the account.
 - **Home.** The Play tab is a dashboard: a live game to continue first, challenges, "Play
@@ -115,7 +116,7 @@ scripts/        the Expo-cloud guardrail
 - **History and replay.** Profiles list the player's finished games, newest first and paged;
   each opens the game, where finished games step through every position. A game against the
   computer offers "Play the computer again" (sides swapped) instead of a rematch or report.
-- **Plans.** Me → Your plan shows Free, Plus or Pro and leads to the plans. Paid features are
+- **Plans.** Settings → Your plan shows Free, Plus or Pro and leads to the plans. Paid features are
   shown with what unlocks them (Hard in the computer picker, the 30-day history note) rather
   than hidden. Admins grant and revoke plans and features on a player's moderation page.
 - **Analysis.** A finished game has an Analysis section: "Analyse this game" (Plus and Pro;
@@ -134,7 +135,7 @@ scripts/        the Expo-cloud guardrail
   now" on my games) and the trainer (the puzzle on the real board, in the player's theme).
   Players without Pro see what each does in the one `Upsell` component, as everywhere a
   paid feature is locked.
-- **Board, pieces and sounds.** Me → Board, pieces and sounds: board themes and piece sets
+- **Board, pieces and sounds.** Settings → Board, pieces and sounds: board themes and piece sets
   (drawn by `Wood.tsx` and `Coin.tsx` from `src/appearance/catalog.ts`), sound packs (made live
   in `sound.ts`), game sounds on or off, and showing or hiding the badge. Free sees the choices
   it would get with Plus. These are one setting, kept on the server for every device: the

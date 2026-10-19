@@ -153,18 +153,17 @@ describe('the Me tab', () => {
   };
 
   test('players see no moderation', async () => {
-    await signedIn('/me', ME_ROUTES);
-    await screen.findByRole('button', { name: 'Account settings' });
-    expect(screen.queryByRole('button', { name: 'Moderation' })).toBeNull();
+    await signedIn('/settings', ME_ROUTES);
+    await screen.findByRole('button', { name: 'Sign out' });
+    expect(screen.queryByRole('link', { name: 'Moderation' })).toBeNull();
   });
 
   test('moderators open the report queue from it', async () => {
-    const { app } = await asModerator('/me', {
+    const { app } = await asModerator('/settings', {
       ...ME_ROUTES,
       'GET /api/v1/mod/reports': { status: 200, body: [] },
     });
-    await screen.findByRole('button', { name: 'Moderation' });
-    await press('Moderation');
+    await fireEvent.press(await screen.findByRole('link', { name: 'Moderation' }));
     expect(await screen.findByText('No open reports.')).toBeOnTheScreen();
     expect(app.getPathname()).toBe('/moderation');
   });

@@ -25,14 +25,14 @@ const radio = (name: string | RegExp) => screen.getByRole('radio', { name });
 
 describe('board, pieces and sounds', () => {
   test('Free keeps the first of each, and says what Plus adds', async () => {
-    const { app, server } = await open('/me', {
+    const { app, server } = await open('/settings', {
       'GET /api/v1/players/alice': {
         status: 200,
         body: { ...ME, online: true, playing: false, blocked: false, ratings: {} },
       },
       'GET /api/v1/blocks': { status: 200, body: [] },
     });
-    await fireEvent.press(await screen.findByRole('button', { name: 'Board, pieces and sounds' }));
+    await fireEvent.press(await screen.findByRole('link', { name: 'Board, pieces and sounds' }));
     await waitFor(() => expect(app.getPathname()).toBe('/appearance'));
     expect(
       await screen.findByText('More boards, pieces and sound packs, and a badge by your name.'),

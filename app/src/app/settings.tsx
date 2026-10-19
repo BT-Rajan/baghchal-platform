@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -8,21 +9,96 @@ import { useApi, useMe, useSession } from '@/auth/session';
 import { checkEmailChange, checkPasswordChange, checkPasswordGiven } from '@/auth/validation';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
+import { FeatureLink } from '@/components/FeatureLink';
+import { GuestBanner } from '@/components/GuestBanner';
+import { PlanCard } from '@/components/PlanCard';
+import { ErrorState, Loading } from '@/components/States';
+import { useBlock, useBlocks } from '@/lobby/hooks';
 import { useFormErrors } from '@/components/form';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { colors, spacing } from '@/theme';
 
-/** Change the email address or password, download your data, or delete the account. */
-export default function AccountScreen() {
+/**
+ * Settings, all in one place: the plan, the board and sounds, blocked players and moderation;
+ * for members, the email address, password, their data and deleting the account; signing out.
+ */
+export default function SettingsScreen() {
+  const me = useMe();
+  const { session } = useSession();
+  const signOut = useMutation({ mutationFn: () => session.signOut() });
+  const guest = me.role === 'guest';
   return (
     <Screen align="top">
-      <EmailSection />
-      <PasswordSection />
-      <DataSection />
-      <DeleteSection />
+      <GuestBanner />
+      <PlanCard />
+      <SectionTitle>Look and sound</SectionTitle>
+      <FeatureLink
+        icon="palette"
+        title="Board, pieces and sounds"
+        text="How games look and sound, on every device you use."
+        onPress={() => router.push('/appearance')}
+      />
+      {(me.role === 'moderator' || me.role === 'admin') && (
+        <FeatureLink
+          icon="shield"
+          title="Moderation"
+          text="Reports, and the players' records."
+          onPress={() => router.push('/moderation')}
+        />
+      )}
+      <BlockedPlayers />
+      {!guest && (
+        <>
+          <EmailSection />
+          <PasswordSection />
+          <DataSection />
+          <DeleteSection />
+        </>
+      )}
+      <SectionTitle>Sign out</SectionTitle>
+      <Button
+        title={guest ? 'Sign out (this guest account will be lost)' : 'Sign out'}
+        variant="secondary"
+        onPress={() => signOut.mutate()}
+        busy={signOut.isPending}
+      />
     </Screen>
+  );
+}
+
+function BlockedPlayers() {
+  const blocks = useBlocks();
+  const change = useBlock();
+  return (
+    <>
+      <SectionTitle>Blocked players</SectionTitle>
+      {change.error !== null && <Notice tone="error">{describeError(change.error)}</Notice>}
+      {blocks.error !== null ? (
+        <ErrorState error={blocks.error} onRetry={() => void blocks.refetch()} />
+      ) : blocks.data === undefined ? (
+        <Loading label="Loading blocked players" />
+      ) : blocks.data.length === 0 ? (
+        <Hint>You have not blocked anyone.</Hint>
+      ) : (
+        <Card>
+          {blocks.data.map((player) => (
+            <View key={player.id} style={styles.row}>
+              <Text style={styles.name}>{player.username}</Text>
+              <Button
+                title={`Unblock ${player.username}`}
+                label="Unblock"
+                variant="secondary"
+                compact
+                busy={change.isPending && change.variables.username === player.username}
+                onPress={() => change.mutate({ username: player.username, block: false })}
+              />
+            </View>
+          ))}
+        </Card>
+      )}
+    </>
   );
 }
 
@@ -254,6 +330,8 @@ function DeleteSection() {
 }
 
 const styles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  name: { flex: 1, fontSize: 16, color: colors.text },
   text: { fontSize: 15, color: colors.text },
   confirm: { gap: spacing.sm },
 });

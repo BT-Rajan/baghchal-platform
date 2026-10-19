@@ -4,13 +4,13 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { Profile } from '@/api/endpoints';
 import { describeError } from '@/api/errors';
-import { CATEGORIES, canChallenge, joinedText, presenceText, ratingText } from '@/lobby/format';
+import { CATEGORIES, canChallenge, joinedText, presenceText } from '@/lobby/format';
 import { useBlock } from '@/lobby/hooks';
 import { colors, spacing } from '@/theme';
 
 import { BadgePill } from './BadgePill';
 import { Button } from './Button';
-import { Card } from './Card';
+import { Card, Hint } from './Card';
 import { Confirm } from './Confirm';
 import { GameHistory } from './GameHistory';
 import { Notice } from './Notice';
@@ -35,9 +35,9 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
                 <Text style={styles.muted}>{label}</Text>
                 <Text
                   style={styles.big}
-                  aria-label={`${label} rating ${rating ? ratingText(rating) : 'none'}`}
+                  aria-label={`${label} rating ${rating ? rating.rating : 'none'}`}
                 >
-                  {rating ? ratingText(rating) : '–'}
+                  {rating ? String(rating.rating) : '–'}
                 </Text>
                 <Text style={styles.muted}>
                   {rating === undefined
@@ -58,6 +58,9 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
           );
         })}
       </View>
+      {Object.values(profile.ratings).some((r) => r?.provisional) && (
+        <Hint>A provisional rating is still settling: it moves faster over the first games.</Hint>
+      )}
       {!isMe && !profile.blocked && (
         <Button
           title={`Challenge ${profile.username}`}

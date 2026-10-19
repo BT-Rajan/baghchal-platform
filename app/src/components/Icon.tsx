@@ -13,7 +13,10 @@ export type IconName =
   | 'puzzle'
   | 'computer'
   | 'people'
-  | 'chevron';
+  | 'chevron'
+  | 'settings'
+  | 'palette'
+  | 'shield';
 
 /**
  * The app's line icons (24-unit grid, 2-unit stroke), drawn in the colour they are given. They
@@ -101,6 +104,27 @@ export function Icon({
         </>
       )}
       {name === 'chevron' && <Polyline points="9 5 16 12 9 19" {...stroke} />}
+      {name === 'settings' && (
+        <>
+          <Path d="M4 7h10M18 7h2M4 17h4M12 17h8" {...stroke} />
+          <Circle cx={16} cy={7} r={2} {...stroke} />
+          <Circle cx={10} cy={17} r={2} {...stroke} />
+        </>
+      )}
+      {name === 'palette' && (
+        <>
+          <Path
+            d="M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.8-1.7 1.7-1.7H17a4 4 0 0 0 4-4c0-4.4-4-8.2-9-8.2z"
+            {...stroke}
+          />
+          <Circle cx={7.5} cy={11} r={1} {...stroke} />
+          <Circle cx={10.5} cy={7.5} r={1} {...stroke} />
+          <Circle cx={15} cy={8} r={1} {...stroke} />
+        </>
+      )}
+      {name === 'shield' && (
+        <Path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z" {...stroke} />
+      )}
     </Svg>
   );
 }

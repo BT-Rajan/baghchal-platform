@@ -14,7 +14,6 @@ import {
   isOpen,
   joinedText,
   presenceText,
-  ratingText,
   searchPrefix,
   secondsLeft,
   durationText,
@@ -29,11 +28,6 @@ test('time controls and categories', () => {
   expect(categoryOf('5+3')).toBe('blitz');
   expect(categoryOf('15+10')).toBe('rapid');
   expect(categoryOf('1+0')).toBeUndefined();
-});
-
-test('ratingText marks provisional ratings', () => {
-  expect(ratingText({ rating: 1500, provisional: true })).toBe('1500?');
-  expect(ratingText({ rating: 1712, provisional: false })).toBe('1712');
 });
 
 test('presence', () => {

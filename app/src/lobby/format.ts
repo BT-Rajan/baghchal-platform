@@ -1,13 +1,5 @@
 /** Words and numbers for the lobby, profiles and leaderboards. */
-import type {
-  GameSummary,
-  Level,
-  Category,
-  Challenge,
-  Rating,
-  Side,
-  TimeControl,
-} from '@/api/endpoints';
+import type { GameSummary, Level, Category, Challenge, Side, TimeControl } from '@/api/endpoints';
 import { ratingChangeText } from '@/game/describe';
 
 export const TIME_CONTROLS: readonly { label: TimeControl; category: Category }[] = [
@@ -25,11 +17,6 @@ export const CATEGORIES: readonly { value: Category; label: string }[] = [
 
 export function categoryOf(timeControl: string): Category | undefined {
   return TIME_CONTROLS.find((tc) => tc.label === timeControl)?.category;
-}
-
-/** A rating, with "?" while it is provisional (still settling). */
-export function ratingText(rating: Pick<Rating, 'rating' | 'provisional'>): string {
-  return `${rating.rating}${rating.provisional ? '?' : ''}`;
 }
 
 export function presenceText(player: { online: boolean; playing: boolean }): string {

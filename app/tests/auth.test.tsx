@@ -12,7 +12,8 @@ async function press(name: string) {
 
 async function signOut() {
   await fireEvent.press(screen.getByRole('button', { name: /^Me, tab/ }));
-  await press('Sign out');
+  await fireEvent.press(await screen.findByRole('button', { name: 'Settings' }));
+  await fireEvent.press(await screen.findByRole('button', { name: 'Sign out' }));
 }
 
 async function type(label: string, text: string) {

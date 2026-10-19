@@ -19,8 +19,8 @@ async function press(name: string | RegExp) {
 }
 
 describe('plans', () => {
-  test('the Me tab shows my plan and leads to the plans', async () => {
-    const { app } = await open('/me', {
+  test('Settings show my plan and lead to the plans', async () => {
+    const { app } = await open('/settings', {
       'GET /api/v1/players/alice': {
         status: 200,
         body: { ...ME, online: true, playing: false, blocked: false, ratings: {} },

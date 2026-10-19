@@ -310,7 +310,8 @@ describe('profiles', () => {
     expect(await screen.findByText('Online · Joined March 2026')).toBeOnTheScreen();
     expect(screen.getByLabelText('Quick rating 1612')).toBeOnTheScreen();
     expect(screen.getByText('23 games · #3')).toBeOnTheScreen();
-    expect(screen.getByLabelText('Standard rating 1500?')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Standard rating 1500')).toBeOnTheScreen();
+    expect(screen.getByText(/^A provisional rating is still settling/)).toBeOnTheScreen();
     expect(screen.getByText('1 game · provisional')).toBeOnTheScreen();
     await press('Challenge bob');
     expect(await screen.findByRole('heading', { name: 'Challenge bob' })).toBeOnTheScreen();
@@ -337,7 +338,7 @@ describe('profiles', () => {
     expect(await screen.findByText('No such player.')).toBeOnTheScreen();
   });
 
-  test('my own page shows my email and signs out', async () => {
+  test('my own page shows my ratings, not my email', async () => {
     await lobby({
       'GET /api/v1/players/alice': {
         status: 200,
@@ -351,11 +352,11 @@ describe('profiles', () => {
     });
     await screen.findByRole('heading', { name: 'Play' });
     await fireEvent.press(screen.getByRole('button', { name: /^Me, tab/ }));
-    expect(await screen.findByText('alice@example.com')).toBeOnTheScreen();
-    expect(await screen.findByLabelText('Quick rating 1500?')).toBeOnTheScreen();
+    expect(await screen.findByLabelText('Quick rating 1500')).toBeOnTheScreen();
+    expect(screen.queryByText('alice@example.com')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Challenge alice' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Block alice' })).toBeNull();
-    expect(await screen.findByText('You have not blocked anyone.')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Settings' })).toBeOnTheScreen();
   });
 });
 

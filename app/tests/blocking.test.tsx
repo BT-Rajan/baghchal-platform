@@ -62,7 +62,7 @@ describe("blocking from a player's page", () => {
 
 describe('the list of blocked players', () => {
   test('lists them and unblocks', async () => {
-    const { server } = await signedIn('/me', {
+    const { server } = await signedIn('/settings', {
       'GET /api/v1/players/alice': MY_PROFILE,
       'GET /api/v1/blocks': { status: 200, body: [BOB_PLAYER] },
       'DELETE /api/v1/blocks/bob': () => {
@@ -76,7 +76,7 @@ describe('the list of blocked players', () => {
   });
 
   test('a failed unblock and a failed list are reported', async () => {
-    const { server } = await signedIn('/me', {
+    const { server } = await signedIn('/settings', {
       'GET /api/v1/players/alice': MY_PROFILE,
       'GET /api/v1/blocks': error(400, 'bad_request', 'The list is down.'),
     });
