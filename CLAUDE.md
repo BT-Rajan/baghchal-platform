@@ -32,3 +32,5 @@
   card or "See plans" link.
 - **Appearance and sound settings**: the server's appearance (`PATCH /me/appearance`, sending
   only what changes); nothing about them is kept on the device.
+- **A new account's username, email and password**: `app/src/components/AccountForm.tsx`,
+  given the action that sends it (signing up, a guest making their account).
