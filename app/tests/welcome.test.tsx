@@ -1,0 +1,120 @@
+import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+
+import { renderApp, savedToken } from './support/app';
+import { ME, error, type Route } from './support/fakeServer';
+
+const GUEST = {
+  ...ME,
+  username: 'guest-3fa9c1',
+  email: 'guest-3fa9c1@guest.invalid',
+  role: 'guest' as const,
+};
+
+async function press(name: string | RegExp) {
+  await fireEvent.press(screen.getByRole('button', { name }));
+}
+
+describe('the welcome page', () => {
+  test('says what ClawPlay is, and plays at once as a guest', async () => {
+    const { server, app } = await renderApp('/', {
+      routes: {
+        'POST /api/v1/auth/guest': { status: 200, body: { user: GUEST, token: 'guest-tok' } },
+        'GET /api/v1/me': { status: 200, body: GUEST },
+      },
+    });
+    expect(await screen.findByText(/^Tigers hunt\./)).toBeOnTheScreen();
+    expect(screen.getByText('Goats trap')).toBeOnTheScreen();
+    expect(screen.getByText('Play your way')).toBeOnTheScreen();
+    await press('Play now, no sign-up');
+    expect(
+      await screen.findByText(/^You are playing as guest-3fa9c1\. Make a free account/),
+    ).toBeOnTheScreen();
+    expect(server.lastTo('POST /api/v1/auth/guest').body).toEqual({ transport: 'bearer' });
+    expect(savedToken()).toBe('guest-tok');
+    await press('Make a free account');
+    await waitFor(() => expect(app.getPathname()).toBe('/claim'));
+  });
+
+  test('the closing button plays too, and a refusal is shown', async () => {
+    await renderApp('/welcome', {
+      routes: { 'POST /api/v1/auth/guest': error(429, 'rate_limited', 'Slow down.') },
+    });
+    await fireEvent.press(await screen.findByRole('button', { name: 'Start playing' }));
+    expect(await screen.findByText('Slow down.')).toBeOnTheScreen();
+  });
+
+  test('leads to sign in and sign up', async () => {
+    const { app } = await renderApp('/welcome');
+    await fireEvent.press(await screen.findByRole('button', { name: 'Sign in' }));
+    await waitFor(() => expect(app.getPathname()).toBe('/sign-in'));
+    await renderApp('/welcome').then(async ({ app: again }) => {
+      await fireEvent.press(await screen.findByRole('link', { name: 'Create a free account' }));
+      await waitFor(() => expect(again.getPathname()).toBe('/sign-up'));
+    });
+  });
+});
+
+describe('a guest', () => {
+  function asGuest(url: string, routes: Record<string, Route> = {}) {
+    return renderApp(url, {
+      token: 'guest-tok',
+      routes: { 'GET /api/v1/me': { status: 200, body: GUEST }, ...routes },
+    });
+  }
+
+  test('makes an account and keeps playing', async () => {
+    let me: typeof GUEST | typeof ME = GUEST;
+    const { server, app } = await asGuest('/claim', {
+      'GET /api/v1/me': () => ({ status: 200, body: me }),
+      'POST /api/v1/me/claim': () => {
+        me = { ...ME, username: 'Sita' };
+        return { status: 200, body: me };
+      },
+    });
+    await screen.findByRole('heading', { name: 'Make your free account' });
+    await fireEvent.changeText(screen.getByLabelText('Username'), 'Sita');
+    await fireEvent.changeText(screen.getByLabelText('Email'), ' sita@example.com ');
+    await fireEvent.changeText(screen.getByLabelText('Password'), 'correct horse');
+    await press('Make my account');
+    expect(await screen.findByRole('heading', { name: 'Welcome, Sita!' })).toBeOnTheScreen();
+    expect(server.lastTo('POST /api/v1/me/claim').body).toEqual({
+      username: 'Sita',
+      email: 'sita@example.com',
+      password: 'correct horse',
+    });
+    await press('Back to playing');
+    await waitFor(() => expect(app.getPathname()).toBe('/'));
+    expect(screen.queryByText(/^You are playing as/)).toBeNull();
+  });
+
+  test('sees why a claim fails, by the field', async () => {
+    await asGuest('/claim', {
+      'POST /api/v1/me/claim': error(409, 'username_taken', 'That username is taken.'),
+    });
+    await screen.findByRole('heading', { name: 'Make your free account' });
+    await press('Make my account');
+    expect(screen.getByText('Choose a username.', { exact: false })).toBeDefined();
+    await fireEvent.changeText(screen.getByLabelText('Username'), 'bob');
+    await fireEvent.changeText(screen.getByLabelText('Email'), 'b@example.com');
+    await fireEvent.changeText(screen.getByLabelText('Password'), 'correct horse');
+    await press('Make my account');
+    expect(await screen.findByText('That username is taken.')).toBeOnTheScreen();
+  });
+
+  test('has no account settings, and is warned before signing out', async () => {
+    await asGuest('/me', {
+      'GET /api/v1/players/guest-3fa9c1': {
+        status: 200,
+        body: { ...GUEST, online: true, playing: false, blocked: false, ratings: {} },
+      },
+      'GET /api/v1/players/guest-3fa9c1/games': { status: 200, body: [] },
+      'GET /api/v1/blocks': { status: 200, body: [] },
+    });
+    expect(
+      await screen.findByRole('button', { name: 'Sign out (this guest account will be lost)' }),
+    ).toBeOnTheScreen();
+    expect(screen.queryByText('guest-3fa9c1@guest.invalid')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Account settings' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Moderation' })).toBeNull();
+  });
+});

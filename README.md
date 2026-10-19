@@ -126,6 +126,8 @@ and the Caddyfile.
 ## API (v1)
 | Method | Path | Purpose |
 |---|---|---|
+| POST | `/api/v1/auth/guest` | Play at once without signing up: a guest account, signed in (`transport`) |
+| POST | `/api/v1/me/claim` | A guest makes a real account (`username`, `email`, `password`), keeping their games; the email works once its link is opened |
 | POST | `/api/v1/auth/register` | Start sign-up; emails a confirmation link (always 202) |
 | POST | `/api/v1/auth/verify-email` | Confirm the address and sign in |
 | POST | `/api/v1/auth/login` | Sign in with username or email |

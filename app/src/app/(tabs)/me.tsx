@@ -6,6 +6,7 @@ import { describeError } from '@/api/errors';
 import { useMe, useSession } from '@/auth/session';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
+import { GuestBanner } from '@/components/GuestBanner';
 import { Notice } from '@/components/Notice';
 import { PlanCard } from '@/components/PlanCard';
 import { ProfileView } from '@/components/ProfileView';
@@ -19,9 +20,11 @@ export default function MeScreen() {
   const { session } = useSession();
   const profile = useProfile(me.username);
   const signOut = useMutation({ mutationFn: () => session.signOut() });
+  const guest = me.role === 'guest';
   return (
     <Screen title={me.username} align="top">
-      <Text style={{ fontSize: 15, color: colors.muted }}>{me.email}</Text>
+      <GuestBanner />
+      {!guest && <Text style={{ fontSize: 15, color: colors.muted }}>{me.email}</Text>}
       {profile.error !== null ? (
         <ErrorState error={profile.error} onRetry={() => void profile.refetch()} />
       ) : profile.data ? (
@@ -36,16 +39,18 @@ export default function MeScreen() {
         onPress={() => router.push('/appearance')}
       />
       <BlockedPlayers />
-      {me.role !== 'player' && (
+      {(me.role === 'moderator' || me.role === 'admin') && (
         <Button title="Moderation" variant="secondary" onPress={() => router.push('/moderation')} />
       )}
+      {!guest && (
+        <Button
+          title="Account settings"
+          variant="secondary"
+          onPress={() => router.push('/account')}
+        />
+      )}
       <Button
-        title="Account settings"
-        variant="secondary"
-        onPress={() => router.push('/account')}
-      />
-      <Button
-        title="Sign out"
+        title={guest ? 'Sign out (this guest account will be lost)' : 'Sign out'}
         variant="secondary"
         onPress={() => signOut.mutate()}
         busy={signOut.isPending}

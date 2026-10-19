@@ -1,0 +1,210 @@
+import { useMutation } from '@tanstack/react-query';
+import { router } from 'expo-router';
+import type { ReactNode } from 'react';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg from 'react-native-svg';
+
+import { describeError } from '@/api/errors';
+import { useSession } from '@/auth/session';
+import { Brand } from '@/components/brand/Logo';
+import { Button } from '@/components/Button';
+import { BoardPreview } from '@/components/game/BoardPreview';
+import { Coin } from '@/components/game/Coin';
+import { Notice } from '@/components/Notice';
+import type { Piece } from '@/game/bfen';
+import { colors, radius, spacing } from '@/theme';
+
+/** Wide enough to put the board beside the words. */
+const WIDE = 880;
+
+const STEPS: readonly { piece: Piece; title: string; text: string }[] = [
+  {
+    piece: 'goat',
+    title: '20 goats, 4 tigers',
+    text: 'The tigers start in the corners. The goats come onto the board one at a time.',
+  },
+  {
+    piece: 'tiger',
+    title: 'Tigers hunt',
+    text: 'A tiger captures by jumping over a goat. Five captures and the tigers win.',
+  },
+  {
+    piece: 'goat',
+    title: 'Goats trap',
+    text: 'Hem the tigers in until none can move, and the goats win.',
+  },
+];
+
+const FEATURES: readonly { title: string; text: string }[] = [
+  { title: 'Live games', text: 'Quick or standard games with players online, rated or casual.' },
+  { title: 'The computer', text: 'Three levels, from a gentle start to a real fight.' },
+  { title: 'Friends', text: 'Private rooms and small tournaments with the people you know.' },
+  { title: 'Get better', text: 'The engine reviews your games; puzzles sharpen your openings.' },
+];
+
+/** The front door: what ClawPlay is, and a game in one tap, without signing up. */
+export default function Welcome() {
+  const { session } = useSession();
+  const { width } = useWindowDimensions();
+  const wide = width >= WIDE;
+  const play = useMutation({ mutationFn: () => session.playAsGuest() });
+
+  const actions = (
+    <View style={[styles.actions, wide && styles.actionsWide]}>
+      <Button
+        title="Play now, no sign-up"
+        variant="bright"
+        busy={play.isPending}
+        onPress={() => play.mutate()}
+      />
+      <Button title="Sign in" variant="light" onPress={() => router.push('/sign-in')} />
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <ScrollView contentContainerStyle={styles.page}>
+        <View style={styles.hero}>
+          <View style={[styles.inner, wide && styles.row]}>
+            <View style={[styles.pitch, wide && styles.half]}>
+              <Brand size={44} onDark />
+              <Text role="heading" style={[styles.headline, wide && styles.headlineWide]}>
+                Tigers hunt.{'\n'}Goats trap.
+              </Text>
+              <Text style={styles.lede}>
+                Bagh Chal, the strategy game of the Himalayas, played live. Four tigers against
+                twenty goats: which side will you take?
+              </Text>
+              {play.error !== null && <Notice tone="error">{describeError(play.error)}</Notice>}
+              {actions}
+              <Text style={styles.small}>
+                New here?{' '}
+                <Text role="link" style={styles.smallLink} onPress={() => router.push('/sign-up')}>
+                  Create a free account
+                </Text>{' '}
+                to keep your rating.
+              </Text>
+            </View>
+            <View style={[styles.boardBox, wide && styles.half]} aria-hidden>
+              <View style={styles.board}>
+                <BoardPreview theme="wood" pieces="classic" />
+              </View>
+            </View>
+          </View>
+        </View>
+
+        <Section title="How it's played">
+          <View style={[styles.cards, wide && styles.row]}>
+            {STEPS.map((step) => (
+              <View key={step.title} style={[styles.card, wide && styles.third]}>
+                <View style={styles.coin} aria-hidden>
+                  <Svg width="100%" height="100%" viewBox="0 0 100 100">
+                    <Coin piece={step.piece} />
+                  </Svg>
+                </View>
+                <Text style={styles.cardTitle}>{step.title}</Text>
+                <Text style={styles.cardText}>{step.text}</Text>
+              </View>
+            ))}
+          </View>
+        </Section>
+
+        <Section title="Play your way">
+          <View style={[styles.cards, styles.wrap]}>
+            {FEATURES.map((f) => (
+              <View key={f.title} style={[styles.card, styles.feature]}>
+                <Text style={styles.cardTitle}>{f.title}</Text>
+                <Text style={styles.cardText}>{f.text}</Text>
+              </View>
+            ))}
+          </View>
+        </Section>
+
+        <View style={styles.closing}>
+          <View style={styles.inner}>
+            <Text role="heading" style={styles.closingTitle}>
+              Your first game is one tap away.
+            </Text>
+            <View style={wide ? styles.actionsWide : styles.actions}>
+              <Button
+                title="Start playing"
+                variant="bright"
+                busy={play.isPending}
+                onPress={() => play.mutate()}
+              />
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <View style={styles.section}>
+      <View style={styles.inner}>
+        <Text role="heading" style={styles.sectionTitle}>
+          {title}
+        </Text>
+        {children}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.brandInk },
+  page: { flexGrow: 1, backgroundColor: colors.background },
+  inner: { width: '100%', maxWidth: 1100, alignSelf: 'center', gap: spacing.lg },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  half: { flex: 1 },
+  third: { flex: 1 },
+  hero: {
+    backgroundColor: colors.brandInk,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  pitch: { gap: spacing.md },
+  headline: {
+    fontSize: 44,
+    lineHeight: 50,
+    fontWeight: '800',
+    color: colors.brandCream,
+    letterSpacing: -1,
+    marginTop: spacing.md,
+  },
+  headlineWide: { fontSize: 64, lineHeight: 70 },
+  lede: { fontSize: 18, lineHeight: 27, color: colors.brandCream, opacity: 0.85, maxWidth: 520 },
+  actions: { gap: spacing.sm },
+  actionsWide: { flexDirection: 'row', flexWrap: 'wrap' },
+  small: { fontSize: 14, color: colors.brandCream, opacity: 0.75 },
+  smallLink: { color: colors.brandLight, fontWeight: '700', textDecorationLine: 'underline' },
+  boardBox: { alignItems: 'center' },
+  board: { width: '100%', maxWidth: 440, aspectRatio: 1 },
+  section: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xl },
+  sectionTitle: { fontSize: 28, fontWeight: '800', color: colors.text },
+  cards: { gap: spacing.md },
+  wrap: { flexDirection: 'row', flexWrap: 'wrap' },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.sm,
+    alignItems: 'flex-start',
+  },
+  feature: { flexGrow: 1, flexBasis: 240 },
+  coin: { width: 56, height: 56 },
+  cardTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+  cardText: { fontSize: 15, lineHeight: 22, color: colors.muted },
+  closing: {
+    backgroundColor: colors.brandInk,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+  },
+  closingTitle: { fontSize: 26, fontWeight: '800', color: colors.brandCream },
+});

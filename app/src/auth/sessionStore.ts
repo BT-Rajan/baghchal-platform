@@ -94,6 +94,11 @@ export class SessionStore {
     await this.start(await this.api.login(login.trim(), password));
   }
 
+  /** Play at once without signing up: a guest account, which can be made a real one later. */
+  async playAsGuest(): Promise<void> {
+    await this.start(await this.api.playAsGuest());
+  }
+
   async signOut(): Promise<void> {
     try {
       await this.api.logout();

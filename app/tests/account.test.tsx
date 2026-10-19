@@ -157,7 +157,7 @@ describe('deleting the account', () => {
     expect(screen.getByText('Enter your password.')).toBeOnTheScreen();
     await type('Your password (to delete your account)', 'secret');
     await press('Delete my account for good');
-    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeOnTheScreen();
+    expect(await screen.findByRole('button', { name: 'Play now, no sign-up' })).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/me/delete').body).toEqual({ password: 'secret' });
   });
 

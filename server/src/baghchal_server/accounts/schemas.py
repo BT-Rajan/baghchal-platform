@@ -76,7 +76,12 @@ class UserOut(BaseModel):
 
 class MeOut(UserOut):
     email: str
-    role: Literal["player", "moderator", "admin"]
+    """A guest's is a placeholder until they claim the account."""
+    role: Literal["guest", "player", "moderator", "admin"]
+
+
+class GuestIn(Strict):
+    transport: Transport = "cookie"
 
 
 class SessionOut(BaseModel):

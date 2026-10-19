@@ -8,6 +8,7 @@ import { useMe } from '@/auth/session';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { ChallengeCard } from '@/components/ChallengeCard';
+import { GuestBanner } from '@/components/GuestBanner';
 import { Notice } from '@/components/Notice';
 import { PlayerRow } from '@/components/PlayerRow';
 import { Screen } from '@/components/Screen';
@@ -132,6 +133,7 @@ export default function Play() {
 
   return (
     <Screen title="Play" align="top" wide={wide}>
+      <GuestBanner />
       {wide ? (
         <View style={styles.row}>
           <View style={styles.half}>{gamesAndChallenges}</View>

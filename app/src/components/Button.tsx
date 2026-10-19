@@ -14,7 +14,8 @@ export interface ButtonProps {
   onPress: () => void;
   busy?: boolean;
   disabled?: boolean;
-  variant?: 'primary' | 'secondary';
+  /** ``bright`` and ``light`` are for dark backgrounds (the landing page). */
+  variant?: 'primary' | 'secondary' | 'bright' | 'light';
 }
 
 export function Button({
@@ -27,7 +28,6 @@ export function Button({
   variant = 'primary',
 }: ButtonProps) {
   const inactive = busy || disabled;
-  const primary = variant === 'primary';
   return (
     <Pressable
       role="button"
@@ -39,21 +39,26 @@ export function Button({
       style={(state) => [
         styles.button,
         compact && styles.compact,
-        primary ? styles.primary : styles.secondary,
+        styles[variant],
         (state.pressed || inactive) && styles.dim,
         focusRing(state),
       ]}
     >
       {busy ? (
-        <ActivityIndicator color={primary ? colors.accentText : colors.accent} />
+        <ActivityIndicator color={TEXT[variant]} />
       ) : (
-        <Text style={[styles.text, primary ? styles.primaryText : styles.secondaryText]}>
-          {label}
-        </Text>
+        <Text style={[styles.text, { color: TEXT[variant] }]}>{label}</Text>
       )}
     </Pressable>
   );
 }
+
+const TEXT = {
+  primary: colors.accentText,
+  secondary: colors.accent,
+  bright: colors.brandInk,
+  light: colors.brandCream,
+} as const;
 
 const styles = StyleSheet.create({
   button: {
@@ -67,8 +72,8 @@ const styles = StyleSheet.create({
   compact: { minHeight: 44, paddingHorizontal: spacing.md },
   primary: { backgroundColor: colors.accent },
   secondary: { borderWidth: 1, borderColor: colors.accent, backgroundColor: 'transparent' },
+  bright: { backgroundColor: colors.brandLight },
+  light: { borderWidth: 1, borderColor: colors.brandCream, backgroundColor: 'transparent' },
   dim: { opacity: 0.6 },
   text: { fontSize: 16, fontWeight: '600' },
-  primaryText: { color: colors.accentText },
-  secondaryText: { color: colors.accent },
 });
