@@ -14,6 +14,8 @@ export type ServerMessage =
   | { type: 'game'; game: Game }
   /** My friends or friend requests changed: fetch them again. */
   | { type: 'friends' }
+  /** A new notification: fetch them again. */
+  | { type: 'notification' }
   | { type: 'error'; code: string; message: string };
 
 export const PING = JSON.stringify({ type: 'ping' });
@@ -77,6 +79,8 @@ export function parseServerMessage(text: unknown): ServerMessage | null {
       return isGame(data.game) ? { type: 'game', game: data.game } : null;
     case 'friends':
       return { type: 'friends' };
+    case 'notification':
+      return { type: 'notification' };
     case 'error':
       return typeof data.code === 'string' && typeof data.message === 'string'
         ? { type: 'error', code: data.code, message: data.message }

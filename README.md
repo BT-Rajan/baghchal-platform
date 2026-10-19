@@ -73,6 +73,8 @@ Each phase ships complete — tested, documented and reviewed — before the nex
      so is the trainer's daily puzzle.)
    - ✅ **Friends**: a request and an answer, then friends on the home screen with their
      presence and a Challenge button.
+   - ✅ **Notifications**: a bell with what happened while you were away (challenges, friend
+     requests, tournaments starting), each leading to where it happened.
    - Perhaps later: **private tables** for Pro, an extension of challenges by link (a table
      that stays open for a series of games with the same friends).
 
@@ -153,6 +155,8 @@ and the Caddyfile.
 | GET | `/api/v1/players/{username}` | A player's profile, with ratings and leaderboard rank |
 | GET | `/api/v1/blocks` | Players you have blocked |
 | PUT, DELETE | `/api/v1/blocks/{username}` | Block or unblock a player (see [rules](docs/rules.md#live-play-platform-rules)); a block ends any friendship |
+| GET | `/api/v1/notifications` | My latest notifications (challenges, friend requests and acceptances, tournaments starting), newest first, and the unread count |
+| POST | `/api/v1/notifications/read` | Mark them all read |
 | GET | `/api/v1/friends` | My friends (online first) and the friend requests waiting on either side |
 | POST, DELETE | `/api/v1/friends/{username}` | Ask a player to be friends (or accept their request); unfriend, decline or cancel. Members only; the other player gets a `friends` event |
 | POST | `/api/v1/players/{username}/report` | Report a player to the moderators (`reason`, `details`, optional `game_id`) |

@@ -1,0 +1,106 @@
+import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+
+import type { Notification, NotificationList } from '@/api/endpoints';
+
+import { renderApp } from './support/app';
+import { ME, error } from './support/fakeServer';
+import { FakeSocket } from './support/fakeSocket';
+import { BOB } from './support/games';
+
+const SIGNED_IN = { 'GET /api/v1/me': { status: 200, body: ME } };
+
+const note = (overrides: Partial<Notification>): Notification => ({
+  id: 'n1',
+  kind: 'challenge',
+  actor: BOB,
+  detail: '5+3 rated',
+  tournament: null,
+  created_at: new Date(Date.now() - 5 * 60_000).toISOString(),
+  read: false,
+  ...overrides,
+});
+
+describe('notifications', () => {
+  test('the bell counts them; opening the list reads them and leads on', async () => {
+    let list: NotificationList = {
+      unread: 2,
+      items: [
+        note({}),
+        note({
+          id: 'n2',
+          kind: 'tournament_started',
+          detail: null,
+          tournament: { code: 'cup1', name: 'Friday cup' },
+          read: true,
+        }),
+      ],
+    };
+    const { app, server } = await renderApp('/', {
+      token: 'tok',
+      routes: {
+        ...SIGNED_IN,
+        'GET /api/v1/notifications': () => ({ status: 200, body: list }),
+        'POST /api/v1/notifications/read': () => {
+          list = { unread: 0, items: list.items.map((n) => ({ ...n, read: true })) };
+          return { status: 204 };
+        },
+        'GET /api/v1/players/bob': {
+          status: 200,
+          body: {
+            ...BOB,
+            online: true,
+            playing: false,
+            blocked: false,
+            created_at: ME.created_at,
+            ratings: {},
+          },
+        },
+      },
+    });
+    await fireEvent.press(await screen.findByRole('button', { name: 'Notifications, 2 unread' }));
+    await waitFor(() => expect(app.getPathname()).toBe('/notifications'));
+    expect(await screen.findByText('bob challenged you to a 5+3 rated game.')).toBeOnTheScreen();
+    expect(screen.getByText('Friday cup has started: your games are ready.')).toBeOnTheScreen();
+    expect(screen.getAllByText('5 min ago')).toHaveLength(2);
+    await waitFor(() => expect(server.lastTo('POST /api/v1/notifications/read')).toBeDefined());
+    await fireEvent.press(
+      screen.getByRole('link', { name: 'bob challenged you to a 5+3 rated game.' }),
+    );
+    await waitFor(() => expect(app.getPathname()).toBe('/player/bob'));
+  });
+
+  test('a new one arrives live; an empty list says what will show', async () => {
+    let list: NotificationList = { unread: 0, items: [] };
+    await renderApp('/', {
+      token: 'tok',
+      routes: { ...SIGNED_IN, 'GET /api/v1/notifications': () => ({ status: 200, body: list }) },
+    });
+    await screen.findByRole('button', { name: 'Notifications' });
+    list = { unread: 1, items: [note({ kind: 'friend_request', detail: null })] };
+    await act(() => {
+      FakeSocket.latest().open();
+      FakeSocket.latest().receive({ type: 'notification' });
+    });
+    expect(
+      await screen.findByRole('button', { name: 'Notifications, 1 unread' }),
+    ).toBeOnTheScreen();
+  });
+
+  test('nothing yet, and a failed load', async () => {
+    let fail = true;
+    await renderApp('/notifications', {
+      token: 'tok',
+      routes: {
+        ...SIGNED_IN,
+        'GET /api/v1/notifications': () =>
+          fail
+            ? error(400, 'bad', 'Notifications are down.')
+            : { status: 200, body: { unread: 0, items: [] } },
+      },
+    });
+    expect(await screen.findByText('Notifications are down.')).toBeOnTheScreen();
+    fail = false;
+    await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByText(/^Nothing yet\./)).toBeOnTheScreen();
+  });
+});

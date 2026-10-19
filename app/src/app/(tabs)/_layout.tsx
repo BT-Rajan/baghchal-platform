@@ -4,6 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { BrandBar } from '@/components/brand/Logo';
 import { Icon, type IconName } from '@/components/Icon';
+import { NotificationBell } from '@/components/NotificationBell';
 import { colors } from '@/theme';
 
 /** From this width the tabs are a sidebar, not a bar stretched along the bottom. */
@@ -65,7 +66,9 @@ export default function TabsLayout() {
 function TabsHeader() {
   return (
     <SafeAreaView edges={['top']} style={{ backgroundColor: colors.brandInk }}>
-      <BrandBar />
+      <BrandBar>
+        <NotificationBell />
+      </BrandBar>
     </SafeAreaView>
   );
 }

@@ -16,7 +16,8 @@ export type IconName =
   | 'chevron'
   | 'settings'
   | 'palette'
-  | 'shield';
+  | 'shield'
+  | 'bell';
 
 /**
  * The app's line icons (24-unit grid, 2-unit stroke), drawn in the colour they are given. They
@@ -121,6 +122,9 @@ export function Icon({
           <Circle cx={10.5} cy={7.5} r={1} {...stroke} />
           <Circle cx={15} cy={8} r={1} {...stroke} />
         </>
+      )}
+      {name === 'bell' && (
+        <Path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0" {...stroke} />
       )}
       {name === 'shield' && (
         <Path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z" {...stroke} />

@@ -2628,6 +2628,37 @@
         }
       }
     },
+    "/api/v1/notifications": {
+      "get": {
+        "summary": "Notifications",
+        "description": "My latest notifications, newest first, and how many are unread.",
+        "operationId": "notifications_api_v1_notifications_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/read": {
+      "post": {
+        "summary": "Read Notifications",
+        "description": "Mark them all read.",
+        "operationId": "read_notifications_api_v1_notifications_read_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
     "/api/v1/trainer": {
       "get": {
         "summary": "Trainer",
@@ -3691,6 +3722,38 @@
         ],
         "title": "ExportGame"
       },
+      "ExportNotification": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "created_at",
+          "read_at"
+        ],
+        "title": "ExportNotification"
+      },
       "ExportOut": {
         "properties": {
           "exported_at": {
@@ -3736,6 +3799,13 @@
             "type": "array",
             "title": "Friends"
           },
+          "notifications": {
+            "items": {
+              "$ref": "#/components/schemas/ExportNotification"
+            },
+            "type": "array",
+            "title": "Notifications"
+          },
           "sessions": {
             "items": {
               "$ref": "#/components/schemas/ExportSession"
@@ -3753,6 +3823,7 @@
           "challenges",
           "blocked_players",
           "friends",
+          "notifications",
           "sessions"
         ],
         "title": "ExportOut",
@@ -4790,6 +4861,100 @@
           "grants"
         ],
         "title": "MyPlanOut"
+      },
+      "NotificationKind": {
+        "type": "string",
+        "enum": [
+          "challenge",
+          "friend_request",
+          "friend_accepted",
+          "tournament_started"
+        ],
+        "title": "NotificationKind"
+      },
+      "NotificationList": {
+        "properties": {
+          "unread": {
+            "type": "integer",
+            "title": "Unread"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "unread",
+          "items"
+        ],
+        "title": "NotificationList"
+      },
+      "NotificationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/NotificationKind"
+          },
+          "actor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlayerOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "tournament": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TournamentRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "read": {
+            "type": "boolean",
+            "title": "Read"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "actor",
+          "detail",
+          "tournament",
+          "created_at",
+          "read"
+        ],
+        "title": "NotificationOut"
       },
       "PairingOut": {
         "properties": {
@@ -6009,6 +6174,24 @@
           "created_at"
         ],
         "title": "TournamentOut"
+      },
+      "TournamentRef": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name"
+        ],
+        "title": "TournamentRef"
       },
       "TournamentStatus": {
         "type": "string",

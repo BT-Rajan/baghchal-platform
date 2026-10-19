@@ -74,6 +74,10 @@ function Routes() {
           <Stack.Screen name="challenge/[username]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="game/[id]" options={{ headerShown: true, title: 'Game' }} />
           <Stack.Screen name="settings" options={{ headerShown: true, title: 'Settings' }} />
+          <Stack.Screen
+            name="notifications"
+            options={{ headerShown: true, title: 'Notifications' }}
+          />
           <Stack.Screen name="report/[username]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="play" options={{ headerShown: true, title: 'Play now' }} />
           <Stack.Screen name="plans" options={{ headerShown: true, title: 'Plans' }} />

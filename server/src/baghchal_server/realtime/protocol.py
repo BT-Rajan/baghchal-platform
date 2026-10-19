@@ -6,7 +6,7 @@ same ``id``: it measures the round trip, which is not charged to the player's cl
 ``challenge`` (a challenge involving you was created or changed; match on ``challenge.id``),
 ``game`` (a game you play in started or changed: the full state; match on ``game.id`` and keep
 the highest ``game.ply``), ``friends`` (my friends or friend requests changed: fetch them
-again), ``error``.
+again), ``notification`` (a new notification: fetch them again), ``error``.
 """
 
 from typing import Annotated, Literal
@@ -55,6 +55,10 @@ class GameEvent(BaseModel):
 
 class FriendsEvent(BaseModel):
     type: Literal["friends"] = "friends"
+
+
+class NotificationEvent(BaseModel):
+    type: Literal["notification"] = "notification"
 
 
 class ErrorEvent(BaseModel):

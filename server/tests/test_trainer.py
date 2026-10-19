@@ -123,6 +123,7 @@ async def test_the_daily_puzzle_is_for_everyone(players: PlayerFactory, clock: C
     # Free players answer it like any trainer puzzle; the first answer is the one kept.
     r = await _answer(alice, puzzle["id"], _wrong(puzzle))
     assert (r.status_code, r.json()["correct"]) == (200, False)
+    clock.advance(seconds=1)
     best = PUZZLES[puzzle["id"]].best
     assert (await _answer(alice, puzzle["id"], best)).json()["correct"] is True
     assert (await alice.http.get(f"{URL}/daily")).json()["answer"] == {

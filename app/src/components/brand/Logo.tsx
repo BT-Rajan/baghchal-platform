@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 /**
  * The ClawPlay brand: the mark (three tiger claw slashes on an amber badge) and the wordmark
  * ("Claw" in ink, "Play" in amber). The same drawing makes the app icon and the favicon
@@ -100,10 +101,12 @@ export function BrandHeader() {
 }
 
 /** A slim bar across the top of the main tabs. */
-export function BrandBar() {
+/** The ClawPlay bar above the tabs; `children` sit at its right end (the notifications bell). */
+export function BrandBar({ children }: { children?: ReactNode }) {
   return (
     <View role="banner" style={styles.bar}>
       <Brand size={30} onDark />
+      {children !== undefined && <View style={styles.end}>{children}</View>}
     </View>
   );
 }
@@ -113,6 +116,7 @@ const styles = StyleSheet.create({
   word: { fontWeight: '800' },
   tagline: { fontSize: 14, color: colors.muted, marginTop: 2 },
   header: { alignItems: 'center', marginBottom: spacing.md },
+  end: { marginLeft: 'auto' },
   bar: {
     backgroundColor: colors.brandInk,
     paddingHorizontal: spacing.md,

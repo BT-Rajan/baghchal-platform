@@ -1209,6 +1209,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Notifications
+         * @description My latest notifications, newest first, and how many are unread.
+         */
+        get: operations["notifications_api_v1_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read Notifications
+         * @description Mark them all read.
+         */
+        post: operations["read_notifications_api_v1_notifications_read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trainer": {
         parameters: {
             query?: never;
@@ -1639,6 +1679,18 @@ export interface components {
             /** Moves */
             moves: string[];
         };
+        /** ExportNotification */
+        ExportNotification: {
+            /** Kind */
+            kind: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Read At */
+            read_at: string | null;
+        };
         /**
          * ExportOut
          * @description Everything the server keeps about a player, for them to download.
@@ -1660,6 +1712,8 @@ export interface components {
             blocked_players: string[];
             /** Friends */
             friends: string[];
+            /** Notifications */
+            notifications: components["schemas"]["ExportNotification"][];
             /** Sessions */
             sessions: components["schemas"]["ExportSession"][];
         };
@@ -2047,6 +2101,38 @@ export interface components {
             features: components["schemas"]["Feature"][];
             /** Grants */
             grants: components["schemas"]["GrantOut"][];
+        };
+        /**
+         * NotificationKind
+         * @enum {string}
+         */
+        NotificationKind: "challenge" | "friend_request" | "friend_accepted" | "tournament_started";
+        /** NotificationList */
+        NotificationList: {
+            /** Unread */
+            unread: number;
+            /** Items */
+            items: components["schemas"]["NotificationOut"][];
+        };
+        /** NotificationOut */
+        NotificationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["NotificationKind"];
+            actor: components["schemas"]["PlayerOut"] | null;
+            /** Detail */
+            detail: string | null;
+            tournament: components["schemas"]["TournamentRef"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Read */
+            read: boolean;
         };
         /** PairingOut */
         PairingOut: {
@@ -2477,6 +2563,13 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** TournamentRef */
+        TournamentRef: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
         };
         /**
          * TournamentStatus
@@ -4678,6 +4771,44 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    notifications_api_v1_notifications_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationList"];
+                };
+            };
+        };
+    };
+    read_notifications_api_v1_notifications_read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -11,6 +11,7 @@ test('keys are stable and distinct', () => {
   const all = [
     queryKeys.challenges,
     queryKeys.friends,
+    queryKeys.notifications,
     queryKeys.activeGames,
     queryKeys.onlinePlayers,
     queryKeys.game('x'),

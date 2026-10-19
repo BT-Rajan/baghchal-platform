@@ -2,6 +2,7 @@
 export const queryKeys = {
   challenges: ['challenges'] as const,
   friends: ['friends'] as const,
+  notifications: ['notifications'] as const,
   linkChallenge: (code: string) => ['challenges', 'link', code] as const,
   activeGames: ['games', 'active'] as const,
   game: (id: string) => ['game', id] as const,

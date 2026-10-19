@@ -20,6 +20,7 @@ from baghchal_server.friends import models as friends_models  # noqa: F401
 from baghchal_server.games import models as game_models  # noqa: F401
 from baghchal_server.lobby import models as lobby_models  # noqa: F401
 from baghchal_server.moderation import models as moderation_models  # noqa: F401
+from baghchal_server.notifications import models as notification_models  # noqa: F401
 from baghchal_server.payments import models as payments_models  # noqa: F401
 from baghchal_server.ratings import models as rating_models  # noqa: F401
 from baghchal_server.tournaments import models as tournaments_models  # noqa: F401

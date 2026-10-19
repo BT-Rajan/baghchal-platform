@@ -146,6 +146,12 @@ class ExportSession(BaseModel):
     expires_at: datetime
 
 
+class ExportNotification(BaseModel):
+    kind: str
+    created_at: datetime
+    read_at: datetime | None
+
+
 class ExportOut(BaseModel):
     """Everything the server keeps about a player, for them to download."""
 
@@ -156,4 +162,5 @@ class ExportOut(BaseModel):
     challenges: list[ExportChallenge]
     blocked_players: list[str]
     friends: list[str]
+    notifications: list["ExportNotification"]
     sessions: list[ExportSession]

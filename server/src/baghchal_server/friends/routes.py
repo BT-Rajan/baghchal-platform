@@ -10,6 +10,8 @@ from baghchal_server.friends.schemas import FriendsOut, RelationOut
 from baghchal_server.lobby import service as lobby
 from baghchal_server.lobby.routes import with_status
 from baghchal_server.lobby.schemas import PlayerOut, UsernameQuery
+from baghchal_server.notifications import service as notifications
+from baghchal_server.notifications.schemas import NotificationKind
 from baghchal_server.ratelimit import Limit
 from baghchal_server.realtime.protocol import FriendsEvent
 
@@ -42,9 +44,17 @@ async def add_friend(username: UsernameQuery, user: Member, state: State, db: DB
     """Ask a player to be friends, or accept their request. They hear of it at once."""
     await enforce_limit(state, FRIENDS_PER_USER, str(user.id))
     other = await _player(state, db, username)
-    other_id = other.id
+    user_id, other_id = user.id, other.id
+    before = await service.relation(db, user_id, other_id)
     relation = await service.request(db, state.clock(), user, other)
     await state.hub.send(other_id, FriendsEvent().model_dump_json())
+    if relation != before:
+        kind = (
+            NotificationKind.FRIEND_ACCEPTED
+            if relation == "friends"
+            else NotificationKind.FRIEND_REQUEST
+        )
+        await notifications.notify(state, db, other_id, kind, actor_id=user_id)
     return RelationOut(relation=relation)
 
 

@@ -41,6 +41,8 @@ from baghchal_server.metrics import CountingMailer, Metrics
 from baghchal_server.middleware import BodyLimit, CrossSiteGuard, RequestContext, SecurityHeaders
 from baghchal_server.moderation import models as _moderation_models  # noqa: F401  (registers tables)
 from baghchal_server.moderation.routes import router as moderation_router
+from baghchal_server.notifications import models as _notification_models  # noqa: F401  (registers tables)
+from baghchal_server.notifications.routes import router as notifications_router
 from baghchal_server.payments import models as _payments_models  # noqa: F401  (registers tables)
 from baghchal_server.payments.gateway import Gateway, RazorpayGateway
 from baghchal_server.payments.routes import router as payments_router
@@ -175,20 +177,24 @@ def create_app(
         openapi_url="/openapi.json" if public_docs else None,
     )
     install_handlers(app)
-    app.include_router(accounts_router)
-    app.include_router(lobby_router)
-    app.include_router(games_router)
-    app.include_router(ratings_router)
-    app.include_router(moderation_router)
-    app.include_router(fair_play_router)
-    app.include_router(billing_router)
-    app.include_router(appearance_router)
-    app.include_router(payments_router)
-    app.include_router(tournaments_router)
-    app.include_router(friends_router)
-    app.include_router(trainer_router)
-    app.include_router(health_router)
-    app.include_router(ws_router)
+    for router in (
+        accounts_router,
+        lobby_router,
+        games_router,
+        ratings_router,
+        moderation_router,
+        fair_play_router,
+        billing_router,
+        appearance_router,
+        payments_router,
+        tournaments_router,
+        friends_router,
+        notifications_router,
+        trainer_router,
+        health_router,
+        ws_router,
+    ):
+        app.include_router(router)
 
     # Added innermost first: requests pass RequestContext → … → BodyLimit → routes.
     app.add_middleware(BodyLimit, max_bytes=settings.max_request_bytes)

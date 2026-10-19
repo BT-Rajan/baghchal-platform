@@ -18,6 +18,7 @@ const DATA = {
   challenges: [],
   blocked_players: [],
   friends: [],
+  notifications: [],
   sessions: [],
 } satisfies DataExport;
 

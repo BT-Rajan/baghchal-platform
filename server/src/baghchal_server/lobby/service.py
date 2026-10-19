@@ -20,6 +20,7 @@ from baghchal_server.games.models import Game
 from baghchal_server.lobby.models import Block, Challenge, ChallengeStatus
 from baghchal_server.lobby.schemas import ChallengeIn, ChallengeOut, PlayerOut
 from baghchal_server.lobby.time_controls import TIME_CONTROLS
+from baghchal_server.notifications.models import Notification
 from baghchal_server.realtime.presence import Presence
 
 CHALLENGE_TTL: Final = timedelta(seconds=60)
@@ -119,9 +120,15 @@ async def block(
     if it was for the blocker, cancelled if it was theirs. Returns the challenges closed."""
     if blocker_id == blocked_id:
         raise AppError(422, "cannot_block_self", "You cannot block yourself.")
-    # A block ends any friendship or friend request between the two.
+    # A block ends any friendship or friend request between the two, and clears what the
+    # blocked player's notifications told the blocker.
     await db.execute(
         delete(Friendship).where(Friendship.pair_key == pair_key(blocker_id, blocked_id))
+    )
+    await db.execute(
+        delete(Notification).where(
+            Notification.user_id == blocker_id, Notification.actor_id == blocked_id
+        )
     )
     if not await has_blocked(db, blocker_id, blocked_id):
         db.add(Block(blocker_id=blocker_id, blocked_id=blocked_id, created_at=now))

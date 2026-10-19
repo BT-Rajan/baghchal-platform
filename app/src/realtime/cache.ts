@@ -68,6 +68,7 @@ export function refetchAfterReconnect(queryClient: QueryClient): Promise<void> {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: queryKeys.challenges }),
     queryClient.invalidateQueries({ queryKey: queryKeys.friends }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.notifications }),
     queryClient.invalidateQueries({ queryKey: queryKeys.activeGames }),
     queryClient.invalidateQueries({ queryKey: ['game'] }),
   ]).then(() => undefined);
@@ -96,6 +97,9 @@ export function applyMessage(
       break;
     case 'game':
       if (applyGame(queryClient, message.game).started) applied.startedGame = message.game;
+      break;
+    case 'notification':
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
       break;
     case 'friends':
       // The lists, and how profiles show the friendship.
