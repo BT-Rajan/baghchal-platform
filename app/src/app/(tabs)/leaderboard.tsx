@@ -25,7 +25,7 @@ export default function Leaderboard() {
   const board = useLeaderboard(category);
   const label = CATEGORIES.find((c) => c.value === category)?.label ?? '';
   return (
-    <Screen title="Leaderboard" align="top">
+    <Screen title="Leaderboard" align="top" refreshable>
       <Segmented
         label="Time control"
         options={CATEGORIES}

@@ -50,7 +50,15 @@ const config: ExpoConfig = {
     themeColor: '#2a1608',
     backgroundColor: '#f6f1e7',
   },
-  plugins: ['expo-router', 'expo-secure-store'],
+  plugins: [
+    'expo-router',
+    'expo-secure-store',
+    // The icon on the brand colour while the app starts (hidden once it knows who is signed in).
+    [
+      'expo-splash-screen',
+      { image: './assets/icon.png', imageWidth: 160, backgroundColor: '#2a1608' },
+    ],
+  ],
 };
 
 export default allowPlainHttp ? withPlainHttp(config) : config;

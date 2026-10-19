@@ -5,6 +5,7 @@ import { useNotifications } from '@/lobby/hooks';
 import { colors, radius } from '@/theme';
 
 import { focusRing } from './focus';
+import { pressedLook, ripple } from './press';
 import { Icon } from './Icon';
 
 /** The bell in the bar above the tabs, with how many notifications are unread. */
@@ -16,7 +17,8 @@ export function NotificationBell() {
       role="button"
       aria-label={unread === 0 ? 'Notifications' : `Notifications, ${unread} unread`}
       onPress={() => router.push('/notifications')}
-      style={(state) => [styles.bell, state.pressed && styles.pressed, focusRing(state)]}
+      {...ripple(true)}
+      style={(state) => [styles.bell, pressedLook(state.pressed, styles.pressed), focusRing(state)]}
     >
       <Icon name="bell" color={colors.brandCream} />
       {unread > 0 && (

@@ -18,7 +18,6 @@ import { useFormErrors } from '@/components/form';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
-import { TextLink } from '@/components/TextLink';
 import { colors, spacing } from '@/theme';
 
 /**
@@ -59,8 +58,18 @@ export default function SettingsScreen() {
         </>
       )}
       <SectionTitle>Terms and privacy</SectionTitle>
-      <TextLink href="/terms">Terms of service</TextLink>
-      <TextLink href="/privacy">Privacy policy</TextLink>
+      <FeatureLink
+        icon="document"
+        title="Terms of service"
+        text="The rules of using ClawPlay."
+        onPress={() => router.push('/terms')}
+      />
+      <FeatureLink
+        icon="document"
+        title="Privacy policy"
+        text="What we keep about you, why, and for how long."
+        onPress={() => router.push('/privacy')}
+      />
       <SectionTitle>Sign out</SectionTitle>
       <Button
         title={guest ? 'Sign out (this guest account will be lost)' : 'Sign out'}

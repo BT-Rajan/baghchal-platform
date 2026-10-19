@@ -3,6 +3,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { colors, radius } from '@/theme';
 
 import { focusRing } from './focus';
+import { pressedLook, ripple } from './press';
 import { Icon, type IconName } from './Icon';
 
 /**
@@ -27,7 +28,12 @@ export function IconButton({
       aria-label={title}
       {...(selected !== undefined && { 'aria-pressed': selected })}
       onPress={onPress}
-      style={(state) => [styles.button, state.pressed && styles.pressed, focusRing(state)]}
+      {...ripple()}
+      style={(state) => [
+        styles.button,
+        pressedLook(state.pressed, styles.pressed),
+        focusRing(state),
+      ]}
     >
       <Icon name={icon} color={colors.text} size={22} />
     </Pressable>
@@ -43,6 +49,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.subtle,
+    overflow: 'hidden',
   },
   pressed: { backgroundColor: colors.border, transform: [{ scale: 0.95 }] },
 });

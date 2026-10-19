@@ -13,7 +13,7 @@ export default function Player() {
   const me = useMe();
   const profile = useProfile(username);
   return (
-    <Screen align="top">
+    <Screen align="top" refreshable>
       <Stack.Screen options={{ title: profile.data?.username ?? username }} />
       {isApiError(profile.error, 'player_not_found') ? (
         <Notice tone="error">No such player.</Notice>

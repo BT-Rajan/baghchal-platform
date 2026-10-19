@@ -7,8 +7,12 @@
  * - **Temple bells**: a small bell for a move, a gong for a capture.
  * - **Arcade**: square-wave bleeps, a falling zap for a capture.
  *
- * Where there is no Web Audio (the native apps for now), there is no sound.
+ * Where there is no Web Audio (the native apps for now), the phone vibrates instead: a tap for
+ * a move, a knock for a capture, and the system's success or warning pattern for a win or loss.
  */
+import * as Haptics from 'expo-haptics';
+import { Platform } from 'react-native';
+
 import type { SoundPack } from '@/api/endpoints';
 import type { Sound } from '@/game/sounds';
 
@@ -123,8 +127,19 @@ const PACKS: Record<SoundPack, Record<GameSound, Player>> = {
   },
 };
 
+const FEEL: Record<GameSound, () => Promise<void>> = {
+  move: () => Haptics.selectionAsync(),
+  capture: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy),
+  win: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+  loss: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning),
+};
+
 export function playSound(sound: GameSound, pack: SoundPack = 'gentle'): void {
-  if (AudioContextClass === undefined) return;
+  if (AudioContextClass === undefined) {
+    // A vibration is a nicety too: a phone without a vibrator says no, and that is fine.
+    if (Platform.OS !== 'web') FEEL[sound]().catch(() => {});
+    return;
+  }
   try {
     context ??= new AudioContextClass();
     if (context.state === 'suspended') void context.resume().catch(() => {});

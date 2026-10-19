@@ -10,6 +10,7 @@ import { useMyPlan } from '@/billing/hooks';
 import { Button } from '@/components/Button';
 import { SectionTitle } from '@/components/Card';
 import { focusRing } from '@/components/focus';
+import { ripple } from '@/components/press';
 import { BoardPreview } from '@/components/game/BoardPreview';
 import { playSound, soundSupported } from '@/components/game/sound';
 import { Notice } from '@/components/Notice';
@@ -96,7 +97,7 @@ export default function AppearanceScreen() {
 
       <SectionTitle>Sounds</SectionTitle>
       <Segmented
-        label="Game sounds"
+        label="Game sounds and vibration"
         value={current.sounds_on ? 'on' : 'off'}
         onChange={(value) => pick({ sounds_on: value === 'on' })}
         options={[
@@ -174,6 +175,7 @@ function Tile({
       aria-disabled={locked}
       disabled={locked}
       onPress={onPress}
+      {...ripple()}
       style={(state) => [
         styles.tile,
         selected && styles.selected,

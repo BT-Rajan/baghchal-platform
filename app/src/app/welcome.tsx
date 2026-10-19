@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg from 'react-native-svg';
 
@@ -39,8 +39,48 @@ const FEATURES: readonly { title: string; text: string }[] = [
   { title: 'Get better', text: 'The engine reviews your games; puzzles sharpen your openings.' },
 ];
 
-/** The front door: what ClawPlay is, and a first game without signing up (`/start`). */
+/**
+ * The front door: what ClawPlay is, and a first game without signing up (`/start`). The web
+ * has a landing page; the phone apps open on a start screen, as apps do.
+ */
 export default function Welcome() {
+  return Platform.OS === 'web' ? <LandingPage /> : <StartScreen />;
+}
+
+/** The apps' first screen: the board, and the ways in. Nothing to scroll. */
+function StartScreen() {
+  return (
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.start}>
+        <Brand size={36} onDark />
+        <View style={styles.startBoard} aria-hidden>
+          <BoardPreview theme="wood" pieces="classic" />
+        </View>
+        <View style={styles.startWords}>
+          <Text role="heading" style={styles.startHeadline}>
+            Tigers hunt.{'\n'}Goats trap.
+          </Text>
+          <Text style={styles.lede}>Bagh Chal, the strategy game of the Himalayas.</Text>
+        </View>
+        <View style={styles.actions}>
+          <Button
+            title="Play now, no sign-up"
+            variant="bright"
+            onPress={() => router.push('/start')}
+          />
+          <Button title="Sign in" variant="light" onPress={() => router.push('/sign-in')} />
+          <Button
+            title="Create a free account"
+            variant="light"
+            onPress={() => router.push('/sign-up')}
+          />
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+function LandingPage() {
   const { width } = useWindowDimensions();
   const wide = width >= WIDE;
   const play = () => router.push('/start');
@@ -149,6 +189,24 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.brandInk },
+  start: {
+    flex: 1,
+    padding: spacing.lg,
+    gap: spacing.lg,
+    justifyContent: 'space-between',
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+  },
+  startBoard: { width: '100%', maxWidth: 360, aspectRatio: 1, alignSelf: 'center', flexShrink: 1 },
+  startWords: { gap: spacing.sm },
+  startHeadline: {
+    fontSize: 36,
+    lineHeight: 42,
+    fontWeight: '800',
+    color: colors.brandCream,
+    letterSpacing: -0.5,
+  },
   page: { flexGrow: 1, backgroundColor: colors.background },
   inner: { width: '100%', maxWidth: 1100, alignSelf: 'center', gap: spacing.lg },
   row: { flexDirection: 'row', alignItems: 'center' },
