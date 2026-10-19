@@ -16,6 +16,7 @@ from baghchal_engine import (
     parse_position,
     perft,
     play,
+    threats,
 )
 from baghchal_engine.board import file_of, iter_points, point, rank_of
 
@@ -127,9 +128,18 @@ def test_tiger_capture() -> None:
     assert after.piece_at(point(0, 2)) is Side.TIGER
 
 
+def test_threats_are_the_captures_tigers_could_make_next() -> None:
+    pos = parse_position("T3T/5/5/G4/T3T g 19 0")
+    assert threats(pos) == [parse_move("a1xa3")]
+    # The same on the tigers' turn, and none for a goat with nothing empty behind it.
+    assert threats(pos._replace(side=Side.TIGER)) == [parse_move("a1xa3")]
+    assert threats(parse_position("T3T/5/G4/G4/T3T g 18 0")) == []
+
+
 def test_no_moves_once_five_goats_are_captured() -> None:
     pos = parse_position("1T2T/5/T4/5/T4 g 15 5")
     assert legal_moves(pos) == []
+    assert threats(pos) == []
     assert not has_legal_move(pos)
 
 

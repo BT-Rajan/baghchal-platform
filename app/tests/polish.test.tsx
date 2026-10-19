@@ -1,7 +1,7 @@
 import * as ReactNative from 'react-native';
 
 import { render } from '@testing-library/react-native';
-import { act, fireEvent, screen } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { ErrorBoundary } from '@/app/_layout';
 
@@ -38,15 +38,20 @@ test('failed lists can be tried again', async () => {
   expect(await screen.findByText('Could not load challenges.')).toBeOnTheScreen();
   fail = false;
   await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
-  expect(await screen.findByText(/wait here to be challenged/)).toBeOnTheScreen();
-  expect(screen.queryByText('Could not load challenges.')).toBeNull();
+  await waitFor(() => expect(screen.queryByText('Could not load challenges.')).toBeNull());
 });
 
 test('a quiet lobby says what to do', async () => {
-  await renderApp('/', { token: 'tok', routes: SIGNED_IN });
+  const { app } = await renderApp('/', { token: 'tok', routes: SIGNED_IN });
+  expect(await screen.findByText('Ready for a game?')).toBeOnTheScreen();
+  // Nobody online: the next step is a friend, by link.
   expect(
-    await screen.findByText(/^Play now pairs you with anyone who wants the same game/),
+    screen.getByText(
+      'Nobody else is online right now. Send a friend a challenge by link, or Play now.',
+    ),
   ).toBeOnTheScreen();
+  await fireEvent.press(await screen.findByRole('link', { name: 'Challenge a friend by link' }));
+  expect(app.getPathname()).toBe('/invite');
 });
 
 test('when I am the only one online, the list says so', async () => {
@@ -61,7 +66,7 @@ test('when I am the only one online, the list says so', async () => {
     },
   });
   expect(await screen.findByText('You')).toBeOnTheScreen();
-  expect(screen.getByText('Nobody else is online right now.')).toBeOnTheScreen();
+  expect(screen.getByText(/^Nobody else is online right now\./)).toBeOnTheScreen();
 });
 
 test('on wide screens the lobby has two columns', async () => {

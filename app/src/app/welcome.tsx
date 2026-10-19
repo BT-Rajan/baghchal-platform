@@ -6,14 +6,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg from 'react-native-svg';
 
 import { describeError } from '@/api/errors';
-import { useSession } from '@/auth/session';
+import { useApi, useSession } from '@/auth/session';
 import { Brand } from '@/components/brand/Logo';
 import { Button } from '@/components/Button';
 import { BoardPreview } from '@/components/game/BoardPreview';
 import { Coin } from '@/components/game/Coin';
 import { Notice } from '@/components/Notice';
+import { useOpenStartedGame } from '@/lobby/hooks';
 import type { Piece } from '@/game/bfen';
 import { colors, radius, spacing } from '@/theme';
+
+/**
+ * A newcomer's first game: the Easy computer, which coaches as they play, with the goats (who
+ * move first, so there is something to do at once) and the longest time control.
+ */
+const FIRST_GAME = { level: 'easy', side: 'goat', time_control: '15+10' } as const;
 
 /** Wide enough to put the board beside the words. */
 const WIDE = 880;
@@ -39,16 +46,27 @@ const STEPS: readonly { piece: Piece; title: string; text: string }[] = [
 const FEATURES: readonly { title: string; text: string }[] = [
   { title: 'Live games', text: 'Quick or standard games with players online, rated or casual.' },
   { title: 'The computer', text: 'Three levels, from a gentle start to a real fight.' },
-  { title: 'Friends', text: 'Private rooms and small tournaments with the people you know.' },
+  { title: 'Friends', text: 'Send a friend a link to a game, or run a small tournament.' },
   { title: 'Get better', text: 'The engine reviews your games; puzzles sharpen your openings.' },
 ];
 
-/** The front door: what ClawPlay is, and a game in one tap, without signing up. */
+/** The front door: what ClawPlay is, and a first game in one tap, without signing up. */
 export default function Welcome() {
   const { session } = useSession();
   const { width } = useWindowDimensions();
   const wide = width >= WIDE;
-  const play = useMutation({ mutationFn: () => session.playAsGuest() });
+  const api = useApi();
+  const openStarted = useOpenStartedGame();
+  const play = useMutation({
+    mutationFn: async () => {
+      await session.playAsGuest();
+      const game = await api.playComputer(FIRST_GAME);
+      // Open it once the screens for signed-in players are in place, or their guard would send
+      // the game back to the welcome page.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      openStarted(game);
+    },
+  });
 
   const actions = (
     <View style={[styles.actions, wide && styles.actionsWide]}>

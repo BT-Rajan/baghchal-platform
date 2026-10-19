@@ -44,6 +44,8 @@ export interface BoardProps {
   /** The player's board theme and piece set. */
   theme?: BoardTheme;
   pieces?: PieceSet;
+  /** Goats to mark as in danger (the coach shows them). */
+  danger?: readonly string[];
 }
 
 export function Board({
@@ -53,6 +55,7 @@ export function Board({
   onMove,
   theme = 'wood',
   pieces = 'classic',
+  danger = [],
 }: BoardProps) {
   const palette = BOARDS[theme].palette;
   const [selected, setSelected] = useState<string | null>(null);
@@ -75,11 +78,12 @@ export function Board({
         const isSelected = p.name === selected;
         const isTarget = targets.has(p.name);
         const canPick = movable.has(p.name);
+        const inDanger = danger.includes(p.name);
         return (
           <Pressable
             key={p.name}
             role="button"
-            aria-label={pointLabel(p.name, piece, isSelected, isTarget, canPick)}
+            aria-label={pointLabel(p.name, piece, isSelected, isTarget, canPick, inDanger)}
             aria-disabled={!isTarget && !canPick && selected === null}
             onPress={() => press(p.name)}
             style={(state) => [
@@ -90,17 +94,18 @@ export function Board({
             ]}
           >
             <Svg width="100%" height="100%" viewBox="0 0 100 100">
+              {inDanger && <Circle cx={50} cy={50} r={48} fill={colors.danger} opacity={0.35} />}
               {piece !== undefined && <Coin piece={piece} set={pieces} />}
               {piece === undefined && !isTarget && <Hole palette={palette} />}
               {isTarget && (
                 <Circle
                   cx={50}
                   cy={50}
-                  r={piece === undefined ? 13 : 46}
+                  r={piece === undefined ? 11 : 46}
                   fill={piece === undefined ? colors.highlight : 'none'}
-                  stroke={colors.highlight}
-                  strokeWidth={piece === undefined ? 0 : 6}
-                  opacity={piece === undefined ? 0.6 : 0.85}
+                  stroke={piece === undefined ? colors.highlightRing : colors.danger}
+                  strokeWidth={piece === undefined ? 3 : 6}
+                  opacity={0.9}
                 />
               )}
               {(isSelected || (canPick && selected === null)) && (
@@ -109,7 +114,7 @@ export function Board({
                   cy={50}
                   r={46}
                   fill="none"
-                  stroke={colors.highlight}
+                  stroke={isSelected ? colors.highlightRing : colors.highlight}
                   strokeWidth={isSelected ? 8 : 3}
                   {...(!isSelected && { strokeDasharray: '8 6' })}
                 />
@@ -128,8 +133,10 @@ function pointLabel(
   selected: boolean,
   target: boolean,
   movable: boolean,
+  danger: boolean,
 ): string {
   const parts = [name, piece ?? 'empty'];
+  if (danger) parts.push('in danger');
   if (selected) parts.push('selected');
   else if (target) parts.push(piece === undefined ? 'move here' : 'capture');
   else if (movable) parts.push('can move');

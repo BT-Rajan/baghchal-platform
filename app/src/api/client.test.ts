@@ -57,11 +57,16 @@ test('204 resolves to undefined', async () => {
   await expect(client(server).post('/logout')).resolves.toBeUndefined();
 });
 
-test('PUT and DELETE', async () => {
-  const server = fakeServer({ 'PUT /b': { status: 204 }, 'DELETE /b': { status: 204 } });
+test('PUT, PATCH and DELETE', async () => {
+  const server = fakeServer({
+    'PUT /b': { status: 204 },
+    'PATCH /b': { status: 204 },
+    'DELETE /b': { status: 204 },
+  });
   await expect(client(server).put('/b')).resolves.toBeUndefined();
+  await expect(client(server).patch('/b')).resolves.toBeUndefined();
   await expect(client(server).delete('/b')).resolves.toBeUndefined();
-  expect(server.requests.map((r) => r.method)).toEqual(['PUT', 'DELETE']);
+  expect(server.requests.map((r) => r.method)).toEqual(['PUT', 'PATCH', 'DELETE']);
 });
 
 test('a success without a JSON body is a bad response', async () => {

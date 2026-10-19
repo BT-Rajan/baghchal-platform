@@ -15,6 +15,8 @@ export type ChallengeList = S['ChallengeList'];
 export type ChallengeRequest = S['ChallengeIn'];
 export type Game = S['GameOut'];
 export type LeaderboardEntry = S['LeaderboardEntry'];
+export type Friends = S['FriendsOut'];
+export type FriendRelation = S['RelationOut']['relation'];
 export type Category = S['Category'];
 export type TimeControl = S['ChallengeIn']['time_control'];
 export type Side = NonNullable<S['ChallengeIn']['side']>;
@@ -42,6 +44,7 @@ export type Analysis = S['AnalysisOut'];
 export type MoveReview = S['MoveReviewOut'];
 export type Verdict = S['MoveReviewOut']['verdict'];
 export type Appearance = S['AppearanceOut'];
+export type AppearanceChange = S['AppearanceIn'];
 export type BoardTheme = S['BoardTheme'];
 export type PieceSet = S['PieceSet'];
 export type SoundPack = S['SoundPack'];
@@ -53,8 +56,6 @@ export type Period = S['Period'];
 export type Payment = S['PaymentOut'];
 export type Payments = S['PaymentsOut'];
 export type PaymentProof = S['VerifyIn'];
-export type Room = S['RoomOut'];
-export type RoomRequest = S['RoomIn'];
 export type Tournament = S['TournamentOut'];
 export type TournamentRequest = S['TournamentIn'];
 export type Pairing = S['PairingOut'];
@@ -62,6 +63,7 @@ export type Trainer = S['TrainerOut'];
 export type TrainerKind = S['Kind'];
 export type TrainerPuzzle = S['PuzzleOut'];
 export type TrainerAnswer = S['AnswerOut'];
+export type DailyPuzzle = S['DailyOut'];
 
 export type ChallengeAnswer = 'accept' | 'decline' | 'cancel';
 export type GameAction = 'resign' | 'abort' | 'claim-abandonment';
@@ -109,6 +111,14 @@ export function createApi(client: Client, transport: Transport) {
     challenge: (body: ChallengeRequest) => client.post<Challenge>(`${V1}/challenges`, { body }),
     answerChallenge: (id: string, answer: ChallengeAnswer) =>
       client.post<Challenge>(`${V1}/challenges/${seg(id)}/${answer}`),
+    friends: (signal?: AbortSignal) => client.get<Friends>(`${V1}/friends`, { signal }),
+    addFriend: (username: string) =>
+      client.post<S['RelationOut']>(`${V1}/friends/${seg(username)}`),
+    removeFriend: (username: string) => client.delete<void>(`${V1}/friends/${seg(username)}`),
+    linkChallenge: (code: string, signal?: AbortSignal) =>
+      client.get<Challenge>(`${V1}/challenges/link/${seg(code)}`, { signal }),
+    acceptLink: (code: string) =>
+      client.post<Challenge>(`${V1}/challenges/link/${seg(code)}/accept`),
 
     // Games
     playComputer: (body: ComputerGameRequest) =>
@@ -175,14 +185,6 @@ export function createApi(client: Client, transport: Transport) {
     checkout: (body: CheckoutRequest) => client.post<Checkout>(`${V1}/payments/checkout`, { body }),
     verifyPayment: (body: PaymentProof) => client.post<Payment>(`${V1}/payments/verify`, { body }),
 
-    // Private rooms
-    rooms: (signal?: AbortSignal) => client.get<Room[]>(`${V1}/rooms`, { signal }),
-    room: (code: string, signal?: AbortSignal) =>
-      client.get<Room>(`${V1}/rooms/${seg(code)}`, { signal }),
-    createRoom: (body: RoomRequest) => client.post<Room>(`${V1}/rooms`, { body }),
-    joinRoom: (code: string) => client.post<Room>(`${V1}/rooms/${seg(code)}/join`),
-    closeRoom: (code: string) => client.post<Room>(`${V1}/rooms/${seg(code)}/close`),
-
     // Tournaments
     tournaments: (signal?: AbortSignal) =>
       client.get<Tournament[]>(`${V1}/tournaments`, { signal }),
@@ -198,12 +200,15 @@ export function createApi(client: Client, transport: Transport) {
     // Trainer
     trainer: (kind: TrainerKind, signal?: AbortSignal) =>
       client.get<Trainer>(`${V1}/trainer`, { query: { kind }, signal }),
+    dailyPuzzle: (signal?: AbortSignal) =>
+      client.get<DailyPuzzle>(`${V1}/trainer/daily`, { signal }),
     answerPuzzle: (id: string, move: string) =>
       client.post<TrainerAnswer>(`${V1}/trainer/${seg(id)}/answer`, { body: { move } }),
 
     // Appearance
     appearance: (signal?: AbortSignal) => client.get<Appearance>(`${V1}/me/appearance`, { signal }),
-    setAppearance: (body: Appearance) => client.put<Appearance>(`${V1}/me/appearance`, { body }),
+    changeAppearance: (body: AppearanceChange) =>
+      client.patch<Appearance>(`${V1}/me/appearance`, { body }),
 
     // Ratings
     leaderboard: (category: Category, signal?: AbortSignal) =>

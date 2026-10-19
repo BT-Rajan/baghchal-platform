@@ -31,6 +31,11 @@ export function PlayerBar({ game, side, isMe }: { game: Game; side: Piece; isMe:
             <BadgePill badge={player.badge} />
           </View>
         )}
+        {toMove && (
+          <Text style={styles.toMoveTag} aria-hidden>
+            TO MOVE
+          </Text>
+        )}
         <Text style={styles.meta}>
           {[SIDE_PLURAL[side], String(rating.rating), change].filter((x) => x !== null).join(' · ')}
         </Text>
@@ -66,7 +71,19 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  toMove: { borderColor: colors.highlight },
+  toMove: { borderColor: colors.accent, backgroundColor: colors.accentSurface },
+  toMoveTag: {
+    alignSelf: 'flex-start',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    color: colors.accentText,
+    backgroundColor: colors.accent,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
   who: { flex: 1, gap: 2 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   name: { fontSize: 15, fontWeight: '600', color: colors.text, paddingVertical: 10 },
@@ -81,8 +98,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
   },
-  running: { backgroundColor: colors.text, borderColor: colors.text },
+  running: { backgroundColor: colors.ink, borderColor: colors.ink },
   low: { backgroundColor: colors.danger, borderColor: colors.danger },
   time: { fontSize: 22, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
-  runningText: { color: colors.surface },
+  runningText: { color: colors.inkText },
 });

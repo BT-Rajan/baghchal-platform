@@ -45,7 +45,7 @@ describe('players', () => {
 
   test('says when nobody is online', async () => {
     await lobby();
-    expect(await screen.findByText('Nobody else is online right now.')).toBeOnTheScreen();
+    expect(await screen.findByText(/^Nobody else is online right now\./)).toBeOnTheScreen();
   });
 
   test('searches by username prefix', async () => {
@@ -55,7 +55,7 @@ describe('players', () => {
         body: request.query.prefix === 'da' ? [{ ...DAVE, online: false, playing: false }] : [],
       }),
     });
-    await screen.findByText('Nobody else is online right now.');
+    await screen.findByText(/^Nobody else is online right now\./);
     await fireEvent.changeText(screen.getByLabelText('Find a player'), ' da');
     expect(await screen.findByText('dave')).toBeOnTheScreen();
     expect(screen.getByText('Players starting with “da”')).toBeOnTheScreen();
@@ -310,7 +310,8 @@ describe('profiles', () => {
     expect(await screen.findByText('Online · Joined March 2026')).toBeOnTheScreen();
     expect(screen.getByLabelText('Quick rating 1612')).toBeOnTheScreen();
     expect(screen.getByText('23 games · #3')).toBeOnTheScreen();
-    expect(screen.getByLabelText('Standard rating 1500?')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Standard rating 1500')).toBeOnTheScreen();
+    expect(screen.getByText(/^A provisional rating is still settling/)).toBeOnTheScreen();
     expect(screen.getByText('1 game · provisional')).toBeOnTheScreen();
     await press('Challenge bob');
     expect(await screen.findByRole('heading', { name: 'Challenge bob' })).toBeOnTheScreen();
@@ -337,7 +338,7 @@ describe('profiles', () => {
     expect(await screen.findByText('No such player.')).toBeOnTheScreen();
   });
 
-  test('my own page shows my email and signs out', async () => {
+  test('my own page shows my ratings, not my email', async () => {
     await lobby({
       'GET /api/v1/players/alice': {
         status: 200,
@@ -351,34 +352,56 @@ describe('profiles', () => {
     });
     await screen.findByRole('heading', { name: 'Play' });
     await fireEvent.press(screen.getByRole('button', { name: /^Me, tab/ }));
-    expect(await screen.findByText('alice@example.com')).toBeOnTheScreen();
-    expect(await screen.findByLabelText('Quick rating 1500?')).toBeOnTheScreen();
+    expect(await screen.findByLabelText('Quick rating 1500')).toBeOnTheScreen();
+    expect(screen.queryByText('alice@example.com')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Challenge alice' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Block alice' })).toBeNull();
-    expect(await screen.findByText('You have not blocked anyone.')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Settings' })).toBeOnTheScreen();
   });
 });
 
 describe('leaderboard', () => {
-  test('quick and standard tabs', async () => {
+  test('a podium, the rest below, and where I stand', async () => {
+    const carol = { id: 'c', username: 'carol' };
+    const dave = { id: 'd', username: 'dave' };
     await lobby({
       'GET /api/v1/leaderboards/blitz': {
         status: 200,
         body: [
           { rank: 1, player: BOB, rating: 1702, games: 40 },
-          { rank: 2, player: ALICE, rating: 1650, games: 31 },
+          { rank: 2, player: carol, rating: 1680, games: 12 },
+          { rank: 3, player: dave, rating: 1660, games: 9 },
+          { rank: 4, player: ALICE, rating: 1650, games: 31 },
         ],
       },
       'GET /api/v1/leaderboards/rapid': { status: 200, body: [] },
+      'GET /api/v1/players/alice': {
+        status: 200,
+        body: {
+          ...ALICE,
+          online: true,
+          playing: false,
+          blocked: false,
+          created_at: ME.created_at,
+          ratings: {
+            blitz: { rating: 1650, deviation: 60, games: 31, provisional: false, rank: 4 },
+          },
+        },
+      },
     });
     await screen.findByRole('heading', { name: 'Play' });
     await fireEvent.press(screen.getByRole('button', { name: /^Leaderboard, tab/ }));
     expect(await screen.findByText('1702')).toBeOnTheScreen();
     expect(screen.getByText('alice (you)')).toBeOnTheScreen();
-    expect(screen.getByText('#2')).toBeOnTheScreen();
+    expect(screen.getByText('#4')).toBeOnTheScreen();
+    expect(await screen.findByText('You are #4, rated 1650.')).toBeOnTheScreen();
 
     await fireEvent.press(screen.getByRole('radio', { name: 'Standard' }));
     expect(await screen.findByText(/Nobody is listed yet/)).toBeOnTheScreen();
+    expect(
+      screen.getByText('You have no standard rating yet: play a rated game to get one.'),
+    ).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Play a rated game' })).toBeOnTheScreen();
   });
 
   test('a failed leaderboard is reported', async () => {

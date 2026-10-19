@@ -344,6 +344,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/challenges/link/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Link Challenge
+         * @description A challenge by link, for whoever has the link.
+         */
+        get: operations["link_challenge_api_v1_challenges_link__code__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/challenges/link/{code}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept Link Challenge
+         * @description Accept a challenge by link (guests too): the game starts now, if the challenger is
+         *     online (its id is in ``game_id``; both players get a ``game`` event).
+         */
+        post: operations["accept_link_challenge_api_v1_challenges_link__code__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/challenges/{challenge_id}/accept": {
         parameters: {
             query?: never;
@@ -913,20 +954,20 @@ export interface paths {
         };
         /**
          * My Appearance
-         * @description My board, pieces and sounds, and whether others see my badge.
+         * @description My board, pieces and sounds, whether game sounds play, and whether others see my badge.
          */
         get: operations["my_appearance_api_v1_me_appearance_get"];
-        /**
-         * Choose Appearance
-         * @description Choose a board, pieces and sounds (beyond the first of each: Plus and Pro), and whether
-         *     to show my badge.
-         */
-        put: operations["choose_appearance_api_v1_me_appearance_put"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Choose Appearance
+         * @description Change my board, pieces or sounds (beyond the first of each: Plus and Pro), whether game
+         *     sounds play, or whether to show my badge; what is left out stays as it was.
+         */
+        patch: operations["choose_appearance_api_v1_me_appearance_patch"];
         trace?: never;
     };
     "/api/v1/me/payments": {
@@ -983,88 +1024,6 @@ export interface paths {
          * @description Confirm a payment from what Checkout handed the browser, and give the plan.
          */
         post: operations["verify_api_v1_payments_verify_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/rooms": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * My Rooms
-         * @description My open rooms.
-         */
-        get: operations["my_rooms_api_v1_rooms_get"];
-        put?: never;
-        /**
-         * Create Room
-         * @description Make a private room (Pro): a link to one casual game, for whoever opens it first.
-         */
-        post: operations["create_room_api_v1_rooms_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/rooms/{code}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Room
-         * @description A room, for someone who has its link.
-         */
-        get: operations["room_api_v1_rooms__code__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/rooms/{code}/join": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Join Room
-         * @description Play the host: the game starts now (its id is in ``game_id``; both get a ``game``
-         *     event). The host must be online.
-         */
-        post: operations["join_room_api_v1_rooms__code__join_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/rooms/{code}/close": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Close Room */
-        post: operations["close_room_api_v1_rooms__code__close_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1206,6 +1165,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/friends": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Friends
+         * @description My friends (with who is online), and the friend requests waiting on either side.
+         */
+        get: operations["friends_api_v1_friends_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/friends/{username}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Friend
+         * @description Ask a player to be friends, or accept their request. They hear of it at once.
+         */
+        post: operations["add_friend_api_v1_friends__username__post"];
+        /**
+         * Remove Friend
+         * @description Unfriend a player, or decline or cancel a friend request.
+         */
+        delete: operations["remove_friend_api_v1_friends__username__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trainer": {
         parameters: {
             query?: never;
@@ -1226,6 +1229,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trainer/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daily
+         * @description Today's puzzle, the same for everyone and free on every plan, and my answer to it.
+         */
+        get: operations["daily_api_v1_trainer_daily_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trainer/{puzzle_id}/answer": {
         parameters: {
             query?: never;
@@ -1237,7 +1260,7 @@ export interface paths {
         put?: never;
         /**
          * Answer
-         * @description Was this the best move? The answer says which was.
+         * @description Was this the best move? The answer says which was. Pro, except for today's puzzle.
          */
         post: operations["answer_api_v1_trainer__puzzle_id__answer_post"];
         delete?: never;
@@ -1299,13 +1322,18 @@ export interface components {
             /** Best */
             best: string;
         };
-        /** AppearanceIn */
+        /**
+         * AppearanceIn
+         * @description A change: only the fields given are changed.
+         */
         AppearanceIn: {
-            board: components["schemas"]["BoardTheme"];
-            pieces: components["schemas"]["PieceSet"];
-            sounds: components["schemas"]["SoundPack"];
+            board?: components["schemas"]["BoardTheme"] | null;
+            pieces?: components["schemas"]["PieceSet"] | null;
+            sounds?: components["schemas"]["SoundPack"] | null;
+            /** Sounds On */
+            sounds_on?: boolean | null;
             /** Show Badge */
-            show_badge: boolean;
+            show_badge?: boolean | null;
         };
         /**
          * AppearanceOut
@@ -1315,6 +1343,8 @@ export interface components {
             board: components["schemas"]["BoardTheme"];
             pieces: components["schemas"]["PieceSet"];
             sounds: components["schemas"]["SoundPack"];
+            /** Sounds On */
+            sounds_on: boolean;
             /** Show Badge */
             show_badge: boolean;
         };
@@ -1331,7 +1361,7 @@ export interface components {
         /** ChallengeIn */
         ChallengeIn: {
             /** Opponent */
-            opponent: string;
+            opponent?: string | null;
             /**
              * Time Control
              * @enum {string}
@@ -1360,7 +1390,9 @@ export interface components {
              */
             id: string;
             challenger: components["schemas"]["PlayerOut"];
-            opponent: components["schemas"]["PlayerOut"];
+            opponent: components["schemas"]["PlayerOut"] | null;
+            /** Code */
+            code?: string | null;
             /** Time Control */
             time_control: string;
             /** Rated */
@@ -1475,6 +1507,27 @@ export interface components {
              */
             time_control: "3+2" | "5+3" | "10+5" | "15+10";
         };
+        /** DailyAnswerOut */
+        DailyAnswerOut: {
+            /** Move */
+            move: string;
+            /** Correct */
+            correct: boolean;
+            /** Best */
+            best: string;
+        };
+        /** DailyOut */
+        DailyOut: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            puzzle: components["schemas"]["PuzzleOut"];
+            answer: components["schemas"]["DailyAnswerOut"] | null;
+            /** Streak */
+            streak: number;
+        };
         /** DeleteAccountIn */
         DeleteAccountIn: {
             /** Password */
@@ -1542,7 +1595,7 @@ export interface components {
              */
             direction: "sent" | "received";
             /** Opponent */
-            opponent: string;
+            opponent: string | null;
             /** Time Control */
             time_control: string;
             /** Rated */
@@ -1605,6 +1658,8 @@ export interface components {
             challenges: components["schemas"]["ExportChallenge"][];
             /** Blocked Players */
             blocked_players: string[];
+            /** Friends */
+            friends: string[];
             /** Sessions */
             sessions: components["schemas"]["ExportSession"][];
         };
@@ -1660,7 +1715,7 @@ export interface components {
          * Feature
          * @enum {string}
          */
-        Feature: "computer_hard" | "full_history" | "analysis" | "themes" | "badge" | "private_rooms" | "tournaments" | "trainer";
+        Feature: "computer_hard" | "full_history" | "analysis" | "themes" | "badge" | "tournaments" | "trainer";
         /** FiguresOut */
         FiguresOut: {
             /** Moves */
@@ -1675,6 +1730,15 @@ export interface components {
             mistake_rate: number;
             /** Blunders */
             blunders: number;
+        };
+        /** FriendsOut */
+        FriendsOut: {
+            /** Friends */
+            friends: components["schemas"]["PlayerStatusOut"][];
+            /** Incoming */
+            incoming: components["schemas"]["PlayerOut"][];
+            /** Outgoing */
+            outgoing: components["schemas"]["PlayerOut"][];
         };
         /** GameOut */
         GameOut: {
@@ -1704,6 +1768,11 @@ export interface components {
             moves: string[];
             /** Legal Moves */
             legal_moves: string[];
+            /**
+             * Goats In Danger
+             * @default []
+             */
+            goats_in_danger: string[];
             clocks: components["schemas"]["ClocksOut"];
             ratings: components["schemas"]["RatingsOut"];
             match: components["schemas"]["MatchOut"] | null;
@@ -2158,6 +2227,12 @@ export interface components {
             };
             /** Blocked */
             blocked: boolean;
+            /**
+             * Friend
+             * @default none
+             * @enum {string}
+             */
+            friend: "none" | "friends" | "requested" | "incoming";
         };
         /** PuzzleOut */
         PuzzleOut: {
@@ -2208,6 +2283,14 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** RelationOut */
+        RelationOut: {
+            /**
+             * Relation
+             * @enum {string}
+             */
+            relation: "none" | "friends" | "requested" | "incoming";
         };
         /** RenameIn */
         RenameIn: {
@@ -2287,49 +2370,6 @@ export interface components {
             /** Reason */
             reason: string;
         };
-        /** RoomIn */
-        RoomIn: {
-            /**
-             * Time Control
-             * @enum {string}
-             */
-            time_control: "3+2" | "5+3" | "10+5" | "15+10";
-            /**
-             * Side
-             * @default random
-             * @enum {string}
-             */
-            side: "goat" | "tiger" | "random";
-        };
-        /** RoomOut */
-        RoomOut: {
-            /** Code */
-            code: string;
-            host: components["schemas"]["PlayerOut"];
-            /**
-             * Time Control
-             * @enum {string}
-             */
-            time_control: "3+2" | "5+3" | "10+5" | "15+10";
-            /**
-             * Host Side
-             * @enum {string}
-             */
-            host_side: "goat" | "tiger" | "random";
-            status: components["schemas"]["RoomStatus"];
-            /** Game Id */
-            game_id: string | null;
-            /**
-             * Expires At
-             * Format: date-time
-             */
-            expires_at: string;
-        };
-        /**
-         * RoomStatus
-         * @enum {string}
-         */
-        RoomStatus: "open" | "played" | "closed";
         /** SeekCountOut */
         SeekCountOut: {
             /** Time Control */
@@ -3109,6 +3149,68 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChallengeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_challenge_api_v1_challenges_link__code__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChallengeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_link_challenge_api_v1_challenges_link__code__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4140,7 +4242,7 @@ export interface operations {
             };
         };
     };
-    choose_appearance_api_v1_me_appearance_put: {
+    choose_appearance_api_v1_me_appearance_patch: {
         parameters: {
             query?: never;
             header?: never;
@@ -4246,152 +4348,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaymentOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    my_rooms_api_v1_rooms_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RoomOut"][];
-                };
-            };
-        };
-    };
-    create_room_api_v1_rooms_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RoomIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RoomOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    room_api_v1_rooms__code__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                code: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RoomOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    join_room_api_v1_rooms__code__join_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                code: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RoomOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    close_room_api_v1_rooms__code__close_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                code: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RoomOut"];
                 };
             };
             /** @description Validation Error */
@@ -4645,6 +4601,86 @@ export interface operations {
             };
         };
     };
+    friends_api_v1_friends_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendsOut"];
+                };
+            };
+        };
+    };
+    add_friend_api_v1_friends__username__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RelationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_friend_api_v1_friends__username__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     trainer_api_v1_trainer_get: {
         parameters: {
             query?: {
@@ -4672,6 +4708,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    daily_api_v1_trainer_daily_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyOut"];
                 };
             };
         };

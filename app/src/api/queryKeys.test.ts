@@ -10,6 +10,7 @@ test('keys are stable and distinct', () => {
   expect(queryKeys.playerGames('bob')).toEqual(['player-games', 'bob']);
   const all = [
     queryKeys.challenges,
+    queryKeys.friends,
     queryKeys.activeGames,
     queryKeys.onlinePlayers,
     queryKeys.game('x'),
@@ -25,11 +26,11 @@ test('keys are stable and distinct', () => {
     queryKeys.analysis('x'),
     queryKeys.appearance,
     queryKeys.payments,
-    queryKeys.rooms,
-    queryKeys.room('x'),
+    queryKeys.linkChallenge('x'),
     queryKeys.tournaments,
     queryKeys.tournament('x'),
     queryKeys.trainer('x'),
+    queryKeys.dailyPuzzle,
   ].map((key) => JSON.stringify(key));
   expect(new Set(all).size).toBe(all.length);
 });

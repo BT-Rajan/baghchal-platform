@@ -23,6 +23,8 @@ from baghchal_server.accounts.schemas import (
 from baghchal_server.accounts.service import DELETED_PREFIX
 from baghchal_server.config import Settings
 from baghchal_server.errors import AppError
+from baghchal_server.friends import service as friends
+from baghchal_server.friends.models import Friendship
 from baghchal_server.games.models import Game, GameMove
 from baghchal_server.games.service import active_games
 from baghchal_server.lobby.models import Block, Challenge
@@ -69,7 +71,9 @@ async def export(db: AsyncSession, user: User, now: datetime) -> ExportOut:
         )
     ).all()
     opponents = {g.tiger_id if g.goat_id == user.id else g.goat_id for g in games} | {
-        c.opponent_id if c.challenger_id == user.id else c.challenger_id for c in challenges
+        c.opponent_id if c.challenger_id == user.id else c.challenger_id
+        for c in challenges
+        if c.opponent_id is not None
     }
     # Every opponent, deleted ones included (they show under their anonymous name).
     rows = await db.execute(select(User.id, User.username).where(User.id.in_(opponents)))
@@ -114,7 +118,9 @@ async def export(db: AsyncSession, user: User, now: datetime) -> ExportOut:
                 id=c.id,
                 created_at=c.created_at,
                 direction="sent" if c.challenger_id == user.id else "received",
-                opponent=names[c.opponent_id if c.challenger_id == user.id else c.challenger_id],
+                opponent=None
+                if c.opponent_id is None
+                else names[c.opponent_id if c.challenger_id == user.id else c.challenger_id],
                 time_control=_time_control(c.initial_seconds, c.increment_seconds),
                 rated=c.rated,
                 status=c.status,
@@ -122,6 +128,7 @@ async def export(db: AsyncSession, user: User, now: datetime) -> ExportOut:
             for c in challenges
         ],
         blocked_players=list(blocked),
+        friends=await friends.friend_names(db, user.id),
         sessions=[
             ExportSession(
                 created_at=s.created_at, last_used_at=s.last_used_at, expires_at=s.expires_at
@@ -159,9 +166,9 @@ async def delete_account(
 ) -> tuple[Sequence[Challenge], Mail]:
     """Delete a player's account; returns the challenges it closed and a goodbye mail.
 
-    Personal data goes: email, password, sessions, links, blocks. The row itself stays under a
-    meaningless name, so the games of the players they met keep an opponent, and ratings stay
-    as they were (deleted players are left out of leaderboards and the lobby).
+    Personal data goes: email, password, sessions, links, blocks, friends. The row itself
+    stays under a meaningless name, so the games of the players they met keep an opponent, and
+    ratings stay as they were (deleted players are left out of leaderboards and the lobby).
     """
     if await active_games(db, user.id):
         raise AppError(
@@ -188,6 +195,11 @@ async def delete_account(
     await db.execute(delete(EmailToken).where(EmailToken.user_id == user.id))
     await db.execute(
         delete(Block).where(or_(Block.blocker_id == user.id, Block.blocked_id == user.id))
+    )
+    await db.execute(
+        delete(Friendship).where(
+            or_(Friendship.requester_id == user.id, Friendship.addressee_id == user.id)
+        )
     )
     await db.commit()
     return challenges, mail

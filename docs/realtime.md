@@ -20,6 +20,7 @@ Every message is a JSON text frame with a `type`.
 | client → server | `probe` | `id` — the echo; ids that do not match the latest probe are ignored |
 | server → client | `challenge` | `challenge: {...}` — a challenge involving you was created or changed (any status); match on `challenge.id` |
 | server → client | `game` | `game: {...}` — a game you play in started or changed: the full state (position, legal moves, clocks, result); match on `game.id` and keep the highest `game.ply` |
+| server → client | `friends` | (no fields) — your friends or friend requests changed; fetch `GET /friends` again |
 | server → client | `error` | `code`, `message` — e.g. `invalid_message`; the socket stays open |
 
 Commands (challenges, moves, resigning) go over HTTP; the socket carries the resulting

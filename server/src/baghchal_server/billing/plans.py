@@ -26,7 +26,6 @@ class Feature(StrEnum):
     """Board and coin themes, and sound packs."""
     BADGE = "badge"
     """A Plus or Pro badge next to the username."""
-    PRIVATE_ROOMS = "private_rooms"
     TOURNAMENTS = "tournaments"
     TRAINER = "trainer"
     """Opening and endgame practice against the engine."""
@@ -46,7 +45,7 @@ _PLUS: Final = frozenset(
 FEATURES: Final[dict[Plan, frozenset[Feature]]] = {
     Plan.FREE: frozenset(),
     Plan.PLUS: _PLUS,
-    Plan.PRO: _PLUS | {Feature.PRIVATE_ROOMS, Feature.TOURNAMENTS, Feature.TRAINER},
+    Plan.PRO: _PLUS | {Feature.TOURNAMENTS, Feature.TRAINER},
 }
 
 FREE_HISTORY_DAYS: Final = 30
@@ -76,7 +75,6 @@ FEATURE_NAMES: Final = {
     Feature.ANALYSIS: "game analysis",
     Feature.THEMES: "themes and sound packs",
     Feature.BADGE: "a profile badge",
-    Feature.PRIVATE_ROOMS: "private rooms",
     Feature.TOURNAMENTS: "tournaments",
     Feature.TRAINER: "the trainer",
 }

@@ -8,6 +8,7 @@ import { AWAY_REFRESH_MS, PRESENCE_REFRESH_MS, useProfile } from '@/lobby/hooks'
 import { colors, spacing } from '@/theme';
 
 import { Button } from '../Button';
+import { Confirm } from '../Confirm';
 import { useNow } from '../useNow';
 
 export interface GameActionsProps {
@@ -64,24 +65,17 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
   }
   if (confirming) {
     return (
-      <View style={styles.confirm}>
-        <Text style={styles.question}>Resign this game?</Text>
-        <View style={styles.row}>
-          <View style={styles.cell}>
-            <Button
-              title="Yes, resign"
-              busy={pending === 'resign'}
-              onPress={() => {
-                setConfirming(false);
-                onAction('resign');
-              }}
-            />
-          </View>
-          <View style={styles.cell}>
-            <Button title="Keep playing" variant="secondary" onPress={() => setConfirming(false)} />
-          </View>
-        </View>
-      </View>
+      <Confirm
+        question="Resign this game?"
+        confirmTitle="Yes, resign"
+        cancelTitle="Keep playing"
+        busy={pending === 'resign'}
+        onConfirm={() => {
+          setConfirming(false);
+          onAction('resign');
+        }}
+        onCancel={() => setConfirming(false)}
+      />
     );
   }
   return (
@@ -117,7 +111,6 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
 
 const styles = StyleSheet.create({
   confirm: { gap: spacing.sm },
-  question: { fontSize: 16, fontWeight: '600', color: colors.text },
   away: { fontSize: 15, color: colors.text },
   row: { flexDirection: 'row', gap: spacing.sm },
   cell: { flex: 1 },

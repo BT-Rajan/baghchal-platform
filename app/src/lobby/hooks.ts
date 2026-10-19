@@ -114,6 +114,59 @@ export function useCreateChallenge() {
   });
 }
 
+/** A challenge by link, as whoever opened the link sees it. */
+export function useLinkChallenge(code: string) {
+  const api = useApi();
+  return useQuery({
+    queryKey: queryKeys.linkChallenge(code),
+    queryFn: async ({ signal }) => {
+      const challenge = await api.linkChallenge(code, signal);
+      serverClock.observe(challenge.created_at);
+      return challenge;
+    },
+  });
+}
+
+/** Accept a challenge by link: the game starts at once and opens. */
+export function useAcceptLink(code: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  const openStarted = useOpenStartedGame();
+  return useMutation({
+    mutationFn: async () => {
+      const challenge = await api.acceptLink(code);
+      queryClient.setQueryData(queryKeys.linkChallenge(code), challenge);
+      openStarted(await api.game(challenge.game_id!));
+      return challenge;
+    },
+    // Someone else may have got there first: show the challenge as it is now.
+    onError: () => void queryClient.invalidateQueries({ queryKey: queryKeys.linkChallenge(code) }),
+  });
+}
+
+export function useFriends() {
+  const api = useApi();
+  return useQuery({ queryKey: queryKeys.friends, queryFn: ({ signal }) => api.friends(signal) });
+}
+
+/** Ask a player to be friends (or accept their request), or unfriend, decline or cancel. */
+export function useFriendship() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ username, add }: { username: string; add: boolean }) => {
+      if (add) await api.addFriend(username);
+      else await api.removeFriend(username);
+    },
+    onSuccess: (_, { username }) =>
+      Promise.all(
+        [queryKeys.friends, queryKeys.profile(username)].map((queryKey) =>
+          queryClient.invalidateQueries({ queryKey }),
+        ),
+      ),
+  });
+}
+
 export function useBlocks() {
   const api = useApi();
   return useQuery({ queryKey: queryKeys.blocks, queryFn: ({ signal }) => api.blocks(signal) });
@@ -134,6 +187,7 @@ export function useBlock() {
           queryKeys.onlinePlayers,
           ['players', 'search'],
           queryKeys.challenges,
+          queryKeys.friends,
         ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
       ),
   });

@@ -1,7 +1,7 @@
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { describeError } from '@/api/errors';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, type } from '@/theme';
 
 import { Button } from './Button';
 import { Notice } from './Notice';
@@ -9,7 +9,8 @@ import { Notice } from './Notice';
 export function Loading({ label = 'Loading' }: { label?: string }) {
   return (
     <View style={styles.loading} role="progressbar" aria-label={label} aria-busy>
-      <ActivityIndicator color={colors.accent} />
+      <ActivityIndicator color={colors.accent} size="large" />
+      <Text style={styles.label}>{`${label}…`}</Text>
     </View>
   );
 }
@@ -25,6 +26,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry: () => 
 }
 
 const styles = StyleSheet.create({
-  loading: { paddingVertical: spacing.lg, alignItems: 'center' },
+  loading: { paddingVertical: spacing.xl, alignItems: 'center', gap: spacing.sm },
+  label: { ...type.caption, color: colors.muted },
   error: { gap: spacing.sm },
 });

@@ -1,5 +1,4 @@
 import type { UseQueryResult } from '@tanstack/react-query';
-import { router } from 'expo-router';
 import { StyleSheet, Text } from 'react-native';
 
 import {
@@ -22,6 +21,7 @@ import { Button } from '../Button';
 import { Card, Hint, SectionTitle } from '../Card';
 import { Notice } from '../Notice';
 import { ErrorState, Loading } from '../States';
+import { Upsell } from '../Upsell';
 
 /**
  * The engine's review of a finished game: asked for once, then the verdict on the move being
@@ -47,12 +47,9 @@ export function AnalysisPanel({
     <>
       <SectionTitle>Analysis</SectionTitle>
       {!allowed ? (
-        <Card>
-          <Text style={styles.text}>
-            The engine’s review of every move, and where the game turned, comes with ClawPlay Plus.
-          </Text>
-          <Button title="See plans" variant="secondary" onPress={() => router.push('/plans')} />
-        </Card>
+        <Upsell feature="analysis">
+          See the engine’s review of every move, and where the game turned.
+        </Upsell>
       ) : analysis.error !== null ? (
         <ErrorState error={analysis.error} onRetry={() => void analysis.refetch()} />
       ) : analysis.data === undefined ? (

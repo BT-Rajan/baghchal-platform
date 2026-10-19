@@ -5,7 +5,8 @@ Server to client: ``hello`` (once, on connect), ``pong``, ``probe`` (answer at o
 same ``id``: it measures the round trip, which is not charged to the player's clock),
 ``challenge`` (a challenge involving you was created or changed; match on ``challenge.id``),
 ``game`` (a game you play in started or changed: the full state; match on ``game.id`` and keep
-the highest ``game.ply``), ``error``.
+the highest ``game.ply``), ``friends`` (my friends or friend requests changed: fetch them
+again), ``error``.
 """
 
 from typing import Annotated, Literal
@@ -50,6 +51,10 @@ class ChallengeEvent(BaseModel):
 class GameEvent(BaseModel):
     type: Literal["game"] = "game"
     game: GameOut
+
+
+class FriendsEvent(BaseModel):
+    type: Literal["friends"] = "friends"
 
 
 class ErrorEvent(BaseModel):

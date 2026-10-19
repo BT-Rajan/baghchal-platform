@@ -7,7 +7,7 @@ import { LINK_TOKEN, ME, error, type Route } from './support/fakeServer';
 const SIGNED_IN = { 'GET /api/v1/me': { status: 200, body: ME } };
 
 function account(routes: Record<string, Route> = {}) {
-  return renderApp('/account', { token: 'tok', routes: { ...SIGNED_IN, ...routes } });
+  return renderApp('/settings', { token: 'tok', routes: { ...SIGNED_IN, ...routes } });
 }
 
 async function press(name: string | RegExp) {
@@ -18,7 +18,7 @@ async function type(label: string, text: string) {
   await fireEvent.changeText(screen.getByLabelText(label), text);
 }
 
-test('the Me tab links to the account settings', async () => {
+test('the Me tab leads to the settings', async () => {
   const { app } = await renderApp('/me', {
     token: 'tok',
     routes: {
@@ -30,10 +30,10 @@ test('the Me tab links to the account settings', async () => {
       'GET /api/v1/blocks': { status: 200, body: [] },
     },
   });
-  await screen.findByRole('button', { name: 'Account settings' });
-  await press('Account settings');
+  await screen.findByRole('button', { name: 'Settings' });
+  await press('Settings');
   expect(await screen.findByText('Your email address is alice@example.com.')).toBeOnTheScreen();
-  expect(app.getPathname()).toBe('/account');
+  expect(app.getPathname()).toBe('/settings');
 });
 
 describe('changing the email address', () => {

@@ -22,43 +22,58 @@ from baghchal_server.billing.plans import Feature, Plan
 from baghchal_server.lobby.schemas import Badge
 
 FREE: Final = AppearanceOut(
-    board=BoardTheme.WOOD, pieces=PieceSet.CLASSIC, sounds=SoundPack.GENTLE, show_badge=True
+    board=BoardTheme.WOOD,
+    pieces=PieceSet.CLASSIC,
+    sounds=SoundPack.GENTLE,
+    sounds_on=True,
+    show_badge=True,
 )
 WHAT: Final = "A choice of boards, pieces and sounds"
 
 
-def _themed(choice: AppearanceIn) -> bool:
-    return (choice.board, choice.pieces, choice.sounds) != (FREE.board, FREE.pieces, FREE.sounds)
+def _themed(change: AppearanceIn) -> bool:
+    """Whether the change picks anything beyond the free board, pieces and sounds."""
+    return any(
+        new is not None and new != free
+        for new, free in (
+            (change.board, FREE.board),
+            (change.pieces, FREE.pieces),
+            (change.sounds, FREE.sounds),
+        )
+    )
 
 
 async def mine(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> AppearanceOut:
     row = await db.get(Appearance, user_id)
     if row is None:
         return FREE
+    own = {"sounds_on": row.sounds_on, "show_badge": row.show_badge}
     if not (await billing.entitlements(db, user_id, now)).has(Feature.THEMES):
-        return FREE.model_copy(update={"show_badge": row.show_badge})
+        return FREE.model_copy(update=own)
     return AppearanceOut(
         board=BoardTheme(row.board),
         pieces=PieceSet(row.pieces),
         sounds=SoundPack(row.sounds),
-        show_badge=row.show_badge,
+        **own,
     )
 
 
 async def choose(
-    db: AsyncSession, user_id: uuid.UUID, now: datetime, choice: AppearanceIn
+    db: AsyncSession, user_id: uuid.UUID, now: datetime, change: AppearanceIn
 ) -> AppearanceOut:
-    """Save the player's choice; anything beyond the free set needs the themes feature."""
-    if _themed(choice):
+    """Change what is given and keep the rest (so muting a game never resets a theme kept
+    through a lapsed plan); anything beyond the free set needs the themes feature."""
+    if _themed(change):
         await billing.require(db, user_id, now, Feature.THEMES, WHAT)
     row = await db.get(Appearance, user_id)
     if row is None:
-        row = Appearance(user_id=user_id)
+        row = Appearance(user_id=user_id, **FREE.model_dump())
         db.add(row)
-    row.board, row.pieces, row.sounds = choice.board, choice.pieces, choice.sounds
-    row.show_badge, row.updated_at = choice.show_badge, now
+    for field, value in change.model_dump(exclude_none=True).items():
+        setattr(row, field, value)
+    row.updated_at = now
     await db.commit()
-    return AppearanceOut.model_validate(choice.model_dump())
+    return await mine(db, user_id, now)
 
 
 async def badges(

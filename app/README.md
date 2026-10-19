@@ -72,8 +72,16 @@ scripts/        the Expo-cloud guardrail
 
 ## How it works
 
+- **The visual system.** `src/theme.ts` holds the tokens: colours by role (`accent` only for
+  a screen's main action, `ink` for what is selected or current, `link`, success, danger), a
+  type scale, radii and a soft shadow. The shared components draw everything with them: chips
+  for choices (`Segmented`), lifted cards, neutral secondary buttons, one line-icon set
+  (`Icon`, also on `IconButton` for utility toggles like sound). Wide screens get a sidebar
+  instead of the bottom tab bar. The game shows whose move it is on the player's bar, and the
+  goats to place and the tigers' captures as a coin tray and five slots (`PieceCounts`).
 - **The front door.** Signed-out visitors land on `/welcome`: what Bagh Chal is, how it's
-  played, and "Play now, no sign-up", which signs them in as a guest (`guest-3fa9c1`) at once.
+  played, and "Play now, no sign-up", which signs them in as a guest (`guest-3fa9c1`) and
+  starts their first game at once: goats, against the Easy computer, at 15+10.
   Guests play the computer and casual games; rated play, challenges, reports and payments ask
   for an account. A banner on Play and Me leads to `/claim`, which turns the guest into a real
   account and keeps its games.
@@ -84,18 +92,41 @@ scripts/        the Expo-cloud guardrail
   for a bearer token and keep it in the Keychain / Keystore (`expo-secure-store`). On start the
   app asks `GET /me`; any `401 not_authenticated` signs out, ignoring late answers that belong
   to an earlier session.
-- **Your account.** Me → Account settings changes the email address (confirmed by a link sent
+- **Settings.** Me → Settings is the one place for settings: the plan, board and sounds, blocked
+  players, moderation (staff) and signing out; for members it also changes the email address (confirmed by a link sent
   to the new one) or password, downloads your data (a file on the web, the share sheet in
   apps) and deletes the account.
+- **Friends.** A player's profile has the friend button (add, cancel, accept or decline,
+  remove after `Confirm`). Home shows friend requests to answer, and the friends themselves,
+  online first, above "Online now", each with a Challenge button. A `friends` event on the
+  socket refreshes them. Guests have no friends.
+- **Home.** The Play tab is a dashboard: a live game to continue first, challenges, "Play
+  now", today's puzzle (`DailyPuzzle`, on the same `PuzzleBoard` as the trainer), the latest
+  three results (`GameHistory` as a preview, with the rest on Me), and beside them the players
+  online. "More ways to play" is here, and only here: challenges by link, tournaments and the
+  trainer, each a `FeatureLink` tile carrying the plan's badge when the player's plan lacks it.
+  The daily puzzle shows the player's daily streak.
 - **Play now.** The lobby's "Play now" opens a screen to pair with whoever wants the same game
   (casual or rated, with a live count of who is waiting; leaving the screen stops waiting) or
   to play the computer at a chosen strength and side.
+- **The coach.** Games against the Easy computer show a tip for the moment (`src/game/coach.ts`:
+  placing and moving goats, captures on offer, a goat just lost, what to try after the game)
+  and mark the goats in danger, which the server sends as `goats_in_danger`. Choosing Easy is
+  choosing tips, so there is no separate setting.
+- **The game screen.** Leaving a live game of mine asks first (`usePreventRemove` with the
+  shared `Confirm`, also used to resign and to block). Once a game ends, the next step comes
+  straight after the result: a rematch or "Play the computer again", and back to the lobby.
+  In a finished game each move in the list is a button that shows the position after it.
 - **History and replay.** Profiles list the player's finished games, newest first and paged;
   each opens the game, where finished games step through every position. A game against the
   computer offers "Play the computer again" (sides swapped) instead of a rematch or report.
-- **Plans.** Me → Your plan shows Free, Plus or Pro and leads to the plans. Paid features are
+- **Leaderboard.** The top three on a podium, the rest below, and a line saying where I stand
+  (my rank, or why I am not listed yet), from my own profile.
+- **Plans.** Settings → Your plan shows Free, Plus or Pro and leads to the plans. Paid features are
   shown with what unlocks them (Hard in the computer picker, the 30-day history note) rather
-  than hidden. Admins grant and revoke plans and features on a player's moderation page.
+  than hidden. The plans page shows each plan's price (with the yearly saving) and a table
+  of what each includes, built from the server's plans (`comparisonRows`). Admins grant and
+  revoke plans and features on a player's moderation page.
 - **Analysis.** A finished game has an Analysis section: "Analyse this game" (Plus and Pro;
   Free sees what Plus adds), then the verdict on the move being replayed with the engine's
   choice, "Next mistake", each side's tally, and ?!, ? and ?? marks in the move list.
@@ -103,13 +134,20 @@ scripts/        the Expo-cloud guardrail
   server takes payments. Razorpay's Checkout script is loaded on the first purchase
   (`src/payments/razorpay.ts`) and opens Razorpay's own window; the app never sees card
   details, and the server confirms the payment before the plan changes. Web only for now.
-- **Pro extras.** Play now → More ways to play: private rooms (make a link, share it; the
-  friend's "Join and play" starts the game), tournaments (host, join by link, standings, "Play
+- **Challenges by link.** Play now → "Challenge a friend by link" (`/invite`) uses the same
+  `ChallengeForm` as challenging a player by name, without the rated choice; the link it makes
+  (`shareLink` in `src/lobby/format.ts`, the one way the app makes share links) opens `/c/[code]`,
+  where the friend's "Accept and play" starts the game. The challenge also shows under Your
+  challenges in the lobby, with its link and a Cancel button.
+- **Pro extras.** Play now → More ways to play: tournaments (host, join by link, standings, "Play
   now" on my games) and the trainer (the puzzle on the real board, in the player's theme).
-  Each shows players without Pro what it does, and the way to the plans.
-- **Board, pieces and sounds.** Me → Board, pieces and sounds: board themes and piece sets
+  Players without Pro see what each does in the one `Upsell` component, as everywhere a
+  paid feature is locked.
+- **Board, pieces and sounds.** Settings → Board, pieces and sounds: board themes and piece sets
   (drawn by `Wood.tsx` and `Coin.tsx` from `src/appearance/catalog.ts`), sound packs (made live
-  in `sound.ts`), and showing or hiding the badge. Free sees the choices it would get with Plus.
+  in `sound.ts`), game sounds on or off, and showing or hiding the badge. Free sees the choices
+  it would get with Plus. These are one setting, kept on the server for every device: the
+  game's "Turn sounds off" button changes the same `sounds_on`.
 - **Reports and moderation.** "Report" on a profile or a finished game sends a report (with
   the game). Moderators see Me → Moderation: the report queue and each player's record, where
   they suspend, ban, lift a suspension, rename and dismiss reports, always with a reason.

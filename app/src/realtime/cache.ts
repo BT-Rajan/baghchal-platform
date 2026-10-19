@@ -36,7 +36,7 @@ export function applyChallenge(queryClient: QueryClient, challenge: Challenge, m
     const incoming = without(lists.incoming, challenge.id);
     const outgoing = without(lists.outgoing, challenge.id);
     if (challenge.status === 'pending') {
-      if (challenge.opponent.id === myId) incoming.push(challenge);
+      if (challenge.opponent?.id === myId) incoming.push(challenge);
       else if (challenge.challenger.id === myId) outgoing.push(challenge);
     }
     return { incoming, outgoing };
@@ -67,6 +67,7 @@ export function applyGame(queryClient: QueryClient, game: Game): { started: bool
 export function refetchAfterReconnect(queryClient: QueryClient): Promise<void> {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: queryKeys.challenges }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.friends }),
     queryClient.invalidateQueries({ queryKey: queryKeys.activeGames }),
     queryClient.invalidateQueries({ queryKey: ['game'] }),
   ]).then(() => undefined);
@@ -95,6 +96,11 @@ export function applyMessage(
       break;
     case 'game':
       if (applyGame(queryClient, message.game).started) applied.startedGame = message.game;
+      break;
+    case 'friends':
+      // The lists, and how profiles show the friendship.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.friends });
+      void queryClient.invalidateQueries({ queryKey: ['player'] });
       break;
     case 'error':
       console.warn('Realtime error from the server', message.code, message.message);

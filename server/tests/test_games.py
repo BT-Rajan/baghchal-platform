@@ -100,6 +100,7 @@ async def test_accepting_starts_a_game(
     assert game["position"] == "T3T/5/5/5/T3T g 20 0"
     assert (game["ply"], game["side_to_move"], game["moves"]) == (0, "goat", [])
     assert len(game["legal_moves"]) == 21
+    assert game["goats_in_danger"] == []
     assert game["clocks"] == {"goat_ms": 300_000, "tiger_ms": 300_000, "running": None}
     assert game["time_control"] == "5+3"
     assert game["rated"] is False
@@ -160,6 +161,18 @@ async def test_one_live_game_per_player(app: FastAPI, players: PlayerFactory) ->
 
 
 # ── Moves ─────────────────────────────────────────────────────────────────
+
+
+async def test_goats_in_danger_are_shown_on_their_turn(
+    app: FastAPI, pair: tuple[Player, Player]
+) -> None:
+    alice, bob = pair
+    async with AsyncExitStack() as stack:
+        await _online(app, stack, alice, bob)
+        game = await _play(alice, bob, await _start(alice, bob), ["a2"])
+        assert game["goats_in_danger"] == []  # the tigers' turn: their captures are legal moves
+        game = await _play(alice, bob, game, ["e1-d1"])
+        assert game["goats_in_danger"] == ["a2"]
 
 
 async def test_a_full_game_to_five_captures(app: FastAPI, pair: tuple[Player, Player]) -> None:

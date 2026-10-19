@@ -1,5 +1,4 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -14,6 +13,7 @@ import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
+import { Upsell } from '@/components/Upsell';
 import { useServerNow } from '@/components/useNow';
 import { LEVELS, TIME_CONTROLS, secondsLeft, waitingText } from '@/lobby/format';
 import { PRESENCE_REFRESH_MS, useOpenStartedGame } from '@/lobby/hooks';
@@ -30,11 +30,14 @@ const SIDES: readonly { value: Side; label: string }[] = [
   { value: 'tiger', label: 'Tigers' },
 ];
 
-/** Start a game now: with whoever wants the same game, or against the computer. */
+/**
+ * Start a game now: with whoever wants the same game, or against the computer. (The other ways
+ * to play are on the home screen.)
+ */
 export default function PlayNow() {
   const [timeControl, setTimeControl] = useState<TimeControl>('5+3');
   return (
-    <Screen title="Play now" align="top">
+    <Screen align="top">
       <Segmented
         label="Time control (minutes + seconds per move)"
         options={TIME_OPTIONS}
@@ -43,18 +46,6 @@ export default function PlayNow() {
       />
       <FindOpponent timeControl={timeControl} />
       <PlayComputer timeControl={timeControl} />
-      <SectionTitle>More ways to play</SectionTitle>
-      <Button
-        title="Invite a friend (private room)"
-        variant="secondary"
-        onPress={() => router.push('/rooms')}
-      />
-      <Button title="Tournaments" variant="secondary" onPress={() => router.push('/tournaments')} />
-      <Button
-        title="Trainer: opening and endgame puzzles"
-        variant="secondary"
-        onPress={() => router.push('/trainer')}
-      />
     </Screen>
   );
 }
@@ -162,13 +153,13 @@ function PlayComputer({ timeControl }: { timeControl: TimeControl }) {
           <Segmented label="Strength" options={LEVELS} value={level} onChange={setLevel} />
           <Segmented label="You play" options={SIDES} value={side} onChange={setSide} />
         </View>
-        <Hint>Casual: games against the computer never change your rating.</Hint>
+        <Hint>
+          Casual: games against the computer never change your rating. Easy gives you tips as you
+          play.
+        </Hint>
         {start.error !== null && <Notice tone="error">{describeError(start.error)}</Notice>}
         {locked && (
-          <>
-            <Notice tone="info">The Hard computer comes with ClawPlay Plus.</Notice>
-            <Button title="See plans" variant="secondary" onPress={() => router.push('/plans')} />
-          </>
+          <Upsell feature="computer_hard">Play the Hard computer, the strongest opponent.</Upsell>
         )}
         <Button
           title="Play the computer"

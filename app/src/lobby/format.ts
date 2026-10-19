@@ -1,13 +1,5 @@
 /** Words and numbers for the lobby, profiles and leaderboards. */
-import type {
-  GameSummary,
-  Level,
-  Category,
-  Challenge,
-  Rating,
-  Side,
-  TimeControl,
-} from '@/api/endpoints';
+import type { GameSummary, Level, Category, Challenge, Side, TimeControl } from '@/api/endpoints';
 import { ratingChangeText } from '@/game/describe';
 
 export const TIME_CONTROLS: readonly { label: TimeControl; category: Category }[] = [
@@ -27,11 +19,6 @@ export function categoryOf(timeControl: string): Category | undefined {
   return TIME_CONTROLS.find((tc) => tc.label === timeControl)?.category;
 }
 
-/** A rating, with "?" while it is provisional (still settling). */
-export function ratingText(rating: Pick<Rating, 'rating' | 'provisional'>): string {
-  return `${rating.rating}${rating.provisional ? '?' : ''}`;
-}
-
 export function presenceText(player: { online: boolean; playing: boolean }): string {
   if (player.playing) return 'Playing';
   return player.online ? 'Online' : 'Offline';
@@ -40,6 +27,28 @@ export function presenceText(player: { online: boolean; playing: boolean }): str
 /** Whether a player can be challenged right now (the server checks again). */
 export function canChallenge(player: { online: boolean; playing: boolean }): boolean {
   return player.online && !player.playing;
+}
+
+/** A link to share, on the web; elsewhere just the path. Every share link in the app comes from here. */
+export function shareLink(
+  path: string,
+  origin: string | undefined = (globalThis as { location?: { origin?: string } }).location?.origin,
+): string {
+  return origin === undefined ? path : `${origin}${path}`;
+}
+
+/** The page that opens a challenge by link. */
+export function linkPath(code: string): string {
+  return `/c/${code}`;
+}
+
+/** "45 s", "12 min" or "23 h 5 min": how long is left, as precisely as it matters. */
+export function durationText(seconds: number): string {
+  if (seconds < 120) return `${seconds} s`;
+  const minutes = Math.ceil(seconds / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const rest = minutes % 60;
+  return `${Math.floor(minutes / 60)} h${rest === 0 ? '' : ` ${rest} min`}`;
 }
 
 /** Whole seconds until `expiresAt`, never negative. */

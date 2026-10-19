@@ -14,9 +14,11 @@ import {
   isOpen,
   joinedText,
   presenceText,
-  ratingText,
   searchPrefix,
   secondsLeft,
+  durationText,
+  linkPath,
+  shareLink,
 } from './format';
 
 test('time controls and categories', () => {
@@ -26,11 +28,6 @@ test('time controls and categories', () => {
   expect(categoryOf('5+3')).toBe('blitz');
   expect(categoryOf('15+10')).toBe('rapid');
   expect(categoryOf('1+0')).toBeUndefined();
-});
-
-test('ratingText marks provisional ratings', () => {
-  expect(ratingText({ rating: 1500, provisional: true })).toBe('1500?');
-  expect(ratingText({ rating: 1712, provisional: false })).toBe('1712');
 });
 
 test('presence', () => {
@@ -129,4 +126,18 @@ test('waiting players and levels', () => {
   expect(waitingText(1)).toBe('1 player is waiting.');
   expect(waitingText(3)).toBe('3 players are waiting.');
   expect(LEVELS.map((l) => l.value)).toEqual(['easy', 'medium', 'hard']);
+});
+
+test('share links to challenges', () => {
+  expect(linkPath('abc')).toBe('/c/abc');
+  expect(shareLink('/c/abc', 'https://clawplay.in')).toBe('https://clawplay.in/c/abc');
+  expect(shareLink('/c/abc', undefined)).toBe('/c/abc');
+});
+
+test('durationText', () => {
+  expect(durationText(45)).toBe('45 s');
+  expect(durationText(119)).toBe('119 s');
+  expect(durationText(150)).toBe('3 min');
+  expect(durationText(3600)).toBe('1 h');
+  expect(durationText(86_400 - 61)).toBe('23 h 59 min');
 });

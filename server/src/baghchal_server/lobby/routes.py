@@ -2,13 +2,14 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Annotated, Final
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Path, Query, status
 
 from baghchal_server.appearance import service as appearance
 from baghchal_server.billing import service as billing
 from baghchal_server.billing.plans import FREE_HISTORY_DAYS, Feature
 from baghchal_server.deps import DB, AppState, CurrentUser, Member, State, enforce_limit, get_member
 from baghchal_server.errors import AppError
+from baghchal_server.friends import service as friends
 from baghchal_server.games import service as games
 from baghchal_server.games.events import notify as notify_game
 from baghchal_server.games.schemas import GameSummaryOut
@@ -35,9 +36,12 @@ SEARCH_PER_USER: Final = Limit("player-search", 60, 60)
 SEEKS_PER_USER: Final = Limit("seek", 120, 3600)
 CHALLENGES_PER_USER: Final = Limit("challenge-create", 30, 3600)
 BLOCKS_PER_USER: Final = Limit("block", 60, 3600)
+LINK_ACCEPTS_PER_USER: Final = Limit("challenge-link-accept", 60, 3600)
+
+LinkCode = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{1,16}$")]
 
 
-async def _with_status(
+async def with_status(
     state: AppState, db: DB, users: list[tuple[uuid.UUID, str]]
 ) -> list[PlayerStatusOut]:
     online = await state.presence.online(uid for uid, _ in users)
@@ -60,7 +64,8 @@ async def notify_challenge(state: AppState, db: DB, challenge: Challenge) -> Cha
     (out,) = await service.describe(db, [challenge])
     message = ChallengeEvent(challenge=out).model_dump_json()
     for user_id in (challenge.challenger_id, challenge.opponent_id):
-        await state.hub.send(user_id, message)
+        if user_id is not None:
+            await state.hub.send(user_id, message)
     return out
 
 
@@ -75,7 +80,7 @@ async def search_players(
     """Players whose username starts with ``prefix`` (case-insensitive)."""
     await enforce_limit(state, SEARCH_PER_USER, str(user.id))
     found = await service.search_players(db, prefix, limit, user.id, state.clock())
-    return await _with_status(state, db, [(u.id, u.username) for u in found])
+    return await with_status(state, db, [(u.id, u.username) for u in found])
 
 
 @router.get("/players/online")
@@ -85,7 +90,7 @@ async def online_players(
     ids = await state.presence.list_online(limit)
     users = await service.users_by_id(db, ids, state.clock())
     hidden = await service.hidden_from(db, user.id)
-    return await _with_status(
+    return await with_status(
         state,
         db,
         [(uid, users[uid].username) for uid in ids if uid in users and uid not in hidden],
@@ -99,7 +104,7 @@ async def player_profile(
     player = await service.find_player(db, username, state.clock())
     if player is None:
         raise AppError(404, "player_not_found", "No such player.")
-    (status,) = await _with_status(state, db, [(player.id, player.username)])
+    (status,) = await with_status(state, db, [(player.id, player.username)])
     now = state.clock()
     rows = await ratings.rows_of(db, player.id)
     profile_ratings = {}
@@ -118,6 +123,7 @@ async def player_profile(
         created_at=player.created_at,
         ratings=profile_ratings,
         blocked=await service.has_blocked(db, user.id, player.id),
+        friend=await friends.relation(db, user.id, player.id),
     )
 
 
@@ -126,7 +132,7 @@ async def list_challenges(user: CurrentUser, state: State, db: DB) -> ChallengeL
     now = state.clock()
     described = await service.describe(db, await service.open_challenges(db, now, user))
     return ChallengeList(
-        incoming=[c for c in described if c.opponent.id == user.id],
+        incoming=[c for c in described if c.opponent is not None and c.opponent.id == user.id],
         outgoing=[c for c in described if c.challenger.id == user.id],
     )
 
@@ -145,6 +151,26 @@ async def _respond(
     out = await notify_challenge(state, db, challenge)
     if game is not None:
         await notify_game(state, db, game)
+    return out
+
+
+@router.get("/challenges/link/{code}")
+async def link_challenge(code: LinkCode, user: CurrentUser, state: State, db: DB) -> ChallengeOut:
+    """A challenge by link, for whoever has the link."""
+    (out,) = await service.describe(db, [await service.find_link(db, code, state.clock())])
+    return out
+
+
+@router.post("/challenges/link/{code}/accept")
+async def accept_link_challenge(
+    code: LinkCode, user: CurrentUser, state: State, db: DB
+) -> ChallengeOut:
+    """Accept a challenge by link (guests too): the game starts now, if the challenger is
+    online (its id is in ``game_id``; both players get a ``game`` event)."""
+    await enforce_limit(state, LINK_ACCEPTS_PER_USER, str(user.id))
+    challenge, game = await service.accept_link(db, state.presence, state.clock(), user, code)
+    out = await notify_challenge(state, db, challenge)
+    await notify_game(state, db, game)
     return out
 
 

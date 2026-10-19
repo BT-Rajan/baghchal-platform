@@ -1,4 +1,4 @@
-import type { Challenge, Game } from '@/api/endpoints';
+import type { Challenge, DailyPuzzle, Game } from '@/api/endpoints';
 
 import { ME } from './fakeServer';
 
@@ -19,6 +19,7 @@ export function game(overrides: Partial<Game> = {}): Game {
     side_to_move: 'goat',
     moves: [],
     legal_moves: ['a2'],
+    goats_in_danger: [],
     clocks: { goat_ms: 300_000, tiger_ms: 300_000, running: null },
     ratings: { goat: { rating: 1500, change: null }, tiger: { rating: 1500, change: null } },
     match: null,
@@ -31,6 +32,20 @@ export function game(overrides: Partial<Game> = {}): Game {
     ...overrides,
   };
 }
+
+/** Today's puzzle, not yet answered. */
+export const DAILY: DailyPuzzle = {
+  date: '2026-01-01',
+  puzzle: {
+    id: 'o006',
+    kind: 'opening',
+    position: 'T3T/5/5/5/T3T g 20 0',
+    side: 'goat',
+    legal_moves: ['a2', 'c3'],
+  },
+  answer: null,
+  streak: 0,
+};
 
 export function challenge(overrides: Partial<Challenge> = {}): Challenge {
   return {

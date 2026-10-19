@@ -4,18 +4,22 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { Profile } from '@/api/endpoints';
 import { describeError } from '@/api/errors';
-import { CATEGORIES, canChallenge, joinedText, presenceText, ratingText } from '@/lobby/format';
+import { CATEGORIES, canChallenge, joinedText, presenceText } from '@/lobby/format';
 import { useBlock } from '@/lobby/hooks';
+import { useMe } from '@/auth/session';
 import { colors, spacing } from '@/theme';
 
 import { BadgePill } from './BadgePill';
 import { Button } from './Button';
-import { Card } from './Card';
+import { Card, Hint } from './Card';
+import { Confirm } from './Confirm';
+import { FriendControl } from './FriendControl';
 import { GameHistory } from './GameHistory';
 import { Notice } from './Notice';
 import { PresenceDot } from './PlayerRow';
 
 export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean }) {
+  const guestViewer = useMe().role === 'guest';
   return (
     <>
       <View style={styles.presence}>
@@ -34,9 +38,9 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
                 <Text style={styles.muted}>{label}</Text>
                 <Text
                   style={styles.big}
-                  aria-label={`${label} rating ${rating ? ratingText(rating) : 'none'}`}
+                  aria-label={`${label} rating ${rating ? rating.rating : 'none'}`}
                 >
-                  {rating ? ratingText(rating) : '–'}
+                  {rating ? String(rating.rating) : '–'}
                 </Text>
                 <Text style={styles.muted}>
                   {rating === undefined
@@ -57,6 +61,16 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
           );
         })}
       </View>
+      {Object.values(profile.ratings).some((r) => r?.provisional) && (
+        <Hint>A provisional rating is still settling: it moves faster over the first games.</Hint>
+      )}
+      {/* Guests have no friends; their names start with "guest-". */}
+      {!isMe &&
+        !profile.blocked &&
+        guestViewer === false &&
+        !profile.username.startsWith('guest-') && (
+          <FriendControl username={profile.username} relation={profile.friend ?? 'none'} />
+        )}
       {!isMe && !profile.blocked && (
         <Button
           title={`Challenge ${profile.username}`}
@@ -99,24 +113,16 @@ function BlockControl({ username, blocked }: { username: string; blocked: boolea
           />
         </>
       ) : confirming ? (
-        <>
-          <Text style={styles.question}>
-            {`Block ${username}? Neither of you will be able to challenge the other, and you ` +
-              `will not see each other in the lobby.`}
-          </Text>
-          <View style={styles.row}>
-            <View style={styles.cell}>
-              <Button
-                title={`Yes, block ${username}`}
-                busy={change.isPending}
-                onPress={() => run(true)}
-              />
-            </View>
-            <View style={styles.cell}>
-              <Button title="Cancel" variant="secondary" onPress={() => setConfirming(false)} />
-            </View>
-          </View>
-        </>
+        <Confirm
+          question={
+            `Block ${username}? Neither of you will be able to challenge the other, and you ` +
+            `will not see each other in the lobby.`
+          }
+          confirmTitle={`Yes, block ${username}`}
+          busy={change.isPending}
+          onConfirm={() => run(true)}
+          onCancel={() => setConfirming(false)}
+        />
       ) : (
         <Button
           title={`Block ${username}`}
@@ -135,7 +141,4 @@ const styles = StyleSheet.create({
   rating: { flex: 1 },
   big: { fontSize: 28, fontWeight: '700', color: colors.text },
   block: { gap: spacing.sm, marginTop: spacing.md },
-  question: { fontSize: 15, color: colors.text },
-  row: { flexDirection: 'row', gap: spacing.sm },
-  cell: { flex: 1 },
 });

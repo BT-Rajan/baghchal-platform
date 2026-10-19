@@ -19,8 +19,8 @@ async function press(name: string | RegExp) {
 }
 
 describe('plans', () => {
-  test('the Me tab shows my plan and leads to the plans', async () => {
-    const { app } = await open('/me', {
+  test('Settings show my plan and lead to the plans', async () => {
+    const { app } = await open('/settings', {
       'GET /api/v1/players/alice': {
         status: 200,
         body: { ...ME, online: true, playing: false, blocked: false, ratings: {} },
@@ -32,10 +32,10 @@ describe('plans', () => {
     await waitFor(() => expect(app.getPathname()).toBe('/plans'));
     expect(await screen.findByRole('heading', { name: 'Plus' })).toBeOnTheScreen();
     expect(screen.getByText('₹149 a month · ₹1,490 a year')).toBeOnTheScreen();
-    expect(screen.getAllByText('✓ Play the Hard computer')).toHaveLength(1);
-    expect(screen.getByText('Everything in Plus, and:')).toBeOnTheScreen();
-    expect(screen.getByText('✓ Opening and endgame trainer')).toBeOnTheScreen();
-    expect(screen.getByText('Game analysis: 5 a day')).toBeOnTheScreen();
+    expect(screen.getByText('Opening and endgame trainer')).toBeOnTheScreen();
+    expect(screen.getAllByLabelText('Pro: included').length).toBeGreaterThan(3);
+    expect(screen.getAllByText('2 months free when you pay for a year')).toHaveLength(2);
+    expect(screen.getByLabelText('Plus: 5 a day')).toBeOnTheScreen();
     expect(screen.getByLabelText('Free, your plan')).toBeOnTheScreen();
   });
 
@@ -60,9 +60,10 @@ describe('plans', () => {
   test('Hard asks for Plus, and the history says how far back it goes', async () => {
     const { app } = await open('/play');
     await fireEvent.press(await screen.findByRole('radio', { name: 'Hard' }));
-    expect(screen.getByText('The Hard computer comes with ClawPlay Plus.')).toBeOnTheScreen();
+    expect(screen.getByText('Play the Hard computer, the strongest opponent.')).toBeOnTheScreen();
+    expect(await screen.findByLabelText('ClawPlay Plus')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Play the computer' })).toBeDisabled();
-    await press('See plans');
+    await press('Get ClawPlay Plus');
     await waitFor(() => expect(app.getPathname()).toBe('/plans'));
   });
 
@@ -81,9 +82,7 @@ describe('plans', () => {
       },
     });
     expect(
-      await screen.findByText(
-        'The Free plan shows games from the last 30 days. Plus keeps every game.',
-      ),
+      await screen.findByText('Your history shows games from the last 30 days. Keep every game.'),
     ).toBeOnTheScreen();
   });
 });
@@ -210,4 +209,12 @@ describe('admins', () => {
     expect(await screen.findByText('In good standing')).toBeOnTheScreen();
     expect(screen.queryByText('Plan')).toBeNull();
   });
+});
+
+test('an upsell still leads to the plans when they cannot be loaded', async () => {
+  const { app } = await open('/tournaments', {
+    'GET /api/v1/plans': error(400, 'bad', 'Plans are down.'),
+  });
+  await fireEvent.press(await screen.findByRole('button', { name: 'See plans' }));
+  await waitFor(() => expect(app.getPathname()).toBe('/plans'));
 });

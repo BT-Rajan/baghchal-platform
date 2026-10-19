@@ -133,7 +133,8 @@ class ExportChallenge(BaseModel):
     id: uuid.UUID
     created_at: datetime
     direction: Literal["sent", "received"]
-    opponent: str
+    opponent: str | None
+    """None for a challenge by link that nobody accepted."""
     time_control: str
     rated: bool
     status: str
@@ -154,4 +155,5 @@ class ExportOut(BaseModel):
     games: list[ExportGame]
     challenges: list[ExportChallenge]
     blocked_players: list[str]
+    friends: list[str]
     sessions: list[ExportSession]

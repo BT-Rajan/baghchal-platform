@@ -5,7 +5,7 @@ import { colors, radius, spacing } from '@/theme';
 const tones = {
   error: { backgroundColor: colors.dangerSurface, color: colors.danger },
   success: { backgroundColor: colors.successSurface, color: colors.success },
-  info: { backgroundColor: colors.surface, color: colors.text },
+  info: { backgroundColor: colors.subtle, color: colors.text },
 } as const;
 
 export function Notice({ tone, children }: { tone: keyof typeof tones; children: string }) {
@@ -20,6 +20,6 @@ export function Notice({ tone, children }: { tone: keyof typeof tones; children:
 }
 
 const styles = StyleSheet.create({
-  box: { borderRadius: radius.sm, padding: spacing.md },
-  text: { fontSize: 15 },
+  box: { borderRadius: radius.md, padding: spacing.md },
+  text: { fontSize: 15, lineHeight: 22 },
 });

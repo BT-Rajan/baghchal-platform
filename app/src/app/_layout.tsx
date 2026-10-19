@@ -73,7 +73,7 @@ function Routes() {
           <Stack.Screen name="player/[username]" options={{ headerShown: true, title: '' }} />
           <Stack.Screen name="challenge/[username]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="game/[id]" options={{ headerShown: true, title: 'Game' }} />
-          <Stack.Screen name="account" options={{ headerShown: true, title: 'Account' }} />
+          <Stack.Screen name="settings" options={{ headerShown: true, title: 'Settings' }} />
           <Stack.Screen name="report/[username]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="play" options={{ headerShown: true, title: 'Play now' }} />
           <Stack.Screen name="plans" options={{ headerShown: true, title: 'Plans' }} />
@@ -81,8 +81,8 @@ function Routes() {
             name="appearance"
             options={{ headerShown: true, title: 'Board, pieces and sounds' }}
           />
-          <Stack.Screen name="rooms" options={{ headerShown: true, title: 'Private rooms' }} />
-          <Stack.Screen name="room/[code]" options={{ headerShown: true, title: 'Private room' }} />
+          <Stack.Screen name="invite" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="c/[code]" options={{ headerShown: true, title: 'Challenge' }} />
           <Stack.Screen name="tournaments" options={{ headerShown: true, title: 'Tournaments' }} />
           <Stack.Screen
             name="tournament/[code]"

@@ -50,12 +50,10 @@ describe('game analysis', () => {
   test('Free players see what Plus adds', async () => {
     const { app, server } = await open();
     expect(
-      await screen.findByText(
-        'The engine’s review of every move, and where the game turned, comes with ClawPlay Plus.',
-      ),
+      await screen.findByText('See the engine’s review of every move, and where the game turned.'),
     ).toBeOnTheScreen();
     expect(server.requests.some((r) => r.path === URL)).toBe(false);
-    await press('See plans');
+    await press('Get ClawPlay Plus');
     await waitFor(() => expect(app.getPathname()).toBe('/plans'));
   });
 
@@ -74,7 +72,11 @@ describe('game analysis', () => {
     expect(screen.getByText('Goats (alice): 1 blunder')).toBeOnTheScreen();
     expect(screen.getByText('Tigers (bob): 1 best')).toBeOnTheScreen();
     expect(screen.getByText('4 analyses of new games left today.')).toBeOnTheScreen();
-    expect(screen.getByText(/a2\?\?\s+a1-b1/)).toBeOnTheScreen();
+    // The move list marks the blunder, and each move shows its position.
+    expect(screen.getByRole('button', { name: 'Show move 2: a1-b1' })).toBeOnTheScreen();
+    await press('Show move 1: a2??');
+    expect(screen.getByText('Blunder')).toBeOnTheScreen();
+    await press('Final position');
 
     await press('Start position');
     expect(

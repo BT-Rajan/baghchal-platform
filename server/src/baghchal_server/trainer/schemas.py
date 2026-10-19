@@ -1,3 +1,4 @@
+from datetime import date
 from enum import StrEnum
 from typing import Literal
 
@@ -44,3 +45,20 @@ class AnswerIn(BaseModel):
 class AnswerOut(Progress):
     correct: bool
     best: str
+
+
+class DailyAnswerOut(BaseModel):
+    move: str
+    correct: bool
+    best: str
+
+
+class DailyOut(BaseModel):
+    date: date
+    """The day (UTC) this puzzle is for; everyone gets the same one."""
+    puzzle: PuzzleOut
+    answer: DailyAnswerOut | None
+    """My first answer to it today, if I have given one."""
+    streak: int
+    """Days in a row I solved the daily puzzle (my first answer right), up to today, or up to
+    yesterday while today's is still to do."""

@@ -19,6 +19,13 @@ test('parses every server message', () => {
     type: 'challenge',
     challenge: c,
   });
+  // A challenge by link has no opponent until someone accepts it.
+  const byLink = challenge({ opponent: null, code: 'abc123' });
+  expect(parseServerMessage(text({ type: 'challenge', challenge: byLink }))).toEqual({
+    type: 'challenge',
+    challenge: byLink,
+  });
+  expect(parseServerMessage(text({ type: 'friends' }))).toEqual({ type: 'friends' });
   const g = game();
   expect(parseServerMessage(text({ type: 'game', game: g }))).toEqual({ type: 'game', game: g });
   expect(
@@ -41,8 +48,8 @@ test.each([
     text({ type: 'challenge', challenge: { ...challenge(), status: 1 } }),
   ],
   [
-    'a challenge without players',
-    text({ type: 'challenge', challenge: { ...challenge(), opponent: null } }),
+    'a challenge with a broken opponent',
+    text({ type: 'challenge', challenge: { ...challenge(), opponent: {} } }),
   ],
   [
     'a challenge without challenger',

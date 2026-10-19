@@ -1,30 +1,17 @@
-import type { Pairing, Room, Tournament } from '@/api/endpoints';
+import type { Pairing, Tournament } from '@/api/endpoints';
 
 import {
   answerText,
-  invitationText,
+  dailyStreakText,
   isMine,
   pairingText,
   progressText,
   puzzlePrompt,
-  roomText,
-  shareLink,
   tournamentStatusText,
 } from './format';
 
 const ALICE = { id: 'a', username: 'alice' };
 const BOB = { id: 'b', username: 'bob' };
-
-const room = (overrides: Partial<Room> = {}): Room => ({
-  code: 'abc',
-  host: ALICE,
-  time_control: '5+3',
-  host_side: 'goat',
-  status: 'open',
-  game_id: null,
-  expires_at: '2026-01-02T12:00:00Z',
-  ...overrides,
-});
 
 const pairing = (overrides: Partial<Pairing> = {}): Pairing => ({
   id: 'p1',
@@ -48,25 +35,6 @@ const tournament = (overrides: Partial<Tournament> = {}): Tournament => ({
   pairings: [],
   created_at: '2026-01-01T12:00:00Z',
   ...overrides,
-});
-
-test('share links', () => {
-  expect(shareLink('/room/abc', 'https://clawplay.in')).toBe('https://clawplay.in/room/abc');
-  expect(shareLink('/room/abc', undefined)).toBe('/room/abc');
-});
-
-test('rooms', () => {
-  expect(roomText(room())).toBe('5+3 casual game · you play goats');
-  expect(roomText(room({ host_side: 'random' }))).toBe('5+3 casual game · sides drawn at random');
-  expect(invitationText(room({ host_side: 'tiger' }))).toBe(
-    'alice invites you to a 5+3 casual game. alice plays tigers; you play goats.',
-  );
-  expect(invitationText(room())).toBe(
-    'alice invites you to a 5+3 casual game. alice plays goats; you play tigers.',
-  );
-  expect(invitationText(room({ host_side: 'random' }))).toBe(
-    'alice invites you to a 5+3 casual game. Sides are drawn at random.',
-  );
 });
 
 test('tournaments', () => {
@@ -93,6 +61,12 @@ test('tournaments', () => {
     true,
     false,
   ]);
+});
+
+test('the daily streak', () => {
+  expect(dailyStreakText(0)).toBeNull();
+  expect(dailyStreakText(1)).toBe('Daily streak: 1 day');
+  expect(dailyStreakText(12)).toBe('Daily streak: 12 days');
 });
 
 test('the trainer', () => {

@@ -1,58 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import type { RoomRequest, TournamentRequest, TrainerKind } from '@/api/endpoints';
+import type { TournamentRequest, TrainerKind } from '@/api/endpoints';
 import { queryKeys } from '@/api/queryKeys';
 import { useApi } from '@/auth/session';
 import { useOpenStartedGame } from '@/lobby/hooks';
 
 /** How often an open tournament page looks for new players, games and results. */
 export const TOURNAMENT_REFRESH_MS = 5_000;
-
-export function useRooms() {
-  const api = useApi();
-  return useQuery({ queryKey: queryKeys.rooms, queryFn: ({ signal }) => api.rooms(signal) });
-}
-
-export function useRoom(code: string) {
-  const api = useApi();
-  return useQuery({
-    queryKey: queryKeys.room(code),
-    queryFn: ({ signal }) => api.room(code, signal),
-  });
-}
-
-export function useCreateRoom() {
-  const api = useApi();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (body: RoomRequest) => api.createRoom(body),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.rooms }),
-  });
-}
-
-export function useCloseRoom() {
-  const api = useApi();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (code: string) => api.closeRoom(code),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.rooms }),
-  });
-}
-
-/** Join a friend's room: the game starts at once and opens. */
-export function useJoinRoom(code: string) {
-  const api = useApi();
-  const queryClient = useQueryClient();
-  const openStarted = useOpenStartedGame();
-  return useMutation({
-    mutationFn: async () => {
-      const room = await api.joinRoom(code);
-      openStarted(await api.game(room.game_id!));
-      return room;
-    },
-    onSettled: () => void queryClient.invalidateQueries({ queryKey: queryKeys.room(code) }),
-  });
-}
 
 export function useTournaments() {
   const api = useApi();
@@ -110,6 +64,15 @@ export function useTrainer(kind: TrainerKind) {
   return useQuery({
     queryKey: queryKeys.trainer(kind),
     queryFn: ({ signal }) => api.trainer(kind, signal),
+  });
+}
+
+/** Today's puzzle: the same for everyone, on every plan. */
+export function useDailyPuzzle() {
+  const api = useApi();
+  return useQuery({
+    queryKey: queryKeys.dailyPuzzle,
+    queryFn: ({ signal }) => api.dailyPuzzle(signal),
   });
 }
 

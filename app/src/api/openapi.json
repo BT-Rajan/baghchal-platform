@@ -655,6 +655,88 @@
         }
       }
     },
+    "/api/v1/challenges/link/{code}": {
+      "get": {
+        "summary": "Link Challenge",
+        "description": "A challenge by link, for whoever has the link.",
+        "operationId": "link_challenge_api_v1_challenges_link__code__get",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,16}$",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/challenges/link/{code}/accept": {
+      "post": {
+        "summary": "Accept Link Challenge",
+        "description": "Accept a challenge by link (guests too): the game starts now, if the challenger is\nonline (its id is in ``game_id``; both players get a ``game`` event).",
+        "operationId": "accept_link_challenge_api_v1_challenges_link__code__accept_post",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,16}$",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/challenges/{challenge_id}/accept": {
       "post": {
         "summary": "Accept Challenge",
@@ -1991,7 +2073,7 @@
     "/api/v1/me/appearance": {
       "get": {
         "summary": "My Appearance",
-        "description": "My board, pieces and sounds, and whether others see my badge.",
+        "description": "My board, pieces and sounds, whether game sounds play, and whether others see my badge.",
         "operationId": "my_appearance_api_v1_me_appearance_get",
         "responses": {
           "200": {
@@ -2006,10 +2088,10 @@
           }
         }
       },
-      "put": {
+      "patch": {
         "summary": "Choose Appearance",
-        "description": "Choose a board, pieces and sounds (beyond the first of each: Plus and Pro), and whether\nto show my badge.",
-        "operationId": "choose_appearance_api_v1_me_appearance_put",
+        "description": "Change my board, pieces or sounds (beyond the first of each: Plus and Pro), whether game\nsounds play, or whether to show my badge; what is left out stays as it was.",
+        "operationId": "choose_appearance_api_v1_me_appearance_patch",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2124,188 +2206,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PaymentOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/rooms": {
-      "get": {
-        "summary": "My Rooms",
-        "description": "My open rooms.",
-        "operationId": "my_rooms_api_v1_rooms_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/RoomOut"
-                  },
-                  "type": "array",
-                  "title": "Response My Rooms Api V1 Rooms Get"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "Create Room",
-        "description": "Make a private room (Pro): a link to one casual game, for whoever opens it first.",
-        "operationId": "create_room_api_v1_rooms_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RoomIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RoomOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/rooms/{code}": {
-      "get": {
-        "summary": "Room",
-        "description": "A room, for someone who has its link.",
-        "operationId": "room_api_v1_rooms__code__get",
-        "parameters": [
-          {
-            "name": "code",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9_-]{1,16}$",
-              "title": "Code"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RoomOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/rooms/{code}/join": {
-      "post": {
-        "summary": "Join Room",
-        "description": "Play the host: the game starts now (its id is in ``game_id``; both get a ``game``\nevent). The host must be online.",
-        "operationId": "join_room_api_v1_rooms__code__join_post",
-        "parameters": [
-          {
-            "name": "code",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9_-]{1,16}$",
-              "title": "Code"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RoomOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/rooms/{code}/close": {
-      "post": {
-        "summary": "Close Room",
-        "operationId": "close_room_api_v1_rooms__code__close_post",
-        "parameters": [
-          {
-            "name": "code",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9_-]{1,16}$",
-              "title": "Code"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RoomOut"
                 }
               }
             }
@@ -2636,6 +2536,98 @@
         }
       }
     },
+    "/api/v1/friends": {
+      "get": {
+        "summary": "Friends",
+        "description": "My friends (with who is online), and the friend requests waiting on either side.",
+        "operationId": "friends_api_v1_friends_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FriendsOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/friends/{username}": {
+      "post": {
+        "summary": "Add Friend",
+        "description": "Ask a player to be friends, or accept their request. They hear of it at once.",
+        "operationId": "add_friend_api_v1_friends__username__post",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,20}$",
+              "title": "Username"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove Friend",
+        "description": "Unfriend a player, or decline or cancel a friend request.",
+        "operationId": "remove_friend_api_v1_friends__username__delete",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,20}$",
+              "title": "Username"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/trainer": {
       "get": {
         "summary": "Trainer",
@@ -2676,10 +2668,29 @@
         }
       }
     },
+    "/api/v1/trainer/daily": {
+      "get": {
+        "summary": "Daily",
+        "description": "Today's puzzle, the same for everyone and free on every plan, and my answer to it.",
+        "operationId": "daily_api_v1_trainer_daily_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/trainer/{puzzle_id}/answer": {
       "post": {
         "summary": "Answer",
-        "description": "Was this the best move? The answer says which was.",
+        "description": "Was this the best move? The answer says which was. Pro, except for today's puzzle.",
         "operationId": "answer_api_v1_trainer__puzzle_id__answer_post",
         "parameters": [
           {
@@ -2845,28 +2856,62 @@
       "AppearanceIn": {
         "properties": {
           "board": {
-            "$ref": "#/components/schemas/BoardTheme"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardTheme"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "pieces": {
-            "$ref": "#/components/schemas/PieceSet"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PieceSet"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "sounds": {
-            "$ref": "#/components/schemas/SoundPack"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SoundPack"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sounds_on": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sounds On"
           },
           "show_badge": {
-            "type": "boolean",
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Show Badge"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "required": [
-          "board",
-          "pieces",
-          "sounds",
-          "show_badge"
-        ],
-        "title": "AppearanceIn"
+        "title": "AppearanceIn",
+        "description": "A change: only the fields given are changed."
       },
       "AppearanceOut": {
         "properties": {
@@ -2879,17 +2924,21 @@
           "sounds": {
             "$ref": "#/components/schemas/SoundPack"
           },
+          "sounds_on": {
+            "type": "boolean",
+            "title": "Sounds On"
+          },
           "show_badge": {
             "type": "boolean",
             "title": "Show Badge"
           }
         },
-        "additionalProperties": false,
         "type": "object",
         "required": [
           "board",
           "pieces",
           "sounds",
+          "sounds_on",
           "show_badge"
         ],
         "title": "AppearanceOut",
@@ -2917,8 +2966,15 @@
       "ChallengeIn": {
         "properties": {
           "opponent": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9_-]{1,20}$",
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,20}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Opponent"
           },
           "time_control": {
@@ -2956,7 +3012,6 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "opponent",
           "time_control"
         ],
         "title": "ChallengeIn"
@@ -2996,7 +3051,25 @@
             "$ref": "#/components/schemas/PlayerOut"
           },
           "opponent": {
-            "$ref": "#/components/schemas/PlayerOut"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlayerOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
           },
           "time_control": {
             "type": "string",
@@ -3276,6 +3349,63 @@
         "type": "object",
         "title": "ComputerGameIn"
       },
+      "DailyAnswerOut": {
+        "properties": {
+          "move": {
+            "type": "string",
+            "title": "Move"
+          },
+          "correct": {
+            "type": "boolean",
+            "title": "Correct"
+          },
+          "best": {
+            "type": "string",
+            "title": "Best"
+          }
+        },
+        "type": "object",
+        "required": [
+          "move",
+          "correct",
+          "best"
+        ],
+        "title": "DailyAnswerOut"
+      },
+      "DailyOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "puzzle": {
+            "$ref": "#/components/schemas/PuzzleOut"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DailyAnswerOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "streak": {
+            "type": "integer",
+            "title": "Streak"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "puzzle",
+          "answer",
+          "streak"
+        ],
+        "title": "DailyOut"
+      },
       "DeleteAccountIn": {
         "properties": {
           "password": {
@@ -3420,7 +3550,14 @@
             "title": "Direction"
           },
           "opponent": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Opponent"
           },
           "time_control": {
@@ -3592,6 +3729,13 @@
             "type": "array",
             "title": "Blocked Players"
           },
+          "friends": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Friends"
+          },
           "sessions": {
             "items": {
               "$ref": "#/components/schemas/ExportSession"
@@ -3608,6 +3752,7 @@
           "games",
           "challenges",
           "blocked_players",
+          "friends",
           "sessions"
         ],
         "title": "ExportOut",
@@ -3723,7 +3868,6 @@
           "analysis",
           "themes",
           "badge",
-          "private_rooms",
           "tournaments",
           "trainer"
         ],
@@ -3766,6 +3910,38 @@
           "blunders"
         ],
         "title": "FiguresOut"
+      },
+      "FriendsOut": {
+        "properties": {
+          "friends": {
+            "items": {
+              "$ref": "#/components/schemas/PlayerStatusOut"
+            },
+            "type": "array",
+            "title": "Friends"
+          },
+          "incoming": {
+            "items": {
+              "$ref": "#/components/schemas/PlayerOut"
+            },
+            "type": "array",
+            "title": "Incoming"
+          },
+          "outgoing": {
+            "items": {
+              "$ref": "#/components/schemas/PlayerOut"
+            },
+            "type": "array",
+            "title": "Outgoing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "friends",
+          "incoming",
+          "outgoing"
+        ],
+        "title": "FriendsOut"
       },
       "GameOut": {
         "properties": {
@@ -3830,6 +4006,14 @@
             },
             "type": "array",
             "title": "Legal Moves"
+          },
+          "goats_in_danger": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Goats In Danger",
+            "default": []
           },
           "clocks": {
             "$ref": "#/components/schemas/ClocksOut"
@@ -5095,6 +5279,17 @@
           "blocked": {
             "type": "boolean",
             "title": "Blocked"
+          },
+          "friend": {
+            "type": "string",
+            "enum": [
+              "none",
+              "friends",
+              "requested",
+              "incoming"
+            ],
+            "title": "Friend",
+            "default": "none"
           }
         },
         "type": "object",
@@ -5248,6 +5443,25 @@
           "password"
         ],
         "title": "RegisterIn"
+      },
+      "RelationOut": {
+        "properties": {
+          "relation": {
+            "type": "string",
+            "enum": [
+              "none",
+              "friends",
+              "requested",
+              "incoming"
+            ],
+            "title": "Relation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "relation"
+        ],
+        "title": "RelationOut"
       },
       "RenameIn": {
         "properties": {
@@ -5490,106 +5704,6 @@
           "reason"
         ],
         "title": "RevokeIn"
-      },
-      "RoomIn": {
-        "properties": {
-          "time_control": {
-            "type": "string",
-            "enum": [
-              "3+2",
-              "5+3",
-              "10+5",
-              "15+10"
-            ],
-            "title": "Time Control"
-          },
-          "side": {
-            "type": "string",
-            "enum": [
-              "goat",
-              "tiger",
-              "random"
-            ],
-            "title": "Side",
-            "default": "random"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "time_control"
-        ],
-        "title": "RoomIn"
-      },
-      "RoomOut": {
-        "properties": {
-          "code": {
-            "type": "string",
-            "title": "Code"
-          },
-          "host": {
-            "$ref": "#/components/schemas/PlayerOut"
-          },
-          "time_control": {
-            "type": "string",
-            "enum": [
-              "3+2",
-              "5+3",
-              "10+5",
-              "15+10"
-            ],
-            "title": "Time Control"
-          },
-          "host_side": {
-            "type": "string",
-            "enum": [
-              "goat",
-              "tiger",
-              "random"
-            ],
-            "title": "Host Side"
-          },
-          "status": {
-            "$ref": "#/components/schemas/RoomStatus"
-          },
-          "game_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Game Id"
-          },
-          "expires_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Expires At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "code",
-          "host",
-          "time_control",
-          "host_side",
-          "status",
-          "game_id",
-          "expires_at"
-        ],
-        "title": "RoomOut"
-      },
-      "RoomStatus": {
-        "type": "string",
-        "enum": [
-          "open",
-          "played",
-          "closed"
-        ],
-        "title": "RoomStatus"
       },
       "SeekCountOut": {
         "properties": {

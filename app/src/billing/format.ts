@@ -1,15 +1,14 @@
 /** Words for plans, features, prices and grants. */
-import type { Feature, Grant, MyPlan, Plan, PlanInfo } from '@/api/endpoints';
+import type { Feature, Grant, MyPlan, PaidPlan, Plan, PlanInfo } from '@/api/endpoints';
 
 export const PLAN_NAMES: Record<Plan, string> = { free: 'Free', plus: 'Plus', pro: 'Pro' };
 
 export const FEATURE_LABELS: Record<Feature, string> = {
   computer_hard: 'Play the Hard computer',
-  full_history: 'Every game in your history, not just the last 30 days',
+  full_history: 'Your whole game history',
   analysis: 'The engine’s review of your finished games',
   themes: 'Board and coin themes, and sound packs',
   badge: 'A badge next to your name',
-  private_rooms: 'Private rooms for friends',
   tournaments: 'Host small tournaments',
   trainer: 'Opening and endgame trainer',
 };
@@ -70,19 +69,47 @@ export function grantText(grant: Grant): string {
     : `${what} · ${when} · given by ${grant.granted_by ?? 'a former admin'}: ${grant.reason}`;
 }
 
-/**
- * What a plan adds over the plan below it, in a sensible order: "Everything in Plus" first
- * where it applies, then the new features.
- */
-export function planLines(plans: readonly PlanInfo[], index: number): string[] {
-  const plan = plans[index]!;
-  const below = index > 0 ? plans[index - 1]! : plan;
-  const before = below === plan ? [] : below.features;
-  const added = (Object.keys(FEATURE_LABELS) as Feature[]).filter(
-    (f) => plan.features.includes(f) && !before.includes(f),
+/** One line of the plans' comparison: what it is, and what each plan has of it. */
+export interface ComparisonRow {
+  label: string;
+  /** Per plan, in the server's order: "✓", "—", or what it has ("5 a day"). */
+  cells: string[];
+}
+
+/** What every plan has, then each feature: the plans side by side, from the server's plans. */
+export function comparisonRows(plans: readonly PlanInfo[]): ComparisonRow[] {
+  const all = (label: string) => ({ label, cells: plans.map(() => '✓') });
+  return [
+    all('Live and rated games, quick pairing'),
+    all('The Easy and Medium computer'),
+    all('The daily puzzle'),
+    ...(Object.keys(FEATURE_LABELS) as Feature[]).map((feature) => ({
+      label: FEATURE_LABELS[feature],
+      cells: plans.map((plan) => {
+        if (!plan.features.includes(feature)) return feature === 'full_history' ? '30 days' : '—';
+        if (feature === 'analysis' && plan.analyses_per_day !== null)
+          return `${plan.analyses_per_day} a day`;
+        return '✓';
+      }),
+    })),
+  ];
+}
+
+/** "2 months free" when paid for a year, or null (Free, or no saving). */
+export function yearlySaving(plan: PlanInfo): string | null {
+  if (plan.monthly_paise === null || plan.yearly_paise === null) return null;
+  const months = Math.round(12 - plan.yearly_paise / plan.monthly_paise);
+  if (months < 1) return null;
+  return `${months} ${months === 1 ? 'month' : 'months'} free when you pay for a year`;
+}
+
+/** The cheapest paid plan that includes a feature (plans as the server lists them, cheapest
+ * first), or null if none does. */
+export function planFor(plans: readonly PlanInfo[], feature: Feature): PaidPlan | null {
+  const found = plans.find(
+    (p): p is PlanInfo & { plan: PaidPlan } => p.plan !== 'free' && p.features.includes(feature),
   );
-  const lines = added.map(featureText);
-  return before.length > 0 ? [`Everything in ${PLAN_NAMES[below.plan]}, and:`, ...lines] : lines;
+  return found?.plan ?? null;
 }
 
 export function has(mine: MyPlan | undefined, feature: Feature): boolean {

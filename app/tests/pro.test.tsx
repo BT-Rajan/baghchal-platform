@@ -4,7 +4,7 @@ import { renderApp } from './support/app';
 import { ME, error, type Route } from './support/fakeServer';
 import { BOB, game } from './support/games';
 
-import type { MyPlan, Pairing, Room, Tournament, Trainer } from '@/api/endpoints';
+import type { MyPlan, Pairing, Tournament, Trainer } from '@/api/endpoints';
 
 const ALICE = { id: ME.id, username: 'alice' };
 const PRO: MyPlan = {
@@ -15,7 +15,6 @@ const PRO: MyPlan = {
     'badge',
     'computer_hard',
     'full_history',
-    'private_rooms',
     'themes',
     'tournaments',
     'trainer',
@@ -37,146 +36,6 @@ function open(url: string, routes: Record<string, Route> = {}, plan: MyPlan | nu
 async function press(name: string | RegExp) {
   await fireEvent.press(screen.getByRole('button', { name }));
 }
-
-const room = (overrides: Partial<Room> = {}): Room => ({
-  code: 'abc123',
-  host: ALICE,
-  time_control: '5+3',
-  host_side: 'random',
-  status: 'open',
-  game_id: null,
-  expires_at: '2026-01-02T12:00:00Z',
-  ...overrides,
-});
-
-describe('private rooms', () => {
-  test('need Pro', async () => {
-    await open('/rooms', {}, null);
-    expect(await screen.findByText('Private rooms come with ClawPlay Pro.')).toBeOnTheScreen();
-  });
-
-  test('make one, share it, close it', async () => {
-    let rooms: Room[] = [];
-    const { server, app } = await open('/play', {
-      'GET /api/v1/seeks': { status: 200, body: [] },
-      'GET /api/v1/rooms': () => ({ status: 200, body: rooms }),
-      'POST /api/v1/rooms': () => {
-        rooms = [room({ host_side: 'tiger', time_control: '10+5' })];
-        return { status: 201, body: rooms[0] };
-      },
-      'POST /api/v1/rooms/abc123/close': () => {
-        rooms = [];
-        return { status: 200, body: room({ status: 'closed' }) };
-      },
-    });
-    await fireEvent.press(
-      await screen.findByRole('button', { name: 'Invite a friend (private room)' }),
-    );
-    await waitFor(() => expect(app.getPathname()).toBe('/rooms'));
-    expect(await screen.findByText('No open rooms.')).toBeOnTheScreen();
-    await fireEvent.press(screen.getByRole('radio', { name: '10+5' }));
-    await fireEvent.press(screen.getByRole('radio', { name: 'Tigers' }));
-    await press('Make a room');
-    await waitFor(() =>
-      expect(server.lastTo('POST /api/v1/rooms').body).toEqual({
-        time_control: '10+5',
-        side: 'tiger',
-      }),
-    );
-    expect(await screen.findByText('10+5 casual game · you play tigers')).toBeOnTheScreen();
-    expect(screen.getByText('/room/abc123')).toBeOnTheScreen();
-    await press('Close room abc123');
-    expect(await screen.findByText('No open rooms.')).toBeOnTheScreen();
-    await waitFor(() => expect(server.lastTo('POST /api/v1/rooms/abc123/close')).toBeDefined());
-  });
-
-  test('a refused room and a failed list are shown', async () => {
-    await open('/rooms', {
-      'GET /api/v1/rooms': error(400, 'bad', 'Rooms are down.'),
-      'POST /api/v1/rooms': error(409, 'too_many_rooms', 'Close one first.'),
-    });
-    expect(await screen.findByText('Rooms are down.')).toBeOnTheScreen();
-    await press('Make a room');
-    expect(await screen.findByText('Close one first.')).toBeOnTheScreen();
-  });
-
-  test('a friend opens the link and plays', async () => {
-    const theirs = room({ host: BOB, host_side: 'goat' });
-    const { app } = await open(
-      '/room/abc123',
-      {
-        'GET /api/v1/rooms/abc123': { status: 200, body: theirs },
-        'POST /api/v1/rooms/abc123/join': {
-          status: 200,
-          body: { ...theirs, status: 'played', game_id: 'g1' },
-        },
-        'GET /api/v1/games/g1': {
-          status: 200,
-          body: game({ server_time: new Date().toISOString() }),
-        },
-      },
-      null,
-    );
-    expect(
-      await screen.findByText(
-        'bob invites you to a 5+3 casual game. bob plays goats; you play tigers.',
-      ),
-    ).toBeOnTheScreen();
-    await press('Join and play');
-    await waitFor(() => expect(app.getPathname()).toBe('/game/g1'));
-  });
-
-  test('a host offline', async () => {
-    await open(
-      '/room/abc123',
-      {
-        'GET /api/v1/rooms/abc123': { status: 200, body: room({ host: BOB }) },
-        'POST /api/v1/rooms/abc123/join': error(409, 'host_offline', 'bob is not online.'),
-      },
-      null,
-    );
-    await fireEvent.press(await screen.findByRole('button', { name: 'Join and play' }));
-    expect(await screen.findByText('bob is not online.')).toBeOnTheScreen();
-  });
-
-  test.each([
-    [room({ host: BOB, status: 'closed' }), 'This room is closed. Ask your friend for a new link.'],
-    [room(), 'Send this link to a friend. The game starts when they open it.'],
-    [room({ status: 'closed' }), 'This room is closed.'],
-  ])('room states: %#', async (body, text) => {
-    await open('/room/abc123', { 'GET /api/v1/rooms/abc123': { status: 200, body } }, null);
-    expect(await screen.findByText(text)).toBeOnTheScreen();
-  });
-
-  test('once played, both can go to the game', async () => {
-    const { app } = await open(
-      '/room/abc123',
-      {
-        'GET /api/v1/rooms/abc123': {
-          status: 200,
-          body: room({ status: 'played', game_id: 'g1' }),
-        },
-        'GET /api/v1/games/g1': {
-          status: 200,
-          body: game({ server_time: new Date().toISOString() }),
-        },
-      },
-      null,
-    );
-    expect(await screen.findByText('Your friend joined.')).toBeOnTheScreen();
-    await press('Go to the game');
-    await waitFor(() => expect(app.getPathname()).toBe('/game/g1'));
-  });
-
-  test('an unknown room', async () => {
-    await open(
-      '/room/nope',
-      { 'GET /api/v1/rooms/nope': error(404, 'room_not_found', 'No such room.') },
-      null,
-    );
-    expect(await screen.findByText('No such room.')).toBeOnTheScreen();
-  });
-});
 
 const pairing = (overrides: Partial<Pairing> = {}): Pairing => ({
   id: 'p1',
@@ -215,9 +74,7 @@ describe('tournaments', () => {
       },
       null,
     );
-    expect(
-      await screen.findByText('Hosting a tournament comes with ClawPlay Pro.'),
-    ).toBeOnTheScreen();
+    expect(await screen.findByText('Host small tournaments for your friends.')).toBeOnTheScreen();
     expect(
       await screen.findByText('5+3 · hosted by bob · Waiting for players: 2 of 6'),
     ).toBeOnTheScreen();
@@ -372,13 +229,13 @@ describe('the trainer', () => {
   test('needs Pro', async () => {
     await open('/trainer', {}, null);
     expect(
-      await screen.findByText(/^The opening and endgame trainer comes with ClawPlay Pro/),
+      await screen.findByText(/^Train with opening and endgame puzzles from real games/),
     ).toBeOnTheScreen();
   });
 
   test('find the best move, or be shown it', async () => {
     let answers = 0;
-    const { server } = await open('/play', {
+    const { server } = await open('/', {
       'GET /api/v1/seeks': { status: 200, body: [] },
       'GET /api/v1/trainer': (request) =>
         request.query.kind === 'endgame'
@@ -393,9 +250,7 @@ describe('the trainer', () => {
         };
       },
     });
-    await fireEvent.press(
-      await screen.findByRole('button', { name: 'Trainer: opening and endgame puzzles' }),
-    );
+    await fireEvent.press(await screen.findByRole('link', { name: 'Trainer' }));
     expect(await screen.findByText('Goats to play: find the best move.')).toBeOnTheScreen();
     expect(screen.getByText('Solved 0 of 60 · Streak 0')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'a2, empty, move here' }));

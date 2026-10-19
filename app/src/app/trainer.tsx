@@ -1,23 +1,21 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
-import type { TrainerKind, TrainerPuzzle } from '@/api/endpoints';
+import type { TrainerKind } from '@/api/endpoints';
 import { describeError } from '@/api/errors';
-import { useAppearance } from '@/appearance/hooks';
 import { has } from '@/billing/format';
 import { useMyPlan } from '@/billing/hooks';
 import { Button } from '@/components/Button';
 import { Hint } from '@/components/Card';
-import { Board } from '@/components/game/Board';
 import { Notice } from '@/components/Notice';
-import { ProGate } from '@/components/ProGate';
+import { PuzzleBoard } from '@/components/PuzzleBoard';
+import { Upsell } from '@/components/Upsell';
 import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
 import { ErrorState, Loading } from '@/components/States';
-import { parseBfen } from '@/game/bfen';
-import { answerText, progressText, puzzlePrompt } from '@/pro/format';
+import { answerText, progressText } from '@/pro/format';
 import { useAnswerPuzzle, useTrainer } from '@/pro/hooks';
-import { colors, spacing } from '@/theme';
+import { colors } from '@/theme';
 
 const KINDS: readonly { value: TrainerKind; label: string }[] = [
   { value: 'opening', label: 'Openings' },
@@ -29,7 +27,7 @@ export default function TrainerScreen() {
   const plan = useMyPlan();
   const [kind, setKind] = useState<TrainerKind>('opening');
   return (
-    <Screen title="Trainer" align="top">
+    <Screen align="top">
       {plan.error !== null ? (
         <ErrorState error={plan.error} onRetry={() => void plan.refetch()} />
       ) : plan.data === undefined ? (
@@ -44,10 +42,9 @@ export default function TrainerScreen() {
           <Puzzles key={kind} kind={kind} />
         </>
       ) : (
-        <ProGate>
-          The opening and endgame trainer comes with ClawPlay Pro: puzzles from real games, each
-          with one best move to find.
-        </ProGate>
+        <Upsell feature="trainer">
+          Train with opening and endgame puzzles from real games, each with one best move to find.
+        </Upsell>
       )}
     </Screen>
   );
@@ -93,44 +90,6 @@ function Puzzles({ kind }: { kind: TrainerKind }) {
   );
 }
 
-function PuzzleBoard({
-  puzzle,
-  answered,
-  best,
-  busy,
-  onMove,
-}: {
-  puzzle: TrainerPuzzle;
-  answered: boolean;
-  best: string | undefined;
-  busy: boolean;
-  onMove: (move: string) => void;
-}) {
-  const look = useAppearance();
-  const position = parseBfen(puzzle.position);
-  return (
-    <>
-      <Text style={styles.prompt}>{puzzlePrompt(puzzle)}</Text>
-      <View style={styles.board}>
-        {position === null ? (
-          <Notice tone="error">This position could not be shown.</Notice>
-        ) : (
-          <Board
-            position={position}
-            legalMoves={answered || busy ? [] : puzzle.legal_moves}
-            lastMove={answered ? best : undefined}
-            onMove={onMove}
-            theme={look.board}
-            pieces={look.pieces}
-          />
-        )}
-      </View>
-    </>
-  );
-}
-
 const styles = StyleSheet.create({
   progress: { fontSize: 14, color: colors.muted },
-  prompt: { fontSize: 18, fontWeight: '700', color: colors.text },
-  board: { width: '100%', maxWidth: 480, alignSelf: 'center', gap: spacing.sm },
 });

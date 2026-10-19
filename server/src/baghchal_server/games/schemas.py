@@ -64,6 +64,9 @@ class GameOut(BaseModel):
     moves: list[str]
     legal_moves: list[str]
     """Empty once the game is over. Excludes moves that would repeat a position."""
+    goats_in_danger: list[str] = []
+    """On the goats' turn, the goats (points) a tiger could capture next if they did nothing
+    about it. Empty on the tigers' turn and once the game is over."""
     clocks: ClocksOut
     ratings: RatingsOut
     match: MatchOut | None

@@ -17,7 +17,8 @@ class ChallengeStatus(StrEnum):
 
 
 class Challenge(Base):
-    """An invitation from one player to another to play a game.
+    """An invitation from one player to another to play a game: to a named player, or by link
+    (``code``) to whoever opens it first, who becomes the opponent on accepting.
 
     ``pair_key`` is set only while the challenge is pending and is unique, so two players can
     have at most one open challenge between them, whoever sent it, even under concurrent
@@ -35,7 +36,12 @@ class Challenge(Base):
     challenger_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="CASCADE")
     )
-    opponent_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"))
+    opponent_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE")
+    )
+    """None for a challenge by link, until someone accepts it."""
+    code: Mapped[str | None] = mapped_column(String(16), unique=True)
+    """A challenge by link: ``/c/<code>``."""
     pair_key: Mapped[str | None] = mapped_column(String(73), unique=True)
     initial_seconds: Mapped[int] = mapped_column(Integer)
     increment_seconds: Mapped[int] = mapped_column(Integer)

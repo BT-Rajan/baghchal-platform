@@ -1,5 +1,6 @@
 import * as ReactNative from 'react-native';
 
+import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { renderApp } from './support/app';
@@ -38,7 +39,7 @@ describe('the board', () => {
     expect(screen.getByText('Goats · 1500')).toBeOnTheScreen();
     expect(screen.getByLabelText('Goats clock 5:00')).toBeOnTheScreen();
     expect(screen.getByLabelText('Tigers clock 5:00')).toBeOnTheScreen();
-    expect(screen.getByText('Goats to place: 20 · Goats captured: 0 of 5')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Goats to place: 20 · Goats captured: 0 of 5')).toBeOnTheScreen();
     expect(screen.getByText('No moves yet. Goats move first.')).toBeOnTheScreen();
   });
 
@@ -392,4 +393,30 @@ test('on wide screens the board sits beside the panel', async () => {
   await openGame(game({ server_time: now() }));
   expect(await screen.findByText('Your move')).toBeOnTheScreen();
   jest.restoreAllMocks();
+});
+
+describe('leaving a live game', () => {
+  test('asks first, and leaves only when told to', async () => {
+    const { app } = await renderApp('/', {
+      token: 'tok',
+      routes: {
+        ...SIGNED_IN,
+        'GET /api/v1/games/g1': { status: 200, body: game({ server_time: now() }) },
+      },
+    });
+    await screen.findByText('Ready for a game?');
+    await act(() => router.push('/game/g1'));
+    expect(await screen.findByText('Your move')).toBeOnTheScreen();
+
+    await act(() => router.back());
+    const question = 'Leave the game? It goes on without you, and your clock keeps running.';
+    expect(await screen.findByText(question)).toBeOnTheScreen();
+    await press('Keep playing');
+    expect(screen.queryByText(question)).toBeNull();
+    expect(app.getPathname()).toBe('/game/g1');
+
+    await act(() => router.back());
+    await fireEvent.press(await screen.findByRole('button', { name: 'Leave the game' }));
+    await waitFor(() => expect(app.getPathname()).toBe('/'));
+  });
 });

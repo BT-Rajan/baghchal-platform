@@ -1,7 +1,13 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { Challenge, ChallengeAnswer } from '@/api/endpoints';
-import { challengeSecondsLeft, challengeTerms } from '@/lobby/format';
+import {
+  challengeSecondsLeft,
+  challengeTerms,
+  durationText,
+  linkPath,
+  shareLink,
+} from '@/lobby/format';
 import { colors, spacing } from '@/theme';
 
 import { Button } from './Button';
@@ -16,24 +22,35 @@ export interface ChallengeCardProps {
   pending: ChallengeAnswer | null;
 }
 
+/** A challenge for me, or mine to a player or by link (`opponent` is null until it is accepted). */
 export function ChallengeCard({ challenge, myId, now, onAnswer, pending }: ChallengeCardProps) {
-  const incoming = challenge.opponent.id === myId;
-  const other = incoming ? challenge.challenger : challenge.opponent;
+  const { challenger, opponent, code } = challenge;
+  const incoming = opponent?.id === myId;
+  const other = incoming ? challenger.username : opponent?.username;
   const seconds = challengeSecondsLeft(challenge, now);
   const busy = pending !== null;
   return (
     <Card>
       <Text style={styles.title}>
-        {incoming ? `${other.username} challenges you` : `Waiting for ${other.username}`}
+        {incoming
+          ? `${other} challenges you`
+          : other === undefined
+            ? 'Your challenge by link'
+            : `Waiting for ${other}`}
       </Text>
       <Text style={styles.terms}>{challengeTerms(challenge, myId)}</Text>
-      <Text style={styles.expiry} aria-live="polite">{`Expires in ${seconds} s`}</Text>
+      {opponent === null && typeof code === 'string' && (
+        <Text style={styles.link} selectable aria-label="Link to share">
+          {shareLink(linkPath(code))}
+        </Text>
+      )}
+      <Text style={styles.expiry} aria-live="polite">{`Expires in ${durationText(seconds)}`}</Text>
       <View style={styles.actions}>
         {incoming ? (
           <>
             <View style={styles.action}>
               <Button
-                title={`Accept ${other.username}'s challenge`}
+                title={`Accept ${other}'s challenge`}
                 label="Accept"
                 busy={pending === 'accept'}
                 disabled={busy}
@@ -42,7 +59,7 @@ export function ChallengeCard({ challenge, myId, now, onAnswer, pending }: Chall
             </View>
             <View style={styles.action}>
               <Button
-                title={`Decline ${other.username}'s challenge`}
+                title={`Decline ${other}'s challenge`}
                 label="Decline"
                 variant="secondary"
                 busy={pending === 'decline'}
@@ -54,7 +71,11 @@ export function ChallengeCard({ challenge, myId, now, onAnswer, pending }: Chall
         ) : (
           <View style={styles.action}>
             <Button
-              title={`Cancel the challenge to ${other.username}`}
+              title={
+                other === undefined
+                  ? 'Cancel the challenge by link'
+                  : `Cancel the challenge to ${other}`
+              }
               label="Cancel"
               variant="secondary"
               busy={pending === 'cancel'}
@@ -71,6 +92,7 @@ export function ChallengeCard({ challenge, myId, now, onAnswer, pending }: Chall
 const styles = StyleSheet.create({
   title: { fontSize: 16, fontWeight: '600', color: colors.text },
   terms: { fontSize: 15, color: colors.text },
+  link: { fontSize: 15, fontWeight: '600', color: colors.accent },
   expiry: { fontSize: 13, color: colors.muted },
   actions: { flexDirection: 'row', gap: spacing.sm },
   action: { flex: 1 },
