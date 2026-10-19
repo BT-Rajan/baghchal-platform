@@ -50,7 +50,7 @@ def _play(job: tuple[str, str, int]) -> dict[str, Any]:
     goat, tiger, seed = job
     rng = random.Random(seed)  # noqa: S311 - a simulation
     game = Game()
-    moves = []
+    moves: list[str] = []
     while game.outcome is None and len(moves) < MAX_PLY:
         level = goat if game.position.side is Side.GOAT else tiger
         move = choose_move(game, Level(level), rng=rng)
