@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
 
 import type { ChallengeResponse } from '@/api/client';
 import { ApiError } from '@/api/errors';
@@ -10,16 +9,7 @@ import { useRealtime } from '@/realtime/provider';
 import { useMe } from '@/auth/session';
 import { api } from '@/services';
 
-/** Re-renders every `intervalMs` while mounted; returns the device time. */
-export function useNow(intervalMs: number, enabled = true): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!enabled) return;
-    const timer = setInterval(() => setNow(Date.now()), intervalMs);
-    return () => clearInterval(timer);
-  }, [intervalMs, enabled]);
-  return now;
-}
+export { useNow } from './use-now';
 
 export function useChallenges() {
   return useQuery({ queryKey: keys.challenges, queryFn: () => api.challenges() });

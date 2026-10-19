@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { Board } from '@/components/Board';
 import { ChallengeCard } from '@/components/lobby';
 import { PlayerBar } from '@/components/PlayerBar';
+import { ClockSync } from '@/game/clock';
 
 import { ALICE, challenge, game, testQueryClient } from './fixtures';
 
@@ -91,13 +92,16 @@ describe('PlayerBar', () => {
       side_to_move: 'tiger',
       ratings: { goat: { rating: 1500, change: -8 }, tiger: { rating: 1510, change: 8 } },
     });
-    const now = Date.parse(g.server_time) + 2_000;
-    await render(<PlayerBar game={g} side="tiger" serverNow={now} />);
+    const clock = new ClockSync();
+    // The device clock runs 2 s ahead of the snapshot's server time.
+    jest.spyOn(Date, 'now').mockReturnValue(Date.parse(g.server_time) + 2_000);
+    await render(<PlayerBar game={g} side="tiger" clock={clock} />);
     expect(screen.getByLabelText('bob clock 7.0')).toBeTruthy();
     expect(screen.getByText('Tigers · 1510 (+8)')).toBeTruthy();
-    await render(<PlayerBar game={g} side="goat" serverNow={now} />);
+    await render(<PlayerBar game={g} side="goat" clock={clock} />);
     expect(screen.getByLabelText('alice clock 1:05')).toBeTruthy();
     expect(screen.getByText('Goats · 1500 (-8)')).toBeTruthy();
+    jest.mocked(Date.now).mockRestore();
   });
 });
 

@@ -1,7 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { Game, Side } from '@/api/types';
-import { formatClock, remainingMs } from '@/game/clock';
+import { formatClock, remainingMs, type ClockSync } from '@/game/clock';
+import { useNow } from '@/hooks/use-now';
 import { radius, space, usePalette } from '@/theme';
 
 function change(value: number | null): string {
@@ -9,21 +10,14 @@ function change(value: number | null): string {
   return value >= 0 ? ` (+${value})` : ` (${value})`;
 }
 
-/** One player's name, side, rating and clock. */
-export function PlayerBar({
-  game,
-  side,
-  serverNow,
-}: {
-  game: Game;
-  side: Side;
-  serverNow: number;
-}) {
+/** One player's name, side, rating and clock. Only a running clock re-renders as it ticks. */
+export function PlayerBar({ game, side, clock }: { game: Game; side: Side; clock: ClockSync }) {
   const palette = usePalette();
   const player = game[side];
   const rating = game.ratings[side];
-  const ms = remainingMs(game.clocks, game.server_time, side, serverNow);
   const running = game.status === 'active' && game.clocks.running === side;
+  const serverNow = clock.serverNow(useNow(100, running));
+  const ms = remainingMs(game.clocks, game.server_time, side, serverNow);
   const low = ms < 20_000;
   const toMove = game.status === 'active' && game.side_to_move === side;
   return (

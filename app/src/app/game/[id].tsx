@@ -11,7 +11,7 @@ import { PlayerBar } from '@/components/PlayerBar';
 import { Body, Button, Card, ErrorText, Heading, Loading, Row, Screen } from '@/components/ui';
 import { parseBfen } from '@/game/bfen';
 import { opposite, sideOf, statusLine } from '@/game/describe';
-import { useGame, useGameAction, useNow } from '@/hooks/queries';
+import { useGame, useGameAction } from '@/hooks/queries';
 import { keys } from '@/realtime/cache';
 import { useRealtime } from '@/realtime/provider';
 import { api } from '@/services';
@@ -51,7 +51,6 @@ function GameView({ game }: { game: Game }) {
   const { clock } = useRealtime();
   const mine = sideOf(game, me.id);
   const active = game.status === 'active';
-  const serverNow = clock.serverNow(useNow(100, active));
   const [confirmResign, setConfirmResign] = useState(false);
 
   const move = useGameAction(game.id, (ply: number, text: string) => api.move(game.id, ply, text));
@@ -60,7 +59,8 @@ function GameView({ game }: { game: Game }) {
   const claim = useGameAction(game.id, () => api.claimAbandonment(game.id));
 
   const myTurn = active && mine !== null && game.side_to_move === mine;
-  const onMove = useCallback((text: string) => move.mutate([game.ply, text]), [move, game.ply]);
+  const { mutate: sendMove } = move; // stable across renders, unlike the mutation object
+  const onMove = useCallback((text: string) => sendMove([game.ply, text]), [sendMove, game.ply]);
 
   const opponentSide: Side = mine ? opposite(mine) : 'tiger';
   const bottomSide: Side = mine ?? 'goat';
@@ -83,7 +83,7 @@ function GameView({ game }: { game: Game }) {
 
   const board = (
     <View style={[styles.boardColumn, wide && styles.boardWide]}>
-      <PlayerBar game={game} side={opponentSide} serverNow={serverNow} />
+      <PlayerBar game={game} side={opponentSide} clock={clock} />
       <Board
         position={game.position}
         legalMoves={myTurn ? game.legal_moves : []}
@@ -91,7 +91,7 @@ function GameView({ game }: { game: Game }) {
         onMove={onMove}
         disabled={!myTurn || move.isPending}
       />
-      <PlayerBar game={game} side={bottomSide} serverNow={serverNow} />
+      <PlayerBar game={game} side={bottomSide} clock={clock} />
     </View>
   );
 
