@@ -2551,7 +2551,7 @@
       },
       "post": {
         "summary": "Create Tournament",
-        "description": "Host a small round robin (Pro); share its code for players to join.",
+        "description": "Host a Swiss tournament (Pro); share its code for players to join.",
         "operationId": "create_tournament_api_v1_tournaments_post",
         "requestBody": {
           "content": {
@@ -3345,6 +3345,24 @@
           "night"
         ],
         "title": "BoardTheme"
+      },
+      "ByeOut": {
+        "properties": {
+          "round": {
+            "type": "integer",
+            "title": "Round"
+          },
+          "player": {
+            "$ref": "#/components/schemas/PlayerOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "round",
+          "player"
+        ],
+        "title": "ByeOut",
+        "description": "A player who sat a round out (odd numbers), scoring a point."
       },
       "Category": {
         "type": "string",
@@ -5624,6 +5642,10 @@
             "format": "uuid",
             "title": "Id"
           },
+          "round": {
+            "type": "integer",
+            "title": "Round"
+          },
           "goat": {
             "$ref": "#/components/schemas/PlayerOut"
           },
@@ -5659,6 +5681,7 @@
         "type": "object",
         "required": [
           "id",
+          "round",
           "goat",
           "tiger",
           "state",
@@ -6811,6 +6834,10 @@
             "type": "integer",
             "title": "Points"
           },
+          "buchholz": {
+            "type": "integer",
+            "title": "Buchholz"
+          },
           "played": {
             "type": "integer",
             "title": "Played"
@@ -6820,6 +6847,7 @@
         "required": [
           "player",
           "points",
+          "buchholz",
           "played"
         ],
         "title": "StandingOut"
@@ -6874,10 +6902,10 @@
           },
           "max_players": {
             "type": "integer",
-            "maximum": 6.0,
+            "maximum": 32.0,
             "minimum": 3.0,
             "title": "Max Players",
-            "default": 6
+            "default": 32
           }
         },
         "additionalProperties": false,
@@ -6912,6 +6940,14 @@
           "status": {
             "$ref": "#/components/schemas/TournamentStatus"
           },
+          "round": {
+            "type": "integer",
+            "title": "Round"
+          },
+          "rounds": {
+            "type": "integer",
+            "title": "Rounds"
+          },
           "players": {
             "items": {
               "$ref": "#/components/schemas/PlayerOut"
@@ -6933,6 +6969,13 @@
             "type": "array",
             "title": "Pairings"
           },
+          "byes": {
+            "items": {
+              "$ref": "#/components/schemas/ByeOut"
+            },
+            "type": "array",
+            "title": "Byes"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -6947,9 +6990,12 @@
           "time_control",
           "max_players",
           "status",
+          "round",
+          "rounds",
           "players",
           "standings",
           "pairings",
+          "byes",
           "created_at"
         ],
         "title": "TournamentOut"

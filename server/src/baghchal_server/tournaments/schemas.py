@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from baghchal_server.lobby.schemas import PlayerOut, TimeControlLabel
 
 MIN_PLAYERS = 3
-MAX_PLAYERS = 6
+MAX_PLAYERS = 32
 
 
 class TournamentStatus(StrEnum):
@@ -35,6 +35,7 @@ class TournamentIn(BaseModel):
 
 class PairingOut(BaseModel):
     id: uuid.UUID
+    round: int
     goat: PlayerOut
     tiger: PlayerOut
     state: PairingState
@@ -45,8 +46,17 @@ class PairingOut(BaseModel):
 class StandingOut(BaseModel):
     player: PlayerOut
     points: int
-    """One for each game won."""
+    """One for each game won, and one for a bye."""
+    buchholz: int
+    """The tie-break: the points of everyone this player has played."""
     played: int
+
+
+class ByeOut(BaseModel):
+    """A player who sat a round out (odd numbers), scoring a point."""
+
+    round: int
+    player: PlayerOut
 
 
 class TournamentOut(BaseModel):
@@ -58,8 +68,14 @@ class TournamentOut(BaseModel):
     """A label; tournaments made before a time control was retired keep it."""
     max_players: int
     status: TournamentStatus
+    round: int
+    """The round being played (0 before the start)."""
+    rounds: int
+    """How many rounds (set at the start: enough for a clear winner)."""
     players: list[PlayerOut]
     standings: list[StandingOut]
-    """Most points first, once started."""
+    """Most points first, then the tie-break, once started."""
     pairings: list[PairingOut]
+    """Every round's games, newest round first."""
+    byes: list[ByeOut]
     created_at: datetime

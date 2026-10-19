@@ -189,7 +189,7 @@ function MoreWaysToPlay({ guest }: { guest: boolean }) {
       <FeatureLink
         icon="trophy"
         title="Tournaments"
-        text="Round robins with friends: join one by link, or host your own."
+        text="Swiss tournaments with friends: join one by link, or host your own."
         onPress={() => router.push('/tournaments')}
       />
       <FeatureLink

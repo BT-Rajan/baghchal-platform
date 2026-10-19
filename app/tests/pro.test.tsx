@@ -39,6 +39,7 @@ async function press(name: string | RegExp) {
 
 const pairing = (overrides: Partial<Pairing> = {}): Pairing => ({
   id: 'p1',
+  round: 1,
   goat: ALICE,
   tiger: BOB,
   state: 'waiting',
@@ -55,8 +56,11 @@ const tournament = (overrides: Partial<Tournament> = {}): Tournament => ({
   max_players: 6,
   status: 'open',
   players: [ALICE, BOB],
+  round: 0,
+  rounds: 0,
   standings: [],
   pairings: [],
+  byes: [],
   created_at: '2026-01-01T12:00:00Z',
   ...overrides,
 });
@@ -131,20 +135,25 @@ describe('tournaments', () => {
     expect(server.lastTo('POST /api/v1/tournaments/cup1/join')).toBeDefined();
   });
 
-  const running = (): Tournament =>
+  // Round 2 of 2: bob beat alice in round 1 while carol sat out; now carol meets alice.
+  const running = (overrides: Partial<Pairing> = {}): Tournament =>
     tournament({
       status: 'running',
+      round: 2,
+      rounds: 2,
       players: [ALICE, BOB, CAROL],
       standings: [
-        { player: BOB, points: 1, played: 1 },
-        { player: ALICE, points: 0, played: 1 },
-        { player: CAROL, points: 0, played: 0 },
+        { player: BOB, points: 2, buchholz: 1, played: 1 },
+        { player: CAROL, points: 1, buchholz: 0, played: 0 },
+        { player: ALICE, points: 0, buchholz: 2, played: 1 },
       ],
       pairings: [
+        pairing({ id: 'p2', round: 2, goat: CAROL, tiger: ALICE, ...overrides }),
         pairing({ state: 'done', game_id: 'g0', winner: BOB }),
-        pairing({ id: 'p2', goat: BOB, tiger: ALICE }),
-        pairing({ id: 'p3', goat: ALICE, tiger: CAROL, state: 'playing', game_id: 'g9' }),
-        pairing({ id: 'p4', goat: BOB, tiger: CAROL }),
+      ],
+      byes: [
+        { round: 2, player: BOB },
+        { round: 1, player: CAROL },
       ],
     });
 
@@ -162,15 +171,19 @@ describe('tournaments', () => {
       },
     });
     await fireEvent.press(await screen.findByRole('button', { name: 'Start the tournament' }));
-    expect(await screen.findByText('1 point')).toBeOnTheScreen();
-    expect(screen.getAllByText('0 points')).toHaveLength(2);
-    // Mine to play, and everyone's.
-    expect(screen.getAllByText('alice (goats) v bob (tigers) · won by bob')).toHaveLength(2);
-    expect(screen.getByText('bob (goats) v carol (tigers) · to play')).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Play bob v carol' })).toBeNull();
+    expect(await screen.findByText('2 points')).toBeOnTheScreen();
+    expect(screen.getByText('1 point')).toBeOnTheScreen();
+    expect(screen.getByText('Your game, round 2')).toBeOnTheScreen();
+    // Mine to play, under this round too; the earlier round below it.
+    expect(screen.getAllByText('carol (goats) v alice (tigers) · to play')).toHaveLength(2);
+    expect(screen.getByText('alice (goats) v bob (tigers) · won by bob')).toBeOnTheScreen();
+    expect(screen.getByText('bob has the bye (a point)')).toBeOnTheScreen();
+    expect(screen.getByText('carol has the bye (a point)')).toBeOnTheScreen();
 
     await press('End the tournament');
-    expect(await screen.findByText(/^5\+3 · hosted by alice · Finished/)).toBeOnTheScreen();
+    expect(
+      await screen.findByText(/^5\+3 · hosted by alice · Finished after 2 rounds/),
+    ).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'End the tournament' })).toBeNull();
     expect(server.lastTo('POST /api/v1/tournaments/cup1/finish')).toBeDefined();
   });
@@ -186,19 +199,22 @@ describe('tournaments', () => {
       'GET /api/v1/tournaments/cup1': { status: 200, body: running() },
       'POST /api/v1/tournaments/cup1/pairings/p2/play': { status: 200, body: started },
     });
-    await fireEvent.press(await screen.findByRole('button', { name: 'Play bob v alice' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Play carol v alice' }));
     await waitFor(() => expect(app.getPathname()).toBe('/game/g2'));
   });
 
   test('open one being played', async () => {
     const { app } = await open('/tournament/cup1', {
-      'GET /api/v1/tournaments/cup1': { status: 200, body: running() },
+      'GET /api/v1/tournaments/cup1': {
+        status: 200,
+        body: running({ state: 'playing', game_id: 'g9' }),
+      },
       'GET /api/v1/games/g9': {
         status: 200,
         body: game({ id: 'g9', server_time: new Date().toISOString() }),
       },
     });
-    await fireEvent.press(await screen.findByRole('button', { name: 'Open alice v carol' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Open carol v alice' }));
     await waitFor(() => expect(app.getPathname()).toBe('/game/g9'));
   });
 

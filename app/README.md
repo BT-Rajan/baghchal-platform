@@ -152,8 +152,8 @@ scripts/        the Expo-cloud guardrail
   (`shareLink` in `src/lobby/format.ts`, the one way the app makes share links) opens `/c/[code]`,
   where the friend's "Accept and play" starts the game. The challenge also shows under Your
   challenges in the lobby, with its link and a Cancel button.
-- **Pro extras.** Play now → More ways to play: tournaments (host, join by link, standings, "Play
-  now" on my games) and the trainer (the puzzle on the real board, in the player's theme).
+- **Pro extras.** Play now → More ways to play: Swiss tournaments (host, join by link, standings with
+  the tie-break, my game this round or my bye, every round's games) and the trainer (the puzzle on the real board, in the player's theme).
   Players without Pro see what each does in the one `Upsell` component, as everywhere a
   paid feature is locked.
 - **Board, pieces and sounds.** Settings → Board, pieces and sounds: board themes and piece sets

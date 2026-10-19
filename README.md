@@ -72,7 +72,7 @@ Each phase ships complete — tested, documented and reviewed — before the nex
      (the first of each free), and a Plus or Pro badge by the player's name.
    - ✅ **Payments with Razorpay**: Plus and Pro for a month or a year, confirmed by signature and
      webhook.
-   - ✅ **Pro extras**: small round-robin tournaments among friends, and an opening and
+   - ✅ **Pro extras**: Swiss tournaments among friends, and an opening and
      endgame puzzle trainer. (Inviting a friend by link is a free challenge, for everyone, and
      so is the trainer's daily puzzle.)
    - ✅ **Friends**: a request and an answer, then friends on the home screen with their
@@ -192,8 +192,8 @@ and the Caddyfile.
 | POST | `/api/v1/payments/checkout` | Start buying a `plan` (plus, pro) for a `period` (month, year): a Razorpay order |
 | POST | `/api/v1/payments/verify` | Confirm a payment with what Razorpay Checkout returned (`order_id`, `payment_id`, `signature`) |
 | POST | `/api/v1/payments/webhook` | Razorpay's webhook (`payment.captured`, `order.paid`, `payment.failed`), checked by its signature |
-| GET, POST | `/api/v1/tournaments` | Tournaments I am in; host one (Pro: `name`, `time_control`, `max_players` 3–6) |
-| GET | `/api/v1/tournaments/{code}` | A tournament: players, standings and every pairing |
+| GET, POST | `/api/v1/tournaments` | Tournaments I am in; host one (Pro: `name`, `time_control`, `max_players` 3–32) |
+| GET | `/api/v1/tournaments/{code}` | A tournament: players, the round, standings (points, Buchholz), every pairing by round and the byes |
 | POST | `/api/v1/tournaments/{code}/join`, `/leave`, `/start`, `/finish` | Join or leave while open; the host starts it or ends it |
 | POST | `/api/v1/tournaments/{code}/pairings/{id}/play` | Start one of my tournament games (my opponent must be online) |
 | GET | `/api/v1/trainer?kind=opening\|endgame` | Pro: my next puzzle and progress |
@@ -299,11 +299,15 @@ challenges. It replaced the Pro private rooms.
 
 **Pro extras.** Only the host needs Pro; anyone can join.
 
-- **Tournaments** (`tournaments/`): a round robin for 3 to 6 players, joined by link. Once the
-  host starts it, each player plays each other twice, once with each side, in casual games
-  (ratings cannot be farmed). Either player starts a pairing whenever the other is online; an
-  aborted game can be played again. A point per win; it ends when every game is played, or
-  when the host ends it.
+- **Tournaments** (`tournaments/`): Swiss, as in chess, for 3 to 32 players, joined by link
+  (`swiss.py` pairs). Once the host starts it, it runs for ⌈log₂ n⌉ + 1 rounds (at most n − 1).
+  Round 1 pairs by rating; each later round pairs players on equal points, never the same two
+  twice when it can be helped, and gives goats to whoever has had them less. With an odd number
+  the lowest-placed player who has not had one gets the bye: a point and no game. Games are
+  casual (ratings cannot be farmed). Either player starts a pairing whenever the other is
+  online; an aborted game can be played again. A point per win; ties are broken by Buchholz
+  (the sum of one's opponents' points). The next round is paired when the last game of this
+  one ends; it finishes after the last round, or when the host ends it.
 - **Trainer** (`trainer/`): 120 puzzles, half openings (goats still being placed) and half
   endgames, each a position from the computer's games where one move beats every other by at
   least a mistake's worth (`server/scripts/make_puzzles.py`, fixed by its seed). Answers are
