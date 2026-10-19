@@ -6,6 +6,11 @@ cd "$(dirname "$0")/../.."
 ROOT=$PWD
 # shellcheck source=/dev/null
 source "$ROOT/bhagchal2.env"
+# The email provider's settings (written by runonce.sh); they take the place of any older ones.
+if [[ -f "$ROOT/.env" ]]; then
+  # shellcheck source=/dev/null
+  source "$ROOT/.env"
+fi
 
 # The password may hold characters that mean something in a URL (such as #), so encode it.
 password=$(DB_PASSWORD="$DB_PASSWORD" "$ROOT/.venv/bin/python" -c \
