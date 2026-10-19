@@ -64,8 +64,13 @@ For a machine that already runs MariaDB and pm2, without Docker:
 every `git pull` too: it applies migrations and rebuilds the app. Players open port 7070,
 where `deploy/pm2/web.mjs` serves the app and passes `/api` to the API on 127.0.0.1:7071.
 
-This is the server's development mode: no Redis (so one server only) and, unless `SMTP_HOST`
-is set, emails (sign-up links, password resets) only appear in `pm2 logs bhagchal2`. With a
+**Email**: `runonce.sh` also writes `.env` (not committed) for your email provider: `SMTP_HOST`,
+`SMTP_PORT` (587, or 465 for TLS from the start), `SMTP_USERNAME`, `SMTP_PASSWORD` and
+`MAIL_FROM`. Fill them in and run `./start.sh` to restart. Until `SMTP_HOST` is set, emails
+(sign-up links, password resets, parents' links) only appear in `pm2 logs bhagchal2`, so new
+players cannot confirm their accounts; guests can play without one.
+
+This is the server's development mode: no Redis (so one server only). With a
 plain `http://` address the app is built to allow it, so passwords cross the network
 unencrypted: keep it to a network you trust, or put an https proxy in front and set
 `PUBLIC_URL` to the https address.

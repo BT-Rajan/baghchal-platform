@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from email.message import EmailMessage
-from typing import Protocol
+from typing import Final, Protocol
 
 import aiosmtplib
 import structlog
@@ -40,6 +40,9 @@ class ConsoleMailer:
         log.info("mail.console", to=mail.to, subject=mail.subject, body=mail.body)
 
 
+SMTPS_PORT: Final = 465
+
+
 class SmtpMailer:
     def __init__(self, settings: Settings) -> None:
         self._s = settings
@@ -56,7 +59,9 @@ class SmtpMailer:
             port=self._s.smtp_port,
             username=self._s.smtp_username or None,
             password=self._s.smtp_password.get_secret_value() or None,
-            start_tls=self._s.smtp_starttls,
+            # Port 465 is TLS from the first byte (SMTPS); other ports upgrade with STARTTLS.
+            use_tls=self._s.smtp_port == SMTPS_PORT,
+            start_tls=self._s.smtp_starttls and self._s.smtp_port != SMTPS_PORT,
             timeout=15,
         )
 
