@@ -62,8 +62,7 @@ Each phase ships complete — tested, documented and reviewed — before the nex
      month and year of birth at sign-up (13 and over; under 18, a parent or guardian agrees by
      email before the player meets other people), and data deleted on the policy's schedule
      ([plan](docs/plans/phase-8-ready-for-players.md)).
-   - Still to do: push notifications and store builds for the apps, and testing on real
-     devices.
+   - Still to do: store builds for the apps, and testing on real devices.
 9. **Plans** — Free, Plus and Pro ([below](#plans)):
    - ✅ Plans, features, admin grants (a plan or one feature, for a while or for good) and the
      Hard computer and full history behind Plus.

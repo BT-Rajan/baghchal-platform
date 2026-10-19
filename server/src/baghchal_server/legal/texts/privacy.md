@@ -58,14 +58,13 @@ You can withdraw your consent at any time by deleting your account (see *Your ri
   - Razorpay (payments, India);
   - our email provider, to deliver emails: [[email_provider]];
   - our hosting provider, where our servers and backups run: [[hosting_provider]];
-  - Google (Firebase Cloud Messaging) and Apple (Apple Push Notification service), to deliver notifications to your phone if you allow them.
 - **Authorities**, when the law requires us to.
 
 We never sell personal data, and we share none for advertising.
 
 ## Where your data is stored
 
-Our servers are in [[hosting_location]]. Some providers above (Google, Apple) may process data outside India or your country. Where the GDPR applies, such transfers rely on adequacy decisions or the European Commission's standard contractual clauses.
+Our servers are in [[hosting_location]]. Our email and hosting providers may process data outside India or your country. Where the GDPR applies, such transfers rely on adequacy decisions or the European Commission's standard contractual clauses.
 
 ## How long we keep it
 
