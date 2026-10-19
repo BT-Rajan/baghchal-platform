@@ -192,6 +192,12 @@ async def create_challenge(
         raise AppError(404, "player_not_found", "No such player.")
     if opponent.id == challenger.id:
         raise AppError(422, "cannot_challenge_self", "You cannot challenge yourself.")
+    if data.rated and opponent.role == "guest":
+        raise AppError(
+            409,
+            "guest_plays_casual",
+            f"{opponent.username} is a guest and plays casual games only.",
+        )
     # Before anything that would tell a blocked player whether the other is online.
     if await has_blocked(db, challenger.id, opponent.id):
         raise AppError(

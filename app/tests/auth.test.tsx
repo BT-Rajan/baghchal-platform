@@ -19,10 +19,10 @@ async function type(label: string, text: string) {
   await fireEvent.changeText(screen.getByLabelText(label), text);
 }
 
-test('someone signed out is sent to sign-in', async () => {
+test('someone signed out is sent to the welcome page', async () => {
   const { app } = await renderApp('/');
-  expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeOnTheScreen();
-  expect(app.getPathname()).toBe('/sign-in');
+  expect(await screen.findByRole('button', { name: 'Play now, no sign-up' })).toBeOnTheScreen();
+  expect(app.getPathname()).toBe('/welcome');
 });
 
 test('a saved session opens the signed-in home', async () => {
@@ -77,8 +77,8 @@ describe('sign in', () => {
     expect(savedToken()).toBe('new-token');
 
     await signOut();
-    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeOnTheScreen();
-    expect(app.getPathname()).toBe('/sign-in');
+    expect(await screen.findByRole('button', { name: 'Play now, no sign-up' })).toBeOnTheScreen();
+    expect(app.getPathname()).toBe('/welcome');
     expect(savedToken()).toBeNull();
   });
 });
@@ -274,6 +274,6 @@ test('signing in opens the live connection; signing out closes it', async () => 
   expect(FakeSocket.all).toHaveLength(1);
   expect(FakeSocket.latest().url).toBe('ws://localhost:8000/api/v1/ws');
   await signOut();
-  await screen.findByRole('heading', { name: 'Sign in' });
+  await screen.findByRole('button', { name: 'Play now, no sign-up' });
   expect(FakeSocket.latest().closed).toBe(true);
 });

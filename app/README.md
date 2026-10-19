@@ -72,6 +72,11 @@ scripts/        the Expo-cloud guardrail
 
 ## How it works
 
+- **The front door.** Signed-out visitors land on `/welcome`: what Bagh Chal is, how it's
+  played, and "Play now, no sign-up", which signs them in as a guest (`guest-3fa9c1`) at once.
+  Guests play the computer and casual games; rated play, challenges, reports and payments ask
+  for an account. A banner on Play and Me leads to `/claim`, which turns the guest into a real
+  account and keeps its games.
 - **The server decides.** The app sends intentions (a move as `{ply, move}`, a challenge, a
   resignation) and shows what the server answers. Selectable pieces and targets come only from
   the server's `legal_moves`; there is no rules engine in the app.

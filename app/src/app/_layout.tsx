@@ -68,7 +68,7 @@ function Routes() {
       {signedIn && <ConnectionBanner />}
       {signedIn && <ChallengeBanner />}
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Protected guard={signedIn}>
+        <Stack.Protected guard={signedIn} redirectTo="/welcome">
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="player/[username]" options={{ headerShown: true, title: '' }} />
           <Stack.Screen name="challenge/[username]" options={{ presentation: 'modal' }} />
@@ -89,6 +89,7 @@ function Routes() {
             options={{ headerShown: true, title: 'Tournament' }}
           />
           <Stack.Screen name="trainer" options={{ headerShown: true, title: 'Trainer' }} />
+          <Stack.Screen name="claim" options={{ headerShown: true, title: 'Your account' }} />
           <Stack.Screen
             name="moderation/index"
             options={{ headerShown: true, title: 'Moderation' }}
@@ -99,6 +100,7 @@ function Routes() {
           />
         </Stack.Protected>
         <Stack.Protected guard={!signedIn}>
+          <Stack.Screen name="welcome" />
           <Stack.Screen name="sign-in" />
           <Stack.Screen name="sign-up" />
           <Stack.Screen name="forgot-password" />

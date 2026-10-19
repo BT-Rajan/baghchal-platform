@@ -6,7 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
 from baghchal_server.accounts.models import User
 from baghchal_server.accounts.schemas import Accepted
 from baghchal_server.accounts.service import STAFF
-from baghchal_server.deps import DB, AppState, CurrentUser, State, enforce_limit
+from baghchal_server.deps import DB, AppState, CurrentUser, Member, State, enforce_limit
 from baghchal_server.errors import AppError
 from baghchal_server.games import service as games
 from baghchal_server.games.events import notify as notify_game
@@ -45,7 +45,7 @@ def _send(tasks: BackgroundTasks, state: AppState, mail: Mail) -> None:
 
 @router.post("/players/{username}/report", status_code=status.HTTP_202_ACCEPTED)
 async def report_player(
-    username: UsernameQuery, data: ReportIn, user: CurrentUser, state: State, db: DB
+    username: UsernameQuery, data: ReportIn, user: Member, state: State, db: DB
 ) -> Accepted:
     """Ask the moderators to look at a player (cheating, abuse, an offensive name…)."""
     await enforce_limit(state, REPORTS_PER_USER, str(user.id))

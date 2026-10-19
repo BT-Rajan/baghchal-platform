@@ -5,6 +5,7 @@ Every function takes the clock as ``now`` so expiry is testable, and leaves comm
 caller only where noted. Responses never reveal whether an email address is registered.
 """
 
+import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Final
@@ -28,6 +29,11 @@ DELETED_PREFIX: Final = "deleted-"
 COMPUTER_PREFIX: Final = "computer"
 """The computer opponent's accounts are named computer-easy and so on."""
 BOT_ROLE: Final = "bot"
+GUEST: Final = "guest"
+"""A visitor playing before signing up; until they claim the account it has no real email
+or password."""
+GUEST_PREFIX: Final = "guest-"
+GUEST_DOMAIN: Final = "guest.invalid"
 SESSION_TOUCH_INTERVAL: Final = timedelta(minutes=5)
 RESERVED_USERNAMES: Final = frozenset(
     {"admin", "administrator", "anonymous", "api", "baghchal", "guest", "help", "mod",
@@ -50,7 +56,7 @@ def username_key(username: str) -> str:
 def username_allowed(settings: Settings, username: str) -> bool:
     """False for reserved names and names containing a blocked word."""
     key = username_key(username)
-    if key in RESERVED_USERNAMES or key.startswith((DELETED_PREFIX, COMPUTER_PREFIX)):
+    if key in RESERVED_USERNAMES or key.startswith((DELETED_PREFIX, COMPUTER_PREFIX, GUEST_PREFIX)):
         return False
     letters = "".join(c for c in key if c.isalpha())  # "b_a-d1" hides "bad" too
     return not any(word.lower() in letters for word in settings.blocked_username_words)
@@ -158,6 +164,74 @@ async def verify_email(
     session_token = await create_session(db, user.id, now, settings.session_ttl)
     await db.commit()
     return user, session_token
+
+
+# ── Guests ────────────────────────────────────────────────────────────────
+
+
+async def create_guest(
+    db: AsyncSession, hasher: PasswordHasher, settings: Settings, now: datetime
+) -> tuple[User, str]:
+    """A guest account and its session, to play at once without signing up.
+
+    Its password is random and never told, so nobody can sign in to it; its email is a
+    placeholder that no mail is sent to.
+    """
+    password_hash = await hasher.hash(secrets.token_urlsafe(32))
+    for _ in range(5):
+        username = f"{GUEST_PREFIX}{secrets.token_hex(3)}"
+        user = User(
+            id=uuid.uuid4(),
+            username=username,
+            username_key=username,
+            email=f"{username}@{GUEST_DOMAIN}",
+            email_key=f"{username}@{GUEST_DOMAIN}",
+            password_hash=password_hash,
+            email_verified_at=now,
+            is_active=True,
+            role=GUEST,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(user)
+        try:
+            await db.flush()
+        except IntegrityError:
+            await db.rollback()
+            continue
+        token = await create_session(db, user.id, now, settings.session_ttl)
+        await db.commit()
+        return user, token
+    raise AppError(503, "try_again", "Please try again.")
+
+
+async def claim_guest(  # noqa: PLR0913, PLR0917 - who, and the account they want
+    db: AsyncSession,
+    hasher: PasswordHasher,
+    settings: Settings,
+    now: datetime,
+    user: User,
+    data: RegisterIn,
+) -> Mail | None:
+    """Turn a guest into an account, keeping its games: the username and password work at
+    once; the email address once its confirmation link is opened (as for a change of email,
+    so nobody can take an address they cannot read)."""
+    if user.role != GUEST:
+        raise AppError(409, "not_a_guest", "You already have an account.")
+    ukey = username_key(data.username)
+    if not username_allowed(settings, data.username):
+        raise AppError(409, "username_unavailable", "That username is not available.")
+    if data.password.lower() == ukey:
+        raise AppError(422, "weak_password", "Your password must not be your username.")
+    password_hash = await hasher.hash(data.password)
+    user.username, user.username_key = data.username, ukey
+    user.password_hash, user.role, user.updated_at = password_hash, "player", now
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise AppError(409, "username_taken", "That username is taken.") from None
+    return await request_email_change(db, settings, now, user, data.email)
 
 
 # ── Login and sessions ────────────────────────────────────────────────────

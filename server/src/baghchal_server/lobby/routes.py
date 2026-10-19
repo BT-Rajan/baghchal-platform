@@ -7,7 +7,7 @@ from fastapi import APIRouter, Query, status
 from baghchal_server.appearance import service as appearance
 from baghchal_server.billing import service as billing
 from baghchal_server.billing.plans import FREE_HISTORY_DAYS, Feature
-from baghchal_server.deps import DB, AppState, CurrentUser, State, enforce_limit
+from baghchal_server.deps import DB, AppState, CurrentUser, Member, State, enforce_limit, get_member
 from baghchal_server.errors import AppError
 from baghchal_server.games import service as games
 from baghchal_server.games.events import notify as notify_game
@@ -132,9 +132,7 @@ async def list_challenges(user: CurrentUser, state: State, db: DB) -> ChallengeL
 
 
 @router.post("/challenges", status_code=status.HTTP_201_CREATED)
-async def create_challenge(
-    data: ChallengeIn, user: CurrentUser, state: State, db: DB
-) -> ChallengeOut:
+async def create_challenge(data: ChallengeIn, user: Member, state: State, db: DB) -> ChallengeOut:
     await enforce_limit(state, CHALLENGES_PER_USER, str(user.id))
     challenge = await service.create_challenge(db, state.presence, state.clock(), user, data)
     return await notify_challenge(state, db, challenge)
@@ -231,6 +229,8 @@ async def player_games(  # noqa: PLR0913, PLR0917 - FastAPI dependencies and que
 
 @router.post("/seeks")
 async def seek_game(data: seeks.SeekIn, user: CurrentUser, state: State, db: DB) -> seeks.SeekOut:
+    if data.rated:
+        await get_member(user)
     """Play anyone who wants the same kind of game: paired at once with whoever has waited
     longest, or wait (two minutes) for the next person."""
     await enforce_limit(state, SEEKS_PER_USER, str(user.id))

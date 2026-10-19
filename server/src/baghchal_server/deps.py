@@ -81,6 +81,16 @@ async def get_current_user(request: Request, state: State, db: DB) -> User:
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
+async def get_member(user: CurrentUser) -> User:
+    """A signed-in player with an account (not a guest)."""
+    if user.role == "guest":
+        raise AppError(403, "account_required", "Make a free account to do this.")
+    return user
+
+
+Member = Annotated[User, Depends(get_member)]
+
+
 def client_ip(request: Request) -> str:
     # Behind a proxy, run uvicorn with --proxy-headers and --forwarded-allow-ips so that this
     # is the real client address rather than the proxy's.

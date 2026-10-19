@@ -3,7 +3,7 @@ from typing import Annotated, Any, Final
 
 from fastapi import APIRouter, BackgroundTasks, Header, Request
 
-from baghchal_server.deps import DB, AppState, CurrentUser, State, enforce_limit
+from baghchal_server.deps import DB, AppState, CurrentUser, Member, State, enforce_limit
 from baghchal_server.errors import AppError
 from baghchal_server.mail import deliver
 from baghchal_server.payments import service
@@ -35,7 +35,7 @@ async def my_payments(user: CurrentUser, state: State, db: DB) -> PaymentsOut:
 
 
 @router.post("/payments/checkout", status_code=201)
-async def checkout(data: CheckoutIn, user: CurrentUser, state: State, db: DB) -> CheckoutOut:
+async def checkout(data: CheckoutIn, user: Member, state: State, db: DB) -> CheckoutOut:
     """Start buying a plan for a month or a year: an order to pay with Razorpay Checkout."""
     gateway = _gateway(state)
     await enforce_limit(state, CHECKOUTS_PER_USER, str(user.id))

@@ -24,6 +24,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/guest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Play As Guest
+         * @description Play at once, without signing up: a guest account, signed in. Guests play the computer
+         *     and casual games; anything rated or social asks them to make an account (``/me/claim``),
+         *     which keeps their games.
+         */
+        post: operations["play_as_guest_api_v1_auth_guest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Claim Guest
+         * @description Make my guest account a real one: the username and password work at once; the email
+         *     address once the link sent to it is opened.
+         */
+        post: operations["claim_guest_api_v1_me_claim_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/verify-email": {
         parameters: {
             query?: never;
@@ -431,11 +474,7 @@ export interface paths {
          */
         get: operations["waiting_players_api_v1_seeks_get"];
         put?: never;
-        /**
-         * Seek Game
-         * @description Play anyone who wants the same kind of game: paired at once with whoever has waited
-         *     longest, or wait (two minutes) for the next person.
-         */
+        /** Seek Game */
         post: operations["seek_game_api_v1_seeks_post"];
         /** Stop Seeking */
         delete: operations["stop_seeking_api_v1_seeks_delete"];
@@ -1700,6 +1739,15 @@ export interface components {
             /** Paid */
             paid: boolean;
         };
+        /** GuestIn */
+        GuestIn: {
+            /**
+             * Transport
+             * @default cookie
+             * @enum {string}
+             */
+            transport: "cookie" | "bearer";
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1773,7 +1821,7 @@ export interface components {
              * Role
              * @enum {string}
              */
-            role: "player" | "moderator" | "admin";
+            role: "guest" | "player" | "moderator" | "admin";
         };
         /** ModActionOut */
         ModActionOut: {
@@ -2466,6 +2514,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Accepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    play_as_guest_api_v1_auth_guest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    claim_guest_api_v1_me_claim_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeOut"];
                 };
             };
             /** @description Validation Error */

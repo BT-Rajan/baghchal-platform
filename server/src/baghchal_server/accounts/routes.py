@@ -12,6 +12,7 @@ from baghchal_server.accounts.schemas import (
     EmailChangedOut,
     EmailChangeIn,
     ExportOut,
+    GuestIn,
     LoginIn,
     MeOut,
     PasswordChangeIn,
@@ -26,6 +27,7 @@ from baghchal_server.deps import (
     DB,
     AppState,
     CurrentUser,
+    Member,
     State,
     client_ip,
     enforce_limit,
@@ -42,6 +44,7 @@ router = APIRouter(prefix="/api/v1")
 # mobile carrier). Guessing is held back by the per-account limits, the per-address mail limit
 # and the cost of argon2id; the per-IP limits stop one address from doing too much of anything.
 REGISTER_PER_IP: Final = Limit("register-ip", 60, 3600)
+GUESTS_PER_IP: Final = Limit("guest-ip", 30, 3600)
 MAIL_PER_ADDRESS: Final = Limit("mail-address", 3, 3600)
 LOGIN_PER_IP: Final = Limit("login-ip", 300, 900)
 # Only failed sign-ins count here, so a room full of people signing in is never held up.
@@ -68,7 +71,7 @@ def _me(user: User) -> MeOut:
         username=user.username,
         email=user.email,
         created_at=user.created_at,
-        role=user.role if user.role in service.STAFF else "player",
+        role=user.role if user.role in {*service.STAFF, service.GUEST} else "player",
     )
 
 
@@ -101,6 +104,31 @@ async def register(
     mail = await service.register(db, state.hasher, state.settings, state.clock(), data)
     _send(tasks, state, mail)
     return Accepted()
+
+
+@router.post("/auth/guest")
+async def play_as_guest(
+    data: GuestIn, request: Request, response: Response, state: State, db: DB
+) -> SessionOut:
+    """Play at once, without signing up: a guest account, signed in. Guests play the computer
+    and casual games; anything rated or social asks them to make an account (``/me/claim``),
+    which keeps their games."""
+    await enforce_limit(state, GUESTS_PER_IP, client_ip(request))
+    user, token = await service.create_guest(db, state.hasher, state.settings, state.clock())
+    return _session_response(response, state, user, token, data.transport)
+
+
+@router.post("/me/claim")
+async def claim_guest(
+    data: RegisterIn, user: CurrentUser, tasks: BackgroundTasks, state: State, db: DB
+) -> MeOut:
+    """Make my guest account a real one: the username and password work at once; the email
+    address once the link sent to it is opened."""
+    await enforce_limit(state, ACCOUNT_CHANGES_PER_USER, str(user.id))
+    await enforce_limit(state, MAIL_PER_ADDRESS, service.email_key(data.email))
+    mail = await service.claim_guest(db, state.hasher, state.settings, state.clock(), user, data)
+    _send(tasks, state, mail)
+    return _me(user)
 
 
 @router.post("/auth/verify-email")
@@ -213,7 +241,7 @@ async def change_password(  # noqa: PLR0913, PLR0917 - FastAPI dependencies
 
 @router.post("/me/email", status_code=status.HTTP_202_ACCEPTED)
 async def change_email(
-    data: EmailChangeIn, user: CurrentUser, tasks: BackgroundTasks, state: State, db: DB
+    data: EmailChangeIn, user: Member, tasks: BackgroundTasks, state: State, db: DB
 ) -> Accepted:
     """Email a confirmation link to the new address; the address changes once it is opened."""
     await _confirm_password(state, user, data.password)
