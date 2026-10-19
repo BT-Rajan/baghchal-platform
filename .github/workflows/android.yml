@@ -2,7 +2,8 @@ name: Android test build
 
 # An APK for testing on phones, built here rather than in Expo's cloud (docs/adr/0002). It is
 # signed with the debug key, so it installs from the file but cannot go to Google Play.
-# Run it by hand (Actions → Android test build → Run workflow) or push a tag android-test-*.
+# Run it by hand (Actions → Android test build → Run workflow), or push to a branch
+# android-test-build or android-test/*.
 on:
   workflow_dispatch:
     inputs:
@@ -11,7 +12,7 @@ on:
         required: true
         default: "http://169.58.13.213:7070"
   push:
-    tags: ["android-test-*"]
+    branches: ["android-test-build", "android-test/**"]
 
 permissions:
   contents: read
@@ -29,7 +30,7 @@ jobs:
         working-directory: app
     env:
       EXPO_NO_TELEMETRY: "1"
-      # A tag has no inputs: it builds for the default test server.
+      # A push has no inputs: it builds for the default test server.
       EXPO_PUBLIC_API_URL: ${{ inputs.api_url || 'http://169.58.13.213:7070' }}
       NODE_ENV: production
     steps:
