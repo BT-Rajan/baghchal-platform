@@ -87,6 +87,8 @@ def settings(database_url: str) -> Settings:
         allowed_origins=(ORIGIN,),
         game_sweeper=False,  # tests call the sweeper directly
         computer_workers=0,  # think in a thread: no processes to start
+        fair_play_checks=False,  # tests run the checks directly
+        fair_play_workers=0,
     )
 
 
@@ -108,6 +110,8 @@ async def app(
         state: AppState = app.state.ctx
         async with state.engine.begin() as conn:
             for table in (
+                "fair_play_sides",
+                "fair_play_checks",
                 "trainer_attempts",
                 "tournament_pairings",
                 "tournament_players",

@@ -62,6 +62,9 @@ class MoveReview:
     score: int
     """The position before the move with best play, from the tigers' side (positive is good for
     them), within ±SCORE_LIMIT."""
+    margin: int | None
+    """How much better the best move was than the next best (0 when two moves tie); None when
+    there was only one legal move. A large margin means the position had one right answer."""
 
 
 def verdict(loss: int) -> Verdict:
@@ -87,17 +90,26 @@ def _scores(game: Game, depth: int, seconds: float) -> dict[Move, int]:
     return scores
 
 
-def review(moves: Iterable[Move], *, depth: int = 3, seconds: float = 0.25) -> list[MoveReview]:
-    """Review ``moves``, a game from the start, spending up to ``seconds`` on each position."""
+def review(
+    moves: Iterable[Move], *, depth: int = 3, seconds: float = 0.25, only: Side | None = None
+) -> list[MoveReview]:
+    """Review ``moves``, a game from the start, spending up to ``seconds`` on each position.
+    With ``only``, just that side's moves are reviewed (the others are still checked as
+    legal), for half the time."""
     game = Game()
     out = []
     for ply, played in enumerate(moves, start=1):
         side = game.position.side
-        scores = _scores(game, depth, seconds)
+        reviewed = only is None or side is only
+        scores = _scores(game, depth, seconds) if reviewed else dict.fromkeys(game.legal_moves(), 0)
         if played not in scores:
             raise IllegalMove(f"move {ply} is not legal: {format_move(played)}")
+        if not reviewed:
+            game.play(played)
+            continue
         best = max(scores, key=lambda m: (scores[m], m == played))
         loss = scores[best] - scores[played]
+        ranked = sorted(scores.values(), reverse=True)
         mover = max(-SCORE_LIMIT, min(SCORE_LIMIT, scores[best]))
         out.append(
             MoveReview(
@@ -108,6 +120,7 @@ def review(moves: Iterable[Move], *, depth: int = 3, seconds: float = 0.25) -> l
                 loss=loss,
                 verdict=verdict(loss),
                 score=mover if side is Side.TIGER else -mover,
+                margin=ranked[0] - ranked[1] if len(ranked) > 1 else None,
             )
         )
         game.play(played)

@@ -89,6 +89,12 @@ These rules belong to the platform, not the board; the server enforces them.
   and leaderboards until the suspension ends or is lifted. Their ratings are kept.
 - **Renames**: a moderator can replace an offensive username; the player is emailed the new
   name and the reason.
+- **Automatic fair-play checks**: after a rated game ends, the server reviews both players'
+  moves with its engine, in the background. A player whose recent rated games, taken together,
+  play as only an engine does is reported to the moderators automatically, with the figures.
+  That is all a check can do: it never changes a game, a result or a rating, and it never
+  penalises anyone. A moderator looks at the games and decides, as for any report. Live games
+  are never analysed.
 
 ## Ratings
 - **Glicko-2**, separately for **quick** games (3+2, 5+3) and **standard** games (10+5, 15+10);

@@ -1846,6 +1846,47 @@
         }
       }
     },
+    "/api/v1/mod/players/{username}/fair-play": {
+      "get": {
+        "summary": "Fair Play",
+        "description": "The player's latest checked rated games and how close they came to the engine.",
+        "operationId": "fair_play_api_v1_mod_players__username__fair_play_get",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,20}$",
+              "title": "Username"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FairPlayOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/plans": {
       "get": {
         "summary": "Plans",
@@ -3105,6 +3146,65 @@
         ],
         "title": "ChallengeStatus"
       },
+      "CheckedGameOut": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id"
+          },
+          "side": {
+            "type": "string",
+            "title": "Side"
+          },
+          "opponent": {
+            "$ref": "#/components/schemas/PlayerOut"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked At"
+          },
+          "screen": {
+            "$ref": "#/components/schemas/FiguresOut"
+          },
+          "confirm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FiguresOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "think_median_ms": {
+            "type": "integer",
+            "title": "Think Median Ms"
+          },
+          "think_spread": {
+            "type": "number",
+            "title": "Think Spread"
+          },
+          "fast_moves": {
+            "type": "integer",
+            "title": "Fast Moves"
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_id",
+          "side",
+          "opponent",
+          "checked_at",
+          "screen",
+          "confirm",
+          "think_median_ms",
+          "think_spread",
+          "fast_moves"
+        ],
+        "title": "CheckedGameOut"
+      },
       "CheckoutIn": {
         "properties": {
           "plan": {
@@ -3723,6 +3823,43 @@
         ],
         "title": "ExportSession"
       },
+      "FairPlayOut": {
+        "properties": {
+          "games": {
+            "items": {
+              "$ref": "#/components/schemas/CheckedGameOut"
+            },
+            "type": "array",
+            "title": "Games"
+          },
+          "screen": {
+            "$ref": "#/components/schemas/FiguresOut"
+          },
+          "confirm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FiguresOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "screen_passed": {
+            "type": "boolean",
+            "title": "Screen Passed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "games",
+          "screen",
+          "confirm",
+          "screen_passed"
+        ],
+        "title": "FairPlayOut",
+        "description": "A player's fair-play figures, for moderators: the window they are judged on."
+      },
       "Feature": {
         "type": "string",
         "enum": [
@@ -3735,6 +3872,44 @@
           "trainer"
         ],
         "title": "Feature"
+      },
+      "FiguresOut": {
+        "properties": {
+          "moves": {
+            "type": "integer",
+            "title": "Moves"
+          },
+          "decisive": {
+            "type": "integer",
+            "title": "Decisive"
+          },
+          "agreement": {
+            "type": "number",
+            "title": "Agreement"
+          },
+          "average_loss": {
+            "type": "number",
+            "title": "Average Loss"
+          },
+          "mistake_rate": {
+            "type": "number",
+            "title": "Mistake Rate"
+          },
+          "blunders": {
+            "type": "integer",
+            "title": "Blunders"
+          }
+        },
+        "type": "object",
+        "required": [
+          "moves",
+          "decisive",
+          "agreement",
+          "average_loss",
+          "mistake_rate",
+          "blunders"
+        ],
+        "title": "FiguresOut"
       },
       "FriendsOut": {
         "properties": {
@@ -5349,7 +5524,14 @@
             "title": "Id"
           },
           "reporter": {
-            "$ref": "#/components/schemas/PlayerOut"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlayerOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "target": {
             "$ref": "#/components/schemas/ReportTargetOut"

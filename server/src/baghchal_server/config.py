@@ -53,6 +53,12 @@ class Settings(BaseSettings):
     """Processes per server that think for the computer opponent. 0 thinks in a thread instead
     (fine for development and tests)."""
 
+    fair_play_workers: int = Field(default=1, ge=0, le=16)
+    """Processes per server for fair-play reviews of finished rated games (separate from the
+    computer opponent's). 0 reviews in a thread instead."""
+    fair_play_checks: bool = True
+    """Check finished rated games in the background (tests drive the checks by hand)."""
+
     game_sweeper: bool = True
     """End games whose clock ran out in the background (tests drive it by hand)."""
 

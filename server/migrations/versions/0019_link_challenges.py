@@ -4,8 +4,8 @@ A challenge may name no opponent and carry a link code instead; whoever accepts 
 becomes the opponent. Private rooms, which did the same job for Pro hosts only, are removed,
 with the private_rooms feature and any grants of it.
 
-Revision ID: 0018
-Revises: 0017
+Revision ID: 0019
+Revises: 0018
 Create Date: 2026-10-26 12:00:00.000000
 """
 
@@ -16,8 +16,8 @@ from alembic import op
 
 import baghchal_server.db
 
-revision: str = "0018"
-down_revision: str | None = "0017"
+revision: str = "0019"
+down_revision: str | None = "0018"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

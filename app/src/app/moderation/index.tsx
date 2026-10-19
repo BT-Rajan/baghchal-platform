@@ -14,7 +14,7 @@ import { ErrorState, Loading } from '@/components/States';
 import { TextField } from '@/components/TextField';
 import { TextLink } from '@/components/TextLink';
 import { searchPrefix } from '@/lobby/format';
-import { dateTimeText, reasonLabel } from '@/lobby/moderation';
+import { dateTimeText, reasonLabel, reportTitle } from '@/lobby/moderation';
 import { colors } from '@/theme';
 
 const STATUSES: readonly { value: ReportStatus; label: string }[] = [
@@ -66,7 +66,7 @@ function ReportCard({ report }: { report: Report }) {
   const target = report.target.username;
   return (
     <Card>
-      <Text style={styles.title}>{`${report.reporter.username} reported ${target}`}</Text>
+      <Text style={styles.title}>{reportTitle(report)}</Text>
       <Text style={styles.muted}>
         {`${reasonLabel(report.reason)} · ${dateTimeText(report.created_at)}`}
       </Text>
