@@ -114,6 +114,36 @@ export function useCreateChallenge() {
   });
 }
 
+/** A challenge by link, as whoever opened the link sees it. */
+export function useLinkChallenge(code: string) {
+  const api = useApi();
+  return useQuery({
+    queryKey: queryKeys.linkChallenge(code),
+    queryFn: async ({ signal }) => {
+      const challenge = await api.linkChallenge(code, signal);
+      serverClock.observe(challenge.created_at);
+      return challenge;
+    },
+  });
+}
+
+/** Accept a challenge by link: the game starts at once and opens. */
+export function useAcceptLink(code: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  const openStarted = useOpenStartedGame();
+  return useMutation({
+    mutationFn: async () => {
+      const challenge = await api.acceptLink(code);
+      queryClient.setQueryData(queryKeys.linkChallenge(code), challenge);
+      openStarted(await api.game(challenge.game_id!));
+      return challenge;
+    },
+    // Someone else may have got there first: show the challenge as it is now.
+    onError: () => void queryClient.invalidateQueries({ queryKey: queryKeys.linkChallenge(code) }),
+  });
+}
+
 export function useBlocks() {
   const api = useApi();
   return useQuery({ queryKey: queryKeys.blocks, queryFn: ({ signal }) => api.blocks(signal) });

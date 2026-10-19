@@ -150,13 +150,15 @@ async def start_game(db: AsyncSession, challenge: Challenge, now: datetime) -> G
 
     Raises IntegrityError if either player is already in a live game.
     """
+    opponent_id = challenge.opponent_id
+    assert opponent_id is not None  # noqa: S101 - an accepted challenge has its opponent
     side = challenge.challenger_side
     if side is None or side == "random":
         side = secrets.choice(("goat", "tiger"))
     goat_id, tiger_id = (
-        (challenge.challenger_id, challenge.opponent_id)
+        (challenge.challenger_id, opponent_id)
         if side == "goat"
-        else (challenge.opponent_id, challenge.challenger_id)
+        else (opponent_id, challenge.challenger_id)
     )
     match_id = None
     if challenge.rated:
@@ -240,7 +242,7 @@ async def start_casual_game(  # noqa: PLR0913 - who plays which side, how fast
     initial_seconds: int,
     increment_seconds: int,
 ) -> Game:
-    """Start an unrated game between two players (private rooms, tournaments; caller commits).
+    """Start an unrated game between two players (tournaments; caller commits).
 
     Raises IntegrityError if either player is already in a live game.
     """

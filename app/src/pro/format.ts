@@ -1,41 +1,5 @@
-/** Words for private rooms, tournaments and the trainer (the Pro extras). */
-import type {
-  Pairing,
-  Room,
-  Tournament,
-  Trainer,
-  TrainerAnswer,
-  TrainerPuzzle,
-} from '@/api/endpoints';
-
-const SIDE_NAMES = { goat: 'goats', tiger: 'tigers' } as const;
-
-/** A link to share, on the web; elsewhere just the path. */
-export function shareLink(
-  path: string,
-  origin: string | undefined = (globalThis as { location?: { origin?: string } }).location?.origin,
-): string {
-  return origin === undefined ? path : `${origin}${path}`;
-}
-
-/** "5+3 casual game · you play goats" (for the host). */
-export function roomText(room: Room): string {
-  const side =
-    room.host_side === 'random'
-      ? 'sides drawn at random'
-      : `you play ${SIDE_NAMES[room.host_side]}`;
-  return `${room.time_control} casual game · ${side}`;
-}
-
-/** "alice invites you to a 5+3 casual game. alice plays goats; you play tigers." */
-export function invitationText(room: Room): string {
-  const who = room.host.username;
-  const sides =
-    room.host_side === 'random'
-      ? 'Sides are drawn at random.'
-      : `${who} plays ${SIDE_NAMES[room.host_side]}; you play ${room.host_side === 'goat' ? 'tigers' : 'goats'}.`;
-  return `${who} invites you to a ${room.time_control} casual game. ${sides}`;
-}
+/** Words for tournaments and the trainer (the Pro extras). */
+import type { Pairing, Tournament, Trainer, TrainerAnswer, TrainerPuzzle } from '@/api/endpoints';
 
 /** "Waiting for players: 2 of 6", "4 of 12 games played", "Finished". */
 export function tournamentStatusText(t: Tournament): string {

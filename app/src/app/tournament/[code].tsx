@@ -9,7 +9,8 @@ import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
-import { isMine, pairingText, shareLink, tournamentStatusText } from '@/pro/format';
+import { shareLink } from '@/lobby/format';
+import { isMine, pairingText, tournamentStatusText } from '@/pro/format';
 import { usePlayPairing, useTournament, useTournamentAction } from '@/pro/hooks';
 import { colors, spacing } from '@/theme';
 

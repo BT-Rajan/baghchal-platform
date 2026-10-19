@@ -79,7 +79,7 @@ test('grants in words', () => {
 
 test('what an admin can grant, and for how long', () => {
   expect(GRANTABLE.slice(0, 2).map((g) => g.value)).toEqual(['plus', 'pro']);
-  expect(GRANTABLE).toHaveLength(10);
+  expect(GRANTABLE).toHaveLength(9);
   expect(grantBody('pro')).toEqual({ plan: 'pro' });
   expect(grantBody('feature:trainer')).toEqual({ feature: 'trainer' });
   expect(DURATIONS.map((d) => d.days)).toEqual([7, 30, 90, 365, null]);
@@ -91,7 +91,6 @@ test('each plan lists what it adds', () => {
   expect(planLines(PLANS, 1)).toHaveLength(5);
   expect(planLines(PLANS, 2)).toEqual([
     'Everything in Plus, and:',
-    'Private rooms for friends',
     'Host small tournaments',
     'Opening and endgame trainer',
   ]);

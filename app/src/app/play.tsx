@@ -46,9 +46,9 @@ export default function PlayNow() {
       <PlayComputer timeControl={timeControl} />
       <SectionTitle>More ways to play</SectionTitle>
       <Button
-        title="Invite a friend (private room)"
+        title="Challenge a friend by link"
         variant="secondary"
-        onPress={() => router.push('/rooms')}
+        onPress={() => router.push('/invite')}
       />
       <Button title="Tournaments" variant="secondary" onPress={() => router.push('/tournaments')} />
       <Button

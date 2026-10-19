@@ -1,6 +1,7 @@
 """Players and challenges."""
 
 import math
+import secrets
 import uuid
 from collections.abc import Sequence
 from datetime import datetime, timedelta
@@ -21,6 +22,8 @@ from baghchal_server.lobby.time_controls import TIME_CONTROLS
 from baghchal_server.realtime.presence import Presence
 
 CHALLENGE_TTL: Final = timedelta(seconds=60)
+LINK_TTL: Final = timedelta(days=1)
+"""How long a challenge by link stays open: friends answer when they see the message."""
 MAX_OUTGOING_CHALLENGES: Final = 5
 RATED_MATCH_EVERY: Final = timedelta(hours=24)
 """Two players may start one rated match per this long, so ratings cannot be farmed between
@@ -184,9 +187,52 @@ async def users_by_id(
 # ── Challenges ────────────────────────────────────────────────────────────
 
 
+async def _check_outgoing(db: AsyncSession, challenger_id: uuid.UUID, now: datetime) -> None:
+    outgoing = await db.scalar(
+        select(func.count())
+        .select_from(Challenge)
+        .where(
+            Challenge.challenger_id == challenger_id,
+            Challenge.status == ChallengeStatus.PENDING,
+            Challenge.expires_at > now,
+        )
+    )
+    if outgoing is not None and outgoing >= MAX_OUTGOING_CHALLENGES:
+        raise AppError(
+            429, "too_many_challenges", "Wait for a reply before sending more challenges."
+        )
+
+
+async def _link_challenge(
+    db: AsyncSession, now: datetime, challenger: User, data: ChallengeIn
+) -> Challenge:
+    """A casual challenge for whoever opens its link first, open for a day."""
+    await check_abort_cooldown(db, challenger.id, now)
+    await _check_outgoing(db, challenger.id, now)
+    tc = TIME_CONTROLS[data.time_control]
+    challenge = Challenge(
+        id=uuid.uuid4(),
+        challenger_id=challenger.id,
+        code=secrets.token_urlsafe(6),
+        initial_seconds=tc.initial_seconds,
+        increment_seconds=tc.increment_seconds,
+        rated=False,
+        challenger_side=data.side,
+        status=ChallengeStatus.PENDING,
+        created_at=now,
+        expires_at=now + LINK_TTL,
+    )
+    db.add(challenge)
+    await db.commit()
+    return challenge
+
+
 async def create_challenge(
     db: AsyncSession, presence: Presence, now: datetime, challenger: User, data: ChallengeIn
 ) -> Challenge:
+    """Challenge a named player who is online now, or (no opponent) anyone with the link."""
+    if data.opponent is None:
+        return await _link_challenge(db, now, challenger, data)
     opponent = await find_player(db, data.opponent, now)
     if opponent is None:
         raise AppError(404, "player_not_found", "No such player.")
@@ -216,19 +262,7 @@ async def create_challenge(
         last = await games.last_rated_match(db, challenger.id, opponent.id)
         if last is not None and now - last < RATED_MATCH_EVERY:
             raise _rated_limit(opponent.username, last + RATED_MATCH_EVERY - now)
-    outgoing = await db.scalar(
-        select(func.count())
-        .select_from(Challenge)
-        .where(
-            Challenge.challenger_id == challenger.id,
-            Challenge.status == ChallengeStatus.PENDING,
-            Challenge.expires_at > now,
-        )
-    )
-    if outgoing is not None and outgoing >= MAX_OUTGOING_CHALLENGES:
-        raise AppError(
-            429, "too_many_challenges", "Wait for a reply before sending more challenges."
-        )
+    await _check_outgoing(db, challenger.id, now)
 
     key = pair_key(challenger.id, opponent.id)
     # A lapsed challenge between the two still holds the pair; release it first.
@@ -303,7 +337,8 @@ async def respond(
         assert challenge is not None  # noqa: S101 - just updated
         game = None
         if response == "accept":
-            players = [challenge.challenger_id, challenge.opponent_id]
+            # Answered by its named opponent, so it has one.
+            players = [challenge.challenger_id, challenge.opponent_id or challenge.challenger_id]
             try:
                 game = await games.start_game(db, challenge, now)
             except IntegrityError:
@@ -320,6 +355,61 @@ async def respond(
     if (response == "cancel") != (user_id == challenge.challenger_id):
         raise AppError(403, "not_allowed", f"You cannot {response} this challenge.")
     raise AppError(409, "challenge_closed", "This challenge is no longer open.")
+
+
+async def find_link(db: AsyncSession, code: str, now: datetime) -> Challenge:
+    challenge = await db.scalar(select(Challenge).where(Challenge.code == code))
+    if challenge is None:
+        raise AppError(
+            404, "challenge_not_found", "No such challenge. Ask your friend for a new link."
+        )
+    if challenge.status == ChallengeStatus.PENDING and challenge.expires_at <= now:
+        challenge.status = ChallengeStatus.EXPIRED  # shown as expired; nothing is saved
+    return challenge
+
+
+async def accept_link(
+    db: AsyncSession, presence: Presence, now: datetime, user: User, code: str
+) -> tuple[Challenge, Game]:
+    """Accept a challenge by link: the one who accepts first plays the challenger, who must be
+    online. One conditional UPDATE decides between two people accepting at once."""
+    challenge = await find_link(db, code, now)
+    if challenge.challenger_id == user.id:
+        raise AppError(409, "own_challenge", "This is your challenge; send the link to a friend.")
+    if challenge.status != ChallengeStatus.PENDING:
+        raise AppError(409, "challenge_closed", "This challenge is no longer open.")
+    challenger = await db.get(User, challenge.challenger_id)
+    assert challenger is not None  # noqa: S101 - challenges go with their challenger
+    if await has_blocked(db, challenger.id, user.id) or await has_blocked(
+        db, user.id, challenger.id
+    ):
+        raise AppError(403, "challenge_refused", "You cannot accept this challenge.")
+    if not await presence.online([challenger.id]):
+        raise AppError(
+            409, "player_offline", f"{challenger.username} is not online. Try again when they are."
+        )
+    await check_abort_cooldown(db, user.id, now)
+    claimed = await db.execute(
+        update(Challenge)
+        .where(
+            Challenge.id == challenge.id,
+            Challenge.opponent_id.is_(None),
+            Challenge.status == ChallengeStatus.PENDING,
+            Challenge.expires_at > now,
+        )
+        .values(opponent_id=user.id, status=ChallengeStatus.ACCEPTED, responded_at=now)
+    )
+    if claimed.rowcount != 1:  # type: ignore[attr-defined]
+        await db.rollback()
+        raise AppError(409, "challenge_closed", "Someone else accepted first.")
+    await db.refresh(challenge)
+    try:
+        game = await games.start_game(db, challenge, now)
+    except IntegrityError:
+        await db.rollback()
+        raise busy_error() from None
+    await db.commit()
+    return challenge, game
 
 
 async def check_abort_cooldown(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> None:
@@ -367,7 +457,9 @@ async def open_challenges(db: AsyncSession, now: datetime, user: User) -> Sequen
 
 
 async def describe(db: AsyncSession, challenges: Sequence[Challenge]) -> list[ChallengeOut]:
-    ids = {c.challenger_id for c in challenges} | {c.opponent_id for c in challenges}
+    ids = {c.challenger_id for c in challenges} | {
+        c.opponent_id for c in challenges if c.opponent_id is not None
+    }
     rows = await db.execute(select(User.id, User.username).where(User.id.in_(ids)))
     names = dict(rows.all())
     game_ids = dict(
@@ -383,7 +475,10 @@ async def describe(db: AsyncSession, challenges: Sequence[Challenge]) -> list[Ch
         ChallengeOut(
             id=c.id,
             challenger=PlayerOut(id=c.challenger_id, username=names[c.challenger_id]),
-            opponent=PlayerOut(id=c.opponent_id, username=names[c.opponent_id]),
+            opponent=None
+            if c.opponent_id is None
+            else PlayerOut(id=c.opponent_id, username=names[c.opponent_id]),
+            code=c.code,
             time_control=f"{c.initial_seconds // 60}+{c.increment_seconds}",
             rated=c.rated,
             side=c.challenger_side,

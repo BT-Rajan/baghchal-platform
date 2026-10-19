@@ -112,7 +112,6 @@ async def app(
                 "tournament_pairings",
                 "tournament_players",
                 "tournaments",
-                "rooms",
                 "analysis_uses",
                 "analyses",
                 "active_games",

@@ -36,7 +36,7 @@ export function applyChallenge(queryClient: QueryClient, challenge: Challenge, m
     const incoming = without(lists.incoming, challenge.id);
     const outgoing = without(lists.outgoing, challenge.id);
     if (challenge.status === 'pending') {
-      if (challenge.opponent.id === myId) incoming.push(challenge);
+      if (challenge.opponent?.id === myId) incoming.push(challenge);
       else if (challenge.challenger.id === myId) outgoing.push(challenge);
     }
     return { incoming, outgoing };

@@ -58,7 +58,13 @@ describe('applyChallenge', () => {
       opponent: BOB,
     });
     applyChallenge(qc, mine, ME.id);
-    expect(lists(qc)).toEqual({ incoming: [challenge({ id: 'c1' })], outgoing: [mine] });
+    // A challenge by link has no opponent yet: it is mine, outgoing.
+    const byLink = { ...mine, id: 'c3', opponent: null, code: 'abc123' };
+    applyChallenge(qc, byLink, ME.id);
+    expect(lists(qc)).toEqual({
+      incoming: [challenge({ id: 'c1' })],
+      outgoing: [mine, byLink],
+    });
   });
 
   test('drops challenges that are no longer pending', () => {

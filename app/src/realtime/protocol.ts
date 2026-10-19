@@ -37,7 +37,7 @@ function isChallenge(value: unknown): value is Challenge {
     hasId(value) &&
     typeof value.status === 'string' &&
     hasId(value.challenger) &&
-    hasId(value.opponent)
+    (value.opponent === null || hasId(value.opponent))
   );
 }
 

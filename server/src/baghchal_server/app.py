@@ -44,8 +44,6 @@ from baghchal_server.ratings.routes import router as ratings_router
 from baghchal_server.realtime.hub import Hub, MemoryBroker, RedisBroker
 from baghchal_server.realtime.presence import MemoryPresence, RedisPresence
 from baghchal_server.realtime.ws import router as ws_router
-from baghchal_server.rooms import models as _rooms_models  # noqa: F401  (registers tables)
-from baghchal_server.rooms.routes import router as rooms_router
 from baghchal_server.security import PasswordHasher
 from baghchal_server.tournaments import models as _tournaments_models  # noqa: F401  (registers tables)
 from baghchal_server.tournaments.routes import router as tournaments_router
@@ -176,7 +174,6 @@ def create_app(
     app.include_router(billing_router)
     app.include_router(appearance_router)
     app.include_router(payments_router)
-    app.include_router(rooms_router)
     app.include_router(tournaments_router)
     app.include_router(trainer_router)
     app.include_router(health_router)

@@ -50,7 +50,8 @@ class ProfileOut(PlayerStatusOut):
 class ChallengeIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    opponent: UsernameQuery
+    opponent: UsernameQuery | None = None
+    """None: a challenge by link, for whoever opens it first (casual only)."""
     time_control: TimeControlLabel
     rated: bool = False
     side: Side | None = None
@@ -58,6 +59,8 @@ class ChallengeIn(BaseModel):
 
     @model_validator(mode="after")
     def _side_rules(self) -> "ChallengeIn":
+        if self.rated and self.opponent is None:
+            raise ValueError("challenges by link are casual; name an opponent for a rated game")
         if self.rated and self.side is not None:
             raise ValueError("rated games alternate sides; leave side out")
         if not self.rated and self.side is None:
@@ -68,7 +71,10 @@ class ChallengeIn(BaseModel):
 class ChallengeOut(BaseModel):
     id: uuid.UUID
     challenger: PlayerOut
-    opponent: PlayerOut
+    opponent: PlayerOut | None
+    """None for a challenge by link that nobody has accepted yet."""
+    code: str | None = None
+    """A challenge by link: share ``/c/<code>``."""
     time_control: str
     rated: bool
     side: Side | None

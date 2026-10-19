@@ -34,3 +34,6 @@
   only what changes); nothing about them is kept on the device.
 - **A new account's username, email and password**: `app/src/components/AccountForm.tsx`,
   given the action that sends it (signing up, a guest making their account).
+- **Start a game with a particular person**: a challenge, by name (`/challenge/[username]`) or by
+  link (`/invite`), both from `app/src/components/ChallengeForm.tsx` and `POST /challenges`.
+- **Share a link**: `shareLink` in `app/src/lobby/format.ts`.

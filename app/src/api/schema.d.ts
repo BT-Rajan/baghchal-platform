@@ -344,6 +344,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/challenges/link/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Link Challenge
+         * @description A challenge by link, for whoever has the link.
+         */
+        get: operations["link_challenge_api_v1_challenges_link__code__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/challenges/link/{code}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept Link Challenge
+         * @description Accept a challenge by link (guests too): the game starts now, if the challenger is
+         *     online (its id is in ``game_id``; both players get a ``game`` event).
+         */
+        post: operations["accept_link_challenge_api_v1_challenges_link__code__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/challenges/{challenge_id}/accept": {
         parameters: {
             query?: never;
@@ -969,88 +1010,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/rooms": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * My Rooms
-         * @description My open rooms.
-         */
-        get: operations["my_rooms_api_v1_rooms_get"];
-        put?: never;
-        /**
-         * Create Room
-         * @description Make a private room (Pro): a link to one casual game, for whoever opens it first.
-         */
-        post: operations["create_room_api_v1_rooms_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/rooms/{code}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Room
-         * @description A room, for someone who has its link.
-         */
-        get: operations["room_api_v1_rooms__code__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/rooms/{code}/join": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Join Room
-         * @description Play the host: the game starts now (its id is in ``game_id``; both get a ``game``
-         *     event). The host must be online.
-         */
-        post: operations["join_room_api_v1_rooms__code__join_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/rooms/{code}/close": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Close Room */
-        post: operations["close_room_api_v1_rooms__code__close_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/tournaments": {
         parameters: {
             query?: never;
@@ -1318,7 +1277,7 @@ export interface components {
         /** ChallengeIn */
         ChallengeIn: {
             /** Opponent */
-            opponent: string;
+            opponent?: string | null;
             /**
              * Time Control
              * @enum {string}
@@ -1347,7 +1306,9 @@ export interface components {
              */
             id: string;
             challenger: components["schemas"]["PlayerOut"];
-            opponent: components["schemas"]["PlayerOut"];
+            opponent: components["schemas"]["PlayerOut"] | null;
+            /** Code */
+            code?: string | null;
             /** Time Control */
             time_control: string;
             /** Rated */
@@ -1505,7 +1466,7 @@ export interface components {
              */
             direction: "sent" | "received";
             /** Opponent */
-            opponent: string;
+            opponent: string | null;
             /** Time Control */
             time_control: string;
             /** Rated */
@@ -1611,7 +1572,7 @@ export interface components {
          * Feature
          * @enum {string}
          */
-        Feature: "computer_hard" | "full_history" | "analysis" | "themes" | "badge" | "private_rooms" | "tournaments" | "trainer";
+        Feature: "computer_hard" | "full_history" | "analysis" | "themes" | "badge" | "tournaments" | "trainer";
         /** GameOut */
         GameOut: {
             /**
@@ -2223,49 +2184,6 @@ export interface components {
             /** Reason */
             reason: string;
         };
-        /** RoomIn */
-        RoomIn: {
-            /**
-             * Time Control
-             * @enum {string}
-             */
-            time_control: "3+2" | "5+3" | "10+5" | "15+10";
-            /**
-             * Side
-             * @default random
-             * @enum {string}
-             */
-            side: "goat" | "tiger" | "random";
-        };
-        /** RoomOut */
-        RoomOut: {
-            /** Code */
-            code: string;
-            host: components["schemas"]["PlayerOut"];
-            /**
-             * Time Control
-             * @enum {string}
-             */
-            time_control: "3+2" | "5+3" | "10+5" | "15+10";
-            /**
-             * Host Side
-             * @enum {string}
-             */
-            host_side: "goat" | "tiger" | "random";
-            status: components["schemas"]["RoomStatus"];
-            /** Game Id */
-            game_id: string | null;
-            /**
-             * Expires At
-             * Format: date-time
-             */
-            expires_at: string;
-        };
-        /**
-         * RoomStatus
-         * @enum {string}
-         */
-        RoomStatus: "open" | "played" | "closed";
         /** SeekCountOut */
         SeekCountOut: {
             /** Time Control */
@@ -3045,6 +2963,68 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChallengeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_challenge_api_v1_challenges_link__code__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChallengeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_link_challenge_api_v1_challenges_link__code__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4151,152 +4131,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaymentOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    my_rooms_api_v1_rooms_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RoomOut"][];
-                };
-            };
-        };
-    };
-    create_room_api_v1_rooms_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RoomIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RoomOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    room_api_v1_rooms__code__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                code: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RoomOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    join_room_api_v1_rooms__code__join_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                code: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RoomOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    close_room_api_v1_rooms__code__close_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                code: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RoomOut"];
                 };
             };
             /** @description Validation Error */

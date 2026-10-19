@@ -52,8 +52,6 @@ export type Period = S['Period'];
 export type Payment = S['PaymentOut'];
 export type Payments = S['PaymentsOut'];
 export type PaymentProof = S['VerifyIn'];
-export type Room = S['RoomOut'];
-export type RoomRequest = S['RoomIn'];
 export type Tournament = S['TournamentOut'];
 export type TournamentRequest = S['TournamentIn'];
 export type Pairing = S['PairingOut'];
@@ -108,6 +106,10 @@ export function createApi(client: Client, transport: Transport) {
     challenge: (body: ChallengeRequest) => client.post<Challenge>(`${V1}/challenges`, { body }),
     answerChallenge: (id: string, answer: ChallengeAnswer) =>
       client.post<Challenge>(`${V1}/challenges/${seg(id)}/${answer}`),
+    linkChallenge: (code: string, signal?: AbortSignal) =>
+      client.get<Challenge>(`${V1}/challenges/link/${seg(code)}`, { signal }),
+    acceptLink: (code: string) =>
+      client.post<Challenge>(`${V1}/challenges/link/${seg(code)}/accept`),
 
     // Games
     playComputer: (body: ComputerGameRequest) =>
@@ -171,14 +173,6 @@ export function createApi(client: Client, transport: Transport) {
     payments: (signal?: AbortSignal) => client.get<Payments>(`${V1}/me/payments`, { signal }),
     checkout: (body: CheckoutRequest) => client.post<Checkout>(`${V1}/payments/checkout`, { body }),
     verifyPayment: (body: PaymentProof) => client.post<Payment>(`${V1}/payments/verify`, { body }),
-
-    // Private rooms
-    rooms: (signal?: AbortSignal) => client.get<Room[]>(`${V1}/rooms`, { signal }),
-    room: (code: string, signal?: AbortSignal) =>
-      client.get<Room>(`${V1}/rooms/${seg(code)}`, { signal }),
-    createRoom: (body: RoomRequest) => client.post<Room>(`${V1}/rooms`, { body }),
-    joinRoom: (code: string) => client.post<Room>(`${V1}/rooms/${seg(code)}/join`),
-    closeRoom: (code: string) => client.post<Room>(`${V1}/rooms/${seg(code)}/close`),
 
     // Tournaments
     tournaments: (signal?: AbortSignal) =>

@@ -655,6 +655,88 @@
         }
       }
     },
+    "/api/v1/challenges/link/{code}": {
+      "get": {
+        "summary": "Link Challenge",
+        "description": "A challenge by link, for whoever has the link.",
+        "operationId": "link_challenge_api_v1_challenges_link__code__get",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,16}$",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/challenges/link/{code}/accept": {
+      "post": {
+        "summary": "Accept Link Challenge",
+        "description": "Accept a challenge by link (guests too): the game starts now, if the challenger is\nonline (its id is in ``game_id``; both players get a ``game`` event).",
+        "operationId": "accept_link_challenge_api_v1_challenges_link__code__accept_post",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,16}$",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/challenges/{challenge_id}/accept": {
       "post": {
         "summary": "Accept Challenge",
@@ -2100,188 +2182,6 @@
         }
       }
     },
-    "/api/v1/rooms": {
-      "get": {
-        "summary": "My Rooms",
-        "description": "My open rooms.",
-        "operationId": "my_rooms_api_v1_rooms_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/RoomOut"
-                  },
-                  "type": "array",
-                  "title": "Response My Rooms Api V1 Rooms Get"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "Create Room",
-        "description": "Make a private room (Pro): a link to one casual game, for whoever opens it first.",
-        "operationId": "create_room_api_v1_rooms_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RoomIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RoomOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/rooms/{code}": {
-      "get": {
-        "summary": "Room",
-        "description": "A room, for someone who has its link.",
-        "operationId": "room_api_v1_rooms__code__get",
-        "parameters": [
-          {
-            "name": "code",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9_-]{1,16}$",
-              "title": "Code"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RoomOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/rooms/{code}/join": {
-      "post": {
-        "summary": "Join Room",
-        "description": "Play the host: the game starts now (its id is in ``game_id``; both get a ``game``\nevent). The host must be online.",
-        "operationId": "join_room_api_v1_rooms__code__join_post",
-        "parameters": [
-          {
-            "name": "code",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9_-]{1,16}$",
-              "title": "Code"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RoomOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/rooms/{code}/close": {
-      "post": {
-        "summary": "Close Room",
-        "operationId": "close_room_api_v1_rooms__code__close_post",
-        "parameters": [
-          {
-            "name": "code",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9_-]{1,16}$",
-              "title": "Code"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RoomOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/tournaments": {
       "get": {
         "summary": "My Tournaments",
@@ -2914,8 +2814,15 @@
       "ChallengeIn": {
         "properties": {
           "opponent": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9_-]{1,20}$",
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,20}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Opponent"
           },
           "time_control": {
@@ -2953,7 +2860,6 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "opponent",
           "time_control"
         ],
         "title": "ChallengeIn"
@@ -2993,7 +2899,25 @@
             "$ref": "#/components/schemas/PlayerOut"
           },
           "opponent": {
-            "$ref": "#/components/schemas/PlayerOut"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlayerOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
           },
           "time_control": {
             "type": "string",
@@ -3358,7 +3282,14 @@
             "title": "Direction"
           },
           "opponent": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Opponent"
           },
           "time_control": {
@@ -3624,7 +3555,6 @@
           "analysis",
           "themes",
           "badge",
-          "private_rooms",
           "tournaments",
           "trainer"
         ],
@@ -5346,106 +5276,6 @@
           "reason"
         ],
         "title": "RevokeIn"
-      },
-      "RoomIn": {
-        "properties": {
-          "time_control": {
-            "type": "string",
-            "enum": [
-              "3+2",
-              "5+3",
-              "10+5",
-              "15+10"
-            ],
-            "title": "Time Control"
-          },
-          "side": {
-            "type": "string",
-            "enum": [
-              "goat",
-              "tiger",
-              "random"
-            ],
-            "title": "Side",
-            "default": "random"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "time_control"
-        ],
-        "title": "RoomIn"
-      },
-      "RoomOut": {
-        "properties": {
-          "code": {
-            "type": "string",
-            "title": "Code"
-          },
-          "host": {
-            "$ref": "#/components/schemas/PlayerOut"
-          },
-          "time_control": {
-            "type": "string",
-            "enum": [
-              "3+2",
-              "5+3",
-              "10+5",
-              "15+10"
-            ],
-            "title": "Time Control"
-          },
-          "host_side": {
-            "type": "string",
-            "enum": [
-              "goat",
-              "tiger",
-              "random"
-            ],
-            "title": "Host Side"
-          },
-          "status": {
-            "$ref": "#/components/schemas/RoomStatus"
-          },
-          "game_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Game Id"
-          },
-          "expires_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Expires At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "code",
-          "host",
-          "time_control",
-          "host_side",
-          "status",
-          "game_id",
-          "expires_at"
-        ],
-        "title": "RoomOut"
-      },
-      "RoomStatus": {
-        "type": "string",
-        "enum": [
-          "open",
-          "played",
-          "closed"
-        ],
-        "title": "RoomStatus"
       },
       "SeekCountOut": {
         "properties": {

@@ -23,7 +23,7 @@ export const PLANS: PlanInfo[] = [
   {
     plan: 'pro',
     name: 'Pro',
-    features: [...PLUS, 'private_rooms', 'tournaments', 'trainer'],
+    features: [...PLUS, 'tournaments', 'trainer'],
     monthly_paise: 29900,
     yearly_paise: 299000,
     analyses_per_day: null,

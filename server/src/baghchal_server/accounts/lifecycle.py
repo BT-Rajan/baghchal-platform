@@ -69,7 +69,9 @@ async def export(db: AsyncSession, user: User, now: datetime) -> ExportOut:
         )
     ).all()
     opponents = {g.tiger_id if g.goat_id == user.id else g.goat_id for g in games} | {
-        c.opponent_id if c.challenger_id == user.id else c.challenger_id for c in challenges
+        c.opponent_id if c.challenger_id == user.id else c.challenger_id
+        for c in challenges
+        if c.opponent_id is not None
     }
     # Every opponent, deleted ones included (they show under their anonymous name).
     rows = await db.execute(select(User.id, User.username).where(User.id.in_(opponents)))
@@ -114,7 +116,9 @@ async def export(db: AsyncSession, user: User, now: datetime) -> ExportOut:
                 id=c.id,
                 created_at=c.created_at,
                 direction="sent" if c.challenger_id == user.id else "received",
-                opponent=names[c.opponent_id if c.challenger_id == user.id else c.challenger_id],
+                opponent=None
+                if c.opponent_id is None
+                else names[c.opponent_id if c.challenger_id == user.id else c.challenger_id],
                 time_control=_time_control(c.initial_seconds, c.increment_seconds),
                 rated=c.rated,
                 status=c.status,

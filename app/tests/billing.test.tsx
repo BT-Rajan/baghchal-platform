@@ -208,7 +208,7 @@ describe('admins', () => {
 });
 
 test('an upsell still leads to the plans when they cannot be loaded', async () => {
-  const { app } = await open('/rooms', {
+  const { app } = await open('/tournaments', {
     'GET /api/v1/plans': error(400, 'bad', 'Plans are down.'),
   });
   await fireEvent.press(await screen.findByRole('button', { name: 'See plans' }));

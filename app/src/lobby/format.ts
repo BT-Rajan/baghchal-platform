@@ -42,6 +42,28 @@ export function canChallenge(player: { online: boolean; playing: boolean }): boo
   return player.online && !player.playing;
 }
 
+/** A link to share, on the web; elsewhere just the path. Every share link in the app comes from here. */
+export function shareLink(
+  path: string,
+  origin: string | undefined = (globalThis as { location?: { origin?: string } }).location?.origin,
+): string {
+  return origin === undefined ? path : `${origin}${path}`;
+}
+
+/** The page that opens a challenge by link. */
+export function linkPath(code: string): string {
+  return `/c/${code}`;
+}
+
+/** "45 s", "12 min" or "23 h 5 min": how long is left, as precisely as it matters. */
+export function durationText(seconds: number): string {
+  if (seconds < 120) return `${seconds} s`;
+  const minutes = Math.ceil(seconds / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const rest = minutes % 60;
+  return `${Math.floor(minutes / 60)} h${rest === 0 ? '' : ` ${rest} min`}`;
+}
+
 /** Whole seconds until `expiresAt`, never negative. */
 export function secondsLeft(expiresAt: string, nowMs: number): number {
   return Math.max(0, Math.ceil((Date.parse(expiresAt) - nowMs) / 1000));

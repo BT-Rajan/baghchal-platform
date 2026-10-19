@@ -64,8 +64,10 @@ Each phase ships complete — tested, documented and reviewed — before the nex
      (the first of each free), and a Plus or Pro badge by the player's name.
    - ✅ **Payments with Razorpay**: Plus and Pro for a month or a year, confirmed by signature and
      webhook.
-   - ✅ **Pro extras**: private rooms (an invitation link to a game), small round-robin
-     tournaments among friends, and an opening and endgame puzzle trainer.
+   - ✅ **Pro extras**: small round-robin tournaments among friends, and an opening and
+     endgame puzzle trainer. (Inviting a friend by link is a free challenge, for everyone.)
+   - Perhaps later: **private tables** for Pro, an extension of challenges by link (a table
+     that stays open for a series of games with the same friends).
 
 ## Development
 Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
@@ -149,7 +151,9 @@ and the Caddyfile.
 | GET | `/api/v1/seeks` | How many players are waiting, per time control and rated or casual |
 | POST, DELETE | `/api/v1/seeks` | Play whoever is waiting for the same game (`time_control`, `rated`): starts the game at once, or waits up to two minutes; `DELETE` stops waiting |
 | GET | `/api/v1/challenges` | Your open challenges, incoming and outgoing |
-| POST | `/api/v1/challenges` | Challenge an online player (`time_control` 3+2, 5+3, 10+5, 15+10; `rated`; `side`) |
+| POST | `/api/v1/challenges` | Challenge an online player (`opponent`; `time_control` 3+2, 5+3, 10+5, 15+10; `rated`; `side`), or, with no `opponent`, make a casual challenge by link (its `code`, open for a day) |
+| GET | `/api/v1/challenges/link/{code}` | A challenge by link, for whoever has the link |
+| POST | `/api/v1/challenges/link/{code}/accept` | Accept a challenge by link (guests too); the game starts now if the challenger is online |
 | POST | `/api/v1/challenges/{id}/accept`, `/decline`, `/cancel` | Answer or withdraw a challenge; accepting starts the game |
 | GET | `/api/v1/games` | Your live games (to resume after a reconnect) |
 | POST | `/api/v1/games/computer` | Play the computer (`level` easy, medium or hard; `side`; `time_control`); never rated |
@@ -161,9 +165,6 @@ and the Caddyfile.
 | POST | `/api/v1/payments/checkout` | Start buying a `plan` (plus, pro) for a `period` (month, year): a Razorpay order |
 | POST | `/api/v1/payments/verify` | Confirm a payment with what Razorpay Checkout returned (`order_id`, `payment_id`, `signature`) |
 | POST | `/api/v1/payments/webhook` | Razorpay's webhook (`payment.captured`, `order.paid`, `payment.failed`), checked by its signature |
-| GET, POST | `/api/v1/rooms` | Pro: my open private rooms; make one (`time_control`, `side`) |
-| GET | `/api/v1/rooms/{code}` | A private room, for whoever has its link |
-| POST | `/api/v1/rooms/{code}/join`, `/close` | Play the host now (they must be online), or (the host) close the room |
 | GET, POST | `/api/v1/tournaments` | Tournaments I am in; host one (Pro: `name`, `time_control`, `max_players` 3–6) |
 | GET | `/api/v1/tournaments/{code}` | A tournament: players, standings and every pairing |
 | POST | `/api/v1/tournaments/{code}/join`, `/leave`, `/start`, `/finish` | Join or leave while open; the host starts it or ends it |
@@ -216,7 +217,7 @@ for everyone.
 | History and replay | Last 30 days | Everything | Everything |
 | Post-game analysis | — | 5 new games a day | Unlimited |
 | Board and piece themes, sound packs, badge | — | ✅ | ✅ |
-| Private rooms, hosting tournaments, the trainer | — | — | ✅ |
+| Hosting tournaments, the trainer | — | — | ✅ |
 
 A player's features are their plan's plus whatever admins have **granted**. Admins grant a plan
 or one feature for 7, 30, 90 or 365 days or until revoked, always with a reason; the player is
@@ -260,11 +261,14 @@ To take payments:
    plans page says paying online is coming soon.
 4. Try a payment with Razorpay's test cards, then switch to live keys.
 
+**Challenges by link** (`lobby/`, free): a challenge with no opponent named, sent as a link to
+a friend who may not be on ClawPlay yet. It is casual, with the challenger's time control and
+side; whoever opens it first, signed in or as a guest, plays the challenger, who must be online.
+It is open for a day, or until accepted or cancelled, and counts towards the challenger's open
+challenges. It replaced the Pro private rooms.
+
 **Pro extras.** Only the host needs Pro; anyone can join.
 
-- **Private rooms** (`rooms/`): a link to one casual game, with the host's time control and
-  side. Whoever opens it first, signed in, plays the host, who must be online. A room lasts a
-  day, or until played or closed; a host has at most 5 open.
 - **Tournaments** (`tournaments/`): a round robin for 3 to 6 players, joined by link. Once the
   host starts it, each player plays each other twice, once with each side, in casual games
   (ratings cannot be farmed). Either player starts a pairing whenever the other is online; an

@@ -39,7 +39,7 @@ const STEPS: readonly { piece: Piece; title: string; text: string }[] = [
 const FEATURES: readonly { title: string; text: string }[] = [
   { title: 'Live games', text: 'Quick or standard games with players online, rated or casual.' },
   { title: 'The computer', text: 'Three levels, from a gentle start to a real fight.' },
-  { title: 'Friends', text: 'Private rooms and small tournaments with the people you know.' },
+  { title: 'Friends', text: 'Send a friend a link to a game, or run a small tournament.' },
   { title: 'Get better', text: 'The engine reviews your games; puzzles sharpen your openings.' },
 ];
 

@@ -20,7 +20,6 @@ from baghchal_server.lobby import models as lobby_models  # noqa: F401
 from baghchal_server.moderation import models as moderation_models  # noqa: F401
 from baghchal_server.payments import models as payments_models  # noqa: F401
 from baghchal_server.ratings import models as rating_models  # noqa: F401
-from baghchal_server.rooms import models as rooms_models  # noqa: F401
 from baghchal_server.tournaments import models as tournaments_models  # noqa: F401
 from baghchal_server.trainer import models as trainer_models  # noqa: F401
 
@@ -32,6 +31,11 @@ target_metadata = Base.metadata
 
 
 def _configure(connection: Connection) -> None:
+    if connection.dialect.name == "sqlite":
+        # On SQLite a batch ALTER copies the table and drops the old one; with foreign keys on,
+        # dropping it would delete the rows that cascade from it (games with their challenge).
+        connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+        connection.commit()  # end the transaction the PRAGMA began; migrations run in their own
     context.configure(
         connection=connection,
         target_metadata=target_metadata,

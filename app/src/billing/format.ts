@@ -9,7 +9,6 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   analysis: 'The engine’s review of your finished games',
   themes: 'Board and coin themes, and sound packs',
   badge: 'A badge next to your name',
-  private_rooms: 'Private rooms for friends',
   tournaments: 'Host small tournaments',
   trainer: 'Opening and endgame trainer',
 };

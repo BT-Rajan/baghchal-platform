@@ -103,8 +103,12 @@ scripts/        the Expo-cloud guardrail
   server takes payments. Razorpay's Checkout script is loaded on the first purchase
   (`src/payments/razorpay.ts`) and opens Razorpay's own window; the app never sees card
   details, and the server confirms the payment before the plan changes. Web only for now.
-- **Pro extras.** Play now → More ways to play: private rooms (make a link, share it; the
-  friend's "Join and play" starts the game), tournaments (host, join by link, standings, "Play
+- **Challenges by link.** Play now → "Challenge a friend by link" (`/invite`) uses the same
+  `ChallengeForm` as challenging a player by name, without the rated choice; the link it makes
+  (`shareLink` in `src/lobby/format.ts`, the one way the app makes share links) opens `/c/[code]`,
+  where the friend's "Accept and play" starts the game. The challenge also shows under Your
+  challenges in the lobby, with its link and a Cancel button.
+- **Pro extras.** Play now → More ways to play: tournaments (host, join by link, standings, "Play
   now" on my games) and the trainer (the puzzle on the real board, in the player's theme).
   Players without Pro see what each does in the one `Upsell` component, as everywhere a
   paid feature is locked.
