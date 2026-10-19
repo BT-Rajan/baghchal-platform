@@ -63,6 +63,9 @@ export const colors = {
   bronze: '#a0612c',
   /** Keyboard focus ring (web). */
   focus: '#1f5fbf',
+  /** Android's touch ripple, on light surfaces and on dark or coloured ones. */
+  ripple: 'rgba(42, 22, 8, 0.12)',
+  rippleOnDark: 'rgba(255, 243, 223, 0.28)',
 } as const;
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;

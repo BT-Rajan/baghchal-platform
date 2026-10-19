@@ -15,6 +15,7 @@ import { Card, Hint, SectionTitle } from './Card';
 import { Icon } from './Icon';
 import { Upsell } from './Upsell';
 import { focusRing } from './focus';
+import { pressedLook, ripple } from './press';
 import { ErrorState, Loading } from './States';
 
 const PAGE = 20;
@@ -62,10 +63,11 @@ export function GameHistory({
               role="link"
               aria-label={`Replay: ${historyText(game)}`}
               onPress={() => router.push(`/game/${game.id}`)}
+              {...ripple()}
               style={(state) => [
                 styles.row,
                 i > 0 && styles.divided,
-                state.pressed && styles.pressed,
+                pressedLook(state.pressed, styles.pressed),
                 focusRing(state),
               ]}
             >

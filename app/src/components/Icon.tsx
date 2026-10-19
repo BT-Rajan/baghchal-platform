@@ -18,7 +18,8 @@ export type IconName =
   | 'palette'
   | 'shield'
   | 'bell'
-  | 'chat';
+  | 'chat'
+  | 'document';
 
 /**
  * The app's line icons (24-unit grid, 2-unit stroke), drawn in the colour they are given. They
@@ -106,6 +107,14 @@ export function Icon({
         </>
       )}
       {name === 'chevron' && <Polyline points="9 5 16 12 9 19" {...stroke} />}
+      {name === 'document' && (
+        <>
+          <Path d="M14 3H6v18h12V7z" {...stroke} />
+          <Polyline points="14 3 14 7 18 7" {...stroke} />
+          <Line x1={9} y1={12} x2={15} y2={12} {...stroke} />
+          <Line x1={9} y1={16} x2={15} y2={16} {...stroke} />
+        </>
+      )}
       {name === 'settings' && (
         <>
           <Path d="M4 7h10M18 7h2M4 17h4M12 17h8" {...stroke} />

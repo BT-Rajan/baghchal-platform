@@ -144,7 +144,7 @@ export default function Play() {
   );
 
   return (
-    <Screen title="Play" align="top" wide={wide}>
+    <Screen title="Play" align="top" wide={wide} refreshable>
       <GuestBanner />
       {wide ? (
         <View style={styles.row}>

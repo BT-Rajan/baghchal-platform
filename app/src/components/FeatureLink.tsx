@@ -7,6 +7,7 @@ import { colors, radius, shadow, spacing, type } from '@/theme';
 
 import { BadgePill } from './BadgePill';
 import { focusRing } from './focus';
+import { pressedLook, ripple } from './press';
 import { Icon, type IconName } from './Icon';
 
 /**
@@ -37,7 +38,8 @@ export function FeatureLink({
       role="link"
       aria-label={title}
       onPress={onPress}
-      style={(state) => [styles.tile, state.pressed && styles.pressed, focusRing(state)]}
+      {...ripple()}
+      style={(state) => [styles.tile, pressedLook(state.pressed, styles.pressed), focusRing(state)]}
     >
       <View style={styles.icon}>
         <Icon name={icon} color={colors.accent} />
@@ -62,6 +64,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
+    overflow: 'hidden',
     ...shadow,
   },
   pressed: { transform: [{ scale: 0.99 }], opacity: 0.85 },

@@ -26,7 +26,7 @@ const SIZES = ['3', '4', '5', '6'].map((n) => ({ value: n, label: `${n} players`
 export default function Tournaments() {
   const plan = useMyPlan();
   return (
-    <Screen align="top">
+    <Screen align="top" refreshable>
       <Hint>
         A round robin for 3 to 6 friends: everyone plays everyone, once with each side, in casual
         games. Anyone can join with the link.

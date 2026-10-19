@@ -1,4 +1,10 @@
+import { router } from 'expo-router';
+import { render } from '@testing-library/react-native';
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { Platform } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+import Welcome from '@/app/welcome';
 
 import { renderApp, savedToken } from './support/app';
 import { AGREED, ME, error, type Route } from './support/fakeServer';
@@ -15,8 +21,8 @@ async function press(name: string | RegExp) {
   await fireEvent.press(screen.getByRole('button', { name }));
 }
 
-describe('the welcome page', () => {
-  test('says what ClawPlay is, and starts a first game at once as a guest', async () => {
+describe('the apps’ start screen', () => {
+  test('says what ClawPlay is, and starts a first game as a guest', async () => {
     const first = game({
       goat: { id: GUEST.id, username: GUEST.username },
       tiger: { id: 'cpu', username: 'computer-easy' },
@@ -33,8 +39,8 @@ describe('the welcome page', () => {
       },
     });
     expect(await screen.findByText(/^Tigers hunt\./)).toBeOnTheScreen();
-    expect(screen.getByText('Goats trap')).toBeOnTheScreen();
-    expect(screen.getByText('Play your way')).toBeOnTheScreen();
+    // An app's start screen, not the web's landing page.
+    expect(screen.queryByText('Play your way')).toBeNull();
     await press('Play now, no sign-up');
     await screen.findByRole('heading', { name: 'Your first game' });
     await fireEvent.changeText(screen.getByLabelText('Month of birth'), '01');
@@ -55,11 +61,10 @@ describe('the welcome page', () => {
     expect(await screen.findByText('Place a goat')).toBeOnTheScreen();
   });
 
-  test('the closing button plays too, and a refusal is shown', async () => {
-    const { server } = await renderApp('/welcome', {
+  test('a young guest plays the computer only, and a refusal is shown', async () => {
+    const { server } = await renderApp('/start', {
       routes: { 'POST /api/v1/auth/guest': error(429, 'rate_limited', 'Slow down.') },
     });
-    await fireEvent.press(await screen.findByRole('button', { name: 'Start playing' }));
     await screen.findByRole('button', { name: 'Start playing', busy: false });
     await press('Start playing');
     expect(screen.getByText('Enter the month and year you were born.')).toBeOnTheScreen();
@@ -87,7 +92,7 @@ describe('the welcome page', () => {
     await fireEvent.press(await screen.findByRole('button', { name: 'Sign in' }));
     await waitFor(() => expect(app.getPathname()).toBe('/sign-in'));
     await renderApp('/welcome').then(async ({ app: again }) => {
-      await fireEvent.press(await screen.findByRole('link', { name: 'Create a free account' }));
+      await fireEvent.press(await screen.findByRole('button', { name: 'Create a free account' }));
       await waitFor(() => expect(again.getPathname()).toBe('/sign-up'));
     });
   });
@@ -169,5 +174,28 @@ describe('a guest', () => {
     expect(screen.queryByText(/guest-3fa9c1@guest\.invalid/)).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Email address' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Moderation' })).toBeNull();
+  });
+});
+
+const METRICS = {
+  frame: { x: 0, y: 0, width: 1280, height: 800 },
+  insets: { top: 0, left: 0, right: 0, bottom: 0 },
+};
+
+describe('the web’s landing page', () => {
+  test('says what ClawPlay is, with buttons to play and links onward', async () => {
+    jest.replaceProperty(Platform, 'OS', 'web');
+    const push = jest.spyOn(router, 'push').mockImplementation(() => {});
+    await render(
+      <SafeAreaProvider initialMetrics={METRICS}>
+        <Welcome />
+      </SafeAreaProvider>,
+    );
+    expect(screen.getByText('Play your way')).toBeOnTheScreen();
+    expect(screen.getByText('Goats trap')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Start playing' }));
+    await fireEvent.press(screen.getByRole('link', { name: 'Create a free account' }));
+    await fireEvent.press(screen.getByRole('link', { name: 'Privacy policy' }));
+    expect(push.mock.calls).toEqual([['/start'], ['/sign-up'], ['/privacy']]);
   });
 });
