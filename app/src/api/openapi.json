@@ -1201,6 +1201,50 @@
         }
       }
     },
+    "/api/v1/games/{game_id}/emote": {
+      "post": {
+        "summary": "Emote",
+        "description": "A quick message to my opponent, during the game or just after it. It reaches them\nunless they have turned quick messages off; nothing is kept.",
+        "operationId": "emote_api_v1_games__game_id__emote_post",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmoteIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/games/computer": {
       "post": {
         "summary": "Play The Computer",
@@ -2927,6 +2971,17 @@
             ],
             "title": "Sounds On"
           },
+          "emotes_on": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emotes On"
+          },
           "show_badge": {
             "anyOf": [
               {
@@ -2959,6 +3014,10 @@
             "type": "boolean",
             "title": "Sounds On"
           },
+          "emotes_on": {
+            "type": "boolean",
+            "title": "Emotes On"
+          },
           "show_badge": {
             "type": "boolean",
             "title": "Show Badge"
@@ -2970,6 +3029,7 @@
           "pieces",
           "sounds",
           "sounds_on",
+          "emotes_on",
           "show_badge"
         ],
         "title": "AppearanceOut",
@@ -3503,6 +3563,27 @@
           "email"
         ],
         "title": "EmailChangedOut"
+      },
+      "EmoteIn": {
+        "properties": {
+          "emote": {
+            "type": "string",
+            "enum": [
+              "good_luck",
+              "good_move",
+              "oops",
+              "thanks",
+              "well_played"
+            ],
+            "title": "Emote"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "emote"
+        ],
+        "title": "EmoteIn"
       },
       "EndReason": {
         "type": "string",

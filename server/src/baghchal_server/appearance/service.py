@@ -26,6 +26,7 @@ FREE: Final = AppearanceOut(
     pieces=PieceSet.CLASSIC,
     sounds=SoundPack.GENTLE,
     sounds_on=True,
+    emotes_on=True,
     show_badge=True,
 )
 WHAT: Final = "A choice of boards, pieces and sounds"
@@ -47,7 +48,7 @@ async def mine(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> Appearanc
     row = await db.get(Appearance, user_id)
     if row is None:
         return FREE
-    own = {"sounds_on": row.sounds_on, "show_badge": row.show_badge}
+    own = {"sounds_on": row.sounds_on, "emotes_on": row.emotes_on, "show_badge": row.show_badge}
     if not (await billing.entitlements(db, user_id, now)).has(Feature.THEMES):
         return FREE.model_copy(update=own)
     return AppearanceOut(

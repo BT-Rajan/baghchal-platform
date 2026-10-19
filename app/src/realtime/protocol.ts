@@ -2,7 +2,7 @@
  * Messages on the WebSocket (docs/realtime.md). Everything the server sends is parsed
  * defensively: malformed JSON and unknown message types are ignored, never thrown.
  */
-import type { Challenge, Game, Player } from '@/api/endpoints';
+import type { Challenge, Emote, Game, Player } from '@/api/endpoints';
 
 export type ServerMessage =
   | { type: 'hello'; user: Player }
@@ -16,6 +16,8 @@ export type ServerMessage =
   | { type: 'friends' }
   /** A new notification: fetch them again. */
   | { type: 'notification' }
+  /** My opponent's quick message in a game. */
+  | { type: 'emote'; game_id: string; side: 'goat' | 'tiger'; emote: Emote }
   | { type: 'error'; code: string; message: string };
 
 export const PING = JSON.stringify({ type: 'ping' });
@@ -81,6 +83,12 @@ export function parseServerMessage(text: unknown): ServerMessage | null {
       return { type: 'friends' };
     case 'notification':
       return { type: 'notification' };
+    case 'emote':
+      return typeof data.game_id === 'string' &&
+        (data.side === 'goat' || data.side === 'tiger') &&
+        typeof data.emote === 'string'
+        ? { type: 'emote', game_id: data.game_id, side: data.side, emote: data.emote as Emote }
+        : null;
     case 'error':
       return typeof data.code === 'string' && typeof data.message === 'string'
         ? { type: 'error', code: data.code, message: data.message }

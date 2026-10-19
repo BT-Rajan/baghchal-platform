@@ -578,6 +578,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/games/{game_id}/emote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Emote
+         * @description A quick message to my opponent, during the game or just after it. It reaches them
+         *     unless they have turned quick messages off; nothing is kept.
+         */
+        post: operations["emote_api_v1_games__game_id__emote_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/games/computer": {
         parameters: {
             query?: never;
@@ -1372,6 +1393,8 @@ export interface components {
             sounds?: components["schemas"]["SoundPack"] | null;
             /** Sounds On */
             sounds_on?: boolean | null;
+            /** Emotes On */
+            emotes_on?: boolean | null;
             /** Show Badge */
             show_badge?: boolean | null;
         };
@@ -1385,6 +1408,8 @@ export interface components {
             sounds: components["schemas"]["SoundPack"];
             /** Sounds On */
             sounds_on: boolean;
+            /** Emotes On */
+            emotes_on: boolean;
             /** Show Badge */
             show_badge: boolean;
         };
@@ -1592,6 +1617,14 @@ export interface components {
         EmailChangedOut: {
             /** Email */
             email: string;
+        };
+        /** EmoteIn */
+        EmoteIn: {
+            /**
+             * Emote
+             * @enum {string}
+             */
+            emote: "good_luck" | "good_move" | "oops" | "thanks" | "well_played";
         };
         /**
          * EndReason
@@ -3672,6 +3705,39 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["GameOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    emote_api_v1_games__game_id__emote_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

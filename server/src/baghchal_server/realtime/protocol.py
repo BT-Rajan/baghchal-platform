@@ -6,9 +6,11 @@ same ``id``: it measures the round trip, which is not charged to the player's cl
 ``challenge`` (a challenge involving you was created or changed; match on ``challenge.id``),
 ``game`` (a game you play in started or changed: the full state; match on ``game.id`` and keep
 the highest ``game.ply``), ``friends`` (my friends or friend requests changed: fetch them
-again), ``notification`` (a new notification: fetch them again), ``error``.
+again), ``notification`` (a new notification: fetch them again), ``emote`` (my opponent's
+quick message in a game), ``error``.
 """
 
+import uuid
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
@@ -59,6 +61,14 @@ class FriendsEvent(BaseModel):
 
 class NotificationEvent(BaseModel):
     type: Literal["notification"] = "notification"
+
+
+class EmoteEvent(BaseModel):
+    type: Literal["emote"] = "emote"
+    game_id: uuid.UUID
+    side: Literal["goat", "tiger"]
+    """Who sent it."""
+    emote: str
 
 
 class ErrorEvent(BaseModel):

@@ -25,5 +25,7 @@ class Appearance(Base):
     pieces: Mapped[str] = mapped_column(String(16))
     sounds: Mapped[str] = mapped_column(String(16))
     sounds_on: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
+    emotes_on: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
+    """Whether the opponent's quick messages reach me."""
     show_badge: Mapped[bool] = mapped_column(Boolean)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime)

@@ -28,7 +28,7 @@ import { IconButton } from '@/components/IconButton';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
-import { useServerNow } from '@/components/useNow';
+import { useNow, useServerNow } from '@/components/useNow';
 import { parseBfen, type Piece } from '@/game/bfen';
 import { firstMoveSecondsLeft } from '@/game/clock';
 import { coachTip, isCoached } from '@/game/coach';
@@ -43,7 +43,8 @@ import {
   sideOf,
   turnText,
 } from '@/game/describe';
-import { useGame, useGameAction, useMove } from '@/game/hooks';
+import { EMOTE_SHOWN_MS, EMOTES, emoteText, emotesOpen } from '@/game/emotes';
+import { useGame, useGameAction, useMove, useSendEmote, useShownEmote } from '@/game/hooks';
 import { boardSize, gameLayout } from '@/game/layout';
 import { TIME_CONTROLS } from '@/lobby/format';
 import { useCreateChallenge, useOpenStartedGame } from '@/lobby/hooks';
@@ -67,6 +68,9 @@ export default function GameScreen() {
   const allowed = plan.data === undefined ? undefined : has(plan.data, 'analysis');
   const reviewable = game?.status === 'finished' && game.ply > 0;
   const analysis = useAnalysis(id, reviewable && allowed === true);
+  const shownEmote = useShownEmote(id);
+  const now = useNow(1000); // also re-renders each second, so a message disappears on time
+  const serverNow = useServerNow(1000);
   // Leaving a game of mine while it is on asks first: it goes on without me.
   const navigation = useNavigation();
   const playing = game?.status === 'active' && sideOf(game, me.id) !== null;
@@ -120,8 +124,23 @@ export default function GameScreen() {
       />
     );
 
-  const opponentBar = <PlayerBar game={game} side={other(bottom)} isMe={mine === other(bottom)} />;
-  const myBar = <PlayerBar game={game} side={bottom} isMe={mine === bottom} />;
+  // A quick message shows on its sender's bar for a moment.
+  const fresh =
+    shownEmote !== undefined && shownEmote !== null && now - shownEmote.at < EMOTE_SHOWN_MS
+      ? shownEmote
+      : null;
+  const emoteOf = (side: Piece) => (fresh?.side === side ? emoteText(fresh.emote) : null);
+  const opponentBar = (
+    <PlayerBar
+      game={game}
+      side={other(bottom)}
+      isMe={mine === other(bottom)}
+      emote={emoteOf(other(bottom))}
+    />
+  );
+  const myBar = (
+    <PlayerBar game={game} side={bottom} isMe={mine === bottom} emote={emoteOf(bottom)} />
+  );
 
   const panel = (
     <View style={styles.panel}>
@@ -173,6 +192,14 @@ export default function GameScreen() {
           analysis={analysis}
           ply={ply}
           onShow={setShown}
+        />
+      )}
+      {mine !== null && emotesOpen(game, serverNow) && (
+        <QuickMessages
+          gameId={game.id}
+          mine={mine}
+          shown={look.emotes_on}
+          onToggle={() => chooseLook.mutate({ emotes_on: !look.emotes_on })}
         />
       )}
       {mine !== null && game.status === 'active' && (
@@ -254,6 +281,48 @@ function Rematch({ game, mine }: { game: Game; mine: Piece }) {
         }
       />
     </>
+  );
+}
+
+/**
+ * Quick messages to my opponent (set phrases), and whether theirs reach me: one setting,
+ * the same as on the Board, pieces and sounds page.
+ */
+function QuickMessages({
+  gameId,
+  mine,
+  shown,
+  onToggle,
+}: {
+  gameId: string;
+  mine: Piece;
+  shown: boolean;
+  onToggle: () => void;
+}) {
+  const send = useSendEmote(gameId, mine);
+  return (
+    <View style={styles.quick}>
+      <View style={styles.emotes}>
+        {EMOTES.map((e) => (
+          <Button
+            key={e.value}
+            title={`Say “${e.label}”`}
+            label={e.label}
+            variant="secondary"
+            compact
+            disabled={send.isPending}
+            onPress={() => send.mutate(e.value)}
+          />
+        ))}
+        <IconButton
+          icon="chat"
+          title={shown ? "Hide your opponent's messages" : "Show your opponent's messages"}
+          selected={shown}
+          onPress={onToggle}
+        />
+      </View>
+      {send.error !== null && <Notice tone="error">{describeError(send.error)}</Notice>}
+    </View>
   );
 }
 
@@ -389,6 +458,8 @@ const styles = StyleSheet.create({
   boardBox: { width: '100%', alignSelf: 'center' },
   panel: { flex: 1, gap: spacing.md, minWidth: 280 },
   next: { gap: spacing.sm },
+  quick: { gap: spacing.sm },
+  emotes: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
   turn: { fontSize: 18, fontWeight: '700', color: colors.text },
   counts: { fontSize: 14, color: colors.muted },
   countsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

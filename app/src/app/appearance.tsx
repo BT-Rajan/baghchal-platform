@@ -114,6 +114,15 @@ export default function AppearanceScreen() {
           label: `${SOUNDS[sounds].name}${locked(sounds === FREE_APPEARANCE.sounds) ? ' (Plus)' : ''}: ${SOUNDS[sounds].description}`,
         }))}
       />
+      <Segmented
+        label="Your opponent's quick messages in games"
+        value={current.emotes_on ? 'show' : 'hide'}
+        onChange={(value) => pick({ emotes_on: value === 'show' })}
+        options={[
+          { value: 'show', label: 'Show' },
+          { value: 'hide', label: 'Hide' },
+        ]}
+      />
       {soundSupported() && (
         <Button
           title={`Hear ${SOUNDS[current.sounds].name}`}

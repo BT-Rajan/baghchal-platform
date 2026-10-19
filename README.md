@@ -75,6 +75,8 @@ Each phase ships complete — tested, documented and reviewed — before the nex
      presence and a Challenge button.
    - ✅ **Notifications**: a bell with what happened while you were away (challenges, friend
      requests, tournaments starting), each leading to where it happened.
+   - ✅ **Quick messages**: five set phrases in any game against a person, rated included,
+     which either player can hide (`emotes_on`, with the other appearance settings).
    - Perhaps later: **private tables** for Pro, an extension of challenges by link (a table
      that stays open for a series of games with the same friends).
 
@@ -169,6 +171,7 @@ and the Caddyfile.
 | POST | `/api/v1/challenges/link/{code}/accept` | Accept a challenge by link (guests too); the game starts now if the challenger is online |
 | POST | `/api/v1/challenges/{id}/accept`, `/decline`, `/cancel` | Answer or withdraw a challenge; accepting starts the game |
 | GET | `/api/v1/games` | Your live games (to resume after a reconnect) |
+| POST | `/api/v1/games/{id}/emote` | A quick message to my opponent (`emote`: good_luck, good_move, oops, thanks, well_played), during the game or up to 5 minutes after; not against the computer. They get an `emote` event unless they turned quick messages off |
 | POST | `/api/v1/games/computer` | Play the computer (`level` easy, medium or hard; `side`; `time_control`); never rated |
 | GET | `/api/v1/games/{id}` | A game: position, moves, legal moves, goats in danger (on the goats' turn), clocks, result; finished games add every position, for replay |
 | POST | `/api/v1/games/{id}/moves` | Play `{"ply": n, "move": "a1-b2"}` (`ply` = moves you have seen) |

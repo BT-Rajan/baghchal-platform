@@ -147,6 +147,12 @@ describe('applyMessage', () => {
     expect(applyMessage(qc, { type: 'game', game: game() }, ME.id).startedGame).toBeNull();
   });
 
+  test('a quick message is kept to show', () => {
+    const qc = testQueryClient();
+    applyMessage(qc, { type: 'emote', game_id: 'g1', side: 'tiger', emote: 'oops' }, ME.id);
+    expect(qc.getQueryData(queryKeys.emote('g1'))).toMatchObject({ side: 'tiger', emote: 'oops' });
+  });
+
   test('a notification refreshes the list', () => {
     const qc = testQueryClient();
     qc.setQueryData(queryKeys.notifications, { unread: 0, items: [] });

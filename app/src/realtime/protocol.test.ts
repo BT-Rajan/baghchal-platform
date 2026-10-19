@@ -27,6 +27,8 @@ test('parses every server message', () => {
   });
   expect(parseServerMessage(text({ type: 'friends' }))).toEqual({ type: 'friends' });
   expect(parseServerMessage(text({ type: 'notification' }))).toEqual({ type: 'notification' });
+  const emote = { type: 'emote', game_id: 'g1', side: 'tiger', emote: 'oops' };
+  expect(parseServerMessage(text(emote))).toEqual(emote);
   const g = game();
   expect(parseServerMessage(text({ type: 'game', game: g }))).toEqual({ type: 'game', game: g });
   expect(
@@ -57,6 +59,9 @@ test.each([
     text({ type: 'challenge', challenge: { ...challenge(), challenger: {} } }),
   ],
   ['a challenge that is not one', text({ type: 'challenge', challenge: 'c1' })],
+  ['an emote without a game', text({ type: 'emote', side: 'goat', emote: 'oops' })],
+  ['an emote from nobody', text({ type: 'emote', game_id: 'g1', side: 'x', emote: 'oops' })],
+  ['an emote that is not one', text({ type: 'emote', game_id: 'g1', side: 'goat', emote: 1 })],
   ['a game without ply', text({ type: 'game', game: { ...game(), ply: '3' } })],
   ['a game without status', text({ type: 'game', game: { ...game(), status: null } })],
   ['a game without server_time', text({ type: 'game', game: { ...game(), server_time: 1 } })],

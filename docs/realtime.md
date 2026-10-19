@@ -22,6 +22,7 @@ Every message is a JSON text frame with a `type`.
 | server → client | `game` | `game: {...}` — a game you play in started or changed: the full state (position, legal moves, clocks, result); match on `game.id` and keep the highest `game.ply` |
 | server → client | `friends` | (no fields) — your friends or friend requests changed; fetch `GET /friends` again |
 | server → client | `notification` | (no fields) — a new notification; fetch `GET /notifications` again |
+| server → client | `emote` | `game_id`, `side`, `emote` — my opponent's quick message (only if I have them on) |
 | server → client | `error` | `code`, `message` — e.g. `invalid_message`; the socket stays open |
 
 Commands (challenges, moves, resigning) go over HTTP; the socket carries the resulting

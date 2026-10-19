@@ -30,8 +30,8 @@
 - **Upsell** a paid feature: `app/src/components/Upsell.tsx` (`<Upsell feature="…">what it
   does</Upsell>`). It names the plan from the server's plans; never write your own notice,
   card or "See plans" link.
-- **Appearance and sound settings**: the server's appearance (`PATCH /me/appearance`, sending
-  only what changes); nothing about them is kept on the device.
+- **Appearance, sound and quick-message settings**: the server's appearance (`PATCH
+  /me/appearance`, sending only what changes); nothing about them is kept on the device.
 - **A new account's username, email and password**: `app/src/components/AccountForm.tsx`,
   given the action that sends it (signing up, a guest making their account).
 - **Start a game with a particular person**: a challenge, by name (`/challenge/[username]`) or by

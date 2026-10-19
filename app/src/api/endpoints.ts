@@ -18,6 +18,7 @@ export type LeaderboardEntry = S['LeaderboardEntry'];
 export type Friends = S['FriendsOut'];
 export type FriendRelation = S['RelationOut']['relation'];
 export type NotificationList = S['NotificationList'];
+export type Emote = S['EmoteIn']['emote'];
 export type Notification = S['NotificationOut'];
 export type Category = S['Category'];
 export type TimeControl = S['ChallengeIn']['time_control'];
@@ -115,6 +116,8 @@ export function createApi(client: Client, transport: Transport) {
       client.post<Challenge>(`${V1}/challenges/${seg(id)}/${answer}`),
     notifications: (signal?: AbortSignal) =>
       client.get<NotificationList>(`${V1}/notifications`, { signal }),
+    emote: (gameId: string, emote: Emote) =>
+      client.post<void>(`${V1}/games/${seg(gameId)}/emote`, { body: { emote } }),
     readNotifications: () => client.post<void>(`${V1}/notifications/read`),
     friends: (signal?: AbortSignal) => client.get<Friends>(`${V1}/friends`, { signal }),
     addFriend: (username: string) =>

@@ -17,7 +17,8 @@ export type IconName =
   | 'settings'
   | 'palette'
   | 'shield'
-  | 'bell';
+  | 'bell'
+  | 'chat';
 
 /**
  * The app's line icons (24-unit grid, 2-unit stroke), drawn in the colour they are given. They
@@ -123,6 +124,7 @@ export function Icon({
           <Circle cx={15} cy={8} r={1} {...stroke} />
         </>
       )}
+      {name === 'chat' && <Path d="M4 5h16v11H9l-5 4z" {...stroke} />}
       {name === 'bell' && (
         <Path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0" {...stroke} />
       )}
