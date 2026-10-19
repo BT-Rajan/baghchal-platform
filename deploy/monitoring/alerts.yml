@@ -81,3 +81,22 @@ groups:
           description: >-
             Probably password guessing. The limits are holding; check the access logs for
             the addresses involved and block them at the firewall if it continues.
+
+      - alert: BaghchalFairPlayBacklog
+        expr: max(baghchal_fair_play_queue) > 500
+        for: 1h
+        labels: { severity: warning }
+        annotations:
+          summary: Fair-play checks are falling behind
+          description: >-
+            More than 500 rated games are waiting for their check. Games still play and are
+            rated; checks older than 7 days are skipped. Add BAGHCHAL_FAIR_PLAY_WORKERS or
+            replicas (see docs/operations.md).
+
+      - alert: BaghchalFairPlayFailing
+        expr: sum(rate(baghchal_fair_play_failures_total[15m])) > 0
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: Fair-play checks keep failing
+          description: Search the api logs for "fair_play.failed" for the traceback.

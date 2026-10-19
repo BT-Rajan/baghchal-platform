@@ -1,5 +1,5 @@
 /** Wording for reports and moderation. */
-import type { ModPlayer, ReportReason } from '@/api/endpoints';
+import type { FairPlayFigures, ModPlayer, Report, ReportReason } from '@/api/endpoints';
 
 const REASONS: Record<ReportReason, string> = {
   cheating: 'Cheating',
@@ -15,6 +15,18 @@ export const REPORT_REASONS = (Object.keys(REASONS) as ReportReason[]).map((valu
 
 export function reasonLabel(reason: ReportReason): string {
   return REASONS[reason];
+}
+
+/** Who filed a report: a player, or the automatic fair-play checks (no reporter). */
+export function reporterText(report: Pick<Report, 'reporter'>): string {
+  return report.reporter === null ? 'the automatic fair-play check' : report.reporter.username;
+}
+
+/** A report's headline in the queue. */
+export function reportTitle(report: Pick<Report, 'reporter' | 'target'>): string {
+  return report.reporter === null
+    ? `Automatic fair-play check: ${report.target.username}`
+    : `${report.reporter.username} reported ${report.target.username}`;
 }
 
 /** "8 January 2026, 12:00 UTC" */
@@ -58,4 +70,23 @@ const ACTIONS: Record<ModPlayer['actions'][number]['action'], string> = {
 
 export function actionText(action: ModPlayer['actions'][number]): string {
   return `${ACTIONS[action.action]} · ${action.moderator ?? 'a former moderator'} · ${dateTimeText(action.created_at)}`;
+}
+
+function percent(share: number): string {
+  return `${(share * 100).toFixed(1)}%`;
+}
+
+/** "Engine's move in 92.0% of 120 decisive positions · average loss 12 · mistakes 0.5%" */
+export function figuresText(f: FairPlayFigures): string {
+  if (f.decisive === 0) return `No decisive positions in ${f.moves} moves`;
+  return [
+    `Engine's move in ${percent(f.agreement)} of ${f.decisive} decisive positions`,
+    `average loss ${Math.round(f.average_loss)}`,
+    `mistakes ${percent(f.mistake_rate)}`,
+  ].join(' · ');
+}
+
+/** "Median 2.4 s per move · 3 under a second" */
+export function thinkText(medianMs: number, fastMoves: number): string {
+  return `Median ${(medianMs / 1000).toFixed(1)} s per move · ${fastMoves} under a second`;
 }

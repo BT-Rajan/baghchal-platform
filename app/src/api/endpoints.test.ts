@@ -59,6 +59,7 @@ test('every endpoint calls the right method, path and body', async () => {
   await api.modReports('open', signal);
   await api.dismissReport('r1', 'fine');
   await api.modPlayer('bob');
+  await api.modFairPlay('b o', signal);
   await api.suspend('bob', null, 'why');
   await api.unsuspend('bob', 'appeal');
   await api.rename('bob', 'nicebob', 'name');
@@ -109,6 +110,7 @@ test('every endpoint calls the right method, path and body', async () => {
     ['GET', `${V}/mod/reports`, { query: { status: 'open' }, signal }],
     ['POST', `${V}/mod/reports/r1/dismiss`, { body: { reason: 'fine' } }],
     ['GET', `${V}/mod/players/bob`, { signal: undefined }],
+    ['GET', `${V}/mod/players/b%20o/fair-play`, { signal }],
     ['POST', `${V}/mod/players/bob/suspend`, { body: { days: null, reason: 'why' } }],
     ['POST', `${V}/mod/players/bob/unsuspend`, { body: { reason: 'appeal' } }],
     ['POST', `${V}/mod/players/bob/rename`, { body: { username: 'nicebob', reason: 'name' } }],

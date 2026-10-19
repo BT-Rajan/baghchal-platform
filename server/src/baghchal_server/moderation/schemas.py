@@ -29,7 +29,8 @@ class ReportTargetOut(PlayerOut):
 
 class ReportOut(BaseModel):
     id: uuid.UUID
-    reporter: PlayerOut
+    reporter: PlayerOut | None
+    """None for an automatic report from the fair-play checks."""
     target: ReportTargetOut
     reason: ReportReason
     details: str

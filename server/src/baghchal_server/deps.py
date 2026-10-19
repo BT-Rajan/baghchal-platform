@@ -23,6 +23,7 @@ from baghchal_server.realtime.presence import Presence
 from baghchal_server.security import PasswordHasher
 
 if TYPE_CHECKING:
+    from baghchal_server.fair_play.worker import FairPlayChecker
     from baghchal_server.games.computer import ComputerPlayers
 
 
@@ -40,6 +41,7 @@ class AppState:
     presence: Presence
     metrics: Metrics
     computer: "ComputerPlayers"
+    fair_play: "FairPlayChecker"
     gateway: Gateway | None
     """Razorpay, when payments are configured."""
 

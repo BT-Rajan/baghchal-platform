@@ -19,6 +19,7 @@ test('keys are stable and distinct', () => {
     queryKeys.blocks,
     queryKeys.modReports('open'),
     queryKeys.modPlayer('x'),
+    queryKeys.modFairPlay('x'),
     queryKeys.seekCounts,
     queryKeys.playerGames('x'),
     queryKeys.analysis('x'),

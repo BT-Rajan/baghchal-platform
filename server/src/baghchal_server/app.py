@@ -23,6 +23,10 @@ from baghchal_server.config import Settings
 from baghchal_server.db import create_engine, session_factory
 from baghchal_server.deps import AppState
 from baghchal_server.errors import install_handlers
+from baghchal_server.fair_play import models as _fair_play_models  # noqa: F401  (registers tables)
+from baghchal_server.fair_play.routes import router as fair_play_router
+from baghchal_server.fair_play.worker import FairPlayChecker
+from baghchal_server.fair_play.worker import run as run_fair_play
 from baghchal_server.games import models as _game_models  # noqa: F401  (registers tables)
 from baghchal_server.games.computer import ComputerPlayers
 from baghchal_server.games.routes import router as games_router
@@ -133,6 +137,7 @@ def create_app(
             presence=RedisPresence(redis) if redis else MemoryPresence(),
             metrics=metrics,
             computer=ComputerPlayers(settings.computer_workers),
+            fair_play=FairPlayChecker(settings.fair_play_workers),
             gateway=gateway
             or (
                 RazorpayGateway(
@@ -142,16 +147,18 @@ def create_app(
                 else None
             ),
         )
-        sweeper = asyncio.create_task(run_sweeper(app.state.ctx)) if settings.game_sweeper else None
+        loops = [(settings.game_sweeper, run_sweeper), (settings.fair_play_checks, run_fair_play)]
+        background = [asyncio.create_task(run(app.state.ctx)) for on, run in loops if on]
         log.info("startup", environment=settings.environment)
         try:
             yield
         finally:
-            if sweeper is not None:
-                sweeper.cancel()
+            for task in background:
+                task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
-                    await sweeper
+                    await task
             await app.state.ctx.computer.stop()
+            app.state.ctx.fair_play.stop()
             if app.state.ctx.gateway is not None:
                 await app.state.ctx.gateway.close()
             await hub.stop()
@@ -173,6 +180,7 @@ def create_app(
     app.include_router(games_router)
     app.include_router(ratings_router)
     app.include_router(moderation_router)
+    app.include_router(fair_play_router)
     app.include_router(billing_router)
     app.include_router(appearance_router)
     app.include_router(payments_router)

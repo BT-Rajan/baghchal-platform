@@ -24,6 +24,8 @@ export type ReportReason = S['ReportIn']['reason'];
 export type Report = S['ReportOut'];
 export type ReportStatus = S['ReportOut']['status'];
 export type ModPlayer = S['ModPlayerOut'];
+export type FairPlay = S['FairPlayOut'];
+export type FairPlayFigures = S['FiguresOut'];
 export type ComputerGameRequest = S['ComputerGameIn'];
 export type Level = NonNullable<S['ComputerGameIn']['level']>;
 export type SeekResult = S['SeekOut'];
@@ -145,6 +147,8 @@ export function createApi(client: Client, transport: Transport) {
       client.post<Report>(`${V1}/mod/reports/${seg(id)}/dismiss`, { body: { reason } }),
     modPlayer: (username: string, signal?: AbortSignal) =>
       client.get<ModPlayer>(`${V1}/mod/players/${seg(username)}`, { signal }),
+    modFairPlay: (username: string, signal?: AbortSignal) =>
+      client.get<FairPlay>(`${V1}/mod/players/${seg(username)}/fair-play`, { signal }),
     suspend: (username: string, days: number | null, reason: string) =>
       client.post<ModPlayer>(`${V1}/mod/players/${seg(username)}/suspend`, {
         body: { days, reason },

@@ -10,6 +10,7 @@ import { useApi, useMe } from '@/auth/session';
 import { usernameProblem } from '@/auth/validation';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
+import { FairPlaySection } from '@/components/FairPlaySection';
 import { Notice } from '@/components/Notice';
 import { PlanAdmin } from '@/components/PlanAdmin';
 import { Screen } from '@/components/Screen';
@@ -17,7 +18,13 @@ import { ErrorState, Loading } from '@/components/States';
 import { TextField } from '@/components/TextField';
 import { TextLink } from '@/components/TextLink';
 import { useServerNow } from '@/components/useNow';
-import { actionText, dateTimeText, reasonLabel, standingText } from '@/lobby/moderation';
+import {
+  actionText,
+  dateTimeText,
+  reasonLabel,
+  reporterText,
+  standingText,
+} from '@/lobby/moderation';
 import { colors, spacing } from '@/theme';
 
 type Action =
@@ -42,7 +49,10 @@ export default function ModeratePlayer() {
       ) : record.data === undefined ? (
         <Loading label="Loading the player's record" />
       ) : (
-        <Record player={record.data} />
+        <>
+          <Record player={record.data} />
+          <FairPlaySection username={record.data.username} />
+        </>
       )}
       {me.role === 'admin' && record.data !== undefined && !record.data.deleted && (
         <PlanAdmin username={record.data.username} />
@@ -164,7 +174,7 @@ function Record({ player }: { player: ModPlayer }) {
         player.reports.map((report) => (
           <Card key={report.id}>
             <Text style={styles.text}>
-              {`${reasonLabel(report.reason)} · from ${report.reporter.username} · ${report.status}`}
+              {`${reasonLabel(report.reason)} · from ${reporterText(report)} · ${report.status}`}
             </Text>
             <Text style={styles.muted}>{dateTimeText(report.created_at)}</Text>
             {report.details !== '' && <Text style={styles.text}>{report.details}</Text>}
@@ -173,7 +183,7 @@ function Record({ player }: { player: ModPlayer }) {
             )}
             {report.status === 'open' && (
               <Button
-                title={`Dismiss the report from ${report.reporter.username}`}
+                title={`Dismiss the report from ${reporterText(report)}`}
                 label="Dismiss"
                 variant="secondary"
                 compact

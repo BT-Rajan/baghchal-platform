@@ -1,4 +1,14 @@
-import { REPORT_REASONS, actionText, dateTimeText, reasonLabel, standingText } from './moderation';
+import {
+  REPORT_REASONS,
+  actionText,
+  dateTimeText,
+  figuresText,
+  reasonLabel,
+  reportTitle,
+  reporterText,
+  standingText,
+  thinkText,
+} from './moderation';
 
 const NOW = Date.parse('2026-01-05T12:00:00Z');
 const PLAYER = { deleted: false, banned: false, suspended_until: null };
@@ -34,4 +44,44 @@ test('the moderation log', () => {
   expect(
     actionText({ action: 'dismiss_report', reason: 'r', moderator: null, created_at: at }),
   ).toBe('Dismissed a report · a former moderator · 8 January 2026, 09:30 UTC');
+});
+
+describe('who filed a report', () => {
+  const target = { id: 't', username: 'bob', suspended_until: null };
+  it('names a player', () => {
+    const report = { reporter: { id: 'r', username: 'alice' }, target };
+    expect(reporterText(report)).toBe('alice');
+    expect(reportTitle(report)).toBe('alice reported bob');
+  });
+
+  it('marks automatic fair-play reports', () => {
+    const report = { reporter: null, target };
+    expect(reporterText(report)).toBe('the automatic fair-play check');
+    expect(reportTitle(report)).toBe('Automatic fair-play check: bob');
+  });
+});
+
+describe('fair-play figures', () => {
+  const base = {
+    moves: 40,
+    decisive: 0,
+    agreement: 0,
+    average_loss: 0,
+    mistake_rate: 0,
+    blunders: 0,
+  };
+
+  it('reads as a moderator needs', () => {
+    expect(
+      figuresText({
+        ...base,
+        decisive: 120,
+        agreement: 0.92,
+        average_loss: 12.4,
+        mistake_rate: 0.005,
+      }),
+    ).toBe("Engine's move in 92.0% of 120 decisive positions · average loss 12 · mistakes 0.5%");
+    expect(figuresText(base)).toBe('No decisive positions in 40 moves');
+    expect(thinkText(2_400, 3)).toBe('Median 2.4 s per move · 3 under a second');
+  });
 });

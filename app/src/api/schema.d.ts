@@ -790,6 +790,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mod/players/{username}/fair-play": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fair Play
+         * @description The player's latest checked rated games and how close they came to the engine.
+         */
+        get: operations["fair_play_api_v1_mod_players__username__fair_play_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/plans": {
         parameters: {
             query?: never;
@@ -1366,6 +1386,30 @@ export interface components {
          * @enum {string}
          */
         ChallengeStatus: "pending" | "accepted" | "declined" | "cancelled" | "expired";
+        /** CheckedGameOut */
+        CheckedGameOut: {
+            /**
+             * Game Id
+             * Format: uuid
+             */
+            game_id: string;
+            /** Side */
+            side: string;
+            opponent: components["schemas"]["PlayerOut"];
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+            screen: components["schemas"]["FiguresOut"];
+            confirm: components["schemas"]["FiguresOut"] | null;
+            /** Think Median Ms */
+            think_median_ms: number;
+            /** Think Spread */
+            think_spread: number;
+            /** Fast Moves */
+            fast_moves: number;
+        };
         /** CheckoutIn */
         CheckoutIn: {
             /**
@@ -1601,10 +1645,37 @@ export interface components {
             expires_at: string;
         };
         /**
+         * FairPlayOut
+         * @description A player's fair-play figures, for moderators: the window they are judged on.
+         */
+        FairPlayOut: {
+            /** Games */
+            games: components["schemas"]["CheckedGameOut"][];
+            screen: components["schemas"]["FiguresOut"];
+            confirm: components["schemas"]["FiguresOut"] | null;
+            /** Screen Passed */
+            screen_passed: boolean;
+        };
+        /**
          * Feature
          * @enum {string}
          */
         Feature: "computer_hard" | "full_history" | "analysis" | "themes" | "badge" | "private_rooms" | "tournaments" | "trainer";
+        /** FiguresOut */
+        FiguresOut: {
+            /** Moves */
+            moves: number;
+            /** Decisive */
+            decisive: number;
+            /** Agreement */
+            agreement: number;
+            /** Average Loss */
+            average_loss: number;
+            /** Mistake Rate */
+            mistake_rate: number;
+            /** Blunders */
+            blunders: number;
+        };
         /** GameOut */
         GameOut: {
             /**
@@ -2163,7 +2234,7 @@ export interface components {
              * Format: uuid
              */
             id: string;
-            reporter: components["schemas"]["PlayerOut"];
+            reporter: components["schemas"]["PlayerOut"] | null;
             target: components["schemas"]["ReportTargetOut"];
             reason: components["schemas"]["ReportReason"];
             /** Details */
@@ -3864,6 +3935,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModPlayerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fair_play_api_v1_mod_players__username__fair_play_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FairPlayOut"];
                 };
             };
             /** @description Validation Error */

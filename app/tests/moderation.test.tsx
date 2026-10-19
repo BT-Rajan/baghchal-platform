@@ -221,6 +221,113 @@ describe('the report queue', () => {
   });
 });
 
+describe('fair play', () => {
+  const figures = (agreement: number, loss: number, mistakes: number) => ({
+    moves: 120,
+    decisive: 96,
+    agreement,
+    average_loss: loss,
+    mistake_rate: mistakes,
+    blunders: 0,
+  });
+
+  test('automatic reports and the figures behind them', async () => {
+    let fail = true;
+    await asModerator('/moderation', {
+      'GET /api/v1/mod/reports': (request) => ({
+        status: 200,
+        body:
+          request.query.status === 'open'
+            ? [
+                report({
+                  reporter: null,
+                  reason: 'cheating',
+                  details: 'Automatic fair-play check.',
+                }),
+              ]
+            : [],
+      }),
+      'GET /api/v1/mod/players/bob': {
+        status: 200,
+        body: record({ reports: [report({ reporter: null, reason: 'cheating' })] }),
+      },
+      'GET /api/v1/mod/players/bob/fair-play': () =>
+        fail
+          ? error(409, 'busy', 'Figures are being worked out.')
+          : {
+              status: 200,
+              body: {
+                games: [
+                  {
+                    game_id: 'g1',
+                    side: 'goat',
+                    opponent: CAROL,
+                    checked_at: '2026-01-08T09:30:00Z',
+                    screen: figures(0.85, 30, 0.01),
+                    confirm: figures(1, 0, 0),
+                    think_median_ms: 2400,
+                    think_spread: 0.1,
+                    fast_moves: 3,
+                  },
+                  {
+                    game_id: 'g2',
+                    side: 'tiger',
+                    opponent: CAROL,
+                    checked_at: '2026-01-07T09:30:00Z',
+                    screen: figures(0.85, 30, 0.01),
+                    confirm: null,
+                    think_median_ms: 2000,
+                    think_spread: 0.2,
+                    fast_moves: 0,
+                  },
+                ],
+                screen: figures(0.85, 30, 0.01),
+                confirm: figures(1, 0, 0),
+                screen_passed: true,
+              },
+            },
+    });
+    expect(await screen.findByText('Automatic fair-play check: bob')).toBeOnTheScreen();
+    await press('Review bob');
+    expect(
+      await screen.findByText(/^Cheating · from the automatic fair-play check · open/),
+    ).toBeOnTheScreen();
+    expect(
+      screen.getByRole('button', { name: 'Dismiss the report from the automatic fair-play check' }),
+    ).toBeOnTheScreen();
+    expect(await screen.findByText('Figures are being worked out.')).toBeOnTheScreen();
+    fail = false;
+    await press('Try again');
+    expect(
+      await screen.findByText(
+        "Last 2 rated games, quick review: Engine's move in 85.0% of 96 decisive positions · average loss 30 · mistakes 1.0%",
+      ),
+    ).toBeOnTheScreen();
+    expect(
+      screen.getByText(
+        "Deep review: Engine's move in 100.0% of 96 decisive positions · average loss 0 · mistakes 0.0%",
+      ),
+    ).toBeOnTheScreen();
+    expect(
+      screen.getByText('Clean enough for an engine: a deep review was asked for.'),
+    ).toBeOnTheScreen();
+    expect(screen.getByText('Goats against carol · 8 January 2026, 09:30 UTC')).toBeOnTheScreen();
+    expect(screen.getByText('Tigers against carol · 7 January 2026, 09:30 UTC')).toBeOnTheScreen();
+    expect(screen.getByText('Median 2.4 s per move · 3 under a second')).toBeOnTheScreen();
+  });
+
+  test('a player with no checked games', async () => {
+    await asModerator('/moderation/bob', {
+      'GET /api/v1/mod/players/bob': { status: 200, body: record({ reports: [] }) },
+      'GET /api/v1/mod/players/bob/fair-play': {
+        status: 200,
+        body: { games: [], screen: figures(0, 0, 0), confirm: null, screen_passed: false },
+      },
+    });
+    expect(await screen.findByText('No rated games checked yet.')).toBeOnTheScreen();
+  });
+});
+
 describe("a player's record", () => {
   test('suspending needs a reason, then shows the new state', async () => {
     const until = '2099-01-08T12:00:00Z';

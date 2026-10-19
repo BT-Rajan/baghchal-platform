@@ -111,7 +111,7 @@ async def list_reports(db: AsyncSession, status: ReportStatus, limit: int) -> li
 async def describe(db: AsyncSession, reports: Sequence[Report]) -> list[ReportOut]:
     if not reports:
         return []
-    ids = {r.reporter_id for r in reports} | {r.target_id for r in reports}
+    ids = {r.reporter_id for r in reports if r.reporter_id} | {r.target_id for r in reports}
     users = {u.id: u for u in await db.scalars(select(User).where(User.id.in_(ids)))}
     targets = {r.target_id for r in reports}
     open_counts: dict[uuid.UUID, int] = dict(
@@ -125,11 +125,16 @@ async def describe(db: AsyncSession, reports: Sequence[Report]) -> list[ReportOu
     )
     out = []
     for r in reports:
-        reporter, target = users[r.reporter_id], users[r.target_id]
+        reporter = users[r.reporter_id] if r.reporter_id else None
+        target = users[r.target_id]
         out.append(
             ReportOut(
                 id=r.id,
-                reporter=PlayerOut(id=reporter.id, username=reporter.username),
+                reporter=(
+                    None
+                    if reporter is None
+                    else PlayerOut(id=reporter.id, username=reporter.username)
+                ),
                 target=ReportTargetOut(
                     id=target.id,
                     username=target.username,
