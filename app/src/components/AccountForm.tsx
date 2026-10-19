@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 import { describeError } from '@/api/errors';
 import { checkSignUp } from '@/auth/validation';
-import { AGREEMENT_CODE_FIELDS, AGREEMENT_FIELDS } from '@/legal/agreement';
+import { AGREEMENT_CODE_FIELDS, AGREEMENT_FIELDS, type KnownAge } from '@/legal/agreement';
 
 import { AgreementFields, useAgreement, type AgreementBody } from './AgreementFields';
 import { Button } from './Button';
@@ -34,14 +34,17 @@ const CODE_FIELDS = {
 export function AccountForm({
   action,
   submitTitle,
+  knownAge,
 }: {
   action: UseMutationResult<unknown, Error, AccountDetails>;
   submitTitle: string;
+  /** The age the server already has (a guest's): it is not asked again. */
+  knownAge?: KnownAge;
 }) {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const agreement = useAgreement({ guest: false });
+  const agreement = useAgreement({ guest: false, ...(knownAge && { known: knownAge }) });
   const { fieldError, formMessage, accept } = useFormErrors(FIELDS, action.error, CODE_FIELDS);
 
   const submit = () => {

@@ -20,7 +20,8 @@ import { Notice } from './Notice';
 import { PresenceDot } from './PlayerRow';
 
 export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean }) {
-  const guestViewer = useMe().role === 'guest';
+  const me = useMe();
+  const guestViewer = me.role === 'guest';
   return (
     <>
       <View style={styles.presence}>
@@ -69,13 +70,14 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
       {!isMe &&
         !profile.blocked &&
         guestViewer === false &&
+        me.plays_people &&
         !profile.username.startsWith('guest-') && (
           <FriendControl username={profile.username} relation={profile.friend ?? 'none'} />
         )}
       {!isMe && !profile.blocked && (
         <Button
           title={`Challenge ${profile.username}`}
-          disabled={!canChallenge(profile)}
+          disabled={!me.plays_people || !canChallenge(profile)}
           onPress={() => router.push(`/challenge/${profile.username}`)}
         />
       )}

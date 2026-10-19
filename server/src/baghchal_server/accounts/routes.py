@@ -8,6 +8,7 @@ from baghchal_server.accounts import lifecycle, service
 from baghchal_server.accounts.models import User
 from baghchal_server.accounts.schemas import (
     Accepted,
+    ClaimIn,
     DeleteAccountIn,
     EmailChangeConfirmIn,
     EmailChangedOut,
@@ -20,6 +21,7 @@ from baghchal_server.accounts.schemas import (
     PasswordResetConfirmIn,
     PasswordResetRequestIn,
     RegisterIn,
+    ResendVerificationIn,
     SessionOut,
     Transport,
     VerifyEmailIn,
@@ -132,7 +134,7 @@ async def play_as_guest(
 
 @router.post("/me/claim")
 async def claim_guest(
-    data: RegisterIn, user: CurrentUser, tasks: BackgroundTasks, state: State, db: DB
+    data: ClaimIn, user: CurrentUser, tasks: BackgroundTasks, state: State, db: DB
 ) -> MeOut:
     """Make my guest account a real one: the username and password work at once; the email
     address once the link sent to it is opened."""
@@ -200,6 +202,19 @@ async def logout(request: Request, response: Response, state: State, db: DB) -> 
         await service.revoke_session(db, token)
     if transport == "cookie":
         _clear_cookie(response, state)
+
+
+@router.post("/auth/verify-email/resend", status_code=status.HTTP_202_ACCEPTED)
+async def resend_verification(
+    data: ResendVerificationIn, request: Request, tasks: BackgroundTasks, state: State, db: DB
+) -> Accepted:
+    """Email a new confirmation link if the address has a sign-up waiting for one. Always
+    answers the same, so it tells nobody whether an address is registered."""
+    await enforce_limit(state, RESET_PER_IP, client_ip(request))
+    await enforce_limit(state, MAIL_PER_ADDRESS, service.email_key(data.email))
+    mail = await service.resend_verification(db, state.settings, state.clock(), data.email)
+    _send(tasks, state, mail)
+    return Accepted()
 
 
 @router.post("/auth/password-reset", status_code=status.HTTP_202_ACCEPTED)

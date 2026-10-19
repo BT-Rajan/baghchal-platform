@@ -128,12 +128,13 @@ describe('a guest', () => {
     await fireEvent.changeText(screen.getByLabelText('Username'), 'Sita');
     await fireEvent.changeText(screen.getByLabelText('Email'), ' sita@example.com ');
     await fireEvent.changeText(screen.getByLabelText('Password'), 'correct horse');
-    await fireEvent.changeText(screen.getByLabelText('Month of birth'), '1');
-    await fireEvent.changeText(screen.getByLabelText('Year of birth'), '1990');
     await press('Make my account');
     expect(await screen.findByRole('heading', { name: 'Welcome, Sita!' })).toBeOnTheScreen();
+    // The age given when the guest started playing is kept, not asked again.
+    expect(screen.queryByLabelText('Month of birth')).toBeNull();
     expect(server.lastTo('POST /api/v1/me/claim').body).toEqual({
-      ...AGREED,
+      terms_version: AGREED.terms_version,
+      privacy_version: AGREED.privacy_version,
       username: 'Sita',
       email: 'sita@example.com',
       password: 'correct horse',
@@ -153,8 +154,6 @@ describe('a guest', () => {
     await fireEvent.changeText(screen.getByLabelText('Username'), 'bob');
     await fireEvent.changeText(screen.getByLabelText('Email'), 'b@example.com');
     await fireEvent.changeText(screen.getByLabelText('Password'), 'correct horse');
-    await fireEvent.changeText(screen.getByLabelText('Month of birth'), '1');
-    await fireEvent.changeText(screen.getByLabelText('Year of birth'), '1990');
     await press('Make my account');
     expect(await screen.findByText('That username is taken.')).toBeOnTheScreen();
   });

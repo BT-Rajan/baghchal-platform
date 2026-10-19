@@ -15,7 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from baghchal_server.accounts.models import EmailToken, Session, User
-from baghchal_server.accounts.schemas import Agreement, LoginIn, RegisterIn
+from baghchal_server.accounts.schemas import Agreement, ClaimIn, LoginIn, RegisterIn
 from baghchal_server.config import Settings
 from baghchal_server.errors import AppError
 from baghchal_server.legal import age
@@ -227,7 +227,7 @@ async def claim_guest(  # noqa: PLR0913, PLR0917 - who, and the account they wan
     settings: Settings,
     now: datetime,
     user: User,
-    data: RegisterIn,
+    data: ClaimIn,
 ) -> list[Mail]:
     """Turn a guest into an account, keeping its games: the username and password work at
     once; the email address once its confirmation link is opened (as for a change of email,
@@ -236,7 +236,13 @@ async def claim_guest(  # noqa: PLR0913, PLR0917 - who, and the account they wan
     if user.role != GUEST:
         raise AppError(409, "not_a_guest", "You already have an account.")
     legal.check_versions(data.terms_version, data.privacy_version)
-    adult = age.check(data.birth_month, data.parent_email, data.email, now)
+    if data.birth_month is not None:
+        adult = age.adult_from(data.birth_month, now)
+    elif user.age_checked_at is not None:  # given when the guest started playing
+        adult = user.adult_from if user.adult_from is not None and user.adult_from > now else None
+    else:
+        raise AppError(422, "birth_month_required", "Please give your month and year of birth.")
+    age.check_parent(adult, data.parent_email, data.email)
     ukey = username_key(data.username)
     if not username_allowed(settings, data.username):
         raise AppError(409, "username_unavailable", "That username is not available.")
@@ -335,6 +341,19 @@ async def revoke_session(db: AsyncSession, token: str) -> None:
 
 
 # ── Password reset ────────────────────────────────────────────────────────
+
+
+async def resend_verification(
+    db: AsyncSession, settings: Settings, now: datetime, email: str
+) -> Mail | None:
+    """A fresh confirmation link for a sign-up not yet confirmed, or None (nothing to send).
+    The earlier links keep working until they expire."""
+    user = await db.scalar(select(User).where(User.email_key == email_key(email)))
+    if user is None or not user.is_active or user.email_verified_at is not None:
+        return None
+    token = await issue_token(db, user.id, VERIFY, now + settings.verify_email_ttl, now)
+    await db.commit()
+    return _verify_mail(settings, user, token)
 
 
 async def request_password_reset(

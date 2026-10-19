@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { LegalVersions } from '@/api/endpoints';
-import { classify } from '@/legal/age';
+import { classify, type AgeAnswer } from '@/legal/age';
 import {
   asksParent,
   checkAgreement,
@@ -11,6 +11,7 @@ import {
   type AgeDetails,
   type AgreementField,
   type AgreementInput,
+  type KnownAge,
 } from '@/legal/agreement';
 import { useLegalVersions } from '@/legal/hooks';
 import { colors, spacing, type } from '@/theme';
@@ -25,11 +26,15 @@ export type AgreementBody = AgeDetails & { terms_version: string; privacy_versio
  * The state behind `AgreementFields`, for the one form it sits in. `check` gives the problems to
  * show and, when there are none, what to send.
  */
-export function useAgreement({ guest }: { guest: boolean }) {
+export function useAgreement({ guest, known }: { guest: boolean; known?: KnownAge }) {
   const versions = useLegalVersions();
   const [input, setInput] = useState<AgreementInput>(EMPTY_AGREEMENT);
   const check = (ownEmail = '') => {
-    const { problems, details } = checkAgreement(input, new Date(), { guest, ownEmail });
+    const { problems, details } = checkAgreement(input, new Date(), {
+      guest,
+      ownEmail,
+      ...(known && { known }),
+    });
     const agreed: LegalVersions | undefined = versions.data;
     const body: AgreementBody | null =
       details && agreed
@@ -37,7 +42,7 @@ export function useAgreement({ guest }: { guest: boolean }) {
         : null;
     return { problems, body };
   };
-  return { input, setInput, versions, check, guest };
+  return { input, setInput, versions, check, guest, known };
 }
 
 /**
@@ -82,38 +87,42 @@ function AgeFields({
   agreement: ReturnType<typeof useAgreement>;
   fieldError: (field: AgreementField) => string | undefined;
 }) {
-  const { input, setInput, guest } = agreement;
-  const answer = classify(input.month, input.year, new Date());
+  const { input, setInput, guest, known } = agreement;
+  const answer: AgeAnswer = known ? { kind: known } : classify(input.month, input.year, new Date());
   const set = (change: Partial<AgreementInput>) => setInput({ ...input, ...change });
   const birthError = fieldError('birth_month');
   return (
     <>
-      <View style={styles.row}>
-        <View style={styles.cell}>
-          <TextField
-            label="Month of birth"
-            placeholder="MM"
-            value={input.month}
-            onChangeText={(month) => set({ month })}
-            keyboardType="number-pad"
-            maxLength={2}
-          />
-        </View>
-        <View style={styles.cell}>
-          <TextField
-            label="Year of birth"
-            placeholder="YYYY"
-            value={input.year}
-            onChangeText={(year) => set({ year })}
-            keyboardType="number-pad"
-            maxLength={4}
-          />
-        </View>
-      </View>
-      {birthError !== undefined && (
-        <Text role="alert" style={styles.error}>
-          {birthError}
-        </Text>
+      {known === undefined && (
+        <>
+          <View style={styles.row}>
+            <View style={styles.cell}>
+              <TextField
+                label="Month of birth"
+                placeholder="MM"
+                value={input.month}
+                onChangeText={(month) => set({ month })}
+                keyboardType="number-pad"
+                maxLength={2}
+              />
+            </View>
+            <View style={styles.cell}>
+              <TextField
+                label="Year of birth"
+                placeholder="YYYY"
+                value={input.year}
+                onChangeText={(year) => set({ year })}
+                keyboardType="number-pad"
+                maxLength={4}
+              />
+            </View>
+          </View>
+          {birthError !== undefined && (
+            <Text role="alert" style={styles.error}>
+              {birthError}
+            </Text>
+          )}
+        </>
       )}
       {answer.kind === 'minor' && guest && (
         <Hint>

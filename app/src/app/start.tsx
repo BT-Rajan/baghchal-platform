@@ -8,7 +8,7 @@ import { useFormErrors } from '@/components/form';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { TextLink } from '@/components/TextLink';
-import { AGREEMENT_CODE_FIELDS, AGREEMENT_FIELDS } from '@/legal/agreement';
+import { AGREEMENT_CODE_FIELDS, AGREEMENT_FIELDS, withAge } from '@/legal/agreement';
 import { useOpenStartedGame } from '@/lobby/hooks';
 
 /**
@@ -26,7 +26,7 @@ export default function Start() {
   const play = useMutation({
     mutationFn: async (body: NonNullable<ReturnType<typeof agreement.check>['body']>) => {
       const { parent_email: _, ...guest } = body;
-      await session.playAsGuest(guest);
+      await session.playAsGuest(withAge(guest));
       const game = await api.playComputer(FIRST_GAME);
       // Open it once the screens for signed-in players are in place, or their guard would send
       // the game back to the welcome page.

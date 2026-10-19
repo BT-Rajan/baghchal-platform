@@ -40,6 +40,20 @@ class RegisterIn(Agreement):
     """Required for players under 18: their parent or guardian is asked to agree."""
 
 
+class ClaimIn(Strict):
+    """A guest's account: as for sign-up, but the month of birth the guest gave is kept, so
+    it is asked again only of guests who never gave one."""
+
+    username: Username
+    email: Email
+    password: Password
+    terms_version: LegalVersion
+    privacy_version: LegalVersion
+    birth_month: BirthMonth | None = None
+    parent_email: Email | None = None
+    """Required for players under 18: their parent or guardian is asked to agree."""
+
+
 class VerifyEmailIn(Strict):
     token: Token
     transport: Transport = "cookie"
@@ -53,6 +67,10 @@ class LoginIn(Strict):
 
 
 class PasswordResetRequestIn(Strict):
+    email: Email
+
+
+class ResendVerificationIn(Strict):
     email: Email
 
 

@@ -28,9 +28,13 @@ export const AGREEMENT_CODE_FIELDS = {
 
 /** What is sent: the month of birth, and a parent's address for a minor's account. */
 export interface AgeDetails {
-  birth_month: string;
+  /** Left out when the server already knows the age (a guest making their account). */
+  birth_month?: string;
   parent_email?: string;
 }
+
+/** An age the server already has: a guest's, given when they started playing. */
+export type KnownAge = 'adult' | 'minor';
 
 /** Whether a parent's address is asked for: minors making an account, not guests. */
 export function asksParent(answer: AgeAnswer, guest: boolean): boolean {
@@ -40,9 +44,9 @@ export function asksParent(answer: AgeAnswer, guest: boolean): boolean {
 export function checkAgreement(
   input: AgreementInput,
   now: Date,
-  { guest, ownEmail }: { guest: boolean; ownEmail: string },
+  { guest, ownEmail, known }: { guest: boolean; ownEmail: string; known?: KnownAge },
 ): { problems: Problems<AgreementField>; details: AgeDetails | null } {
-  const answer = classify(input.month, input.year, now);
+  const answer: AgeAnswer = known ? { kind: known } : classify(input.month, input.year, now);
   const problems: Problems<AgreementField> = {};
   if (answer.kind === 'incomplete')
     problems.birth_month = 'Enter the month and year you were born.';
@@ -61,11 +65,16 @@ export function checkAgreement(
     }
   }
   if (Object.keys(problems).length > 0) return { problems, details: null };
-  const birth = birthMonth(input.month, input.year);
+  const birth = known ? {} : { birth_month: birthMonth(input.month, input.year) };
   return {
     problems,
-    details: asksParent(answer, guest)
-      ? { birth_month: birth, parent_email: parent }
-      : { birth_month: birth },
+    details: asksParent(answer, guest) ? { ...birth, parent_email: parent } : birth,
   };
+}
+
+/** For a form that asked the age (sign-up, a guest's first game): the details, with it. */
+export function withAge<T extends AgeDetails>(details: T): T & { birth_month: string } {
+  const { birth_month } = details;
+  if (birth_month === undefined) throw new Error('This form asks for the month of birth.');
+  return { ...details, birth_month };
 }

@@ -91,7 +91,9 @@ export function createApi(client: Client, transport: Transport) {
       client.post<Session>(`${V1}/auth/verify-email`, { body: { token, transport } }),
     playAsGuest: (agreement: Agreement) =>
       client.post<Session>(`${V1}/auth/guest`, { body: { ...agreement, transport } }),
-    claimAccount: (body: S['RegisterIn']) => client.post<Me>(`${V1}/me/claim`, { body }),
+    claimAccount: (body: S['ClaimIn']) => client.post<Me>(`${V1}/me/claim`, { body }),
+    resendVerification: (email: string) =>
+      client.post<S['Accepted']>(`${V1}/auth/verify-email/resend`, { body: { email } }),
     login: (login: string, password: string) =>
       client.post<Session>(`${V1}/auth/login`, { body: { login, password, transport } }),
     logout: () => client.post<void>(`${V1}/auth/logout`),
