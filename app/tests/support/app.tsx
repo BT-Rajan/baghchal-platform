@@ -6,6 +6,7 @@ import { serverClock } from '@/game/serverClock';
 
 import { fakeServer, type Route } from './fakeServer';
 import { FakeSocket } from './fakeSocket';
+import { DAILY } from './games';
 import { FREE, PLANS } from './plans';
 
 const mockSecure = new Map<string, string>();
@@ -28,6 +29,9 @@ export const QUIET_LOBBY: Record<string, Route> = {
   // Profiles show game history; nobody has played yet unless a test says so.
   'GET /api/v1/players/alice/games': { status: 200, body: [] },
   'GET /api/v1/players/bob/games': { status: 200, body: [] },
+  'GET /api/v1/players/guest-3fa9c1/games': { status: 200, body: [] },
+  // Home shows today's puzzle.
+  'GET /api/v1/trainer/daily': { status: 200, body: DAILY },
   // Everyone is on the Free plan unless a test says otherwise.
   'GET /api/v1/me/plan': { status: 200, body: FREE },
   'GET /api/v1/plans': { status: 200, body: PLANS },

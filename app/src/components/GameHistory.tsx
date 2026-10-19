@@ -19,8 +19,20 @@ import { ErrorState, Loading } from './States';
 
 const PAGE = 20;
 
-/** A player's finished games, newest first; each opens the game to replay it. */
-export function GameHistory({ username }: { username: string }) {
+/** How many games the home screen's preview shows. */
+const PREVIEW = 3;
+
+/**
+ * A player's finished games, newest first; each opens the game to replay it. As a `preview`
+ * (the home screen), only the latest few, with a way to the rest on the Me tab.
+ */
+export function GameHistory({
+  username,
+  preview = false,
+}: {
+  username: string;
+  preview?: boolean;
+}) {
   const api = useApi();
   const history = useInfiniteQuery({
     queryKey: queryKeys.playerGames(username),
@@ -29,7 +41,8 @@ export function GameHistory({ username }: { username: string }) {
     getNextPageParam: (last: GameSummary[]) =>
       last.length < PAGE ? undefined : last.at(-1)?.finished_at,
   });
-  const games = history.data?.pages.flat() ?? [];
+  const all = history.data?.pages.flat() ?? [];
+  const games = preview ? all.slice(0, PREVIEW) : all;
   const mine = useMyPlan();
   const limited = mine.data !== undefined && !has(mine.data, 'full_history');
   return (
@@ -64,12 +77,20 @@ export function GameHistory({ username }: { username: string }) {
           ))}
         </Card>
       )}
-      {limited && (
+      {preview && all.length > 0 && (
+        <Button
+          title="See all your games"
+          variant="secondary"
+          compact
+          onPress={() => router.navigate('/me')}
+        />
+      )}
+      {!preview && limited && (
         <Upsell feature="full_history">
           Your history shows games from the last 30 days. Keep every game.
         </Upsell>
       )}
-      {history.hasNextPage && (
+      {!preview && history.hasNextPage && (
         <Button
           title="Show more games"
           variant="secondary"

@@ -22,4 +22,5 @@ export const queryKeys = {
   tournaments: ['tournaments'] as const,
   tournament: (code: string) => ['tournament', code] as const,
   trainer: (kind: string) => ['trainer', kind] as const,
+  dailyPuzzle: ['trainer', 'daily'] as const,
 };

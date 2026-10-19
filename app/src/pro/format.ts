@@ -1,4 +1,4 @@
-/** Words for tournaments and the trainer (the Pro extras). */
+/** Words for tournaments and the trainer (the Pro extras, and the daily puzzle for everyone). */
 import type { Pairing, Tournament, Trainer, TrainerAnswer, TrainerPuzzle } from '@/api/endpoints';
 
 /** "Waiting for players: 2 of 6", "4 of 12 games played", "Finished". */
@@ -30,7 +30,7 @@ export function puzzlePrompt(puzzle: TrainerPuzzle): string {
   return `${puzzle.side === 'goat' ? 'Goats' : 'Tigers'} to play: find the best move.`;
 }
 
-export function answerText(answer: TrainerAnswer): string {
+export function answerText(answer: Pick<TrainerAnswer, 'correct' | 'best'>): string {
   return answer.correct
     ? 'Correct! That is the best move.'
     : `Not quite. The best move was ${answer.best}.`;

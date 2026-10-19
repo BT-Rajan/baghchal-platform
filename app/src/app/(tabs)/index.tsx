@@ -8,6 +8,8 @@ import { useMe } from '@/auth/session';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { ChallengeCard } from '@/components/ChallengeCard';
+import { DailyPuzzle } from '@/components/DailyPuzzle';
+import { GameHistory } from '@/components/GameHistory';
 import { GuestBanner } from '@/components/GuestBanner';
 import { Notice } from '@/components/Notice';
 import { PlayerRow } from '@/components/PlayerRow';
@@ -23,12 +25,15 @@ import {
   useOnlinePlayers,
   usePlayerSearch,
 } from '@/lobby/hooks';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, type } from '@/theme';
 
-/** Two columns (challenges | players) from this width. */
+/** Two columns (my games and things to do | players) from this width. */
 const WIDE = 900;
 
-/** The lobby: my live game, my challenges, and players to challenge. */
+/**
+ * Home: a game to continue, challenges, a way to start one, today's puzzle and my latest
+ * results, beside the players online to challenge.
+ */
 export default function Play() {
   const me = useMe();
   const now = useServerNow();
@@ -48,10 +53,6 @@ export default function Play() {
     answer.isPending && answer.variables.id === id ? answer.variables.answer : null;
 
   const others = players.data?.filter((p) => p.id !== me.id).length ?? 0;
-  const quiet =
-    games.data?.length === 0 &&
-    challenges.data !== undefined &&
-    incoming.length + outgoing.length === 0;
   const wide = width >= WIDE;
 
   const gamesAndChallenges = (
@@ -65,13 +66,6 @@ export default function Play() {
       {answer.error !== null && <Notice tone="error">{describeError(answer.error)}</Notice>}
       {challenges.error !== null && (
         <ErrorState error={challenges.error} onRetry={() => void challenges.refetch()} />
-      )}
-      {games.data?.length === 0 && <Button title="Play now" onPress={() => router.push('/play')} />}
-      {quiet && (
-        <Hint>
-          Play now pairs you with anyone who wants the same game, or with the computer. You can also
-          challenge someone who is online, or wait here to be challenged.
-        </Hint>
       )}
       {incoming.length > 0 && <SectionTitle>Challenges for you</SectionTitle>}
       {incoming.map((c) => (
@@ -95,6 +89,15 @@ export default function Play() {
           onAnswer={(a) => answer.mutate({ id: c.id, answer: a })}
         />
       ))}
+      {games.data?.length === 0 && (
+        <Card>
+          <Text style={styles.cardTitle}>Ready for a game?</Text>
+          <Hint>Quick or standard, rated or casual, with whoever is waiting or the computer.</Hint>
+          <Button title="Play now" onPress={() => router.push('/play')} />
+        </Card>
+      )}
+      <DailyPuzzle />
+      <GameHistory username={me.username} preview />
     </View>
   );
 
@@ -117,7 +120,11 @@ export default function Play() {
       ) : players.data === undefined ? (
         <Loading label="Loading players" />
       ) : players.data.length === 0 ? (
-        <Hint>{prefix === null ? 'Nobody else is online right now.' : 'No players found.'}</Hint>
+        prefix === null ? (
+          <NobodyOnline guest={me.role === 'guest'} />
+        ) : (
+          <Hint>No players found.</Hint>
+        )
       ) : (
         <>
           <Card>
@@ -125,7 +132,7 @@ export default function Play() {
               <PlayerRow key={player.id} player={player} isMe={player.id === me.id} />
             ))}
           </Card>
-          {prefix === null && others === 0 && <Hint>Nobody else is online right now.</Hint>}
+          {prefix === null && others === 0 && <NobodyOnline guest={me.role === 'guest'} />}
         </>
       )}
     </View>
@@ -149,10 +156,28 @@ export default function Play() {
   );
 }
 
+/** Nobody to challenge here: the next step is a friend, by link (members only). */
+function NobodyOnline({ guest }: { guest: boolean }) {
+  return (
+    <Card>
+      <Hint>Nobody else is online right now.</Hint>
+      {!guest && (
+        <Button
+          title="Challenge a friend by link"
+          icon="link"
+          variant="secondary"
+          onPress={() => router.push('/invite')}
+        />
+      )}
+    </Card>
+  );
+}
+
 function LiveGame({ game, myId }: { game: Game; myId: string }) {
   const opponent = game.goat.id === myId ? game.tiger : game.goat;
   return (
-    <Card>
+    <Card tone="accent">
+      <Text style={styles.cardTitle}>Continue your game</Text>
       <Text style={styles.live}>{`Your game against ${opponent.username} is on.`}</Text>
       <Button title="Resume game" onPress={() => router.push(`/game/${game.id}`)} />
     </Card>
@@ -160,7 +185,8 @@ function LiveGame({ game, myId }: { game: Game; myId: string }) {
 }
 
 const styles = StyleSheet.create({
-  live: { fontSize: 16, fontWeight: '600', color: colors.text },
+  cardTitle: { ...type.heading, color: colors.text },
+  live: { fontSize: 16, color: colors.text },
   row: { flexDirection: 'row', gap: spacing.xl, alignItems: 'flex-start' },
   half: { flex: 1 },
   column: { gap: spacing.md },

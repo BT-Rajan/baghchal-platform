@@ -67,6 +67,15 @@ export function useTrainer(kind: TrainerKind) {
   });
 }
 
+/** Today's puzzle: the same for everyone, on every plan. */
+export function useDailyPuzzle() {
+  const api = useApi();
+  return useQuery({
+    queryKey: queryKeys.dailyPuzzle,
+    queryFn: ({ signal }) => api.dailyPuzzle(signal),
+  });
+}
+
 export function useAnswerPuzzle() {
   const api = useApi();
   return useMutation({

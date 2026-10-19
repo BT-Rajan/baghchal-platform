@@ -2535,10 +2535,29 @@
         }
       }
     },
+    "/api/v1/trainer/daily": {
+      "get": {
+        "summary": "Daily",
+        "description": "Today's puzzle, the same for everyone and free on every plan, and my answer to it.",
+        "operationId": "daily_api_v1_trainer_daily_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/trainer/{puzzle_id}/answer": {
       "post": {
         "summary": "Answer",
-        "description": "Was this the best move? The answer says which was.",
+        "description": "Was this the best move? The answer says which was. Pro, except for today's puzzle.",
         "operationId": "answer_api_v1_trainer__puzzle_id__answer_post",
         "parameters": [
           {
@@ -3137,6 +3156,58 @@
         "additionalProperties": false,
         "type": "object",
         "title": "ComputerGameIn"
+      },
+      "DailyAnswerOut": {
+        "properties": {
+          "move": {
+            "type": "string",
+            "title": "Move"
+          },
+          "correct": {
+            "type": "boolean",
+            "title": "Correct"
+          },
+          "best": {
+            "type": "string",
+            "title": "Best"
+          }
+        },
+        "type": "object",
+        "required": [
+          "move",
+          "correct",
+          "best"
+        ],
+        "title": "DailyAnswerOut"
+      },
+      "DailyOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "puzzle": {
+            "$ref": "#/components/schemas/PuzzleOut"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DailyAnswerOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "puzzle",
+          "answer"
+        ],
+        "title": "DailyOut"
       },
       "DeleteAccountIn": {
         "properties": {

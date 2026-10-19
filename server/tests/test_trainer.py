@@ -109,3 +109,33 @@ async def test_every_puzzle_solved(
     await _answer(alice, "o001", "c3")
     done = await _next(alice)
     assert (done["puzzle"], done["solved"], done["total"]) == (None, 1, 1)
+
+
+async def test_the_daily_puzzle_is_for_everyone(players: PlayerFactory, clock: Clock) -> None:
+    alice, bob = await players("alice"), await players("bob")
+    today = (await alice.http.get(f"{URL}/daily")).json()
+    puzzle = today["puzzle"]
+    assert (today["date"], today["answer"]) == ("2026-01-01", None)
+    assert "best" not in puzzle
+    # The same puzzle for everyone today.
+    assert (await bob.http.get(f"{URL}/daily")).json()["puzzle"] == puzzle
+
+    # Free players answer it like any trainer puzzle; the first answer is the one kept.
+    r = await _answer(alice, puzzle["id"], _wrong(puzzle))
+    assert (r.status_code, r.json()["correct"]) == (200, False)
+    best = PUZZLES[puzzle["id"]].best
+    assert (await _answer(alice, puzzle["id"], best)).json()["correct"] is True
+    assert (await alice.http.get(f"{URL}/daily")).json()["answer"] == {
+        "move": _wrong(puzzle),
+        "correct": False,
+        "best": best,
+    }
+    # The rest of the trainer is still Pro.
+    other = next(p for p in PUZZLES if p != puzzle["id"])
+    assert (await _answer(alice, other, "c3")).status_code == 403
+
+    # Tomorrow brings a new puzzle, not yet answered.
+    clock.advance(days=1)
+    tomorrow = (await alice.http.get(f"{URL}/daily")).json()
+    assert (tomorrow["date"], tomorrow["answer"]) == ("2026-01-02", None)
+    assert tomorrow["puzzle"]["id"] == service.daily_puzzle(clock.now.date()).id

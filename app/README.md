@@ -95,6 +95,10 @@ scripts/        the Expo-cloud guardrail
 - **Your account.** Me → Account settings changes the email address (confirmed by a link sent
   to the new one) or password, downloads your data (a file on the web, the share sheet in
   apps) and deletes the account.
+- **Home.** The Play tab is a dashboard: a live game to continue first, challenges, "Play
+  now", today's puzzle (`DailyPuzzle`, on the same `PuzzleBoard` as the trainer), the latest
+  three results (`GameHistory` as a preview, with the rest on Me), and beside them the players
+  online. When nobody else is online, it offers a challenge by link.
 - **Play now.** The lobby's "Play now" opens a screen to pair with whoever wants the same game
   (casual or rated, with a live count of who is waiting; leaving the screen stops waiting) or
   to play the computer at a chosen strength and side.

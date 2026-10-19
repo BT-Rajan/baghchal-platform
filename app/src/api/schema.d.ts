@@ -1165,6 +1165,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trainer/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daily
+         * @description Today's puzzle, the same for everyone and free on every plan, and my answer to it.
+         */
+        get: operations["daily_api_v1_trainer_daily_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trainer/{puzzle_id}/answer": {
         parameters: {
             query?: never;
@@ -1176,7 +1196,7 @@ export interface paths {
         put?: never;
         /**
          * Answer
-         * @description Was this the best move? The answer says which was.
+         * @description Was this the best move? The answer says which was. Pro, except for today's puzzle.
          */
         post: operations["answer_api_v1_trainer__puzzle_id__answer_post"];
         delete?: never;
@@ -1398,6 +1418,25 @@ export interface components {
              * @enum {string}
              */
             time_control: "3+2" | "5+3" | "10+5" | "15+10";
+        };
+        /** DailyAnswerOut */
+        DailyAnswerOut: {
+            /** Move */
+            move: string;
+            /** Correct */
+            correct: boolean;
+            /** Best */
+            best: string;
+        };
+        /** DailyOut */
+        DailyOut: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            puzzle: components["schemas"]["PuzzleOut"];
+            answer: components["schemas"]["DailyAnswerOut"] | null;
         };
         /** DeleteAccountIn */
         DeleteAccountIn: {
@@ -4416,6 +4455,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    daily_api_v1_trainer_daily_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyOut"];
                 };
             };
         };

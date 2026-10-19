@@ -59,6 +59,7 @@ export type Trainer = S['TrainerOut'];
 export type TrainerKind = S['Kind'];
 export type TrainerPuzzle = S['PuzzleOut'];
 export type TrainerAnswer = S['AnswerOut'];
+export type DailyPuzzle = S['DailyOut'];
 
 export type ChallengeAnswer = 'accept' | 'decline' | 'cancel';
 export type GameAction = 'resign' | 'abort' | 'claim-abandonment';
@@ -189,6 +190,8 @@ export function createApi(client: Client, transport: Transport) {
     // Trainer
     trainer: (kind: TrainerKind, signal?: AbortSignal) =>
       client.get<Trainer>(`${V1}/trainer`, { query: { kind }, signal }),
+    dailyPuzzle: (signal?: AbortSignal) =>
+      client.get<DailyPuzzle>(`${V1}/trainer/daily`, { signal }),
     answerPuzzle: (id: string, move: string) =>
       client.post<TrainerAnswer>(`${V1}/trainer/${seg(id)}/answer`, { body: { move } }),
 

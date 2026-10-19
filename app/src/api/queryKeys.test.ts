@@ -28,6 +28,7 @@ test('keys are stable and distinct', () => {
     queryKeys.tournaments,
     queryKeys.tournament('x'),
     queryKeys.trainer('x'),
+    queryKeys.dailyPuzzle,
   ].map((key) => JSON.stringify(key));
   expect(new Set(all).size).toBe(all.length);
 });
