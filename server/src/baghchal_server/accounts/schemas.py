@@ -197,6 +197,12 @@ class ExportNotification(BaseModel):
     read_at: datetime | None
 
 
+class ExportChatMessage(BaseModel):
+    game_id: uuid.UUID
+    text: str
+    sent_at: datetime
+
+
 class ExportConsent(BaseModel):
     document: str
     version: str
@@ -215,4 +221,6 @@ class ExportOut(BaseModel):
     blocked_players: list[str]
     friends: list[str]
     notifications: list["ExportNotification"]
+    chat_messages: list["ExportChatMessage"] = []
+    """What I wrote in game chats (kept 30 days)."""
     sessions: list[ExportSession]

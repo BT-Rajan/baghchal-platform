@@ -1704,6 +1704,88 @@
         }
       }
     },
+    "/api/v1/games/{game_id}/draw": {
+      "post": {
+        "summary": "Offer Draw",
+        "description": "Offer a draw, or accept the opponent's open offer (the game ends drawn). Not against the\ncomputer, and not before both sides have moved.",
+        "operationId": "offer_draw_api_v1_games__game_id__draw_post",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/draw/decline": {
+      "post": {
+        "summary": "Decline Draw",
+        "description": "Turn down the opponent's draw offer (moving on does the same).",
+        "operationId": "decline_draw_api_v1_games__game_id__draw_decline_post",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/games/{game_id}/claim-abandonment": {
       "post": {
         "summary": "Claim Abandonment",
@@ -1940,6 +2022,47 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ReportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mod/games/{game_id}/chat": {
+      "get": {
+        "summary": "Game Chat",
+        "description": "What was written in a game (kept 30 days), for checking a report about it.",
+        "operationId": "game_chat_api_v1_mod_games__game_id__chat_get",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModChatOut"
                 }
               }
             }
@@ -2963,6 +3086,96 @@
         }
       }
     },
+    "/api/v1/games/{game_id}/chat": {
+      "get": {
+        "summary": "Read Chat",
+        "description": "The game's chat: whether it is open (adults with accounts, both with messages on, no\nblock, the game on or just over), and what has been said.",
+        "operationId": "read_chat_api_v1_games__game_id__chat_get",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Send Chat",
+        "description": "Write to the other player. Blocked words are masked; both players get a ``chat`` event.\nKept 30 days, so a report about it can be checked.",
+        "operationId": "send_chat_api_v1_games__game_id__chat_post",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessageOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/trainer": {
       "get": {
         "summary": "Trainer",
@@ -3557,6 +3770,92 @@
         ],
         "title": "ChallengeStatus"
       },
+      "ChatIn": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "ChatIn"
+      },
+      "ChatMessageOut": {
+        "properties": {
+          "side": {
+            "type": "string",
+            "enum": [
+              "goat",
+              "tiger"
+            ],
+            "title": "Side"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "sent_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sent At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "side",
+          "text",
+          "sent_at"
+        ],
+        "title": "ChatMessageOut"
+      },
+      "ChatOut": {
+        "properties": {
+          "open": {
+            "type": "boolean",
+            "title": "Open"
+          },
+          "closed_because": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "computer",
+                  "guest",
+                  "under_18",
+                  "messages_off",
+                  "blocked",
+                  "game_over"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed Because"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMessageOut"
+            },
+            "type": "array",
+            "title": "Messages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "open",
+          "closed_because",
+          "messages"
+        ],
+        "title": "ChatOut",
+        "description": "A game's chat, as one of its players sees it."
+      },
       "CheckedGameOut": {
         "properties": {
           "game_id": {
@@ -4062,7 +4361,8 @@
           "timeout",
           "resigned",
           "abandoned",
-          "aborted"
+          "aborted",
+          "draw_agreed"
         ],
         "title": "EndReason"
       },
@@ -4202,6 +4502,31 @@
           "status"
         ],
         "title": "ExportChallenge"
+      },
+      "ExportChatMessage": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "sent_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sent At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_id",
+          "text",
+          "sent_at"
+        ],
+        "title": "ExportChatMessage"
       },
       "ExportConsent": {
         "properties": {
@@ -4423,6 +4748,14 @@
             },
             "type": "array",
             "title": "Notifications"
+          },
+          "chat_messages": {
+            "items": {
+              "$ref": "#/components/schemas/ExportChatMessage"
+            },
+            "type": "array",
+            "title": "Chat Messages",
+            "default": []
           },
           "sessions": {
             "items": {
@@ -4756,6 +5089,21 @@
             ],
             "title": "Deadline At"
           },
+          "draw_offer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "goat",
+                  "tiger"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draw Offer"
+          },
           "server_time": {
             "type": "string",
             "format": "date-time",
@@ -4863,6 +5211,7 @@
             "enum": [
               "won",
               "lost",
+              "drawn",
               "aborted"
             ],
             "title": "Outcome"
@@ -5216,7 +5565,7 @@
             "$ref": "#/components/schemas/PlayerOut"
           },
           "points": {
-            "type": "integer",
+            "type": "number",
             "title": "Points"
           }
         },
@@ -5340,6 +5689,52 @@
           "created_at"
         ],
         "title": "ModActionOut"
+      },
+      "ModChatMessageOut": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "sent_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sent At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "text",
+          "sent_at"
+        ],
+        "title": "ModChatMessageOut"
+      },
+      "ModChatOut": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ModChatMessageOut"
+            },
+            "type": "array",
+            "title": "Messages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_id",
+          "messages"
+        ],
+        "title": "ModChatOut"
       },
       "ModPlayerOut": {
         "properties": {
@@ -6831,11 +7226,11 @@
             "$ref": "#/components/schemas/PlayerOut"
           },
           "points": {
-            "type": "integer",
+            "type": "number",
             "title": "Points"
           },
           "buchholz": {
-            "type": "integer",
+            "type": "number",
             "title": "Buchholz"
           },
           "played": {

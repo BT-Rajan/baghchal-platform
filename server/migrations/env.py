@@ -14,6 +14,7 @@ from sqlalchemy.engine import Connection
 from baghchal_server.accounts import models  # noqa: F401  (registers tables)
 from baghchal_server.appearance import models as appearance_models  # noqa: F401
 from baghchal_server.billing import models as billing_models  # noqa: F401
+from baghchal_server.chat import models as chat_models  # noqa: F401
 from baghchal_server.db import Base, create_engine
 from baghchal_server.fair_play import models as fair_play_models  # noqa: F401
 from baghchal_server.friends import models as friends_models  # noqa: F401

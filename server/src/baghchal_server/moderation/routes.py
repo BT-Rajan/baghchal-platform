@@ -6,6 +6,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
 from baghchal_server.accounts.models import User
 from baghchal_server.accounts.schemas import Accepted
 from baghchal_server.accounts.service import STAFF
+from baghchal_server.chat import service as chat
+from baghchal_server.chat.schemas import ModChatOut
 from baghchal_server.deps import DB, AppState, CurrentUser, Member, State, enforce_limit
 from baghchal_server.errors import AppError
 from baghchal_server.games import service as games
@@ -73,6 +75,12 @@ async def dismiss_report(
 ) -> ReportOut:
     """Close a report without acting on the player."""
     return await service.dismiss(db, state.clock(), moderator, report_id, data.reason)
+
+
+@router.get("/mod/games/{game_id}/chat")
+async def game_chat(game_id: uuid.UUID, _: Moderator, db: DB) -> ModChatOut:
+    """What was written in a game (kept 30 days), for checking a report about it."""
+    return await chat.for_moderators(db, await games.get_game(db, game_id))
 
 
 @router.get("/mod/players/{username}")
