@@ -47,6 +47,17 @@ export function useTournamentAction(code: string) {
   });
 }
 
+/** The host gives an unplayed game to the player who turned up. */
+export function useAwardPairing(code: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pairingId, winner }: { pairingId: string; winner: 'goat' | 'tiger' }) =>
+      api.awardPairing(code, pairingId, winner),
+    onSuccess: (tournament) => queryClient.setQueryData(queryKeys.tournament(code), tournament),
+  });
+}
+
 /** Start one of my tournament games; it opens for both players. */
 export function usePlayPairing(code: string) {
   const api = useApi();

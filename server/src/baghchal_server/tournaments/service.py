@@ -11,10 +11,11 @@ host ends it.
 
 import secrets
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Final, cast
 
-from sqlalchemy import and_, or_, select, update
+from sqlalchemy import ColumnElement, and_, delete, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -86,13 +87,20 @@ async def find(db: AsyncSession, code: str) -> Tournament:
     return tournament
 
 
-async def _players(db: AsyncSession, tournament: Tournament) -> list[uuid.UUID]:
-    found = await db.scalars(
-        select(Entry.user_id)
-        .where(Entry.tournament_id == tournament.id)
-        .order_by(Entry.joined_at, Entry.user_id)
-    )
+async def _players(
+    db: AsyncSession, tournament: Tournament, *, playing: bool = False
+) -> list[uuid.UUID]:
+    """Everyone in it, in the order they joined; with ``playing``, only those still paired
+    (not withdrawn)."""
+    query = select(Entry.user_id).where(Entry.tournament_id == tournament.id)
+    if playing:
+        query = query.where(Entry.withdrawn_at.is_(None))
+    found = await db.scalars(query.order_by(Entry.joined_at, Entry.user_id))
     return list(found)
+
+
+async def players_of(db: AsyncSession, tournament: Tournament) -> list[uuid.UUID]:
+    return await _players(db, tournament)
 
 
 async def mine(db: AsyncSession, user_id: uuid.UUID) -> list[Tournament]:
@@ -109,6 +117,8 @@ async def mine(db: AsyncSession, user_id: uuid.UUID) -> list[Tournament]:
 
 async def join(db: AsyncSession, now: datetime, user: User, code: str) -> Tournament:
     tournament = await find(db, code)
+    # One join at a time per tournament, so two at once cannot pass its size.
+    await db.execute(select(Tournament.id).where(Tournament.id == tournament.id).with_for_update())
     players = await _players(db, tournament)
     if user.id in players:
         return tournament
@@ -131,6 +141,10 @@ async def join(db: AsyncSession, now: datetime, user: User, code: str) -> Tourna
             "You cannot join: you and a player in it have blocked one another.",
         )
     db.add(Entry(tournament_id=tournament.id, user_id=user.id, joined_at=now))
+    await db.flush()
+    if len(await _players(db, tournament)) > tournament.max_players:  # a join landed meanwhile
+        await db.rollback()
+        raise AppError(409, "tournament_full", "This tournament is full.")
     await db.commit()
     return tournament
 
@@ -166,10 +180,12 @@ async def _ratings(
     return dict(rows.all())
 
 
-def _add_round(db: AsyncSession, tournament: Tournament, records: list[swiss.Record]) -> None:
+def _add_round(
+    db: AsyncSession, tournament: Tournament, records: list[swiss.Record]
+) -> list[Pairing]:
     """Pair the next round and add its pairings (and bye)."""
     pairs, bye = swiss.pair(records)
-    db.add_all(
+    added = [
         Pairing(
             id=uuid.uuid4(),
             tournament_id=tournament.id,
@@ -178,9 +194,9 @@ def _add_round(db: AsyncSession, tournament: Tournament, records: list[swiss.Rec
             tiger_id=tiger,
         )
         for goat, tiger in pairs
-    )
+    ]
     if bye is not None:
-        db.add(
+        added.append(
             Pairing(
                 id=uuid.uuid4(),
                 tournament_id=tournament.id,
@@ -189,6 +205,8 @@ def _add_round(db: AsyncSession, tournament: Tournament, records: list[swiss.Rec
                 tiger_id=None,
             )
         )
+    db.add_all(added)
+    return added
 
 
 async def start(db: AsyncSession, now: datetime, user_id: uuid.UUID, code: str) -> Tournament:
@@ -203,9 +221,26 @@ async def start(db: AsyncSession, now: datetime, user_id: uuid.UUID, code: str) 
             409, "not_enough_players", f"A tournament needs at least {MIN_PLAYERS} players."
         )
     ratings = await _ratings(db, tournament, players)
+    claimed = await db.execute(  # pressed twice (two devices): round 1 is drawn up once
+        update(Tournament)
+        .where(Tournament.id == tournament.id, Tournament.status == TournamentStatus.OPEN)
+        .values(status=TournamentStatus.RUNNING, started_at=now)
+        .execution_options(synchronize_session=False)
+    )
+    if claimed.rowcount != 1:  # type: ignore[attr-defined]
+        await db.rollback()
+        raise AppError(409, "tournament_started", "This tournament has already started.")
     tournament.rounds, tournament.round = swiss.rounds_for(len(players)), 1
-    _add_round(db, tournament, [swiss.Record(uid, 0, ratings.get(uid, 1500.0)) for uid in players])
     tournament.status, tournament.started_at = TournamentStatus.RUNNING, now
+    blocks = await _blocks(db, players)
+    _add_round(
+        db,
+        tournament,
+        [
+            swiss.Record(uid, 0, ratings.get(uid, 1500.0), opponents=blocks.get(uid, set()))
+            for uid in players
+        ],
+    )
     await db.commit()
     return tournament
 
@@ -218,6 +253,12 @@ async def finish(db: AsyncSession, now: datetime, user_id: uuid.UUID, code: str)
         tournament.status, tournament.finished_at = TournamentStatus.FINISHED, now
     await db.commit()
     return tournament
+
+
+def _pairing_state(p: Pairing, found: dict[uuid.UUID, Game]) -> PairingState:
+    if p.tiger_id is None or p.forfeit_to is not None:
+        return PairingState.DONE  # a bye, or won without a game
+    return _state(None if p.game_id is None else found.get(p.game_id))
 
 
 def _state(game: Game | None) -> PairingState:
@@ -247,9 +288,15 @@ async def play(  # noqa: PLR0913, PLR0917 - who starts which pairing of which to
     if pairing.tiger_id is None:
         raise AppError(409, "pairing_played", "This round is a bye: there is no game to play.")
     before = None if pairing.game_id is None else await db.get(Game, pairing.game_id)
-    if _state(before) != PairingState.WAITING:
+    if pairing.forfeit_to is not None or _state(before) != PairingState.WAITING:
         raise AppError(409, "pairing_played", "This game has already been played.")
     opponent = pairing.tiger_id if user.id == pairing.goat_id else pairing.goat_id
+    if await lobby.has_blocked(db, user.id, opponent) or await lobby.has_blocked(
+        db, opponent, user.id
+    ):
+        raise AppError(
+            403, "player_blocked", "One of you has blocked the other: the host decides this game."
+        )
     if not await presence.online([opponent]):
         raise AppError(409, "player_offline", "Your opponent is not online.")
     await lobby.check_abort_cooldown(db, user.id, now)
@@ -268,12 +315,7 @@ async def play(  # noqa: PLR0913, PLR0917 - who starts which pairing of which to
         raise lobby.busy_error() from None
     claimed = await db.execute(
         update(Pairing)
-        .where(
-            Pairing.id == pairing.id,
-            Pairing.game_id.is_(None)
-            if pairing.game_id is None
-            else Pairing.game_id == pairing.game_id,
-        )
+        .where(Pairing.id == pairing.id, Pairing.forfeit_to.is_(None), _unstarted(pairing))
         .values(game_id=game.id)
     )
     if claimed.rowcount != 1:  # type: ignore[attr-defined]
@@ -290,64 +332,213 @@ def _winner(p: Pairing, game: Game) -> uuid.UUID | None:
     return p.goat_id if game.winner == "goat" else p.tiger_id
 
 
-async def describe(db: AsyncSession, now: datetime, tournament: Tournament) -> TournamentOut:
-    """The tournament as it stands. When the round being played is over, the next is paired
-    here (or, after the last, the tournament ends)."""
-    players = await _players(db, tournament)
+async def _played(
+    db: AsyncSession, tournament: Tournament
+) -> tuple[list[Pairing], dict[uuid.UUID, Game], dict[uuid.UUID, PairingState]]:
+    """Every pairing (newest round first), the games played for them, and where each stands."""
     pairings = list(
         await db.scalars(
             select(Pairing)
             .where(Pairing.tournament_id == tournament.id)
             .order_by(Pairing.round.desc(), Pairing.id)
+            .execution_options(populate_existing=True)
         )
     )
     game_ids = [p.game_id for p in pairings if p.game_id is not None]
     found = {g.id: g for g in await db.scalars(select(Game).where(Game.id.in_(game_ids)))}
-    states = {
-        p.id: PairingState.DONE
-        if p.tiger_id is None
-        else _state(None if p.game_id is None else found.get(p.game_id))
-        for p in pairings
-    }
-    current = [p for p in pairings if p.round == tournament.round]
-    if (
-        tournament.status == TournamentStatus.RUNNING
-        and current
-        and all(states[p.id] == PairingState.DONE for p in current)
-    ):
-        # Two people looking at once must not both pair the next round: one claims it.
-        more = tournament.round < tournament.rounds
-        records = (
-            _records(pairings, found, players, await _ratings(db, tournament, players))
-            if more
-            else None
+    return pairings, found, {p.id: _pairing_state(p, found) for p in pairings}
+
+
+async def _blocks(db: AsyncSession, players: list[uuid.UUID]) -> dict[uuid.UUID, set[uuid.UUID]]:
+    """Who each player has a block with (either way): kept apart when pairing, if it can be."""
+    rows = await db.execute(
+        select(Block.blocker_id, Block.blocked_id).where(
+            Block.blocker_id.in_(players), Block.blocked_id.in_(players)
         )
-        claimed = await db.execute(
-            update(Tournament)
+    )
+    apart: dict[uuid.UUID, set[uuid.UUID]] = {}
+    for a, b in rows.all():
+        apart.setdefault(a, set()).add(b)
+        apart.setdefault(b, set()).add(a)
+    return apart
+
+
+@dataclass(frozen=True)
+class Step:
+    """A tournament moved on: the next round paired (its pairings and bye), or it ended."""
+
+    tournament: Tournament
+    pairings: list[Pairing]
+    """Empty when it ended."""
+
+
+async def advance(db: AsyncSession, now: datetime, tournament: Tournament) -> Step | None:
+    """When the round being played is over, pair the next (or, after the last, or with fewer
+    than two players left, end the tournament). Once, however many ask at once."""
+    if tournament.status != TournamentStatus.RUNNING:
+        return None
+    pairings, found, states = await _played(db, tournament)
+    current = [p for p in pairings if p.round == tournament.round]
+    if not current or any(states[p.id] != PairingState.DONE for p in current):
+        return None
+    playing = await _players(db, tournament, playing=True)
+    more = tournament.round < tournament.rounds and len(playing) >= 2
+    records = None
+    if more:
+        everyone = await _players(db, tournament)
+        ratings = await _ratings(db, tournament, everyone)
+        apart = await _blocks(db, playing)
+        records = [r for r in _records(pairings, found, everyone, ratings) if r.id in set(playing)]
+        for r in records:
+            r.opponents |= apart.get(r.id, set())
+    claimed = await db.execute(
+        update(Tournament)
+        .where(
+            Tournament.id == tournament.id,
+            Tournament.round == tournament.round,
+            Tournament.status == TournamentStatus.RUNNING,
+        )
+        .values(
+            {"round": tournament.round + 1}
+            if more
+            else {"status": TournamentStatus.FINISHED, "finished_at": now}
+        )
+        .execution_options(synchronize_session=False)  # set below, as claimed
+    )
+    if claimed.rowcount != 1:  # type: ignore[attr-defined]
+        await db.rollback()  # another request moved it on first
+        return None
+    added: list[Pairing] = []
+    if records is not None:
+        tournament.round += 1
+        added = _add_round(db, tournament, records)
+    else:
+        tournament.status, tournament.finished_at = TournamentStatus.FINISHED, now
+    await db.commit()
+    return Step(tournament, added)
+
+
+async def of_game(db: AsyncSession, game_id: uuid.UUID) -> Tournament | None:
+    """The running tournament a game was played for, if any."""
+    return await db.scalar(
+        select(Tournament)
+        .join(Pairing, Pairing.tournament_id == Tournament.id)
+        .where(Pairing.game_id == game_id, Tournament.status == TournamentStatus.RUNNING)
+    )
+
+
+async def award(
+    db: AsyncSession, user_id: uuid.UUID, code: str, pairing_id: uuid.UUID, winner: str
+) -> Tournament:
+    """The host gives a game nobody has started to the player who turned up (``goat`` or
+    ``tiger``), so the round can move on."""
+    tournament = await find(db, code)
+    _hosted(tournament, user_id)
+    if tournament.status != TournamentStatus.RUNNING:
+        raise AppError(409, "tournament_not_running", "This tournament is not being played.")
+    pairing = await db.get(Pairing, pairing_id)
+    if pairing is None or pairing.tournament_id != tournament.id:
+        raise AppError(404, "pairing_not_found", "No such game in this tournament.")
+    if pairing.round != tournament.round or pairing.tiger_id is None:
+        raise AppError(409, "pairing_played", "Only this round's games can be given.")
+    game = None if pairing.game_id is None else await db.get(Game, pairing.game_id)
+    if pairing.forfeit_to is not None or _state(game) != PairingState.WAITING:
+        raise AppError(409, "pairing_played", "This game has been played, or is being played.")
+    given = await db.execute(
+        update(Pairing)
+        .where(Pairing.id == pairing.id, Pairing.forfeit_to.is_(None), _unstarted(pairing))
+        .values(forfeit_to=pairing.goat_id if winner == "goat" else pairing.tiger_id)
+    )
+    if given.rowcount != 1:  # type: ignore[attr-defined]
+        await db.rollback()
+        raise AppError(409, "pairing_played", "This game has just been started.")
+    await db.commit()
+    return tournament
+
+
+def _unstarted(pairing: Pairing) -> ColumnElement[bool]:
+    """The pairing still has the game it had when read (none, or an aborted one)."""
+    return (
+        Pairing.game_id.is_(None) if pairing.game_id is None else Pairing.game_id == pairing.game_id
+    )
+
+
+async def _forfeit_waiting(
+    db: AsyncSession, tournament: Tournament, loser: uuid.UUID, only_against: uuid.UUID | None
+) -> bool:
+    """Give this round's unplayed games of ``loser`` to their opponents (only the one against
+    ``only_against``, if given); whether any was given."""
+    pairings, _, states = await _played(db, tournament)
+    given = False
+    for p in pairings:
+        if p.round != tournament.round or states[p.id] != PairingState.WAITING:
+            continue
+        if loser not in (p.goat_id, p.tiger_id):
+            continue
+        winner = p.tiger_id if loser == p.goat_id else p.goat_id
+        if only_against is not None and winner != only_against:
+            continue
+        p.forfeit_to = winner
+        given = True
+    return given
+
+
+async def _running_with(db: AsyncSession, user_id: uuid.UUID) -> list[Tournament]:
+    return list(
+        await db.scalars(
+            select(Tournament)
+            .join(Entry, Entry.tournament_id == Tournament.id)
             .where(
-                Tournament.id == tournament.id,
-                Tournament.round == tournament.round,
+                Entry.user_id == user_id,
+                Entry.withdrawn_at.is_(None),
                 Tournament.status == TournamentStatus.RUNNING,
             )
-            .values(
-                {"round": tournament.round + 1}
-                if more
-                else {"status": TournamentStatus.FINISHED, "finished_at": now}
-            )
-            .execution_options(synchronize_session=False)  # set below, as claimed
         )
-        if claimed.rowcount != 1:  # type: ignore[attr-defined]
-            await db.rollback()
-            await db.refresh(tournament)
-            return await describe(db, now, tournament)
-        if records is not None:
-            tournament.round += 1
-            _add_round(db, tournament, records)
-        else:
-            tournament.status, tournament.finished_at = TournamentStatus.FINISHED, now
-        await db.commit()
-        if tournament.status == TournamentStatus.RUNNING:
-            return await describe(db, now, tournament)
+    )
+
+
+async def withdraw(db: AsyncSession, now: datetime, user_id: uuid.UUID) -> list[Tournament]:
+    """A player leaves for good (account deleted, or banned): out of tournaments not started,
+    and in running ones paired no more, this round's unplayed games going to their opponents.
+    The tournaments that changed."""
+    await db.execute(
+        delete(Entry).where(
+            Entry.user_id == user_id,
+            Entry.tournament_id.in_(
+                select(Tournament.id).where(
+                    Tournament.status == TournamentStatus.OPEN, Tournament.host_id != user_id
+                )
+            ),
+        )
+    )
+    running = await _running_with(db, user_id)
+    for tournament in running:
+        entry = await db.get(Entry, (tournament.id, user_id))
+        assert entry is not None  # noqa: S101 - found through it
+        entry.withdrawn_at = now
+        await _forfeit_waiting(db, tournament, user_id, None)
+    await db.commit()
+    return running
+
+
+async def blocked(
+    db: AsyncSession, blocker_id: uuid.UUID, blocked_id: uuid.UUID
+) -> list[Tournament]:
+    """A block between two players due to meet this round: the game goes to the one blocked
+    (who did nothing to lose it). The tournaments that changed."""
+    changed = [
+        t
+        for t in await _running_with(db, blocker_id)
+        if await _forfeit_waiting(db, t, blocker_id, blocked_id)
+    ]
+    await db.commit()
+    return changed
+
+
+async def describe(db: AsyncSession, now: datetime, tournament: Tournament) -> TournamentOut:
+    """The tournament as it stands."""
+    players = await _players(db, tournament)
+    pairings, found, states = await _played(db, tournament)
 
     people = {tournament.host_id, *players}
     names = dict(
@@ -367,8 +558,10 @@ async def describe(db: AsyncSession, now: datetime, tournament: Tournament) -> T
             byes.append(ByeOut(round=p.round, player=who(p.goat_id)))
             continue
         game = None if p.game_id is None else found.get(p.game_id)
-        winner = None
-        if states[p.id] == PairingState.DONE:
+        winner = p.forfeit_to
+        if winner is not None:
+            points[winner] += 1  # won without a game: a point, but no opponent met
+        elif states[p.id] == PairingState.DONE:
             assert game is not None  # noqa: S101 - done means a finished game
             winner = _winner(p, game)
             for uid in (p.goat_id, p.tiger_id):
@@ -383,8 +576,13 @@ async def describe(db: AsyncSession, now: datetime, tournament: Tournament) -> T
                 goat=who(p.goat_id),
                 tiger=who(p.tiger_id),
                 state=states[p.id],
-                game_id=p.game_id if states[p.id] != PairingState.WAITING else None,
+                game_id=(
+                    p.game_id
+                    if states[p.id] != PairingState.WAITING and p.forfeit_to is None
+                    else None
+                ),
                 winner=None if winner is None else who(winner),
+                forfeit=p.forfeit_to is not None,
             )
         )
     buchholz = {uid: sum(points[o] for o in met[uid]) for uid in players}
@@ -434,6 +632,9 @@ def _records(
         goat, tiger = records[p.goat_id], records[p.tiger_id]
         goat.opponents.add(tiger.id)
         tiger.opponents.add(goat.id)
+        if p.forfeit_to is not None:  # a point to the winner; no sides played
+            records[p.forfeit_to].score += 1
+            continue
         goat.goats, goat.last_side = goat.goats + 1, "goat"
         tiger.tigers, tiger.last_side = tiger.tigers + 1, "tiger"
         # The rounds played are over: every game in them has a result (a win, or a draw).

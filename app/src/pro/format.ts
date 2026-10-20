@@ -32,7 +32,7 @@ export function pairingText(p: Pairing): string {
       ? 'to play'
       : p.state === 'playing'
         ? 'playing now'
-        : `won by ${p.winner?.username ?? 'nobody'}`;
+        : `won by ${p.winner?.username ?? 'nobody'}${p.forfeit ? ' (no game)' : ''}`;
   return `${who} · ${state}`;
 }
 

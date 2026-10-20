@@ -46,6 +46,9 @@ class Entry(Base):
         Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
     joined_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    withdrawn_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    """When they left a running tournament (account deleted, or banned): their results stay
+    in the standings, but they are paired no more."""
 
 
 class Pairing(Base):
@@ -56,6 +59,7 @@ class Pairing(Base):
     __tablename__ = "tournament_pairings"
     __table_args__ = (
         Index("ix_tournament_pairings_tournament_id", "tournament_id"),
+        Index("ix_tournament_pairings_game_id", "game_id"),
         MYSQL_TABLE_ARGS,
     )
 
@@ -71,3 +75,8 @@ class Pairing(Base):
     game_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("games.id", ondelete="SET NULL")
     )
+    forfeit_to: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE")
+    )
+    """Won without a game: the host gave it to the player who turned up, or the other left
+    (account deleted, banned) or blocked them."""

@@ -26,6 +26,8 @@ from baghchal_server.moderation.schemas import (
     SuspendIn,
 )
 from baghchal_server.ratelimit import Limit
+from baghchal_server.tournaments import progress as tournament_progress
+from baghchal_server.tournaments import service as tournaments
 
 router = APIRouter(prefix="/api/v1")
 
@@ -111,6 +113,10 @@ async def suspend_player(  # noqa: PLR0913, PLR0917 - FastAPI dependencies
     while live := await games.active_games(db, target.id):
         for game in live:
             await notify_game(state, db, await games.resign(db, game.id, target.id, now))
+    if data.days is None:  # banned: out of their tournaments for good
+        await tournament_progress.moved_on(
+            state, db, await tournaments.withdraw(db, now, target.id)
+        )
     _send(tasks, state, mail)
     return await service.record(db, target)
 

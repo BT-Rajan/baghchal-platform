@@ -47,6 +47,7 @@ const pairing = (overrides: Partial<Pairing> = {}): Pairing => ({
   state: 'waiting',
   game_id: null,
   winner: null,
+  forfeit: false,
   ...overrides,
 });
 const CAROL = { id: '00000000-0000-4000-8000-0000000000c0', username: 'carol' };
@@ -176,8 +177,8 @@ describe('tournaments', () => {
     expect(await screen.findByText('2 points')).toBeOnTheScreen();
     expect(screen.getByText('1 point')).toBeOnTheScreen();
     expect(screen.getByText('Your game, round 2')).toBeOnTheScreen();
-    // Mine to play, under this round too; the earlier round below it.
-    expect(screen.getAllByText('carol (goats) v alice (tigers) · to play')).toHaveLength(2);
+    // Mine to play, under this round too, and among the host's games not played yet.
+    expect(screen.getAllByText('carol (goats) v alice (tigers) · to play')).toHaveLength(3);
     expect(screen.getByText('alice (goats) v bob (tigers) · won by bob')).toBeOnTheScreen();
     expect(screen.getByText('bob has the bye (a point)')).toBeOnTheScreen();
     expect(screen.getByText('carol has the bye (a point)')).toBeOnTheScreen();
@@ -193,6 +194,33 @@ describe('tournaments', () => {
     ).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'End the tournament' })).toBeNull();
     expect(server.lastTo('POST /api/v1/tournaments/cup1/finish')).toBeDefined();
+  });
+
+  test('the host gives a game nobody turned up for', async () => {
+    let t = running();
+    const { server } = await open('/tournament/cup1', {
+      'GET /api/v1/tournaments/cup1': () => ({ status: 200, body: t }),
+      'POST /api/v1/tournaments/cup1/pairings/p2/award': () => {
+        t = running({ state: 'done', winner: CAROL, forfeit: true });
+        return { status: 200, body: t };
+      },
+    });
+    expect(await screen.findByText('Games not played yet')).toBeOnTheScreen();
+    await press('Give the game to carol');
+    expect(
+      screen.getByText('Give this game to carol? alice gets no point, and it is not played.'),
+    ).toBeOnTheScreen();
+    await press('Cancel');
+    await press('Give the game to carol');
+    await press('Give the game');
+    expect(
+      (await screen.findAllByText('carol (goats) v alice (tigers) · won by carol (no game)'))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(server.lastTo('POST /api/v1/tournaments/cup1/pairings/p2/award').body).toEqual({
+      winner: 'goat',
+    });
+    expect(screen.queryByText('Games not played yet')).toBeNull();
   });
 
   test('start one of my games', async () => {

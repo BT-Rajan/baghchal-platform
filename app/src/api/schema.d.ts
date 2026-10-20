@@ -1447,6 +1447,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tournaments/{code}/pairings/{pairing_id}/award": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Award Pairing
+         * @description The host gives this round's unplayed game to the player who turned up (a point), so
+         *     the round can move on.
+         */
+        post: operations["award_pairing_api_v1_tournaments__code__pairings__pairing_id__award_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tournaments/{code}/pairings/{pairing_id}/play": {
         parameters: {
             query?: never;
@@ -1743,6 +1764,14 @@ export interface components {
             emotes_on: boolean;
             /** Show Badge */
             show_badge: boolean;
+        };
+        /** AwardIn */
+        AwardIn: {
+            /**
+             * Winner
+             * @enum {string}
+             */
+            winner: "goat" | "tiger";
         };
         /**
          * BoardTheme
@@ -2648,7 +2677,7 @@ export interface components {
          * NotificationKind
          * @enum {string}
          */
-        NotificationKind: "challenge" | "friend_request" | "friend_accepted" | "tournament_started";
+        NotificationKind: "challenge" | "friend_request" | "friend_accepted" | "tournament_started" | "tournament_round" | "tournament_finished";
         /** NotificationList */
         NotificationList: {
             /** Unread */
@@ -2691,6 +2720,8 @@ export interface components {
             /** Game Id */
             game_id: string | null;
             winner: components["schemas"]["PlayerOut"] | null;
+            /** Forfeit */
+            forfeit: boolean;
         };
         /**
          * PairingState
@@ -5755,6 +5786,42 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TournamentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    award_pairing_api_v1_tournaments__code__pairings__pairing_id__award_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+                pairing_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AwardIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

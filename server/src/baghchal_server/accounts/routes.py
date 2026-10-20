@@ -43,6 +43,8 @@ from baghchal_server.legal import age, consents
 from baghchal_server.lobby.routes import notify_challenge
 from baghchal_server.mail import Mail, deliver
 from baghchal_server.ratelimit import Limit
+from baghchal_server.tournaments import progress as tournament_progress
+from baghchal_server.tournaments import service as tournaments
 
 router = APIRouter(prefix="/api/v1")
 
@@ -332,6 +334,8 @@ async def delete_account(  # noqa: PLR0913, PLR0917 - FastAPI dependencies
     closed, mail = await lifecycle.delete_account(db, state.settings, state.clock(), user)
     for challenge in closed:
         await notify_challenge(state, db, challenge)
+    left = await tournaments.withdraw(db, state.clock(), user.id)
+    await tournament_progress.moved_on(state, db, left)
     _send(tasks, state, mail)
     if session_token(request, state.settings)[1] == "cookie":
         _clear_cookie(response, state)

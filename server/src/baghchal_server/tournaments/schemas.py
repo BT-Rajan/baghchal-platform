@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
@@ -42,6 +42,15 @@ class PairingOut(BaseModel):
     game_id: uuid.UUID | None
     winner: PlayerOut | None
     """None until played, and for a draw."""
+    forfeit: bool
+    """Won without a game (the host gave it, or the other player left or blocked)."""
+
+
+class AwardIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    winner: Literal["goat", "tiger"]
+    """The side of the player who turned up."""
 
 
 class StandingOut(BaseModel):

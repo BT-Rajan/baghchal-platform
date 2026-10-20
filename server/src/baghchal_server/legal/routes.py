@@ -23,6 +23,8 @@ from baghchal_server.legal.schemas import (
 from baghchal_server.lobby.routes import notify_challenge
 from baghchal_server.mail import deliver
 from baghchal_server.ratelimit import Limit
+from baghchal_server.tournaments import progress as tournament_progress
+from baghchal_server.tournaments import service as tournaments
 
 router = APIRouter(prefix="/api/v1")
 
@@ -95,6 +97,9 @@ async def decide(
     )
     for challenge in closed:
         await notify_challenge(state, db, challenge)
+    if data.decision == "refuse":  # the account is gone: out of its tournaments
+        left = await tournaments.withdraw(db, state.clock(), child.id)
+        await tournament_progress.moved_on(state, db, left)
     for mail in mails:
         tasks.add_task(deliver, state.mailer, mail)
     if data.decision == "refuse":

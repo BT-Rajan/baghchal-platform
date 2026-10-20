@@ -22,6 +22,7 @@ const pairing = (overrides: Partial<Pairing> = {}): Pairing => ({
   state: 'waiting',
   game_id: null,
   winner: null,
+  forfeit: false,
   ...overrides,
 });
 
@@ -69,6 +70,9 @@ test('tournaments', () => {
   );
   expect(pairingText(pairing({ state: 'done' }))).toBe(
     'alice (goats) v bob (tigers) · won by nobody',
+  );
+  expect(pairingText(pairing({ state: 'done', winner: ALICE, forfeit: true }))).toBe(
+    'alice (goats) v bob (tigers) · won by alice (no game)',
   );
   expect([isMine(pairing(), 'a'), isMine(pairing(), 'b'), isMine(pairing(), 'c')]).toEqual([
     true,

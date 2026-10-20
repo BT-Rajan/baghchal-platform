@@ -9,8 +9,8 @@ from baghchal_server.games.schemas import GameOut
 from baghchal_server.notifications import service as notifications
 from baghchal_server.notifications.schemas import NotificationKind
 from baghchal_server.ratelimit import Limit
-from baghchal_server.tournaments import service
-from baghchal_server.tournaments.schemas import TournamentIn, TournamentOut
+from baghchal_server.tournaments import progress, service
+from baghchal_server.tournaments.schemas import AwardIn, TournamentIn, TournamentOut
 
 router = APIRouter(prefix="/api/v1")
 
@@ -79,6 +79,17 @@ async def finish_tournament(code: Code, user: CurrentUser, state: State, db: DB)
     """The host ends the tournament now."""
     now = state.clock()
     return await service.describe(db, now, await service.finish(db, now, user.id, code))
+
+
+@router.post("/tournaments/{code}/pairings/{pairing_id}/award")
+async def award_pairing(  # noqa: PLR0913, PLR0917 - FastAPI dependencies
+    code: Code, pairing_id: uuid.UUID, data: AwardIn, user: CurrentUser, state: State, db: DB
+) -> TournamentOut:
+    """The host gives this round's unplayed game to the player who turned up (a point), so
+    the round can move on."""
+    tournament = await service.award(db, user.id, code, pairing_id, data.winner)
+    await progress.moved_on(state, db, [tournament])
+    return await service.describe(db, state.clock(), tournament)
 
 
 @router.post("/tournaments/{code}/pairings/{pairing_id}/play")

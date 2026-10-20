@@ -7,6 +7,7 @@ from baghchal_server.games import service
 from baghchal_server.games.models import Game, GameStatus
 from baghchal_server.games.schemas import GameOut
 from baghchal_server.realtime.protocol import GameEvent
+from baghchal_server.tournaments import progress as tournament_progress
 
 
 async def notify(state: AppState, db: AsyncSession, game: Game) -> GameOut:
@@ -16,6 +17,7 @@ async def notify(state: AppState, db: AsyncSession, game: Game) -> GameOut:
     message = GameEvent(game=out).model_dump_json()
     for user_id in (game.goat_id, game.tiger_id):
         await state.hub.send(user_id, message)
+    await tournament_progress.after_game(state, db, game)
     if out.match is not None and out.status == GameStatus.FINISHED and len(out.match.games) == 2:
         following = await service.get_game(db, out.match.games[1])
         if following.id != game.id and following.ply == 0 and following.status == GameStatus.ACTIVE:
