@@ -186,7 +186,7 @@ async def test_given_time_lines_up_with_bought_time(
     clock.advance(minutes=1)
     later = await _grant(boss, "alice", plan="plus", days=1)
     assert later["starts_at"] == "2026-01-18T12:00:00Z"
-    assert "from 18 January 2026, when your better plan ends" in mailer.outbox[-1].body
+    assert "from 18 January 2026, after the plan time you already have" in mailer.outbox[-1].body
 
     # Taking Pro away brings the Plus time forward; so does taking away waiting time.
     clock.advance(days=2)

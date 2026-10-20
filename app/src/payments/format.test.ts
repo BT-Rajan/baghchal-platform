@@ -42,7 +42,7 @@ test('thanks and the record', () => {
   expect(
     thanksText(payment({ starts: '2026-12-01T12:00:00Z', until: '2026-12-31T12:00:00Z' })),
   ).toBe(
-    'Thank you! Your ClawPlay Plus starts on 1 Dec 2026, when your better plan ends, and runs until 31 Dec 2026.',
+    'Thank you! Your ClawPlay Plus starts on 1 Dec 2026, after the plan time you already have, and runs until 31 Dec 2026.',
   );
   expect(paymentText(payment())).toBe('ClawPlay Plus for a month · ₹149 · 18 Oct 2026 · paid');
   expect(paymentText(payment({ status: 'refunded' }))).toMatch(/· refunded$/);

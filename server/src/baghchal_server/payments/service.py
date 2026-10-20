@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from typing import Final
 
 import structlog
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from baghchal_server.accounts.models import User
@@ -136,18 +136,44 @@ async def checkout(
     )
 
 
+OPEN: Final = (PaymentStatus.CREATED, PaymentStatus.FAILED)
+"""Not paid yet: only these may become paid (refunded and reversed payments are final)."""
+
+
 async def _locked(db: AsyncSession, order_id: str) -> Payment:
-    payment = await db.scalar(select(Payment).where(Payment.order_id == order_id).with_for_update())
+    payment = await db.scalar(
+        select(Payment)
+        .where(Payment.order_id == order_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)  # as stored now, not as read earlier
+    )
     if payment is None:
         raise AppError(404, "payment_not_found", "No such payment.")
     return payment
+
+
+async def _claim(
+    db: AsyncSession, payment: Payment, before: tuple[str, ...], **values: object
+) -> bool:
+    """Move a payment on from one of ``before``, if nobody else did first (two requests at
+    once, or a database without row locks): whether this one did."""
+    done = await db.execute(
+        update(Payment).where(Payment.id == payment.id, Payment.status.in_(before)).values(**values)
+    )
+    if done.rowcount != 1:  # type: ignore[attr-defined]
+        await db.commit()
+        await db.refresh(payment)
+        return False
+    for key, value in values.items():
+        setattr(payment, key, value)
+    return True
 
 
 async def captured(gateway: Gateway, payment: Payment, payment_id: str) -> None:
     """Make sure the money is ours before the plan is given: Razorpay must say the payment is
     for this order and amount, and captured (an authorised one is captured now), whatever the
     account's capture setting."""
-    if payment.status == PaymentStatus.PAID:
+    if payment.status not in OPEN:  # paid already (nothing to check), or refunded: final
         return
     unavailable = AppError(
         502,
@@ -175,10 +201,14 @@ async def captured(gateway: Gateway, payment: Payment, payment_id: str) -> None:
 
 async def capture_held(gateway: Gateway, db: AsyncSession, order_id: str, payment_id: str) -> None:
     """A payment the bank holds for one of our orders (webhook ``payment.authorized``): take
-    the money, so the plan follows (``payment.captured``) even if the browser never came back."""
+    the money, so the plan follows (``payment.captured``) even if the browser never came back.
+    A second payment for an order already paid is left alone: Razorpay hands it back."""
     payment = await db.scalar(select(Payment).where(Payment.order_id == order_id))
     if payment is None:
         raise AppError(404, "payment_not_found", "No such payment.")
+    if payment.status not in OPEN:
+        log.warning("payments.second_payment", order_id=order_id, payment_id=payment_id)
+        return
     try:
         await gateway.capture(payment_id, payment.amount_paise)
     except GatewayError:
@@ -190,10 +220,10 @@ async def fulfil(
 ) -> tuple[Payment, Mail | None]:
     """Record the payment and give the plan, once; the receipt to send, the first time."""
     payment = await _locked(db, order_id)
-    if payment.status == PaymentStatus.PAID:
+    paid = {"status": PaymentStatus.PAID, "payment_id": payment_id, "paid_at": now}
+    if payment.status not in OPEN or not await _claim(db, payment, OPEN, **paid):
         await db.commit()  # ends the lock
         return payment, None
-    payment.status, payment.payment_id, payment.paid_at = PaymentStatus.PAID, payment_id, now
     user = None if payment.user_id is None else await db.get(User, payment.user_id)
     if user is None:  # the account was deleted while paying: kept as a record, nothing to give
         await db.commit()
@@ -218,7 +248,7 @@ async def fulfil(
     if grant.games_left is not None:
         when = f"for {grant.games_left} games, {when} at the latest"
     if grant.starts_at > now:
-        when = f"from {_day(grant.starts_at)}, when your better plan ends, {when}"
+        when = f"from {_day(grant.starts_at)}, after the plan time you already have, {when}"
     after = await db.scalar(  # cheaper plan time this pushed on
         select(func.max(Grant.ends_at)).where(
             Grant.user_id == user.id,
@@ -242,7 +272,10 @@ async def fulfil(
 
 async def _by_payment_id(db: AsyncSession, payment_id: str) -> Payment:
     payment = await db.scalar(
-        select(Payment).where(Payment.payment_id == payment_id).with_for_update()
+        select(Payment)
+        .where(Payment.payment_id == payment_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
     )
     if payment is None:
         raise AppError(404, "payment_not_found", "No such payment.")
@@ -275,10 +308,13 @@ async def refunded(
     total = await db.scalar(
         select(func.sum(Refund.amount_paise)).where(Refund.payment_id == payment.id)
     )
-    full = (total or 0) >= payment.amount_paise and payment.status == PaymentStatus.PAID
+    full = (
+        (total or 0) >= payment.amount_paise
+        and payment.status == PaymentStatus.PAID
+        and await _claim(db, payment, (PaymentStatus.PAID,), status=PaymentStatus.REFUNDED)
+    )
     user = None
     if full:
-        payment.status = PaymentStatus.REFUNDED
         user = await _end_time(db, payment, now)
     elif payment.user_id is not None:
         user = await db.get(User, payment.user_id)
@@ -297,10 +333,11 @@ async def refunded(
 async def reversed_(db: AsyncSession, now: datetime, payment_id: str) -> Mail | None:
     """The player's bank took a payment back after a dispute: its plan time ends."""
     payment = await _by_payment_id(db, payment_id)
-    if payment.status != PaymentStatus.PAID:
+    if payment.status != PaymentStatus.PAID or not await _claim(
+        db, payment, (PaymentStatus.PAID,), status=PaymentStatus.REVERSED
+    ):
         await db.commit()
         return None
-    payment.status = PaymentStatus.REVERSED
     user = await _end_time(db, payment, now)
     await db.commit()
     if user is None:

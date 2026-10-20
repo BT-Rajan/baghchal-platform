@@ -50,14 +50,14 @@ export function refusedAsMinor(error: unknown): boolean {
 
 /**
  * "Thank you! You have ClawPlay Plus until 17 Nov 2026.", or for time lined up after a better
- * plan, "Thank you! Your ClawPlay Plus starts on 1 Jan 2027, when your better plan ends, and
+ * plan, "Thank you! Your ClawPlay Plus starts on 1 Jan 2027, after the plan time you already have, and
  * runs until 31 Jan 2027."
  */
 export function thanksText(payment: Payment): string {
   const until = payment.until === null ? '' : ` until ${dayText(payment.until)}`;
   const name = `ClawPlay ${PLAN_NAMES[payment.plan]}`;
   if (payment.starts !== null && payment.paid_at !== null && payment.starts > payment.paid_at)
-    return `Thank you! Your ${name} starts on ${dayText(payment.starts)}, when your better plan ends, and runs${until}.`;
+    return `Thank you! Your ${name} starts on ${dayText(payment.starts)}, after the plan time you already have, and runs${until}.`;
   return `Thank you! You have ${name}${until}.`;
 }
 
