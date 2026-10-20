@@ -32,6 +32,9 @@ describe('plans', () => {
     await waitFor(() => expect(app.getPathname()).toBe('/plans'));
     expect(await screen.findByRole('heading', { name: 'Plus' })).toBeOnTheScreen();
     expect(screen.getByText('₹149 for 45 games or a month')).toBeOnTheScreen();
+    // The table of what each includes is shut until asked for.
+    expect(screen.queryByText('Opening and endgame trainer')).toBeNull();
+    await press('Compare the plans');
     expect(screen.getByText('Opening and endgame trainer')).toBeOnTheScreen();
     expect(screen.getAllByLabelText('Pro: included').length).toBeGreaterThan(3);
     expect(screen.getAllByText('2 months free when you pay for a year')).toHaveLength(1);

@@ -103,7 +103,9 @@ scripts/        the Expo-cloud guardrail
   to earn". A profile lists its latest five games, and more on asking.
 - **Long pages, folded.** Settings keeps the account (blocked players, email, password, data,
   deleting) as sections shut until opened (`Disclosure`), with Moderation and Payments under
-  Admin; a player's moderation page and Board, pieces and sounds show one tab at a time.
+  Admin; a player's moderation page and Board, pieces and sounds show one tab at a time. The
+  plans' comparison table, "Find friends" on Make it yours, and the daily puzzle's board once
+  answered are folded the same way.
 - **Quick messages.** In a game against a person, five set phrases (`src/game/emotes.ts`)
   show for a moment on the sender's bar, the opponent's via an `emote` event. The chat button
   beside them hides the opponent's; it is the same `emotes_on` setting as on the Board, pieces
