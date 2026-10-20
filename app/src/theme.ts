@@ -66,6 +66,8 @@ export const colors = {
   /** Android's touch ripple, on light surfaces and on dark or coloured ones. */
   ripple: 'rgba(42, 22, 8, 0.12)',
   rippleOnDark: 'rgba(255, 243, 223, 0.28)',
+  /** The current place in a dark bar (the web's top bar). */
+  currentOnDark: 'rgba(255, 243, 223, 0.14)',
 } as const;
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;

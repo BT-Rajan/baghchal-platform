@@ -1,7 +1,7 @@
 name: CI
 
-# Paused: runs only when started by hand (Actions → CI → Run workflow). To turn it back on,
-# put back:
+# Off for this project (see CLAUDE.md, "CI is off"): it runs only if started by hand, and
+# nobody should. Changes are checked locally. To turn it back on, put back:
 #   push:
 #     branches: [main]
 #   pull_request:

@@ -8,6 +8,7 @@ import { Brand } from '@/components/brand/Logo';
 import { Button } from '@/components/Button';
 import { BoardPreview } from '@/components/game/BoardPreview';
 import { Coin } from '@/components/game/Coin';
+import { SiteFooter } from '@/components/site/SiteFooter';
 import type { Piece } from '@/game/bfen';
 import { colors, radius, spacing } from '@/theme';
 
@@ -85,20 +86,12 @@ function LandingPage() {
   const wide = width >= WIDE;
   const play = () => router.push('/start');
 
-  const actions = (
-    <View style={[styles.actions, wide && styles.actionsWide]}>
-      <Button title="Play now, no sign-up" variant="bright" onPress={play} />
-      <Button title="Sign in" variant="light" onPress={() => router.push('/sign-in')} />
-    </View>
-  );
-
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.page}>
         <View style={styles.hero}>
           <View style={[styles.inner, wide && styles.row]}>
             <View style={[styles.pitch, wide && styles.half]}>
-              <Brand size={44} onDark />
               <Text role="heading" style={[styles.headline, wide && styles.headlineWide]}>
                 Tigers hunt.{'\n'}Goats trap.
               </Text>
@@ -106,22 +99,12 @@ function LandingPage() {
                 Bagh Chal, the strategy game of the Himalayas, played live. Four tigers against
                 twenty goats: which side will you take?
               </Text>
-              {actions}
+              {/* Signing in and up are in the top bar; the terms and privacy in the footer. */}
+              <View style={[styles.actions, wide && styles.actionsWide]}>
+                <Button title="Play now, no sign-up" variant="bright" onPress={play} />
+              </View>
               <Text style={styles.small}>
-                New here?{' '}
-                <Text role="link" style={styles.smallLink} onPress={() => router.push('/sign-up')}>
-                  Create a free account
-                </Text>{' '}
-                to keep your rating.
-              </Text>
-              <Text style={styles.small}>
-                <Text role="link" style={styles.smallLink} onPress={() => router.push('/terms')}>
-                  Terms of service
-                </Text>
-                {'  ·  '}
-                <Text role="link" style={styles.smallLink} onPress={() => router.push('/privacy')}>
-                  Privacy policy
-                </Text>
+                No account needed: make one later to keep your rating.
               </Text>
             </View>
             <View style={[styles.boardBox, wide && styles.half]} aria-hidden>
@@ -169,6 +152,7 @@ function LandingPage() {
             </View>
           </View>
         </View>
+        <SiteFooter />
       </ScrollView>
     </SafeAreaView>
   );
@@ -232,7 +216,6 @@ const styles = StyleSheet.create({
   actions: { gap: spacing.sm },
   actionsWide: { flexDirection: 'row', flexWrap: 'wrap' },
   small: { fontSize: 14, color: colors.brandCream, opacity: 0.75 },
-  smallLink: { color: colors.brandLight, fontWeight: '700', textDecorationLine: 'underline' },
   boardBox: { alignItems: 'center' },
   board: { width: '100%', maxWidth: 440, aspectRatio: 1 },
   section: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xl },
