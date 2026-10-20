@@ -12,10 +12,11 @@ from sqlalchemy import func, select, update
 from baghchal_server import housekeeping
 from baghchal_server.accounts.models import EmailToken, Session, User
 from baghchal_server.app import create_app
+from baghchal_server.billing import reminders
 from baghchal_server.config import Settings
 from baghchal_server.deps import AppState
 from baghchal_server.fair_play.models import CheckStatus, FairPlayCheck, FairPlaySide, Stage
-from baghchal_server.mail import MemoryMailer
+from baghchal_server.mail import Mail, MemoryMailer
 from baghchal_server.moderation.models import ModerationAction, Report, ReportStatus
 from baghchal_server.payments.models import Payment
 from baghchal_server.ratelimit import MemoryRateLimiter
@@ -169,7 +170,19 @@ async def test_the_loop_runs_and_survives_errors(
             raise RuntimeError("database away")
         return {"sessions": 2}
 
+    sent: list[Mail] = []
+
+    async def due(*args: object) -> list[Mail]:
+        return (
+            [Mail("a@example.com", "Your ClawPlay Plus ends soon", "…")] if len(calls) == 2 else []
+        )
+
+    async def deliver(mailer: object, mail: Mail) -> None:
+        sent.append(mail)
+
     monkeypatch.setattr(housekeeping, "tidy", tidy)
+    monkeypatch.setattr(reminders, "due", due)
+    monkeypatch.setattr(housekeeping, "deliver", deliver)
     monkeypatch.setattr(housekeeping, "INTERVAL_SECONDS", 0)
     app = create_app(
         settings.model_copy(update={"housekeeping": True}), limiter=MemoryRateLimiter()
@@ -179,6 +192,7 @@ async def test_the_loop_runs_and_survives_errors(
             await asyncio.sleep(0.01)
         deleted = _state(app).metrics.housekeeping_deleted.labels("sessions")._value.get()
         assert deleted >= 2
+        assert [m.subject for m in sent] == ["Your ClawPlay Plus ends soon"]
 
 
 def test_the_periods_match_the_policy() -> None:

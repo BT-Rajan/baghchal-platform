@@ -7866,12 +7866,12 @@
         "properties": {
           "order_id": {
             "type": "string",
-            "maxLength": 64,
+            "pattern": "^order_[A-Za-z0-9]{1,40}$",
             "title": "Order Id"
           },
           "payment_id": {
             "type": "string",
-            "maxLength": 64,
+            "pattern": "^pay_[A-Za-z0-9]{1,40}$",
             "title": "Payment Id"
           },
           "signature": {

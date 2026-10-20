@@ -29,6 +29,8 @@ class Grant(Base):
     """None: until revoked."""
     games_left: Mapped[int | None] = mapped_column(Integer)
     """Finished games it still lasts (bought Plus); None: no limit. At 0 it ends."""
+    reminded_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    """When the player was told it would end soon (see ``billing.reminders``)."""
     reason: Mapped[str] = mapped_column(String(500))
     granted_by: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="SET NULL")

@@ -51,8 +51,8 @@ class VerifyIn(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    order_id: str = Field(max_length=64)
-    payment_id: str = Field(max_length=64)
+    order_id: str = Field(pattern=r"^order_[A-Za-z0-9]{1,40}$")
+    payment_id: str = Field(pattern=r"^pay_[A-Za-z0-9]{1,40}$")
     signature: str = Field(max_length=128)
 
 

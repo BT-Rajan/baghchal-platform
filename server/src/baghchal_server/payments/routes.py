@@ -78,7 +78,8 @@ async def verify(
     keys = await _keys(state, db)
     if not payment_signed(data.order_id, data.payment_id, data.signature, keys.key_secret):
         raise AppError(400, "bad_signature", "This payment could not be confirmed.")
-    await service.find(db, data.order_id, user.id)
+    found = await service.find(db, data.order_id, user.id)
+    await service.captured(_gateway(state, keys), found, data.payment_id)
     payment, mail = await service.fulfil(db, state.clock(), data.order_id, data.payment_id)
     if mail is not None:
         tasks.add_task(deliver, state.mailer, mail)
@@ -114,6 +115,8 @@ async def webhook(
                 tasks.add_task(deliver, state.mailer, mail)
         elif name == "payment.failed":
             await service.failed(db, order_id)
+        elif name == "payment.authorized":
+            await service.capture_held(_gateway(state, keys), db, order_id, payment_id)
     except AppError:  # an order made elsewhere (another site on the same Razorpay account)
         return {"status": "ignored"}
     return {"status": "ok"}
