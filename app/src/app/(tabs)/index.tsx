@@ -1,5 +1,4 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import type { Game } from '@/api/endpoints';
@@ -14,19 +13,12 @@ import { FriendList, FriendRequests } from '@/components/Friends';
 import { GameHistory } from '@/components/GameHistory';
 import { GuestBanner } from '@/components/GuestBanner';
 import { Notice } from '@/components/Notice';
-import { PlayerRow } from '@/components/PlayerRow';
+import { PlayerSearch } from '@/components/PlayerSearch';
 import { Screen } from '@/components/Screen';
-import { ErrorState, Loading } from '@/components/States';
-import { TextField } from '@/components/TextField';
+import { ErrorState } from '@/components/States';
 import { useServerNow } from '@/components/useNow';
-import { isOpen, searchPrefix } from '@/lobby/format';
-import {
-  useActiveGames,
-  useAnswerChallenge,
-  useChallenges,
-  useOnlinePlayers,
-  usePlayerSearch,
-} from '@/lobby/hooks';
+import { isOpen } from '@/lobby/format';
+import { useActiveGames, useAnswerChallenge, useChallenges } from '@/lobby/hooks';
 import { colors, spacing, type } from '@/theme';
 
 /** Two columns (my games and things to do | players) from this width. */
@@ -43,18 +35,12 @@ export default function Play() {
   const games = useActiveGames();
   const challenges = useChallenges();
   const answer = useAnswerChallenge();
-  const [search, setSearch] = useState('');
-  const prefix = searchPrefix(search);
-  const online = useOnlinePlayers();
-  const found = usePlayerSearch(prefix);
-  const players = prefix === null ? online : found;
 
   const incoming = challenges.data?.incoming.filter((c) => isOpen(c, now)) ?? [];
   const outgoing = challenges.data?.outgoing.filter((c) => isOpen(c, now)) ?? [];
   const pendingFor = (id: string) =>
     answer.isPending && answer.variables.id === id ? answer.variables.answer : null;
 
-  const others = players.data?.filter((p) => p.id !== me.id).length ?? 0;
   const wide = width >= WIDE;
 
   const gamesAndChallenges = (
@@ -108,38 +94,7 @@ export default function Play() {
   const playerList = (
     <View style={styles.column}>
       <FriendList myId={me.id} />
-      <SectionTitle>
-        {prefix === null ? 'Online now' : `Players starting with “${prefix}”`}
-      </SectionTitle>
-      <TextField
-        label="Find a player"
-        value={search}
-        onChangeText={setSearch}
-        placeholder="Username"
-        autoCapitalize="none"
-        autoCorrect={false}
-        maxLength={20}
-      />
-      {players.error !== null ? (
-        <ErrorState error={players.error} onRetry={() => void players.refetch()} />
-      ) : players.data === undefined ? (
-        <Loading label="Loading players" />
-      ) : players.data.length === 0 ? (
-        prefix === null ? (
-          <NobodyOnline guest={me.role === 'guest'} />
-        ) : (
-          <Hint>No players found.</Hint>
-        )
-      ) : (
-        <>
-          <Card>
-            {players.data.map((player) => (
-              <PlayerRow key={player.id} player={player} isMe={player.id === me.id} />
-            ))}
-          </Card>
-          {prefix === null && others === 0 && <NobodyOnline guest={me.role === 'guest'} />}
-        </>
-      )}
+      <PlayerSearch nobodyElse={<NobodyOnline guest={me.role === 'guest'} />} />
     </View>
   );
 

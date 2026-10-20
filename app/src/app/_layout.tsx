@@ -124,6 +124,10 @@ function Routes() {
           <Stack.Screen name="trainer" options={{ headerShown: true, title: 'Trainer' }} />
           <Stack.Screen name="claim" options={{ headerShown: true, title: 'Your account' }} />
           <Stack.Screen
+            name="make-it-yours"
+            options={{ headerShown: true, title: 'Make it yours' }}
+          />
+          <Stack.Screen
             name="moderation/index"
             options={{ headerShown: true, title: 'Moderation' }}
           />

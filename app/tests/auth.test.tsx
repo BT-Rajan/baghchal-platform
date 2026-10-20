@@ -161,8 +161,9 @@ describe('verify email', () => {
         'POST /api/v1/auth/verify-email': { status: 200, body: { user: ME, token: 'fresh' } },
       },
     });
-    expect(await screen.findByRole('heading', { name: 'Play' })).toBeOnTheScreen();
-    expect(app.getPathname()).toBe('/');
+    // A new account's first stop: an optional board, pieces and friends.
+    expect(await screen.findByText('Find friends')).toBeOnTheScreen();
+    expect(app.getPathname()).toBe('/make-it-yours');
     const verifications = server.requests.filter((r) => r.path === '/api/v1/auth/verify-email');
     expect(verifications).toEqual([
       expect.objectContaining({ body: { token: LINK_TOKEN, transport: 'bearer' } }),

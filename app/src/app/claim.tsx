@@ -33,7 +33,8 @@ export default function Claim() {
             {`We also emailed ${claim.variables.parent_email} to ask them to agree. Until they do you can play the computer and puzzles.`}
           </Notice>
         )}
-        <Button title="Back to playing" onPress={() => router.navigate('/')} />
+        <Button title="Make it yours" onPress={() => router.replace('/make-it-yours')} />
+        <Button title="Back to playing" variant="secondary" onPress={() => router.navigate('/')} />
       </Screen>
     );
   }
