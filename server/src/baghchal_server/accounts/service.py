@@ -129,7 +129,12 @@ async def register(
         if existing.email_verified_at is not None:
             await db.commit()
             return _account_exists_mail(settings, existing)
-        age.apply(existing, adult, data.parent_email, now)  # the latest answers count
+        # The latest answers count, the username and password too: whoever opens the link
+        # signs in with what they chose, never with what someone else typed for that address.
+        existing.username, existing.username_key = data.username, ukey
+        existing.password_hash, existing.updated_at = password_hash, now
+        await db.execute(delete(Session).where(Session.user_id == existing.id))
+        age.apply(existing, adult, data.parent_email, now)
         await legal.record(db, existing.id, now)
         token = await issue_token(db, existing.id, VERIFY, now + settings.verify_email_ttl, now)
         await db.commit()
@@ -238,6 +243,9 @@ async def claim_guest(  # noqa: PLR0913, PLR0917 - who, and the account they wan
     legal.check_versions(data.terms_version, data.privacy_version)
     if data.birth_month is not None:
         adult = age.adult_from(data.birth_month, now)
+        given = user.adult_from if user.adult_from is not None and user.adult_from > now else None
+        if given is not None and (adult is None or adult < given):
+            adult = given  # the younger of the two answers counts: no answering past a parent
     elif user.age_checked_at is not None:  # given when the guest started playing
         adult = user.adult_from if user.adult_from is not None and user.adult_from > now else None
     else:

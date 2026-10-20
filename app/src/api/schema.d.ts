@@ -114,7 +114,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Logout */
+        /**
+         * Logout
+         * @description Sign out. A guest's account goes with it (nobody can sign in to it again), unless a
+         *     live game holds it: housekeeping deletes it once its sessions have expired.
+         */
         post: operations["logout_api_v1_auth_logout_post"];
         delete?: never;
         options?: never;

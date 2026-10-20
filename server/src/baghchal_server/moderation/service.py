@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from baghchal_server.accounts.models import Session, User
 from baghchal_server.accounts.service import (
+    BOT_ROLE,
     PERMANENT,
     STAFF,
     is_suspended,
@@ -43,6 +44,8 @@ from baghchal_server.moderation.schemas import (
     ReportTargetOut,
 )
 
+REASON_LENGTH: Final = 500
+"""What the moderation log holds of a reason."""
 RECORD_REPORTS: Final = 50
 """Reports and actions shown on a player's moderation record."""
 
@@ -251,6 +254,8 @@ def _check_target(moderator: User, target: User) -> None:
         raise AppError(422, "cannot_moderate_self", "You cannot do this to your own account.")
     if target.role in STAFF:
         raise AppError(403, "cannot_moderate_moderator", "Moderators cannot act on moderators.")
+    if target.role == BOT_ROLE:
+        raise AppError(422, "not_a_player", "The computer players cannot be moderated.")
     if not target.is_active:
         raise AppError(409, "account_deleted", "This account has been deleted.")
 
@@ -341,7 +346,7 @@ async def rename(  # noqa: PLR0913 - who, the new name, and why
         moderator,
         target.id,
         action=ActionKind.RENAME,
-        reason=f"{old} → {username}: {reason}",
+        reason=f"{old} → {username}: {reason}"[:REASON_LENGTH],  # the log's column holds 500
     )
     await db.commit()
     return Mail(

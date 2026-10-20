@@ -116,6 +116,17 @@ async def test_make_mailer() -> None:
     await ConsoleMailer().send(Mail("a@example.com", "Subject", "Body"))
 
 
+async def test_server_logs_keep_email_links_out(capsys: pytest.CaptureFixture[str]) -> None:
+    await ConsoleMailer(bodies=False).send(
+        Mail("a@example.com", "Reset", "https://x/reset?t=SECRET")
+    )
+    await ConsoleMailer().send(Mail("a@example.com", "Hi", "body-shown"))
+    logged = capsys.readouterr().out
+    assert "SECRET" not in logged
+    assert "mail.not_sent" in logged
+    assert "body-shown" in logged
+
+
 async def test_smtp_mailer(monkeypatch: pytest.MonkeyPatch) -> None:
     captured: dict[str, Any] = {}
 

@@ -1,13 +1,18 @@
 """Guests: play at once without signing up, and keep everything when making an account."""
 
 import secrets
+import uuid
 from contextlib import AsyncExitStack
 from typing import Any
 
 import httpx
 import pytest
 from fastapi import FastAPI
+from sqlalchemy import delete, update
 
+from baghchal_server import housekeeping
+from baghchal_server.accounts.models import User
+from baghchal_server.games.models import ActiveGame, Game, GameStatus
 from baghchal_server.mail import MemoryMailer
 
 from .conftest import AGREE, ORIGIN, PASSWORD, PlayerFactory, last_token
@@ -168,3 +173,40 @@ async def test_names_run_out(app: FastAPI, monkeypatch: pytest.MonkeyPatch) -> N
             },
         )
         assert (r.status_code, r.json()["error"]["code"]) == (503, "try_again")
+
+
+async def _active(app: FastAPI, user_id: str) -> bool:
+    async with app.state.ctx.sessions() as db:
+        user = await db.get(User, uuid.UUID(user_id))
+        assert user is not None
+        return user.is_active
+
+
+async def test_signing_out_deletes_a_guest_account(app: FastAPI) -> None:
+    async with _browser(app) as http:
+        me = await _guest(http)
+        assert (await http.post("/api/v1/auth/logout")).status_code == 204
+    assert not await _active(app, me["id"])
+
+
+async def test_a_guest_in_a_live_game_is_deleted_later(app: FastAPI) -> None:
+    state = app.state.ctx
+
+    async def tidy() -> int:
+        async with state.sessions() as db:
+            done = await housekeeping.tidy(db, state.settings, state.clock())
+        return done["guest_accounts"]
+
+    async with _browser(app) as http:
+        me = await _guest(http)
+        game = (await http.post("/api/v1/games/computer", json={"level": "easy"})).json()
+        assert (await http.post("/api/v1/auth/logout")).status_code == 204
+    assert await _active(app, me["id"])  # the live game keeps it for now
+    assert await tidy() == 0
+    async with state.sessions() as db:  # the game ends
+        gid = uuid.UUID(game["id"])
+        await db.execute(update(Game).where(Game.id == gid).values(status=GameStatus.FINISHED))
+        await db.execute(delete(ActiveGame).where(ActiveGame.game_id == gid))
+        await db.commit()
+    assert await tidy() == 1
+    assert not await _active(app, me["id"])

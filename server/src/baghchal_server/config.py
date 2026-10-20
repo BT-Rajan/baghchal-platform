@@ -105,6 +105,9 @@ class Settings(BaseSettings):
     sentry_traces_sample_rate: float = Field(default=0.0, ge=0.0, le=1.0)
     """Share of requests traced for performance; 0 sends errors only."""
 
+    log_mail_bodies: bool = True
+    """With mail_backend ``console``: log whole emails (their links let anyone who reads the
+    log sign in as the player). For a developer's machine; servers set it false."""
     secrets_key: SecretStr = SecretStr("")
     """Encrypts the secrets kept in the database: the Razorpay keys an admin enters on the
     payments page (they are not set here). Any long random string, e.g. from

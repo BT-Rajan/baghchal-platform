@@ -73,6 +73,7 @@ Our servers are in [[hosting_location]]. Our email and hosting providers may pro
 - **Your account and games**: while your account exists.
 - **When you delete your account**: your email address, password, sessions, links, blocks and chat messages are deleted at once. Your username is replaced with an anonymous one; games you played stay in your opponents' history under that anonymous name, without anything that identifies you.
 - **Sign-ups never confirmed**: deleted after 7 days.
+- **Guest accounts** (playing without signing up): deleted like an account when you sign out, or once their session expires, 30 days after you started playing.
 - **Accounts of 13-to-17-year-olds whose parent has not agreed**: deleted after 7 days.
 - **Sessions**: deleted when they expire, 30 days after you sign in.
 - **Email links** (confirmations, password resets): deleted 7 days after they expire or are used.

@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from baghchal_server.accounts import lifecycle
 from baghchal_server.accounts.models import EmailToken, Session, User
+from baghchal_server.accounts.service import GUEST
 from baghchal_server.billing import reminders
 from baghchal_server.chat.models import ChatMessage
 from baghchal_server.chat.service import KEPT as CHAT
@@ -22,7 +23,7 @@ from baghchal_server.errors import AppError
 from baghchal_server.fair_play.models import FairPlayCheck, FairPlaySide
 from baghchal_server.legal.age import PENDING
 from baghchal_server.legal.consents import PARENT_DEADLINE
-from baghchal_server.mail import deliver
+from baghchal_server.mail import Mail, deliver
 from baghchal_server.moderation.models import ModerationAction, Report
 from baghchal_server.payments.models import Payment
 
@@ -48,7 +49,9 @@ async def _delete(db: AsyncSession, statement: object) -> int:
     return int(result.rowcount)
 
 
-async def _without_parent(db: AsyncSession, settings: Settings, now: datetime) -> int:
+async def _without_parent(
+    db: AsyncSession, settings: Settings, now: datetime, outbox: list[Mail]
+) -> int:
     """Accounts of players under 18 whose parent did not agree in time: deleted like any
     account (anonymised), except while they are in a live game (next time)."""
     waiting = (
@@ -64,15 +67,42 @@ async def _without_parent(db: AsyncSession, settings: Settings, now: datetime) -
     deleted = 0
     for user in waiting:
         try:
-            await lifecycle.delete_account(db, settings, now, user)
+            _, goodbye = await lifecycle.delete_account(db, settings, now, user)
         except AppError:  # a live game: next time
+            continue
+        outbox.append(goodbye)  # they play only the computer: no challenges to anyone
+        deleted += 1
+    return deleted
+
+
+async def _lost_guests(db: AsyncSession, settings: Settings, now: datetime) -> int:
+    """Guest accounts nobody can reach any more (every session expired): deleted like any
+    account, except while they are in a live game (next time)."""
+    lost = (
+        await db.scalars(
+            select(User).where(
+                User.role == GUEST,
+                User.is_active.is_(True),
+                ~select(Session.token_hash).where(Session.user_id == User.id).exists(),
+            )
+        )
+    ).all()
+    deleted = 0
+    for user in lost:
+        try:
+            await lifecycle.delete_account(db, settings, now, user)
+        except AppError:
             continue
         deleted += 1
     return deleted
 
 
-async def tidy(db: AsyncSession, settings: Settings, now: datetime) -> dict[str, int]:
-    """Delete everything past its time; returns how many of each were deleted."""
+async def tidy(
+    db: AsyncSession, settings: Settings, now: datetime, outbox: list[Mail] | None = None
+) -> dict[str, int]:
+    """Delete everything past its time; returns how many of each were deleted. The emails
+    owed (goodbyes) go in ``outbox``."""
+    outbox = [] if outbox is None else outbox
     done = {
         "sessions": await _delete(db, delete(Session).where(Session.expires_at < now)),
         "email_links": await _delete(
@@ -103,7 +133,8 @@ async def tidy(db: AsyncSession, settings: Settings, now: datetime) -> dict[str,
         ),
     }
     await db.commit()
-    done["accounts_without_parent"] = await _without_parent(db, settings, now)
+    done["accounts_without_parent"] = await _without_parent(db, settings, now, outbox)
+    done["guest_accounts"] = await _lost_guests(db, settings, now)
     return done
 
 
@@ -113,9 +144,11 @@ async def run(state: "AppState") -> None:
     while True:
         try:
             async with state.sessions() as db:
-                done = await tidy(db, state.settings, state.clock())
-                for mail in await reminders.due(db, state.settings, state.clock()):
-                    await deliver(state.mailer, mail)
+                outbox: list[Mail] = []
+                done = await tidy(db, state.settings, state.clock(), outbox)
+                outbox += await reminders.due(db, state.settings, state.clock())
+            for mail in outbox:
+                await deliver(state.mailer, mail)
             for kind, count in done.items():
                 state.metrics.housekeeping_deleted.labels(kind).inc(count)
             log.info("housekeeping.done", **done)
