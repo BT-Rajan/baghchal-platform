@@ -9,10 +9,11 @@ import { queryKeys } from '@/api/queryKeys';
 import { useApi, useMe } from '@/auth/session';
 import { usernameProblem } from '@/auth/validation';
 import { Button } from '@/components/Button';
-import { Card, Hint, SectionTitle } from '@/components/Card';
+import { Card, Hint } from '@/components/Card';
 import { FairPlaySection } from '@/components/FairPlaySection';
 import { Notice } from '@/components/Notice';
 import { PlanAdmin } from '@/components/PlanAdmin';
+import { Segmented } from '@/components/Segmented';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
 import { TextField } from '@/components/TextField';
@@ -33,35 +34,61 @@ type Action =
   | { kind: 'rename'; username: string }
   | { kind: 'dismiss'; reportId: string };
 
-/** One player's record, and what a moderator can do about them. */
+type Tab = 'reports' | 'act' | 'history' | 'fair' | 'plan';
+
+/**
+ * One player's record, and what a moderator can do about them: their standing, then one tab
+ * at a time (the reports first, as moderators mostly come from one).
+ */
 export default function ModeratePlayer() {
   const { username } = useLocalSearchParams<{ username: string }>();
   const api = useApi();
   const me = useMe();
+  const [tab, setTab] = useState<Tab>('reports');
   const record = useQuery({
     queryKey: queryKeys.modPlayer(username),
     queryFn: ({ signal }) => api.modPlayer(username, signal),
   });
+  if (record.error !== null || record.data === undefined) {
+    return (
+      <Screen title={username} align="top">
+        {record.error !== null ? (
+          <ErrorState error={record.error} onRetry={() => void record.refetch()} />
+        ) : (
+          <Loading label="Loading the player's record" />
+        )}
+      </Screen>
+    );
+  }
+  const player = record.data;
+  const actable = !player.deleted && player.role === 'player';
+  const tabs: { value: Tab; label: string }[] = [
+    { value: 'reports', label: `Reports (${player.reports.length})` },
+    ...(actable ? [{ value: 'act' as const, label: 'Act' }] : []),
+    { value: 'history', label: 'History' },
+    { value: 'fair', label: 'Fair play' },
+    ...(me.role === 'admin' && !player.deleted ? [{ value: 'plan' as const, label: 'Plan' }] : []),
+  ];
   return (
     <Screen title={username} align="top">
-      {record.error !== null ? (
-        <ErrorState error={record.error} onRetry={() => void record.refetch()} />
-      ) : record.data === undefined ? (
-        <Loading label="Loading the player's record" />
-      ) : (
-        <>
-          <Record player={record.data} />
-          <FairPlaySection username={record.data.username} />
-        </>
-      )}
-      {me.role === 'admin' && record.data !== undefined && !record.data.deleted && (
-        <PlanAdmin username={record.data.username} />
-      )}
+      <Record player={player} tab={tab} onTab={setTab} tabs={tabs} />
+      {tab === 'fair' && <FairPlaySection username={player.username} />}
+      {tab === 'plan' && <PlanAdmin username={player.username} />}
     </Screen>
   );
 }
 
-function Record({ player }: { player: ModPlayer }) {
+function Record({
+  player,
+  tab,
+  onTab,
+  tabs,
+}: {
+  player: ModPlayer;
+  tab: Tab;
+  onTab: (tab: Tab) => void;
+  tabs: { value: Tab; label: string }[];
+}) {
   const api = useApi();
   const queryClient = useQueryClient();
   const now = useServerNow(60_000);
@@ -117,17 +144,21 @@ function Record({ player }: { player: ModPlayer }) {
         {player.role === 'moderator' && <Text style={styles.muted}>Moderator</Text>}
         {player.role === 'admin' && <Text style={styles.muted}>Admin</Text>}
       </Card>
+      <Segmented label="Show" options={tabs} value={tab} onChange={onTab} />
       {act.error !== null && <Notice tone="error">{describeError(act.error)}</Notice>}
-      {!player.deleted && player.role === 'player' && (
+      {/* Every action asks why: acting, and dismissing a report. */}
+      {(tab === 'act' ||
+        (tab === 'reports' && player.reports.some((r) => r.status === 'open'))) && (
+        <TextField
+          label="Reason (sent to the player for suspensions and renames)"
+          value={reason}
+          onChangeText={setReason}
+          error={reasonError}
+          maxLength={500}
+        />
+      )}
+      {tab === 'act' && (
         <>
-          <SectionTitle>Act</SectionTitle>
-          <TextField
-            label="Reason (sent to the player for suspensions and renames)"
-            value={reason}
-            onChangeText={setReason}
-            error={reasonError}
-            maxLength={500}
-          />
           {suspended ? (
             <Button
               title="Lift the suspension"
@@ -167,10 +198,8 @@ function Record({ player }: { player: ModPlayer }) {
           />
         </>
       )}
-      <SectionTitle>Reports about this player</SectionTitle>
-      {player.reports.length === 0 ? (
-        <Hint>No reports.</Hint>
-      ) : (
+      {tab === 'reports' && player.reports.length === 0 && <Hint>No reports.</Hint>}
+      {tab === 'reports' &&
         player.reports.map((report) => (
           <Card key={report.id}>
             <Text style={styles.text}>
@@ -192,19 +221,17 @@ function Record({ player }: { player: ModPlayer }) {
               />
             )}
           </Card>
-        ))
-      )}
-      <SectionTitle>History</SectionTitle>
-      {player.actions.length === 0 ? (
+        ))}
+      {tab === 'history' && player.actions.length === 0 && (
         <Hint>No moderator has acted on this player.</Hint>
-      ) : (
+      )}
+      {tab === 'history' &&
         player.actions.map((action) => (
           <Card key={`${action.created_at}-${action.action}`}>
             <Text style={styles.muted}>{actionText(action)}</Text>
             <Text style={styles.text}>{action.reason}</Text>
           </Card>
-        ))
-      )}
+        ))}
     </>
   );
 }

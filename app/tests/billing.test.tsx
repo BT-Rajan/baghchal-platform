@@ -141,6 +141,7 @@ describe('admins', () => {
         },
       },
     });
+    await fireEvent.press(await screen.findByRole('radio', { name: 'Plan' }));
     expect(await screen.findByText('bob is on the Free plan.')).toBeOnTheScreen();
     expect(screen.getByText('Nothing granted yet.')).toBeOnTheScreen();
 
@@ -190,6 +191,7 @@ describe('admins', () => {
         },
       },
     });
+    await fireEvent.press(await screen.findByRole('radio', { name: 'Plan' }));
     expect(await screen.findByText('Plans are down.')).toBeOnTheScreen();
     fail = false;
     await press('Try again');

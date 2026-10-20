@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 
 import { Button } from '@/components/Button';
 import { Hint, SectionTitle } from '@/components/Card';
-import { BoardAndPieces, useLookChoice } from '@/components/LookPicker';
+import { BoardAndPieces, LookNotices, useLookChoice } from '@/components/LookPicker';
 import { PeopleOnly } from '@/components/PeopleOnly';
 import { PlayerSearch } from '@/components/PlayerSearch';
 import { Screen } from '@/components/Screen';
@@ -21,7 +21,10 @@ export default function MakeItYours() {
         Your account is ready. Two quick choices, both optional: you can change them any time.
       </Hint>
       {ready !== null ? (
-        <BoardAndPieces choice={ready} />
+        <>
+          <LookNotices choice={ready} />
+          <BoardAndPieces choice={ready} />
+        </>
       ) : error !== null ? (
         <ErrorState error={error} onRetry={retry} />
       ) : (

@@ -38,11 +38,13 @@ describe('board, pieces and sounds', () => {
       await screen.findByText('More boards, pieces and sound packs, and a badge by your name.'),
     ).toBeOnTheScreen();
     expect(radio('Wood')).toBeChecked();
-    expect(screen.queryByText('Badge')).toBeNull();
+    expect(screen.queryByRole('radio', { name: 'Badge' })).toBeNull();
 
-    // Locked choices are marked and do nothing; the one upsell above says why.
+    // Locked choices are marked and do nothing; the one upsell above the tabs says why.
     expect(radio('Walnut, comes with Plus')).toBeDisabled();
+    await fireEvent.press(radio('Sounds and messages'));
     await fireEvent.press(radio(/^Temple bells \(Plus\)/));
+    await fireEvent.press(radio('Board and pieces'));
     expect(radio('Wood')).toBeChecked();
     expect(server.requests.some((r) => r.method === 'PATCH')).toBe(false);
     await fireEvent.press(screen.getByRole('button', { name: 'Get ClawPlay Plus' }));
@@ -63,6 +65,7 @@ describe('board, pieces and sounds', () => {
     await waitFor(() => expect(saved.board).toBe('walnut'));
     await waitFor(() => expect(radio('Walnut')).toBeChecked());
     await fireEvent.press(radio('Porcelain'));
+    await fireEvent.press(radio('Sounds and messages'));
     await fireEvent.press(radio(/^Temple bells/));
     // Only what changed is sent; the rest stays as it was.
     await waitFor(() => expect(server.lastTo(`PATCH ${URL}`).body).toEqual({ sounds: 'bells' }));
@@ -86,6 +89,7 @@ describe('board, pieces and sounds', () => {
       ]),
     );
 
+    await fireEvent.press(radio('Badge'));
     await fireEvent.press(radio('Nothing'));
     await waitFor(() => expect(saved.show_badge).toBe(false));
   });

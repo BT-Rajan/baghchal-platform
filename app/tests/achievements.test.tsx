@@ -1,10 +1,10 @@
-import { screen } from 'expo-router/testing-library';
+import { fireEvent, screen } from 'expo-router/testing-library';
 
 import { renderApp } from './support/app';
 import { ME } from './support/fakeServer';
 import { BOB } from './support/games';
 
-test("a profile shows the player's achievements, earned ones first", async () => {
+test("a profile shows the player's achievements: the earned ones, and the rest on asking", async () => {
   await renderApp('/player/bob', {
     token: 'tok',
     routes: {
@@ -31,5 +31,7 @@ test("a profile shows the player's achievements, earned ones first", async () =>
   });
   expect(await screen.findByText('1 of 2 earned')).toBeOnTheScreen();
   expect(screen.getByLabelText('First win: Win a game. Earned 3 Oct 2026')).toBeOnTheScreen();
+  expect(screen.queryByLabelText('Master: Beat the Hard computer. Not yet earned')).toBeNull();
+  await fireEvent.press(screen.getByRole('button', { name: 'Still to earn (1)' }));
   expect(screen.getByLabelText('Master: Beat the Hard computer. Not yet earned')).toBeOnTheScreen();
 });

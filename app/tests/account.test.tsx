@@ -6,8 +6,14 @@ import { LINK_TOKEN, ME, error, type Route } from './support/fakeServer';
 
 const SIGNED_IN = { 'GET /api/v1/me': { status: 200, body: ME } };
 
-function account(routes: Record<string, Route> = {}) {
-  return renderApp('/settings', { token: 'tok', routes: { ...SIGNED_IN, ...routes } });
+/** Settings, with one section of the account opened (they start shut). */
+async function account(section: string, routes: Record<string, Route> = {}) {
+  const rendered = await renderApp('/settings', {
+    token: 'tok',
+    routes: { ...SIGNED_IN, ...routes },
+  });
+  await fireEvent.press(await screen.findByRole('button', { name: section, expanded: false }));
+  return rendered;
 }
 
 async function press(name: string | RegExp) {
@@ -32,13 +38,13 @@ test('the Me tab leads to the settings', async () => {
   });
   await screen.findByRole('button', { name: 'Settings' });
   await press('Settings');
-  expect(await screen.findByText('Your email address is alice@example.com.')).toBeOnTheScreen();
+  expect(await screen.findByRole('button', { name: 'Email address' })).toBeOnTheScreen();
   expect(app.getPathname()).toBe('/settings');
 });
 
 describe('changing the email address', () => {
   test('sends a link to the new address', async () => {
-    const { server } = await account({
+    const { server } = await account('Email address', {
       'POST /api/v1/me/email': { status: 202, body: { status: 'accepted' } },
     });
     await screen.findByText('Your email address is alice@example.com.');
@@ -57,7 +63,7 @@ describe('changing the email address', () => {
   });
 
   test('checks the form, then shows what the server said', async () => {
-    const { server } = await account({
+    const { server } = await account('Email address', {
       'POST /api/v1/me/email': error(403, 'wrong_password', 'That is not your current password.'),
     });
     await screen.findByText('Your email address is alice@example.com.');
@@ -76,8 +82,7 @@ describe('changing the email address', () => {
 
 describe('changing the password', () => {
   test('changes it and clears the form', async () => {
-    const { server } = await account({ 'POST /api/v1/me/password': { status: 204 } });
-    await screen.findByText('Your email address is alice@example.com.');
+    const { server } = await account('Password', { 'POST /api/v1/me/password': { status: 204 } });
     await type('Current password', 'old password');
     await type('New password', 'a brand new one');
     await type('Repeat the new password', 'a brand new one');
@@ -95,14 +100,13 @@ describe('changing the password', () => {
   });
 
   test('checks the form, then shows what the server said', async () => {
-    await account({
+    await account('Password', {
       'POST /api/v1/me/password': error(
         403,
         'wrong_password',
         'That is not your current password.',
       ),
     });
-    await screen.findByText('Your email address is alice@example.com.');
     await type('New password', 'short');
     await press('Change password');
     expect(screen.getByText('Enter your current password.')).toBeOnTheScreen();
@@ -122,8 +126,7 @@ describe('downloading my data', () => {
     const share = jest
       .spyOn(Share, 'share')
       .mockResolvedValue({ action: 'sharedAction', activityType: undefined });
-    await account({ 'GET /api/v1/me/export': { status: 200, body: data } });
-    await screen.findByText('Your email address is alice@example.com.');
+    await account('Your data', { 'GET /api/v1/me/export': { status: 200, body: data } });
     await press('Download my data');
     await waitFor(() =>
       expect(share).toHaveBeenCalledWith({
@@ -135,10 +138,9 @@ describe('downloading my data', () => {
   });
 
   test('a failure is reported', async () => {
-    await account({
+    await account('Your data', {
       'GET /api/v1/me/export': error(429, 'rate_limited', 'Too many requests. Try again later.'),
     });
-    await screen.findByText('Your email address is alice@example.com.');
     await press('Download my data');
     expect(await screen.findByText('Too many requests. Try again later.')).toBeOnTheScreen();
   });
@@ -146,8 +148,9 @@ describe('downloading my data', () => {
 
 describe('deleting the account', () => {
   test('asks for the password, then signs out', async () => {
-    const { server } = await account({ 'POST /api/v1/me/delete': { status: 204 } });
-    await screen.findByText('Your email address is alice@example.com.');
+    const { server } = await account('Delete account', {
+      'POST /api/v1/me/delete': { status: 204 },
+    });
     await press('Delete my account…');
     await press('Keep my account');
     expect(screen.queryByLabelText('Your password (to delete your account)')).toBeNull();
@@ -162,14 +165,13 @@ describe('deleting the account', () => {
   });
 
   test('explains why it cannot be done yet', async () => {
-    await account({
+    await account('Delete account', {
       'POST /api/v1/me/delete': error(
         409,
         'game_in_progress',
         'Finish or resign your live game before deleting your account.',
       ),
     });
-    await screen.findByText('Your email address is alice@example.com.');
     await press('Delete my account…');
     await type('Your password (to delete your account)', 'secret');
     await press('Delete my account for good');

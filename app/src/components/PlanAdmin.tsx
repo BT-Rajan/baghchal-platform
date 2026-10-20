@@ -57,7 +57,6 @@ export function PlanAdmin({ username }: { username: string }) {
   const plan = record.data;
   return (
     <>
-      <SectionTitle>Plan</SectionTitle>
       <Card>
         <Text style={styles.title}>{myPlanText(plan, username)}</Text>
       </Card>
@@ -72,7 +71,7 @@ export function PlanAdmin({ username }: { username: string }) {
           vertical
         />
       )}
-      <Segmented label="For" options={DURATIONS} value={duration} onChange={setDuration} vertical />
+      <Segmented label="For" options={DURATIONS} value={duration} onChange={setDuration} />
       <TextField
         label="Reason (sent to the player)"
         value={reason}

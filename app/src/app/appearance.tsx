@@ -1,17 +1,29 @@
+import { useState } from 'react';
+
 import type { SoundPack } from '@/api/endpoints';
 import { FREE_APPEARANCE, SOUNDS } from '@/appearance/catalog';
 import { has } from '@/billing/format';
 import { Button } from '@/components/Button';
-import { SectionTitle } from '@/components/Card';
 import { playSound, soundSupported } from '@/components/game/sound';
-import { BoardAndPieces, useLookChoice } from '@/components/LookPicker';
+import {
+  BoardAndPieces,
+  LookNotices,
+  useLookChoice,
+  type LookChoice,
+} from '@/components/LookPicker';
 import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
 import { ErrorState, Loading } from '@/components/States';
 
-/** Choose a board, pieces and sounds (Plus and Pro), and whether others see my badge. */
+type Tab = 'look' | 'sounds' | 'badge';
+
+/**
+ * Choose a board, pieces and sounds (Plus and Pro), and whether others see my badge: one tab
+ * at a time.
+ */
 export default function AppearanceScreen() {
   const { error, retry, ready } = useLookChoice();
+  const [tab, setTab] = useState<Tab>('look');
 
   if (ready === null) {
     return (
@@ -25,13 +37,39 @@ export default function AppearanceScreen() {
     );
   }
 
-  const { current, plan, pick, locked } = ready;
+  const { current, plan, pick } = ready;
+  const badge = has(plan, 'badge');
+  const tabs: { value: Tab; label: string }[] = [
+    { value: 'look', label: 'Board and pieces' },
+    { value: 'sounds', label: 'Sounds and messages' },
+    ...(badge ? [{ value: 'badge' as const, label: 'Badge' }] : []),
+  ];
 
   return (
     <Screen align="top" wide>
-      <BoardAndPieces choice={ready} />
+      <LookNotices choice={ready} />
+      <Segmented label="Show" options={tabs} value={tab} onChange={setTab} />
+      {tab === 'look' && <BoardAndPieces choice={ready} />}
+      {tab === 'sounds' && <Sounds choice={ready} />}
+      {tab === 'badge' && (
+        <Segmented
+          label="Next to my name, others see"
+          value={current.show_badge ? 'show' : 'hide'}
+          onChange={(value) => pick({ show_badge: value === 'show' })}
+          options={[
+            { value: 'show', label: 'My badge' },
+            { value: 'hide', label: 'Nothing' },
+          ]}
+        />
+      )}
+    </Screen>
+  );
+}
 
-      <SectionTitle>Sounds</SectionTitle>
+function Sounds({ choice }: { choice: LookChoice }) {
+  const { current, pick, locked } = choice;
+  return (
+    <>
       <Segmented
         label="Game sounds and vibration"
         value={current.sounds_on ? 'on' : 'off'}
@@ -51,15 +89,6 @@ export default function AppearanceScreen() {
           label: `${SOUNDS[sounds].name}${locked(sounds === FREE_APPEARANCE.sounds) ? ' (Plus)' : ''}: ${SOUNDS[sounds].description}`,
         }))}
       />
-      <Segmented
-        label="Your opponent's messages in games (quick messages and chat)"
-        value={current.emotes_on ? 'show' : 'hide'}
-        onChange={(value) => pick({ emotes_on: value === 'show' })}
-        options={[
-          { value: 'show', label: 'Show' },
-          { value: 'hide', label: 'Hide' },
-        ]}
-      />
       {soundSupported() && (
         <Button
           title={`Hear ${SOUNDS[current.sounds].name}`}
@@ -71,21 +100,15 @@ export default function AppearanceScreen() {
           }}
         />
       )}
-
-      {has(plan, 'badge') && (
-        <>
-          <SectionTitle>Badge</SectionTitle>
-          <Segmented
-            label="Next to my name, others see"
-            value={current.show_badge ? 'show' : 'hide'}
-            onChange={(value) => pick({ show_badge: value === 'show' })}
-            options={[
-              { value: 'show', label: 'My badge' },
-              { value: 'hide', label: 'Nothing' },
-            ]}
-          />
-        </>
-      )}
-    </Screen>
+      <Segmented
+        label="Your opponent's messages in games (quick messages and chat)"
+        value={current.emotes_on ? 'show' : 'hide'}
+        onChange={(value) => pick({ emotes_on: value === 'show' })}
+        options={[
+          { value: 'show', label: 'Show' },
+          { value: 'hide', label: 'Hide' },
+        ]}
+      />
+    </>
   );
 }

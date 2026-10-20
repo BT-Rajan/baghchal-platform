@@ -6,7 +6,7 @@ import { useApi } from '@/auth/session';
 import { dateTimeText, figuresText, thinkText } from '@/lobby/moderation';
 import { colors } from '@/theme';
 
-import { Card, Hint, SectionTitle } from './Card';
+import { Card, Hint } from './Card';
 import { ErrorState, Loading } from './States';
 import { TextLink } from './TextLink';
 
@@ -19,7 +19,6 @@ export function FairPlaySection({ username }: { username: string }) {
   });
   return (
     <>
-      <SectionTitle>Fair play</SectionTitle>
       {found.error !== null ? (
         <ErrorState error={found.error} onRetry={() => void found.refetch()} />
       ) : found.data === undefined ? (
