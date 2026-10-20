@@ -199,6 +199,7 @@ describe('badges', () => {
 test('plans no longer call themes and badges coming soon', async () => {
   expect(PLANS[1]!.features).toContain('themes');
   await open('/plans');
+  await fireEvent.press(await screen.findByRole('button', { name: 'Compare the plans' }));
   expect(await screen.findByText('Board and coin themes, and sound packs')).toBeOnTheScreen();
   expect(screen.getByText('A badge next to your name')).toBeOnTheScreen();
 });

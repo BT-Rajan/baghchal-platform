@@ -51,6 +51,14 @@ describe('home', () => {
     expect(await screen.findByText('Not quite. The best move was c3.')).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/trainer/o006/answer').body).toEqual({ move: 'a2' });
     expect(screen.getByText('A new puzzle comes tomorrow.')).toBeOnTheScreen();
+    // Answered, the board folds away; it can be looked at again.
+    expect(screen.queryByText('Goats to play: find the best move.')).toBeNull();
+    await fireEvent.press(
+      screen.getByRole('button', { name: "Today's position", expanded: false }),
+    );
+    expect(
+      screen.getByRole('button', { name: "Today's position", expanded: true }),
+    ).toBeOnTheScreen();
     expect(
       screen.getByText('Train every day with opening and endgame puzzles from real games.'),
     ).toBeOnTheScreen();

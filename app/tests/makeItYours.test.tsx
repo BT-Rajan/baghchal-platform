@@ -34,7 +34,7 @@ describe('make it yours: a new account’s first stop', () => {
         body: [{ id: 'b', username: 'bob', online: true, playing: false, badge: null }],
       },
     });
-    expect(await screen.findByText('Find friends')).toBeOnTheScreen();
+    await fireEvent.press(await screen.findByRole('button', { name: 'Find friends' }));
     await fireEvent.changeText(screen.getByLabelText('Find a player'), 'bo');
     expect(await screen.findByText('bob')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Challenge a friend by link' }));
@@ -44,7 +44,7 @@ describe('make it yours: a new account’s first stop', () => {
   test('a player waiting for a parent sees why friends are not open yet', async () => {
     await open({ ...ME, plays_people: false, parent_consent: 'pending' });
     expect(await screen.findByRole('radio', { name: 'Wood' })).toBeChecked();
-    expect(screen.queryByText('Find friends')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Find friends' })).toBeNull();
     expect(screen.getByText(/^A parent or guardian has to agree/)).toBeOnTheScreen();
   });
 });

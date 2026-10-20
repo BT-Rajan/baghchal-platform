@@ -10,6 +10,7 @@ import { colors, type } from '@/theme';
 
 import { Button } from './Button';
 import { Card, Hint, SectionTitle } from './Card';
+import { Disclosure } from './Disclosure';
 import { Notice } from './Notice';
 import { PuzzleBoard } from './PuzzleBoard';
 import { ErrorState, Loading } from './States';
@@ -17,7 +18,8 @@ import { Upsell } from './Upsell';
 
 /**
  * Today's puzzle, from the trainer, for everyone: one move to find, then the answer and a new
- * puzzle tomorrow. Pro players go on to the trainer; others see what it adds.
+ * puzzle tomorrow (the answered board folds away, to keep the home screen short). Pro players
+ * go on to the trainer; others see what it adds.
  */
 export function DailyPuzzle() {
   const daily = useDailyPuzzle();
@@ -25,6 +27,18 @@ export function DailyPuzzle() {
   const plan = useMyPlan();
   const result = daily.data?.answer ?? null;
   const streak = dailyStreakText(daily.data?.streak ?? 0);
+  const board = daily.data !== undefined && (
+    <PuzzleBoard
+      puzzle={daily.data.puzzle}
+      answered={result !== null}
+      best={result?.best}
+      busy={answer.isPending}
+      maxWidth={280}
+      onMove={(move) =>
+        answer.mutate({ id: daily.data.puzzle.id, move }, { onSuccess: () => void daily.refetch() })
+      }
+    />
+  );
   return (
     <>
       <SectionTitle>Daily puzzle</SectionTitle>
@@ -35,19 +49,7 @@ export function DailyPuzzle() {
       ) : (
         <Card>
           {streak !== null && <Text style={styles.streak}>{streak}</Text>}
-          <PuzzleBoard
-            puzzle={daily.data.puzzle}
-            answered={result !== null}
-            best={result?.best}
-            busy={answer.isPending}
-            maxWidth={360}
-            onMove={(move) =>
-              answer.mutate(
-                { id: daily.data.puzzle.id, move },
-                { onSuccess: () => void daily.refetch() },
-              )
-            }
-          />
+          {result === null ? board : <Disclosure title="Today's position">{board}</Disclosure>}
           {answer.error !== null && <Notice tone="error">{describeError(answer.error)}</Notice>}
           {result !== null && (
             <>

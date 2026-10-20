@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 
 import { Button } from '@/components/Button';
-import { Hint, SectionTitle } from '@/components/Card';
+import { Hint } from '@/components/Card';
+import { Disclosure } from '@/components/Disclosure';
 import { BoardAndPieces, LookNotices, useLookChoice } from '@/components/LookPicker';
 import { PeopleOnly } from '@/components/PeopleOnly';
 import { PlayerSearch } from '@/components/PlayerSearch';
@@ -32,17 +33,18 @@ export default function MakeItYours() {
       )}
 
       <PeopleOnly>
-        <SectionTitle>Find friends</SectionTitle>
-        <Hint>
-          Search for a friend by username and open their profile to add them, or send a friend a
-          challenge by link if they are not on ClawPlay yet.
-        </Hint>
-        <Button
-          title="Challenge a friend by link"
-          variant="secondary"
-          onPress={() => router.push('/invite')}
-        />
-        <PlayerSearch nobodyElse={<Hint>Nobody else is online right now.</Hint>} />
+        <Disclosure title="Find friends">
+          <Hint>
+            Search for a friend by username and open their profile to add them, or send a friend a
+            challenge by link if they are not on ClawPlay yet.
+          </Hint>
+          <Button
+            title="Challenge a friend by link"
+            variant="secondary"
+            onPress={() => router.push('/invite')}
+          />
+          <PlayerSearch nobodyElse={<Hint>Nobody else is online right now.</Hint>} />
+        </Disclosure>
       </PeopleOnly>
 
       <Button title="Start playing" onPress={play} />

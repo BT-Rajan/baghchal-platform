@@ -5,6 +5,7 @@ import { comparisonRows, myPlanText, PLAN_NAMES, priceText, yearlySaving } from 
 import { useMyPlan, usePlans } from '@/billing/hooks';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
+import { Disclosure } from '@/components/Disclosure';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
@@ -20,7 +21,10 @@ import { useBuy, usePayments } from '@/payments/hooks';
 import { WEB_URL } from '@/config';
 import { colors, radius, spacing, type } from '@/theme';
 
-/** Free, Plus and Pro: what each costs, a way to buy it, and a table of what each includes. */
+/**
+ * Free, Plus and Pro: what each costs, a way to buy it, and a table of what each includes
+ * (folded shut until asked for).
+ */
 export default function Plans() {
   const plans = usePlans();
   const mine = useMyPlan();
@@ -162,8 +166,7 @@ function PlanColumn({
 /** What each plan includes, row by row, from the server's plans. */
 function Comparison({ plans, mine }: { plans: readonly PlanInfo[]; mine: MyPlan }) {
   return (
-    <>
-      <SectionTitle>What each plan includes</SectionTitle>
+    <Disclosure title="Compare the plans">
       <Card>
         <View style={styles.tableRow}>
           <Text style={styles.feature} />
@@ -190,7 +193,7 @@ function Comparison({ plans, mine }: { plans: readonly PlanInfo[]; mine: MyPlan 
           </View>
         ))}
       </Card>
-    </>
+    </Disclosure>
   );
 }
 
