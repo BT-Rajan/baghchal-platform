@@ -246,12 +246,11 @@ async def block_player(username: UsernameQuery, user: CurrentUser, state: State,
     the lobby's player lists. Open challenges between you are closed."""
     await enforce_limit(state, BLOCKS_PER_USER, str(user.id))
     blocked_id = await _player(state, db, username)
-    for challenge in await service.block(db, state.clock(), user.id, blocked_id):
+    me = user.id  # read now: blocking twice at once rolls back, which unloads ``user``
+    for challenge in await service.block(db, state.clock(), me, blocked_id):
         await notify_challenge(state, db, challenge)
     # This round's tournament game between them goes to the one blocked.
-    await tournament_progress.moved_on(
-        state, db, await tournaments.blocked(db, user.id, blocked_id)
-    )
+    await tournament_progress.moved_on(state, db, await tournaments.blocked(db, me, blocked_id))
 
 
 @router.delete("/blocks/{username}", status_code=status.HTTP_204_NO_CONTENT)

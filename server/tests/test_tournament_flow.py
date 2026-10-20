@@ -2,6 +2,7 @@
 and games nobody can play are won without playing (forfeits)."""
 
 import asyncio
+import uuid
 from contextlib import AsyncExitStack
 from typing import Any
 
@@ -10,6 +11,7 @@ from fastapi import FastAPI
 from sqlalchemy import select
 
 from baghchal_server.deps import AppState
+from baghchal_server.lobby.models import Block
 from baghchal_server.tournaments import service as tournaments
 from baghchal_server.tournaments.models import Pairing, Tournament
 
@@ -221,3 +223,47 @@ async def test_a_round_moves_on_once_however_many_ask(
     steps = await asyncio.gather(advance(), advance())
     assert sorted(step is None for step in steps) == [False, True]
     assert len(_round(await _get(people["bob"], code), 2)) == 2
+
+
+async def test_what_cannot_be_given_or_played(app: FastAPI, players: PlayerFactory) -> None:
+    alice, bob, carol = await players("alice"), await players("bob"), await players("carol")
+    code = (await _host(app, alice))["code"]
+    r = await alice.http.post(
+        f"{URL}/{code}/pairings/{uuid.uuid4()}/award", json={"winner": "goat"}
+    )
+    assert (r.status_code, r.json()["error"]["code"]) == (409, "tournament_not_running")
+    state: AppState = app.state.ctx
+    async with state.sessions() as db:  # nothing to move on before it starts
+        open_ = await db.scalar(select(Tournament).where(Tournament.code == code))
+        assert open_ is not None
+        assert await tournaments.advance(db, state.clock(), open_) is None
+    for p in (bob, carol):
+        await p.http.post(f"{URL}/{code}/join")
+    t = (await alice.http.post(f"{URL}/{code}/start")).json()
+    r = await alice.http.post(
+        f"{URL}/{code}/pairings/{uuid.uuid4()}/award", json={"winner": "goat"}
+    )
+    assert (r.status_code, r.json()["error"]["code"]) == (404, "pairing_not_found")
+    async with state.sessions() as db:  # the bye is a pairing too: there is no game to give
+        bye = await db.scalar(select(Pairing).where(Pairing.tiger_id.is_(None), Pairing.round == 1))
+        assert bye is not None
+    r = await alice.http.post(f"{URL}/{code}/pairings/{bye.id}/award", json={"winner": "goat"})
+    assert (r.status_code, r.json()["error"]["code"]) == (409, "pairing_played")
+
+    # Two who could not be kept apart and have blocked one another: no game; the host decides.
+    (game,) = _round(t, 1)
+    people = {"alice": alice, "bob": bob, "carol": carol}
+    goat, tiger = people[game["goat"]["username"]], people[game["tiger"]["username"]]
+    async with state.sessions() as db:
+        db.add(
+            Block(
+                blocker_id=uuid.UUID(goat.id),
+                blocked_id=uuid.UUID(tiger.id),
+                created_at=state.clock(),
+            )
+        )
+        await db.commit()
+    async with AsyncExitStack() as stack:
+        await _online(app, stack, goat, tiger)
+        r = await _play(tiger, code, game)
+    assert (r.status_code, r.json()["error"]["code"]) == (403, "player_blocked")
