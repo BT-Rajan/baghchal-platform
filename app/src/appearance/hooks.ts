@@ -38,6 +38,9 @@ export function useChooseAppearance() {
     },
     onError: (_error, _choice, context) =>
       queryClient.setQueryData(queryKeys.appearance, context?.before),
-    onSuccess: (saved) => queryClient.setQueryData(queryKeys.appearance, saved),
+    onSuccess: (saved) => {
+      queryClient.setQueryData(queryKeys.appearance, saved);
+      void queryClient.invalidateQueries({ queryKey: ['chat'] }); // messages on or off: chat opens or closes
+    },
   });
 }

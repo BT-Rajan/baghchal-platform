@@ -114,7 +114,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Logout */
+        /**
+         * Logout
+         * @description Sign out. A guest's account goes with it (nobody can sign in to it again), unless a
+         *     live game holds it: housekeeping deletes it once its sessions have expired.
+         */
         post: operations["logout_api_v1_auth_logout_post"];
         delete?: never;
         options?: never;
@@ -737,7 +741,8 @@ export interface paths {
         /**
          * Emote
          * @description A quick message to my opponent, during the game or just after it. It reaches them
-         *     unless they have turned quick messages off; nothing is kept.
+         *     unless they have turned quick messages off, or either has blocked the other (as chat);
+         *     nothing is kept.
          */
         post: operations["emote_api_v1_games__game_id__emote_post"];
         delete?: never;

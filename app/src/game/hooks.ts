@@ -98,13 +98,20 @@ export function useSendEmote(gameId: string, mine: Piece) {
   });
 }
 
+/** After the game, chat stays open a few minutes: ask again meanwhile, so it closes when the
+ * server's does. */
+export function chatRefreshMs(over: boolean, open: boolean | undefined): number | false {
+  return over && open === true ? 30_000 : false;
+}
+
 /** A game's chat for one of its players (open or not, and what was said). */
-export function useChat(gameId: string, enabled: boolean) {
+export function useChat(gameId: string, enabled: boolean, over: boolean) {
   const api = useApi();
   return useQuery({
     queryKey: queryKeys.chat(gameId),
     queryFn: ({ signal }) => api.chat(gameId, signal),
     enabled,
+    refetchInterval: (query) => chatRefreshMs(over, query.state.data?.open),
   });
 }
 

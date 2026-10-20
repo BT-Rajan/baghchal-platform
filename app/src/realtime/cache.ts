@@ -54,6 +54,11 @@ export function applyGame(queryClient: QueryClient, game: Game): { started: bool
   const current = queryClient.getQueryData<Game>(key);
   if (!isNewer(game, current)) return { started: false };
   queryClient.setQueryData(key, game);
+  if (current?.status === 'active' && game.status !== 'active') {
+    // Over: the results, ratings and a Plus's games left changed, and chat closes soon.
+    for (const k of [queryKeys.chat(game.id), queryKeys.myPlan, ['player-games'], ['player']])
+      void queryClient.invalidateQueries({ queryKey: k });
+  }
   queryClient.setQueryData<Game[]>(queryKeys.activeGames, (games) => {
     if (games === undefined) return undefined;
     if (game.status !== 'active') return games.filter((g) => g.id !== game.id);
@@ -71,6 +76,7 @@ export function refetchAfterReconnect(queryClient: QueryClient): Promise<void> {
     queryClient.invalidateQueries({ queryKey: queryKeys.notifications }),
     queryClient.invalidateQueries({ queryKey: queryKeys.activeGames }),
     queryClient.invalidateQueries({ queryKey: ['game'] }),
+    queryClient.invalidateQueries({ queryKey: ['chat'] }),
   ]).then(() => undefined);
 }
 

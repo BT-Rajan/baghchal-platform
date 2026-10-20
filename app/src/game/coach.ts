@@ -77,7 +77,7 @@ export function coachTip(game: Game, me: Piece): Tip | null {
     ? {
         title: 'Place a goat',
         text:
-          `Tap any glowing point: ${position.inHand} goats still to place. Start along the ` +
+          `Tap any glowing point: ${position.inHand} ${position.inHand === 1 ? 'goat' : 'goats'} still to place. Start along the ` +
           'edges and keep them together.',
       }
     : {

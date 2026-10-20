@@ -159,3 +159,24 @@ async def test_a_move_landing_first_wins(
 
         monkeypatch.setattr(service, "_finish", lost_race)
         assert _code(await _draw(bob, game)) == "stale_position"
+
+
+async def test_an_offer_made_while_the_other_side_moves_lapses(
+    app: FastAPI, players: PlayerFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    alice, bob = await players("alice"), await players("bob")
+    async with AsyncExitStack() as stack:
+        await _online(app, stack, alice, bob)
+        game = await _start(alice, bob)
+        game = await _moves(alice, bob, game, 3)  # bob (tigers) to move
+        real = service._engine_game
+
+        async def offer_meanwhile(*args: Any, **kwargs: Any) -> Any:
+            found = await real(*args, **kwargs)
+            monkeypatch.setattr(service, "_engine_game", real)
+            assert (await _draw(alice, game)).json()["draw_offer"] == "goat"
+            return found
+
+        monkeypatch.setattr(service, "_engine_game", offer_meanwhile)
+        game = await _moves(alice, bob, game, 1)  # bob plays on
+        assert game["draw_offer"] is None

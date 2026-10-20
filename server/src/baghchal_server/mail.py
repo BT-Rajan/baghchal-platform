@@ -34,10 +34,17 @@ class MemoryMailer:
 
 
 class ConsoleMailer:
-    """Logs mail instead of sending it, for local development only (bodies contain tokens)."""
+    """Logs mail instead of sending it. Bodies hold sign-in, reset and consent links, so they
+    are logged only on a developer's machine (``log_mail_bodies``), never on a server."""
+
+    def __init__(self, bodies: bool = True) -> None:
+        self._bodies = bodies
 
     async def send(self, mail: Mail) -> None:
-        log.info("mail.console", to=mail.to, subject=mail.subject, body=mail.body)
+        if self._bodies:
+            log.info("mail.console", to=mail.to, subject=mail.subject, body=mail.body)
+        else:
+            log.warning("mail.not_sent", to=mail.to, subject=mail.subject)
 
 
 SMTPS_PORT: Final = 465
@@ -71,7 +78,7 @@ def make_mailer(settings: Settings) -> Mailer:
         return SmtpMailer(settings)
     if settings.mail_backend == "memory":
         return MemoryMailer()
-    return ConsoleMailer()
+    return ConsoleMailer(settings.log_mail_bodies)
 
 
 async def deliver(mailer: Mailer, mail: Mail) -> None:

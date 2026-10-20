@@ -248,7 +248,7 @@ async def test_plus_bought_on_pro_waits_for_it(
     r = (await _verify(alice, (await _buy(alice, "plus"))["order_id"], "pay_2")).json()
     # The Plus month is not spent underneath Pro: it starts when Pro ends.
     assert (r["starts"], r["until"]) == (_z(pro_ends), _z(pro_ends + timedelta(days=30)))
-    assert f"from {pro_ends.day} {pro_ends:%b %Y}, when your better plan ends" in (
+    assert f"from {pro_ends.day} {pro_ends:%b %Y}, after the plan time you already have" in (
         mailer.outbox[-1].body
     )
     mine = (await alice.http.get("/api/v1/me/plan")).json()
@@ -754,3 +754,84 @@ async def test_two_servers_send_a_reminder_once(
 
         db.scalar = meanwhile  # type: ignore[method-assign]
         assert await reminders.due(db, state.settings, clock()) == []
+
+
+async def test_refunded_and_reversed_payments_are_final(
+    app: FastAPI, players: PlayerFactory, gateway: FakeGateway
+) -> None:
+    alice = await players("alice")
+    order = (await _buy(alice, "pro"))["order_id"]
+    await _verify(alice, order, "pay_1")
+    lost = {
+        "event": "payment.dispute.lost",
+        "payload": {"dispute": {"entity": {"payment_id": "pay_1"}}},
+    }
+    await _webhook(app, lost)
+    # Confirming it again, or a late webhook, gives nothing back.
+    r = await _verify(alice, order, "pay_1")
+    assert (r.status_code, r.json()["status"]) == (200, "reversed")
+    await _webhook(app, _event("order.paid", order, "pay_1"))
+    assert (await alice.http.get("/api/v1/me/plan")).json()["plan"] == "free"
+
+    order = (await _buy(alice))["order_id"]
+    await _verify(alice, order, "pay_2")
+    await _webhook(app, _refund("rfnd_1", "pay_2", 14900))
+    await _webhook(app, _event("payment.captured", order, "pay_2"))
+    assert (await alice.http.get("/api/v1/me/plan")).json()["plan"] == "free"
+    # A second payment on a paid order is not captured: Razorpay hands it back.
+    gateway.captured.clear()
+    await _webhook(app, _event("payment.authorized", order, "pay_3"))
+    assert gateway.captured == []
+
+
+async def test_the_browser_and_the_webhook_at_once_give_one_plan(
+    app: FastAPI, players: PlayerFactory, gateway: FakeGateway, mailer: MemoryMailer
+) -> None:
+    alice = await players("alice")
+    order = (await _buy(alice, "pro"))["order_id"]
+    asked = gateway.payment
+
+    async def webhook_meanwhile(payment_id: str) -> PaymentState:
+        await _webhook(app, _event("payment.captured", order, payment_id))  # lands first
+        return await asked(payment_id)
+
+    gateway.payment = webhook_meanwhile  # type: ignore[method-assign]
+    sent = len(mailer.outbox)
+    r = await _verify(alice, order, "pay_1")
+    assert (r.status_code, r.json()["status"]) == (200, "paid")
+    mine = (await alice.http.get("/api/v1/me/plan")).json()
+    assert len(mine["grants"]) + len(mine["waiting"]) == 1
+    assert len(mailer.outbox) == sent + 1  # one receipt
+
+
+async def test_a_moved_plan_is_reminded_again(
+    app: FastAPI, players: PlayerFactory, clock: Clock
+) -> None:
+    alice = await players("alice")
+    await _verify(alice, (await _buy(alice))["order_id"], "pay_1")
+    clock.advance(days=28)
+    assert len(await _reminders(app)) == 1
+    await _verify(alice, (await _buy(alice, "pro"))["order_id"], "pay_2")  # Plus moves after
+    clock.advance(days=30)
+    (mail,) = await _reminders(app)
+    assert mail.subject == "Your ClawPlay Plus ends soon"
+
+
+async def test_a_payment_moved_on_elsewhere_is_not_claimed(
+    app: FastAPI, players: PlayerFactory
+) -> None:
+    from baghchal_server.payments import service  # noqa: PLC0415
+
+    alice = await players("alice")
+    order = (await _buy(alice))["order_id"]
+    state: AppState = app.state.ctx
+    async with state.sessions() as db:
+        payment = await db.scalar(select(Payment).where(Payment.order_id == order))
+        assert payment is not None
+        async with state.sessions() as other:  # another server paid it first
+            await other.execute(
+                update(Payment).where(Payment.id == payment.id).values(status="paid")
+            )
+            await other.commit()
+        assert not await service._claim(db, payment, service.OPEN, status="paid")
+        assert payment.status == "paid"  # read again

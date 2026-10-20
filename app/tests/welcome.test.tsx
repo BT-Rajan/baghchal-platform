@@ -175,6 +175,15 @@ describe('a guest', () => {
     expect(screen.queryByText(/guest-3fa9c1@guest\.invalid/)).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Email address' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Moderation' })).toBeNull();
+    // Signing out loses the account: asked first.
+    await fireEvent.press(
+      screen.getByRole('button', { name: 'Sign out (this guest account will be lost)' }),
+    );
+    expect(screen.getByText(/^Sign out and lose this guest account\?/)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
+    expect(
+      screen.getByRole('button', { name: 'Sign out (this guest account will be lost)' }),
+    ).toBeOnTheScreen();
   });
 });
 

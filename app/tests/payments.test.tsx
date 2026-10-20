@@ -196,7 +196,7 @@ test('Plus bought on Pro waits for Pro to end', async () => {
   );
   expect(
     await screen.findByText(
-      'Thank you! Your ClawPlay Plus starts on 1 Jan 2027, when your better plan ends, and runs until 31 Jan 2027.',
+      'Thank you! Your ClawPlay Plus starts on 1 Jan 2027, after the plan time you already have, and runs until 31 Jan 2027.',
     ),
   ).toBeOnTheScreen();
 });

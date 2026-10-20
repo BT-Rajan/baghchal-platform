@@ -19,6 +19,8 @@ export BAGHCHAL_DATABASE_URL="mysql+asyncmy://${DB_USER}:${password}@${DB_HOST}:
 export BAGHCHAL_PUBLIC_BASE_URL="$PUBLIC_URL"
 export BAGHCHAL_ALLOWED_ORIGINS="[\"$PUBLIC_URL\", \"http://localhost:$WEB_PORT\"]"
 export BAGHCHAL_COMPUTER_WORKERS="${COMPUTER_WORKERS:-2}"
+# Without an email provider, emails are not sent, and their links are kept out of the logs.
+export BAGHCHAL_LOG_MAIL_BODIES=false
 if [[ -n "${SMTP_HOST:-}" ]]; then
   export BAGHCHAL_MAIL_BACKEND=smtp BAGHCHAL_SMTP_HOST="$SMTP_HOST"
   export BAGHCHAL_SMTP_PORT="${SMTP_PORT:-587}" BAGHCHAL_SMTP_USERNAME="${SMTP_USERNAME:-}"

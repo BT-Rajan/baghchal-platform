@@ -202,6 +202,7 @@
     "/api/v1/auth/logout": {
       "post": {
         "summary": "Logout",
+        "description": "Sign out. A guest's account goes with it (nobody can sign in to it again), unless a\nlive game holds it: housekeeping deletes it once its sessions have expired.",
         "operationId": "logout_api_v1_auth_logout_post",
         "responses": {
           "204": {
@@ -1464,7 +1465,7 @@
     "/api/v1/games/{game_id}/emote": {
       "post": {
         "summary": "Emote",
-        "description": "A quick message to my opponent, during the game or just after it. It reaches them\nunless they have turned quick messages off; nothing is kept.",
+        "description": "A quick message to my opponent, during the game or just after it. It reaches them\nunless they have turned quick messages off, or either has blocked the other (as chat);\nnothing is kept.",
         "operationId": "emote_api_v1_games__game_id__emote_post",
         "parameters": [
           {

@@ -52,7 +52,7 @@ async def test_from_games(
 
     # Rarer ends, the computer, and rated games.
     await _edit(app, won["id"], end_reason="tigers_trapped", bot_level="hard", rated=True)
-    await _edit(app, captured["id"], rated=True)
+    await _edit(app, captured["id"], rated=True, winner=None, end_reason="draw_agreed")
     monkeypatch.setattr(service, "RATED_GAMES", 2)
     mine = await _earned(alice, "alice")
     assert mine["trapped"] == mine["beat_hard"] == mine["first_win"]

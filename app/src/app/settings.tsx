@@ -8,6 +8,7 @@ import { saveExport } from '@/auth/exportFile';
 import { useApi, useMe, useSession } from '@/auth/session';
 import { checkEmailChange, checkPasswordChange, checkPasswordGiven } from '@/auth/validation';
 import { Button } from '@/components/Button';
+import { Confirm } from '@/components/Confirm';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Disclosure } from '@/components/Disclosure';
 import { FeatureLink } from '@/components/FeatureLink';
@@ -30,6 +31,7 @@ export default function SettingsScreen() {
   const me = useMe();
   const { session } = useSession();
   const signOut = useMutation({ mutationFn: () => session.signOut() });
+  const [leaving, setLeaving] = useState(false);
   const guest = me.role === 'guest';
   const staff = me.role === 'moderator' || me.role === 'admin';
   return (
@@ -86,12 +88,22 @@ export default function SettingsScreen() {
         onPress={() => router.push('/privacy')}
       />
       <SectionTitle>Sign out</SectionTitle>
-      <Button
-        title={guest ? 'Sign out (this guest account will be lost)' : 'Sign out'}
-        variant="secondary"
-        onPress={() => signOut.mutate()}
-        busy={signOut.isPending}
-      />
+      {leaving ? (
+        <Confirm
+          question="Sign out and lose this guest account? Its games and rating cannot be got back. Make an account first to keep them."
+          confirmTitle="Sign out"
+          busy={signOut.isPending}
+          onConfirm={() => signOut.mutate()}
+          onCancel={() => setLeaving(false)}
+        />
+      ) : (
+        <Button
+          title={guest ? 'Sign out (this guest account will be lost)' : 'Sign out'}
+          variant="secondary"
+          onPress={() => (guest ? setLeaving(true) : signOut.mutate())}
+          busy={signOut.isPending}
+        />
+      )}
     </Screen>
   );
 }

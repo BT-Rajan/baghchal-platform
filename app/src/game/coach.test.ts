@@ -22,6 +22,9 @@ test('only my games against the Easy computer are coached', () => {
 test('goats: place, keep safe, then move', () => {
   expect(coachTip(easy(), 'goat')?.title).toBe('Place a goat');
   expect(coachTip(easy(), 'goat')?.text).toMatch(/^Tap any glowing point: 20 goats still/);
+  expect(coachTip(easy({ position: 'T3T/5/5/5/T3T g 1 0' }), 'goat')?.text).toMatch(
+    /^Tap any glowing point: 1 goat still/,
+  );
   expect(coachTip(easy({ goats_in_danger: ['a2'] }), 'goat')).toEqual({
     title: 'A goat in danger',
     text: 'A tiger can jump the goat on a2. Place a goat on the empty point behind it to block the jump.',

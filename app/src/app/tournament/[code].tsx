@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { Pairing, Tournament } from '@/api/endpoints';
@@ -6,11 +7,12 @@ import { describeError } from '@/api/errors';
 import { useMe } from '@/auth/session';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
+import { Confirm } from '@/components/Confirm';
 import { Notice } from '@/components/Notice';
 import { PeopleOnly } from '@/components/PeopleOnly';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
-import { shareLink } from '@/lobby/format';
+import { shareLink, timeControlName } from '@/lobby/format';
 import { isMine, pairingText, roundsOf, tournamentStatusText } from '@/pro/format';
 import { usePlayPairing, useTournament, useTournamentAction } from '@/pro/hooks';
 import { colors, spacing } from '@/theme';
@@ -35,6 +37,7 @@ export default function TournamentScreen() {
 function Details({ tournament: t }: { tournament: Tournament }) {
   const me = useMe();
   const action = useTournamentAction(t.code);
+  const [ending, setEnding] = useState(false);
   const play = usePlayPairing(t.code);
   const host = t.host.id === me.id;
   const playing = t.players.some((p) => p.id === me.id);
@@ -45,7 +48,7 @@ function Details({ tournament: t }: { tournament: Tournament }) {
   return (
     <>
       <Text style={styles.muted}>
-        {`${t.time_control} · hosted by ${t.host.username} · ${tournamentStatusText(t)}`}
+        {`${timeControlName(t.time_control)} · hosted by ${t.host.username} · ${tournamentStatusText(t)}`}
       </Text>
       {error !== null && <Notice tone="error">{describeError(error)}</Notice>}
 
@@ -138,14 +141,19 @@ function Details({ tournament: t }: { tournament: Tournament }) {
         </Hint>
       )}
 
-      {host && t.status === 'running' && (
-        <Button
-          title="End the tournament"
-          variant="secondary"
-          busy={action.isPending}
-          onPress={() => action.mutate('finish')}
-        />
-      )}
+      {host &&
+        t.status === 'running' &&
+        (ending ? (
+          <Confirm
+            question="End the tournament now? Games not yet played are not played, and the standings stay as they are."
+            confirmTitle="End the tournament"
+            busy={action.isPending}
+            onConfirm={() => action.mutate('finish', { onSettled: () => setEnding(false) })}
+            onCancel={() => setEnding(false)}
+          />
+        ) : (
+          <Button title="End the tournament" variant="secondary" onPress={() => setEnding(true)} />
+        ))}
     </>
   );
 }

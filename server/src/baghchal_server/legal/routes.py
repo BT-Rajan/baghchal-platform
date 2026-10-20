@@ -1,3 +1,4 @@
+import contextlib
 from typing import Final
 
 from fastapi import APIRouter, BackgroundTasks, Request
@@ -7,6 +8,8 @@ from baghchal_server.accounts.routes import describe_me
 from baghchal_server.accounts.schemas import MeOut
 from baghchal_server.deps import DB, CurrentUser, State, client_ip, enforce_limit
 from baghchal_server.errors import AppError
+from baghchal_server.games import service as games
+from baghchal_server.games.events import notify
 from baghchal_server.legal import age, consents, service
 from baghchal_server.legal.documents import VERSIONS, Document, render
 from baghchal_server.legal.schemas import (
@@ -81,7 +84,12 @@ async def decide(
     """A parent or guardian agrees, refuses, or withdraws an earlier agreement (which deletes
     the account)."""
     await enforce_limit(state, PARENT_LINKS_PER_IP, client_ip(request))
-    username = (await service.look_up(db, data.token, state.clock())).username
+    child = await service.look_up(db, data.token, state.clock())
+    username = child.username
+    if data.decision == "refuse":  # the account goes now: a live game is resigned first
+        for game in await games.active_games(db, child.id):
+            with contextlib.suppress(AppError):  # it ended meanwhile
+                await notify(state, db, await games.resign(db, game.id, child.id, state.clock()))
     user, closed, mails = await service.decide(
         db, state.settings, state.clock(), data.token, agree=data.decision == "agree"
     )

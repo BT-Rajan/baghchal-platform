@@ -104,10 +104,19 @@ export function challengeTerms(challenge: Challenge, myId: string): string {
   return parts.join(' · ');
 }
 
+/** "18 Jan 2027", on the player's own calendar (their device's time zone). */
+export function dayText(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 /** "Joined March 2026". */
 export function joinedText(createdAt: string): string {
   const date = new Date(createdAt);
-  return `Joined ${date.toLocaleDateString('en', { month: 'long', year: 'numeric', timeZone: 'UTC' })}`;
+  return `Joined ${date.toLocaleDateString('en', { month: 'long', year: 'numeric' })}`;
 }
 
 /** Usernames contain only these characters, so anything else cannot match a prefix search. */
@@ -136,12 +145,7 @@ export function historyText(game: GameSummary): string {
   const kind = game.rated ? 'rated' : 'casual';
   const delta = ratingChangeText(game.rating_change);
   const change = delta === null ? '' : ` (${delta})`;
-  const day = new Date(game.finished_at).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
+  const day = dayText(game.finished_at);
   return `${OUTCOMES[game.outcome]} · vs ${opponent} · ${timeControlName(game.time_control)} ${kind}${change} · ${day}`;
 }
 

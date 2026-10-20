@@ -88,6 +88,9 @@ test('grants in words', () => {
   expect(grantText(grant({ plan: 'plus', paid: true, games_left: 12, reason: 'Paid' }))).toBe(
     'ClawPlay Plus · until 31 Jan 2026 · 12 games left · Paid',
   );
+  expect(grantText(grant({ plan: 'plus', paid: true, games_left: 1, reason: 'Paid' }))).toContain(
+    '· 1 game left ·',
+  );
   expect(grantText(grant({ plan: null, feature: 'themes', ends_at: null }))).toBe(
     'Board and coin themes, and sound packs · until revoked · given by boss: Welcome gift',
   );

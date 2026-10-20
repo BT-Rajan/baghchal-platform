@@ -67,6 +67,7 @@ async def lay_out(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> None:
                 or_(Grant.ends_at.is_(None), Grant.ends_at > now),
             )
             .order_by(Grant.created_at, Grant.starts_at, Grant.id)
+            .execution_options(populate_existing=True)  # as stored now, not as read earlier
         )
     ).all()
     cursor = now
@@ -78,6 +79,8 @@ async def lay_out(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> None:
             left = g.ends_at - max(now, g.starts_at)  # type: ignore[operator]
             if cursor > now or g.starts_at > now:
                 g.starts_at = cursor
+            if g.ends_at != cursor + left:  # it moved: remind before its new end
+                g.reminded_at = None
             g.ends_at = cursor = cursor + left
 
 
@@ -101,14 +104,16 @@ async def count_game(db: AsyncSession, user_ids: Collection[uuid.UUID], now: dat
 
 
 async def _grants(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> list[Grant]:
-    """The grants in force now."""
+    """The grants in force now (as stored now: ``count_game`` changes them under a lock)."""
     found = await db.scalars(
-        select(Grant).where(
+        select(Grant)
+        .where(
             Grant.user_id == user_id,
             Grant.revoked_at.is_(None),
             Grant.starts_at <= now,
             or_(Grant.ends_at.is_(None), Grant.ends_at > now),
         )
+        .execution_options(populate_existing=True)
     )
     return list(found)
 
@@ -282,7 +287,7 @@ async def grant(
     await db.commit()
     until = "for good" if row.ends_at is None else f"until {row.ends_at:%d %B %Y}"
     if row.starts_at > now:
-        until = f"from {row.starts_at:%d %B %Y}, when your better plan ends, {until}"
+        until = f"from {row.starts_at:%d %B %Y}, after the plan time you already have, {until}"
     mail = Mail(
         target.email,
         f"You have {what}",

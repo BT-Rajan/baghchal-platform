@@ -183,6 +183,11 @@ describe('tournaments', () => {
     expect(screen.getByText('carol has the bye (a point)')).toBeOnTheScreen();
 
     await press('End the tournament');
+    expect(screen.getByText(/^End the tournament now\?/)).toBeOnTheScreen();
+    await press('Cancel');
+    expect(server.requests.some((r) => r.path.endsWith('/finish'))).toBe(false);
+    await press('End the tournament');
+    await press('End the tournament'); // the confirmation's
     expect(
       await screen.findByText(/^5\+3 · hosted by alice · Finished after 2 rounds/),
     ).toBeOnTheScreen();

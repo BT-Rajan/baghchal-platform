@@ -1,3 +1,4 @@
+import contextlib
 import time
 from datetime import datetime
 from typing import Final
@@ -26,6 +27,7 @@ from baghchal_server.accounts.schemas import (
     Transport,
     VerifyEmailIn,
 )
+from baghchal_server.accounts.service import GUEST, resolve_session
 from baghchal_server.deps import (
     DB,
     AppState,
@@ -197,9 +199,16 @@ def _clear_cookie(response: Response, state: AppState) -> None:
 
 @router.post("/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(request: Request, response: Response, state: State, db: DB) -> None:
+    """Sign out. A guest's account goes with it (nobody can sign in to it again), unless a
+    live game holds it: housekeeping deletes it once its sessions have expired."""
     token, transport = session_token(request, state.settings)
     if token:
+        user = await resolve_session(db, token, state.clock())
         await service.revoke_session(db, token)
+        if user is not None and user.role == GUEST:
+            # Guests make no challenges, so none close. A live game: housekeeping, later.
+            with contextlib.suppress(AppError):
+                await lifecycle.delete_account(db, state.settings, state.clock(), user)
     if transport == "cookie":
         _clear_cookie(response, state)
 

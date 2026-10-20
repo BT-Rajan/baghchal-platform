@@ -80,7 +80,8 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
     );
   }
   // Draws: once both have moved, between people. An offer stands until answered or moved past.
-  const drawable = !isComputer(game, other(me));
+  // Not before both sides moved (the server refuses: game 2 of a match cannot be aborted).
+  const drawable = !isComputer(game, other(me)) && !opening;
   const offeredToMe = drawable && game.draw_offer === other(me);
   const iOffered = drawable && game.draw_offer === me;
   return (

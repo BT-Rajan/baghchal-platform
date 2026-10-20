@@ -15,6 +15,7 @@ from baghchal_server.games import computer as computer_players
 from baghchal_server.games.events import notify
 from baghchal_server.games.models import GameStatus
 from baghchal_server.games.schemas import AnalysisOut, ComputerGameIn, EmoteIn, GameOut, MoveIn
+from baghchal_server.lobby import service as lobby
 from baghchal_server.lobby.time_controls import TIME_CONTROLS
 from baghchal_server.ratelimit import Limit
 from baghchal_server.realtime.protocol import EmoteEvent
@@ -73,7 +74,8 @@ async def play(
 @router.post("/games/{game_id}/emote", status_code=status.HTTP_204_NO_CONTENT)
 async def emote(game_id: uuid.UUID, data: EmoteIn, user: CurrentUser, state: State, db: DB) -> None:
     """A quick message to my opponent, during the game or just after it. It reaches them
-    unless they have turned quick messages off; nothing is kept."""
+    unless they have turned quick messages off, or either has blocked the other (as chat);
+    nothing is kept."""
     await enforce_limit(state, EMOTES_PER_USER, str(user.id))
     now = state.clock()
     game = await service.get_game(db, game_id)
@@ -85,7 +87,10 @@ async def emote(game_id: uuid.UUID, data: EmoteIn, user: CurrentUser, state: Sta
         raise AppError(409, "game_over", "This game ended a while ago.")
     side = "goat" if game.goat_id == user.id else "tiger"
     opponent_id = game.tiger_id if side == "goat" else game.goat_id
-    if (await appearance.mine(db, opponent_id, now)).emotes_on:
+    blocked = await lobby.has_blocked(db, opponent_id, user.id) or await lobby.has_blocked(
+        db, user.id, opponent_id
+    )
+    if not blocked and (await appearance.mine(db, opponent_id, now)).emotes_on:
         event = EmoteEvent(game_id=game.id, side=side, emote=data.emote)
         await state.hub.send(opponent_id, event.model_dump_json())
 

@@ -180,6 +180,35 @@ async def test_re_registering_unverified_email_resends_a_fresh_link(
     assert (await client.post(VERIFY, json={"token": second})).status_code == 200
 
 
+async def test_nobody_can_sign_up_ahead_of_an_address_owner(
+    client: httpx.AsyncClient, mailer: MemoryMailer, app: FastAPI
+) -> None:
+    """Someone signs up with another person's address first; that person then signs up and
+    opens the link: the account is theirs, with their username and password."""
+    await client.post(
+        REGISTER,
+        json={
+            **AGREE,
+            "username": "mallory1",
+            "email": "v@example.com",
+            "password": "mallory pw 1",
+        },
+    )
+    await client.post(
+        REGISTER,
+        json={**AGREE, "username": "victim", "email": "v@example.com", "password": PASSWORD},
+    )
+    r = await client.post(VERIFY, json={"token": last_token(mailer)})
+    assert (r.status_code, r.json()["user"]["username"]) == (200, "victim")
+    login = "/api/v1/auth/login"
+    assert (
+        await client.post(login, json={"login": "v@example.com", "password": PASSWORD})
+    ).status_code == 200
+    r = await client.post(login, json={"login": "v@example.com", "password": "mallory pw 1"})
+    assert r.status_code == 401
+    assert [u.username for u in await _users(app)] == ["victim"]
+
+
 async def test_unverified_registrations_expire(
     client: httpx.AsyncClient, mailer: MemoryMailer, clock: Clock, app: FastAPI
 ) -> None:

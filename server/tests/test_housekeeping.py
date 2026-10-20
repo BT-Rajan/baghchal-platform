@@ -157,6 +157,13 @@ async def test_pending_minors_are_counted_from_when_they_were_asked(
         await db.commit()
     clock.advance(days=2)
     assert (await _tidy(app))["accounts_without_parent"] == 0
+    clock.advance(days=6)
+    state = _state(app)
+    outbox: list[Mail] = []
+    async with state.sessions() as db:
+        done = await housekeeping.tidy(db, state.settings, state.clock(), outbox)
+    assert done["accounts_without_parent"] == 1
+    assert [m.subject for m in outbox] == ["Your ClawPlay account was deleted"]
 
 
 async def test_the_loop_runs_and_survives_errors(

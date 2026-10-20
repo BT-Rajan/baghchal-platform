@@ -298,6 +298,12 @@ async def test_who_can_be_moderated(
     r = await moderator.http.post(f"{MOD}/players/bob/suspend", json={"days": 0, "reason": "x"})
     assert r.status_code == 422
     assert (await moderator.http.get(f"{MOD}/players/nobody")).status_code == 404
+    bob = await players("bob2")
+    await bob.http.post("/api/v1/games/computer", json={"level": "easy"})  # makes its account
+    r = await moderator.http.post(
+        f"{MOD}/players/computer-easy/suspend", json={"days": 1, "reason": "x"}
+    )
+    assert (r.status_code, r.json()["error"]["code"]) == (422, "not_a_player")
 
 
 async def test_a_deleted_account_cannot_be_moderated(
@@ -346,6 +352,10 @@ async def test_renaming_an_offensive_username(
         f"{MOD}/players/player-1234/rename", json={"username": "player-1234", "reason": "case"}
     )
     assert r.status_code == 200
+    long = await moderator.http.post(
+        f"{MOD}/players/taken/rename", json={"username": "Player-9", "reason": "y" * 500}
+    )
+    assert len(long.json()["actions"][0]["reason"]) == 500  # fits the log
 
 
 def test_the_username_word_list(settings: Settings) -> None:

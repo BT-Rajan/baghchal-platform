@@ -14,6 +14,7 @@ from baghchal_server.accounts.models import User
 from baghchal_server.config import Settings
 from baghchal_server.deps import AppState
 from baghchal_server.errors import AppError
+from baghchal_server.games.models import Game
 from baghchal_server.legal import age, documents
 from baghchal_server.legal.documents import VERSIONS, Document, render
 from baghchal_server.legal.models import Consent
@@ -247,13 +248,26 @@ async def test_a_parent_refuses(
 ) -> None:
     kid = await _minor(app, mailer)
     token = _link(mailer, "mum@example.com")
-    await kid.http.post("/api/v1/games/computer", json={"level": "easy"})
-    r = await client.post("/api/v1/parent-consent", json={"token": token, "decision": "refuse"})
-    assert (r.status_code, r.json()["error"]["code"]) == (409, "game_in_progress")
-    game = (await kid.http.get("/api/v1/games")).json()[0]
-    await kid.http.post(f"/api/v1/games/{game['id']}/resign")
+    game = (await kid.http.post("/api/v1/games/computer", json={"level": "easy"})).json()
+    # A live game does not stop the parent: it is resigned, and the account goes.
     r = await client.post("/api/v1/parent-consent", json={"token": token, "decision": "refuse"})
     assert r.json()["status"] == "deleted"
+    async with _state(app).sessions() as db:
+        ended = await db.get(Game, uuid.UUID(game["id"]))
+        assert ended is not None
+        assert ended.end_reason == "resigned"
+
+
+async def test_a_guest_cannot_answer_past_a_parent(
+    app_client: httpx.AsyncClient, mailer: MemoryMailer
+) -> None:
+    r = await app_client.post(
+        "/api/v1/auth/guest", json={**AGREE, "birth_month": MINOR, "transport": "bearer"}
+    )
+    app_client.headers["authorization"] = f"Bearer {r.json()['token']}"
+    claim = {**AGREE, "username": "Sita", "email": "sita@example.com", "password": PASSWORD}
+    r = await app_client.post("/api/v1/me/claim", json={**claim, "birth_month": "1990-01"})
+    assert r.json()["error"]["code"] == "parent_email_required"  # the younger answer counts
 
 
 async def test_a_minor_is_free_at_18(app: FastAPI, mailer: MemoryMailer, clock: Clock) -> None:
@@ -368,3 +382,33 @@ async def test_older_accounts_and_new_versions_are_asked_again(
         "/api/v1/me/consents", json={**versions, "terms_version": "2027-01-01"}
     )
     assert r.json()["consents_needed"] == []
+
+
+async def test_changes_wait_for_the_age_and_the_terms(app: FastAPI, players: PlayerFactory) -> None:
+    from sqlalchemy import delete as _delete  # noqa: PLC0415
+    from sqlalchemy import update as _update  # noqa: PLC0415
+
+    from baghchal_server.accounts.models import User as _User  # noqa: PLC0415
+    from baghchal_server.legal.models import Consent as _Consent  # noqa: PLC0415
+
+    alice = await players("alice")
+    state = app.state.ctx
+    async with state.sessions() as db:  # the terms changed since she accepted them
+        await db.execute(_delete(_Consent).where(_Consent.user_id == uuid.UUID(alice.id)))
+        await db.commit()
+    r = await alice.http.post("/api/v1/games/computer", json={"level": "easy"})
+    assert (r.status_code, r.json()["error"]["code"]) == (403, "consents_needed")
+    assert (await alice.http.get("/api/v1/me")).status_code == 200  # reading still works
+    r = await alice.http.post("/api/v1/me/consents", json={**AGREE})
+    assert r.status_code == 200, r.text
+    assert (
+        await alice.http.post("/api/v1/games/computer", json={"level": "easy"})
+    ).status_code == 201
+
+    async with state.sessions() as db:  # an account older than the age question
+        await db.execute(
+            _update(_User).where(_User.id == uuid.UUID(alice.id)).values(age_checked_at=None)
+        )
+        await db.commit()
+    r = await alice.http.post("/api/v1/payments/checkout", json={"plan": "plus", "period": "month"})
+    assert (r.status_code, r.json()["error"]["code"]) == (403, "age_needed")
