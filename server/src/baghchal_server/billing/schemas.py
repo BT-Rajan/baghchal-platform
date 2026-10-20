@@ -42,6 +42,8 @@ class MyPlanOut(BaseModel):
     features: list[Feature]
     grants: list[GrantOut]
     """Grants in force now."""
+    waiting: list[GrantOut]
+    """Plan time lined up to start later: a cheaper plan's waits until a dearer one ends."""
 
 
 class PlayerPlanOut(MyPlanOut):

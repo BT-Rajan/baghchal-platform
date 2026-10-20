@@ -5925,6 +5925,13 @@
             },
             "type": "array",
             "title": "Grants"
+          },
+          "waiting": {
+            "items": {
+              "$ref": "#/components/schemas/GrantOut"
+            },
+            "type": "array",
+            "title": "Waiting"
           }
         },
         "type": "object",
@@ -5932,7 +5939,8 @@
           "plan",
           "plan_until",
           "features",
-          "grants"
+          "grants",
+          "waiting"
         ],
         "title": "MyPlanOut"
       },
@@ -6272,6 +6280,18 @@
             ],
             "title": "Paid At"
           },
+          "starts": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts"
+          },
           "until": {
             "anyOf": [
               {
@@ -6294,6 +6314,7 @@
           "status",
           "created_at",
           "paid_at",
+          "starts",
           "until"
         ],
         "title": "PaymentOut"
@@ -6481,6 +6502,13 @@
             "type": "array",
             "title": "Grants"
           },
+          "waiting": {
+            "items": {
+              "$ref": "#/components/schemas/GrantOut"
+            },
+            "type": "array",
+            "title": "Waiting"
+          },
           "username": {
             "type": "string",
             "title": "Username"
@@ -6499,6 +6527,7 @@
           "plan_until",
           "features",
           "grants",
+          "waiting",
           "username",
           "history"
         ],

@@ -60,8 +60,11 @@ class PaymentOut(BaseModel):
     status: PaymentStatus
     created_at: datetime
     paid_at: datetime | None
+    starts: datetime | None
+    """When the plan it bought starts, once paid: later than ``paid_at`` while a better plan
+    runs first."""
     until: datetime | None
-    """When the plan it bought ends (later purchases add on), once paid."""
+    """When the plan it bought ends, once paid (better plan time bought later pushes it on)."""
 
 
 class PaymentsOut(BaseModel):

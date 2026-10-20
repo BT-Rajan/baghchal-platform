@@ -2551,6 +2551,8 @@ export interface components {
             features: components["schemas"]["Feature"][];
             /** Grants */
             grants: components["schemas"]["GrantOut"][];
+            /** Waiting */
+            waiting: components["schemas"]["GrantOut"][];
         };
         /**
          * NotificationKind
@@ -2677,6 +2679,8 @@ export interface components {
             created_at: string;
             /** Paid At */
             paid_at: string | null;
+            /** Starts */
+            starts: string | null;
             /** Until */
             until: string | null;
         };
@@ -2745,6 +2749,8 @@ export interface components {
             features: components["schemas"]["Feature"][];
             /** Grants */
             grants: components["schemas"]["GrantOut"][];
+            /** Waiting */
+            waiting: components["schemas"]["GrantOut"][];
             /** Username */
             username: string;
             /** History */

@@ -82,7 +82,13 @@ async def test_the_plans() -> None:
 
 async def test_everyone_starts_free_and_hard_needs_plus(players: PlayerFactory) -> None:
     alice = await players("alice")
-    assert await _plan(alice) == {"plan": "free", "plan_until": None, "features": [], "grants": []}
+    assert await _plan(alice) == {
+        "plan": "free",
+        "plan_until": None,
+        "features": [],
+        "grants": [],
+        "waiting": [],
+    }
     r = await alice.http.post(COMPUTER, json=HARD)
     assert (r.status_code, r.json()["error"]) == (
         403,
@@ -128,13 +134,13 @@ async def test_plans_and_features_add_up(
     await _grant(boss, "alice", plan="plus", days=10)
     clock.advance(days=1)
     await _grant(boss, "alice", plan="plus", days=20)
-    assert (await _plan(alice))["plan_until"] == "2026-01-22T12:00:00Z"  # the later end
+    assert (await _plan(alice))["plan_until"] == "2026-01-31T12:00:00Z"  # added on
     await _grant(boss, "alice", plan="plus", days=None)
     assert (await _plan(alice))["plan_until"] is None  # one of them lasts for good
     await _grant(boss, "alice", plan="pro", days=5)
     mine = await _plan(alice)
     assert (mine["plan"], mine["plan_until"]) == ("pro", "2026-01-07T12:00:00Z")
-    assert len(mine["grants"]) == 5
+    assert (len(mine["grants"]), len(mine["waiting"])) == (4, 1)  # the second 20 days wait
 
 
 async def test_revoking(
@@ -161,6 +167,39 @@ async def test_revoking(
         ("revoke", "ClawPlay Pro: Ended early", "boss"),
         ("grant", "ClawPlay Pro: Tester", "boss"),
     ]
+
+
+async def test_given_time_lines_up_with_bought_time(
+    app: FastAPI, players: PlayerFactory, clock: Clock, mailer: MemoryMailer
+) -> None:
+    boss, alice = await players("boss"), await players("alice")
+    await make_admin(app, boss)
+    plus = await _grant(boss, "alice", plan="plus", days=10)
+    pro = await _grant(boss, "alice", plan="pro", days=7)
+    mine = await _plan(alice)
+    assert (mine["plan"], mine["plan_until"]) == ("pro", "2026-01-08T12:00:00Z")
+    assert [(g["id"], g["starts_at"], g["ends_at"]) for g in mine["waiting"]] == [
+        (plus["id"], "2026-01-08T12:00:00Z", "2026-01-18T12:00:00Z")
+    ]
+    # Plus given on Pro waits for it, and says so.
+    clock.advance(minutes=1)
+    later = await _grant(boss, "alice", plan="plus", days=1)
+    assert later["starts_at"] == "2026-01-18T12:00:00Z"
+    assert "from 18 January 2026, when your better plan ends" in mailer.outbox[-1].body
+
+    # Taking Pro away brings the Plus time forward; so does taking away waiting time.
+    clock.advance(days=2)
+    r = await boss.http.post(f"/api/v1/admin/grants/{pro['id']}/revoke", json={"reason": "x"})
+    assert r.status_code == 200
+    r = await boss.http.post(f"/api/v1/admin/grants/{plus['id']}/revoke", json={"reason": "x"})
+    assert (r.status_code, r.json()["active"]) == (200, False)
+    mine = await _plan(alice)
+    assert (mine["plan"], mine["plan_until"]) == ("plus", "2026-01-04T12:01:00Z")
+    assert mine["waiting"] == []
+    themes = await _grant(boss, "alice", feature="themes", days=None)  # no plan time to move
+    r = await boss.http.post(f"/api/v1/admin/grants/{themes['id']}/revoke", json={"reason": "x"})
+    assert r.status_code == 200
+    assert (await _plan(alice))["plan_until"] == "2026-01-04T12:01:00Z"
 
 
 async def test_only_admins_grant(app: FastAPI, players: PlayerFactory, settings: Settings) -> None:

@@ -3,7 +3,8 @@
 import hashlib
 import hmac
 import json
-from datetime import timedelta
+import uuid
+from datetime import datetime, timedelta
 from typing import Any
 
 import httpx
@@ -12,6 +13,7 @@ from fastapi import FastAPI
 from sqlalchemy import select, update
 
 from baghchal_server.app import create_app
+from baghchal_server.billing.service import my_plan
 from baghchal_server.config import Settings
 from baghchal_server.deps import AppState
 from baghchal_server.mail import MemoryMailer
@@ -24,6 +26,7 @@ from baghchal_server.payments.gateway import (
 from baghchal_server.payments.models import Payment
 
 from .conftest import ORIGIN, Clock, Player, PlayerFactory
+from .test_billing import give_plan
 
 KEY_SECRET = "test-key-secret"
 WEBHOOK_SECRET = "test-webhook-secret"
@@ -172,10 +175,79 @@ async def test_buying_again_adds_on(players: PlayerFactory, clock: Clock) -> Non
     assert r.json()["until"] == until.isoformat().replace("+00:00", "Z")
     assert r.json()["amount_paise"] == 149000
 
-    # Pro runs from now, alongside.
-    r = await _verify(alice, (await _buy(alice, "pro"))["order_id"], "pay_3")
+
+def _z(at: datetime) -> str:
+    return at.isoformat().replace("+00:00", "Z")
+
+
+async def _plan_then(app: FastAPI, player: Player) -> tuple[str, str | None]:
+    """The plan and its end, long after the player's session has lapsed."""
+    state: AppState = app.state.ctx
+    async with state.sessions() as db:
+        mine = await my_plan(db, uuid.UUID(player.id), state.clock())
+    return mine.plan, None if mine.plan_until is None else _z(mine.plan_until)
+
+
+async def test_plus_bought_on_pro_waits_for_it(
+    app: FastAPI, players: PlayerFactory, clock: Clock, mailer: MemoryMailer
+) -> None:
+    alice = await players("alice")
+    await _verify(alice, (await _buy(alice, "pro", "year"))["order_id"], "pay_1")
+    pro_ends = clock() + timedelta(days=365)
+    clock.advance(days=5)
+    r = (await _verify(alice, (await _buy(alice, "plus"))["order_id"], "pay_2")).json()
+    # The Plus month is not spent underneath Pro: it starts when Pro ends.
+    assert (r["starts"], r["until"]) == (_z(pro_ends), _z(pro_ends + timedelta(days=30)))
+    assert f"from {pro_ends.day} {pro_ends:%b %Y}, when your better plan ends" in (
+        mailer.outbox[-1].body
+    )
     mine = (await alice.http.get("/api/v1/me/plan")).json()
-    assert (mine["plan"], mine["plan_until"]) == ("pro", r.json()["until"])
+    assert (mine["plan"], mine["plan_until"]) == ("pro", _z(pro_ends))
+    assert [(g["plan"], g["starts_at"], g["active"]) for g in mine["waiting"]] == [
+        ("plus", _z(pro_ends), False)
+    ]
+    # A second Plus month lines up after the first.
+    clock.advance(minutes=1)
+    r = (await _verify(alice, (await _buy(alice, "plus"))["order_id"], "pay_3")).json()
+    assert r["until"] == _z(pro_ends + timedelta(days=60))
+
+    clock.advance(days=360)  # Pro has ended; Plus runs for both months
+    assert await _plan_then(app, alice) == ("plus", _z(pro_ends + timedelta(days=60)))
+
+
+async def test_pro_bought_on_plus_moves_the_plus_time_left(
+    app: FastAPI, players: PlayerFactory, clock: Clock, mailer: MemoryMailer
+) -> None:
+    alice = await players("alice")
+    await _verify(alice, (await _buy(alice, "plus"))["order_id"], "pay_1")
+    clock.advance(days=10)  # 20 days of Plus left
+    pro = (await _verify(alice, (await _buy(alice, "pro"))["order_id"], "pay_2")).json()
+    pro_ends = clock() + timedelta(days=30)
+    assert (pro["starts"], pro["until"]) == (_z(clock()), _z(pro_ends))
+    plus_ends = pro_ends + timedelta(days=20)
+    assert f"now follows it, until {plus_ends.day} {plus_ends:%b %Y}" in mailer.outbox[-1].body
+    listed = (await alice.http.get("/api/v1/me/payments")).json()["payments"]
+    assert [(p["plan"], p["starts"], p["until"]) for p in listed] == [
+        ("pro", _z(clock()), _z(pro_ends)),
+        ("plus", _z(pro_ends), _z(plus_ends)),
+    ]
+    clock.advance(days=30)
+    assert await _plan_then(app, alice) == ("plus", _z(plus_ends))
+
+
+async def test_nothing_to_buy_under_a_plan_held_for_good(
+    app: FastAPI, players: PlayerFactory
+) -> None:
+    alice = await players("alice")
+    await give_plan(app, alice, "pro")
+    for plan in ("plus", "pro"):
+        r = await alice.http.post(
+            "/api/v1/payments/checkout", json={"plan": plan, "period": "month"}
+        )
+        assert (r.status_code, r.json()["error"]["code"]) == (409, "plan_held_for_good")
+    bob = await players("bob")
+    await give_plan(app, bob, "plus")
+    await _buy(bob, "pro")  # Pro is more than Plus for good
 
 
 async def test_what_cannot_be_confirmed(players: PlayerFactory, gateway: FakeGateway) -> None:

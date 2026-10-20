@@ -46,13 +46,15 @@ export default function Plans() {
             be bought: paid plans add extras, not advantages.
           </Hint>
           <View style={styles.grid}>
-            {plans.data.map((plan) => {
+            {plans.data.map((plan, i) => {
               const paid = plan.plan === 'free' ? null : plan.plan;
               return (
                 <PlanColumn
                   key={plan.plan}
                   plan={plan}
                   mine={mine.data}
+                  // The server lists the plans cheapest first.
+                  cheaper={i < plans.data.findIndex((p) => p.plan === mine.data.plan)}
                   onBuy={
                     payments.data.enabled && paid !== null
                       ? (period) => buy.mutate({ plan: paid, period })
@@ -66,7 +68,7 @@ export default function Plans() {
           <Comparison plans={plans.data} mine={mine.data} />
           <Hint>
             {payments.data.enabled
-              ? 'Payments are taken by Razorpay: cards, UPI, net banking and wallets. Plans are paid in advance for a month or a year and never renew by themselves; buying again adds on to the time you have.'
+              ? 'Payments are taken by Razorpay: cards, UPI, net banking and wallets. Plans are paid in advance for a month or a year and never renew by themselves; buying again adds on to the time you have. A plan bought while a better one runs starts when that one ends, and time left on a cheaper plan moves to after a better one.'
               : 'Paying online is coming soon. Until then, ClawPlay can add a plan to your account.'}
           </Hint>
           {payments.data.payments.length > 0 && (
@@ -90,11 +92,14 @@ export default function Plans() {
 function PlanColumn({
   plan,
   mine,
+  cheaper,
   onBuy,
   buying,
 }: {
   plan: PlanInfo;
   mine: MyPlan;
+  /** Cheaper than the player's plan: time bought now waits for it to end. */
+  cheaper: boolean;
   /** Null where this plan cannot be bought (Free, or payments off). */
   onBuy: ((period: Period) => void) | null;
   buying: boolean;
@@ -113,6 +118,9 @@ function PlanColumn({
         {current && <Text style={styles.badge}>Your plan</Text>}
         <Text style={styles.price}>{priceText(plan)}</Text>
         {saving !== null && <Text style={styles.saving}>{saving}</Text>}
+        {onBuy !== null && cheaper && (
+          <Hint>{`Starts when your ${PLAN_NAMES[mine.plan]} ends, so none of it is spent underneath it.`}</Hint>
+        )}
         {onBuy !== null &&
           (['year', 'month'] as const).map((period) => (
             <Button

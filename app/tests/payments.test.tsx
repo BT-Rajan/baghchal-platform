@@ -45,6 +45,7 @@ const PAID: Payment = {
   status: 'paid',
   created_at: '2026-01-01T12:00:00Z',
   paid_at: '2026-01-01T12:01:00Z',
+  starts: '2026-01-01T12:01:00Z',
   until: '2027-01-01T12:01:00Z',
 };
 
@@ -78,7 +79,10 @@ test('buy a year of Plus', async () => {
     'GET /api/v1/me/plan': () =>
       paid
         ? { status: 200, body: PLUS_UNTIL }
-        : { status: 200, body: { plan: 'free', plan_until: null, features: [], grants: [] } },
+        : {
+            status: 200,
+            body: { plan: 'free', plan_until: null, features: [], grants: [], waiting: [] },
+          },
     'GET /api/v1/me/payments': () => ({
       status: 200,
       body: { enabled: true, payments: paid ? [PAID] : [] },
@@ -156,4 +160,33 @@ test('payments off: no buttons', async () => {
   });
   expect(await screen.findByText(/^Paying online is coming soon/)).toBeOnTheScreen();
   expect(screen.queryByRole('button', { name: /^Buy/ })).toBeNull();
+});
+
+test('Plus bought on Pro waits for Pro to end', async () => {
+  const pro = { ...PLUS_UNTIL, plan: 'pro' as const, plan_until: '2027-01-01T12:00:00Z' };
+  await open({
+    'GET /api/v1/me/plan': { status: 200, body: pro },
+    'POST /api/v1/payments/verify': {
+      status: 200,
+      body: { ...PAID, starts: '2027-01-01T12:00:00Z', until: '2028-01-01T12:00:00Z' },
+    },
+  });
+  expect(
+    await screen.findByText('Starts when your Pro ends, so none of it is spent underneath it.'),
+  ).toBeOnTheScreen();
+  expect(screen.getAllByText(/^Starts when your Pro ends/)).toHaveLength(1); // only on Plus
+  await fireEvent.press(screen.getByRole('button', { name: 'Buy ClawPlay Plus for a year' }));
+  await waitFor(() => expect(opened).toHaveLength(1));
+  await act(() =>
+    opened[0]!.options.handler({
+      razorpay_order_id: 'order_1',
+      razorpay_payment_id: 'pay_1',
+      razorpay_signature: 'sig',
+    }),
+  );
+  expect(
+    await screen.findByText(
+      'Thank you! Your ClawPlay Plus starts on 1 Jan 2027, when your better plan ends, and runs until 1 Jan 2028.',
+    ),
+  ).toBeOnTheScreen();
 });

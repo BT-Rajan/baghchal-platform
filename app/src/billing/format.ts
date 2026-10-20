@@ -36,22 +36,35 @@ function dayText(iso: string): string {
   });
 }
 
+/** " Then ClawPlay Plus until 30 Jan 2028.": plan time lined up after the current plan. */
+function thenText(mine: MyPlan): string {
+  const ends = new Map<Plan, string>();
+  for (const g of mine.waiting)
+    if (g.plan !== null && g.plan !== mine.plan && g.ends_at !== null) ends.set(g.plan, g.ends_at);
+  return [...ends]
+    .map(([plan, end]) => ` Then ClawPlay ${PLAN_NAMES[plan]} until ${dayText(end)}.`)
+    .join('');
+}
+
 /**
  * "You have ClawPlay Plus until 18 Jan 2027." / "You are on the Free plan." — or, for an admin
- * looking at a player, "alice has ClawPlay Plus…" / "alice is on the Free plan."
+ * looking at a player, "alice has ClawPlay Plus…" / "alice is on the Free plan." Plan time
+ * waiting its turn follows: "… Then ClawPlay Plus until 30 Jan 2028."
  */
 export function myPlanText(mine: MyPlan, who: string | null = null): string {
+  const then = thenText(mine);
   if (mine.plan === 'free')
-    return `${who ?? 'You'} ${who === null ? 'are' : 'is'} on the Free plan.`;
+    return `${who ?? 'You'} ${who === null ? 'are' : 'is'} on the Free plan.${then}`;
   const until = mine.plan_until === null ? '' : ` until ${dayText(mine.plan_until)}`;
-  return `${who ?? 'You'} ${who === null ? 'have' : 'has'} ClawPlay ${PLAN_NAMES[mine.plan]}${until}.`;
+  return `${who ?? 'You'} ${who === null ? 'have' : 'has'} ClawPlay ${PLAN_NAMES[mine.plan]}${until}.${then}`;
 }
 
 /**
  * "ClawPlay Pro · until 18 Jan 2027 · given by boss: Welcome gift", or for a bought plan
- * "ClawPlay Plus · until 17 Nov 2026 · Paid ₹149 for a month (pay_…)".
+ * "ClawPlay Plus · until 17 Nov 2026 · Paid ₹149 for a month (pay_…)"; time waiting for a
+ * better plan to end reads "from 18 Jan 2027 until 17 Feb 2027".
  */
-export function grantText(grant: Grant): string {
+export function grantText(grant: Grant, now: number = Date.now()): string {
   const what =
     grant.plan !== null
       ? `ClawPlay ${PLAN_NAMES[grant.plan]}`
@@ -63,7 +76,9 @@ export function grantText(grant: Grant): string {
       ? `revoked ${dayText(grant.revoked_at)}`
       : grant.ends_at === null
         ? 'until revoked'
-        : `${grant.active ? 'until' : 'ended'} ${dayText(grant.ends_at)}`;
+        : Date.parse(grant.starts_at) > now
+          ? `from ${dayText(grant.starts_at)} until ${dayText(grant.ends_at)}`
+          : `${grant.active ? 'until' : 'ended'} ${dayText(grant.ends_at)}`;
   return grant.paid
     ? `${what} · ${when} · ${grant.reason}`
     : `${what} · ${when} · given by ${grant.granted_by ?? 'a former admin'}: ${grant.reason}`;

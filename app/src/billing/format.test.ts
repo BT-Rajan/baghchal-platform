@@ -44,6 +44,19 @@ test('plans and prices in words', () => {
   );
   expect(myPlanText(FREE, 'alice')).toBe('alice is on the Free plan.');
   expect(myPlanText(PLUS_UNTIL, 'alice')).toBe('alice has ClawPlay Plus until 1 Feb 2026.');
+  // Plan time waiting for a better plan to end follows it.
+  const waiting = [
+    grant({ plan: 'plus', starts_at: '2026-02-01T12:00:00Z', ends_at: '2026-03-03T12:00:00Z' }),
+    grant({ plan: 'plus', starts_at: '2026-03-03T12:00:00Z', ends_at: '2026-04-02T12:00:00Z' }),
+    grant({ plan: null, feature: 'themes', ends_at: null }),
+  ];
+  expect(myPlanText({ ...PLUS_UNTIL, plan: 'pro', waiting })).toBe(
+    'You have ClawPlay Pro until 1 Feb 2026. Then ClawPlay Plus until 2 Apr 2026.',
+  );
+  expect(myPlanText({ ...FREE, waiting: waiting.slice(0, 1) })).toBe(
+    'You are on the Free plan. Then ClawPlay Plus until 3 Mar 2026.',
+  );
+  expect(myPlanText({ ...PLUS_UNTIL, waiting })).toBe('You have ClawPlay Plus until 1 Feb 2026.');
 });
 
 test('features, and the ones still being built', () => {
@@ -76,6 +89,10 @@ test('grants in words', () => {
     'revoked 5 Jan 2026',
   );
   expect(grantText(grant({ plan: null, feature: null }))).toMatch(/^Access ·/);
+  const now = Date.parse('2026-01-01T12:00:00Z');
+  expect(grantText(grant({ active: false, starts_at: '2026-01-10T12:00:00Z' }), now)).toBe(
+    'ClawPlay Pro · from 10 Jan 2026 until 31 Jan 2026 · given by boss: Welcome gift',
+  );
 });
 
 test('what an admin can grant, and for how long', () => {

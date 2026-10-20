@@ -12,6 +12,7 @@ const payment = (overrides: Partial<Payment> = {}): Payment => ({
   status: 'paid',
   created_at: '2026-10-18T12:00:00Z',
   paid_at: '2026-10-18T12:01:00Z',
+  starts: '2026-10-18T12:01:00Z',
   until: '2026-11-17T12:01:00Z',
   ...overrides,
 });
@@ -36,6 +37,11 @@ test('thanks and the record', () => {
   expect(thanksText(payment())).toBe('Thank you! You have ClawPlay Plus until 17 Nov 2026.');
   expect(thanksText(payment({ plan: 'pro', until: null }))).toBe(
     'Thank you! You have ClawPlay Pro.',
+  );
+  expect(
+    thanksText(payment({ starts: '2026-12-01T12:00:00Z', until: '2026-12-31T12:00:00Z' })),
+  ).toBe(
+    'Thank you! Your ClawPlay Plus starts on 1 Dec 2026, when your better plan ends, and runs until 31 Dec 2026.',
   );
   expect(paymentText(payment())).toBe('ClawPlay Plus for a month · ₹149 · 18 Oct 2026 · paid');
   expect(paymentText(payment({ period: 'year', status: 'failed' }))).toBe(

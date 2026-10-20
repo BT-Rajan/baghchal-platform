@@ -30,11 +30,18 @@ export const PLANS: PlanInfo[] = [
   },
 ];
 
-export const FREE: MyPlan = { plan: 'free', plan_until: null, features: [], grants: [] };
+export const FREE: MyPlan = {
+  plan: 'free',
+  plan_until: null,
+  features: [],
+  grants: [],
+  waiting: [],
+};
 
 export const PLUS_UNTIL: MyPlan = {
   plan: 'plus',
   plan_until: '2026-02-01T12:00:00Z',
   features: PLUS,
   grants: [],
+  waiting: [],
 };

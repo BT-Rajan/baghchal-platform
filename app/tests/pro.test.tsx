@@ -20,6 +20,7 @@ const PRO: MyPlan = {
     'trainer',
   ],
   grants: [],
+  waiting: [],
 };
 
 function open(url: string, routes: Record<string, Route> = {}, plan: MyPlan | null = PRO) {

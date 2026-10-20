@@ -1,8 +1,9 @@
 """Buying a plan for a month or a year.
 
 A paid period is an ordinary grant (see ``billing``), so everything that checks features
-just works. Buying again adds on: the new grant ends a period after the latest end of the same
-plan already held. Each order is fulfilled once, whether the browser or the webhook says so
+just works. Bought time is lined up with the rest (``billing.service.lay_out``): buying again
+adds on, Plus bought while Pro runs starts when Pro ends, and Pro bought on Plus moves the Plus
+time left to after it. Each order is fulfilled once, whether the browser or the webhook says so
 first.
 """
 
@@ -15,7 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from baghchal_server.accounts.models import User
 from baghchal_server.billing.models import Grant
-from baghchal_server.billing.plans import NAMES, PRICES, Plan
+from baghchal_server.billing.plans import NAMES, PRICES, RANK, Plan
+from baghchal_server.billing.service import entitlements, lay_out
 from baghchal_server.errors import AppError
 from baghchal_server.mail import Mail
 from baghchal_server.payments.gateway import Gateway, GatewayError
@@ -42,6 +44,10 @@ def rupees(paise: int) -> str:
     return f"₹{paise // 100:,}" if paise % 100 == 0 else f"₹{paise / 100:,.2f}"
 
 
+def _day(at: datetime) -> str:
+    return f"{at.day} {at:%b %Y}"
+
+
 def _what(payment: Payment) -> str:
     return f"ClawPlay {NAMES[Plan(payment.plan)]} for {FOR[Period(payment.period)]}"
 
@@ -51,6 +57,13 @@ async def checkout(
 ) -> CheckoutOut:
     """Create an order for the plan; the browser takes the payment with Razorpay Checkout."""
     plan = Plan(data.plan)
+    held = await entitlements(db, user.id, now)
+    if held.plan_until is None and RANK[held.plan] >= RANK[plan] and held.plan != Plan.FREE:
+        raise AppError(
+            409,
+            "plan_held_for_good",
+            f"You have ClawPlay {NAMES[held.plan]} for good, so there is nothing to buy.",
+        )
     amount = price(plan, data.period)
     payment = Payment(
         id=uuid.uuid4(),
@@ -104,34 +117,40 @@ async def fulfil(
     if user is None:  # the account was deleted while paying: kept as a record, nothing to give
         await db.commit()
         return payment, None
-    latest = await db.scalar(
-        select(func.max(Grant.ends_at)).where(
-            Grant.user_id == user.id,
-            Grant.plan == payment.plan,
-            Grant.revoked_at.is_(None),
-            Grant.ends_at > now,
-        )
-    )
-    ends = max(now, latest or now) + LENGTH[Period(payment.period)]
     grant = Grant(
         id=uuid.uuid4(),
         user_id=user.id,
         plan=payment.plan,
         starts_at=now,
-        ends_at=ends,
+        ends_at=now + LENGTH[Period(payment.period)],
         reason=f"Paid {rupees(payment.amount_paise)} for {FOR[Period(payment.period)]} "
         f"({payment_id})",
         created_at=now,
     )
     db.add(grant)
     payment.grant_id = grant.id
+    await lay_out(db, user.id, now)
     await db.commit()
-    until = f"{ends.day} {ends:%b %Y}"
+    name = NAMES[Plan(payment.plan)]
+    when = f"until {_day(grant.ends_at)}"  # type: ignore[arg-type]
+    if grant.starts_at > now:
+        when = f"from {_day(grant.starts_at)}, when your better plan ends, {when}"
+    after = await db.scalar(  # cheaper plan time this pushed on
+        select(func.max(Grant.ends_at)).where(
+            Grant.user_id == user.id,
+            Grant.plan.is_not(None),
+            Grant.plan != payment.plan,
+            Grant.revoked_at.is_(None),
+            Grant.starts_at >= grant.ends_at,
+        )
+    )
+    if after is not None:
+        when += f". The plan time you had left now follows it, until {_day(after)}"
     mail = Mail(
         user.email,
-        f"Your ClawPlay {NAMES[Plan(payment.plan)]} receipt",
+        f"Your ClawPlay {name} receipt",
         f"Hello {user.username},\n\nThank you! You paid {rupees(payment.amount_paise)} for "
-        f"{_what(payment)}. You have ClawPlay {NAMES[Plan(payment.plan)]} until {until}.\n\n"
+        f"{_what(payment)}. You have ClawPlay {name} {when}.\n\n"
         f"Payment: {payment_id}\nOrder: {payment.order_id}\n\nEnjoy your games!",
     )
     return payment, mail
@@ -154,9 +173,12 @@ async def find(db: AsyncSession, order_id: str, user_id: uuid.UUID) -> Payment:
 
 async def describe(db: AsyncSession, payments: list[Payment]) -> list[PaymentOut]:
     grants = {p.grant_id for p in payments if p.grant_id is not None}
-    ends = dict(
-        (await db.execute(select(Grant.id, Grant.ends_at).where(Grant.id.in_(grants)))).all()
-    )
+    spans = {
+        row.id: (row.starts_at, row.ends_at)
+        for row in await db.execute(
+            select(Grant.id, Grant.starts_at, Grant.ends_at).where(Grant.id.in_(grants))
+        )
+    }
     return [
         PaymentOut(
             id=p.id,
@@ -166,7 +188,8 @@ async def describe(db: AsyncSession, payments: list[Payment]) -> list[PaymentOut
             status=PaymentStatus(p.status),
             created_at=p.created_at,
             paid_at=p.paid_at,
-            until=ends.get(p.grant_id) if p.grant_id is not None else None,
+            starts=spans[p.grant_id][0] if p.grant_id in spans else None,
+            until=spans[p.grant_id][1] if p.grant_id in spans else None,
         )
         for p in payments
     ]
