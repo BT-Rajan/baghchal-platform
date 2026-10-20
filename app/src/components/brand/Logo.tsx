@@ -86,7 +86,9 @@ export function Brand({
   return (
     <View style={styles.row}>
       <ClawMark size={size} />
-      <View>
+      {/* The name and tagline take the room left beside the mark, and wrap in it: unshrunk,
+          a long tagline widened the row past the screen and pushed the mark off its edge. */}
+      <View style={styles.words}>
         <Wordmark size={size * 0.62} onDark={onDark} />
         {tagline && <Text style={styles.tagline}>{TAGLINE}</Text>}
       </View>
@@ -131,6 +133,7 @@ export function BrandBar({
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  words: { flexShrink: 1 },
   word: { fontWeight: '800' },
   tagline: { fontSize: 14, color: colors.muted, marginTop: 2 },
   header: { alignItems: 'center', marginBottom: spacing.md },
