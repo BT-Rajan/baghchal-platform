@@ -5,7 +5,7 @@ import type { Emote, Game, GameAction } from '@/api/endpoints';
 import { isApiError } from '@/api/errors';
 import { queryKeys } from '@/api/queryKeys';
 import { useApi } from '@/auth/session';
-import { applyGame, isNewer, showEmote, type ShownEmote } from '@/realtime/cache';
+import { addChatMessage, applyGame, isNewer, showEmote, type ShownEmote } from '@/realtime/cache';
 
 import type { Piece } from './bfen';
 
@@ -95,5 +95,25 @@ export function useSendEmote(gameId: string, mine: Piece) {
   return useMutation({
     mutationFn: (emote: Emote) => api.emote(gameId, emote),
     onSuccess: (_, emote) => showEmote(queryClient, gameId, mine, emote),
+  });
+}
+
+/** A game's chat for one of its players (open or not, and what was said). */
+export function useChat(gameId: string, enabled: boolean) {
+  const api = useApi();
+  return useQuery({
+    queryKey: queryKeys.chat(gameId),
+    queryFn: ({ signal }) => api.chat(gameId, signal),
+    enabled,
+  });
+}
+
+/** Write in a game's chat; the message shows at once (the server's echo is not shown twice). */
+export function useSendChat(gameId: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (text: string) => api.sendChat(gameId, text),
+    onSuccess: (message) => addChatMessage(queryClient, gameId, message),
   });
 }

@@ -76,8 +76,13 @@ export type ParentLink = S['ParentLinkOut'];
 /** What every sign-up gives besides the account: the age, and the documents accepted. */
 export type Agreement = Omit<S['GuestIn'], 'transport'>;
 
+/** A game's chat as one of its players sees it. */
+export type Chat = S['ChatOut'];
+export type ChatMessage = S['ChatMessageOut'];
+
 export type ChallengeAnswer = 'accept' | 'decline' | 'cancel';
-export type GameAction = 'resign' | 'abort' | 'claim-abandonment';
+/** What a player can do to a game besides moving; `draw` offers a draw or accepts one. */
+export type GameAction = 'resign' | 'abort' | 'claim-abandonment' | 'draw' | 'draw/decline';
 
 const V1 = '/api/v1';
 const seg = encodeURIComponent;
@@ -139,6 +144,10 @@ export function createApi(client: Client, transport: Transport) {
       client.get<NotificationList>(`${V1}/notifications`, { signal }),
     emote: (gameId: string, emote: Emote) =>
       client.post<void>(`${V1}/games/${seg(gameId)}/emote`, { body: { emote } }),
+    chat: (gameId: string, signal?: AbortSignal) =>
+      client.get<Chat>(`${V1}/games/${seg(gameId)}/chat`, { signal }),
+    sendChat: (gameId: string, text: string) =>
+      client.post<ChatMessage>(`${V1}/games/${seg(gameId)}/chat`, { body: { text } }),
     achievements: (username: string, signal?: AbortSignal) =>
       client.get<Achievement[]>(`${V1}/players/${seg(username)}/achievements`, { signal }),
     readNotifications: () => client.post<void>(`${V1}/notifications/read`),

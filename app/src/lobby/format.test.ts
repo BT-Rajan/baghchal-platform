@@ -128,6 +128,9 @@ test('history lines', () => {
   expect(historyText({ ...base, outcome: 'aborted', rating_change: null })).toBe(
     'Aborted · vs bob · 5+3 rated · 3 Oct 2026',
   );
+  expect(historyText({ ...base, outcome: 'drawn', rating_change: 0 })).toBe(
+    'Drawn · vs bob · 5+3 rated (±0) · 3 Oct 2026',
+  );
 });
 
 test('waiting players and levels', () => {

@@ -14,7 +14,7 @@ export interface Ending {
   won: boolean | null;
 }
 
-const HOW: Record<Exclude<EndReason, 'aborted'>, string> = {
+const HOW: Record<Exclude<EndReason, 'aborted' | 'draw_agreed'>, string> = {
   five_captured: 'Five goats captured',
   tigers_trapped: 'The tigers are trapped',
   goats_blocked: 'The goats cannot move',
@@ -25,12 +25,13 @@ const HOW: Record<Exclude<EndReason, 'aborted'>, string> = {
 
 /**
  * The ending to show when a game I was watching (`before` is the status I last saw) has just
- * finished with a winner. Nothing for an aborted game, or one that was already over when opened.
+ * finished with a winner. Nothing for an aborted or drawn game (the result says so), or one that
+ * was already over when opened.
  */
 export function endingFor(before: string | null, game: Game, me: Piece | null): Ending | null {
   if (before !== 'active' || game.status !== 'finished' || game.result === null) return null;
   const { winner, reason } = game.result;
-  if (winner === null || reason === 'aborted') return null;
+  if (winner === null || reason === 'aborted' || reason === 'draw_agreed') return null;
   const won = me === null ? null : winner === me;
   return {
     winner,

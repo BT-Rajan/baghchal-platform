@@ -1,7 +1,7 @@
 /** How realtime events update the query cache that screens read from. */
 import type { QueryClient } from '@tanstack/react-query';
 
-import type { Challenge, ChallengeList, Emote, Game } from '@/api/endpoints';
+import type { Challenge, ChallengeList, Chat, ChatMessage, Emote, Game } from '@/api/endpoints';
 import { queryKeys } from '@/api/queryKeys';
 import { serverClock } from '@/game/serverClock';
 
@@ -97,6 +97,21 @@ export function showEmote(
   queryClient.setQueryData<ShownEmote>(queryKeys.emote(gameId), { side, emote, at: Date.now() });
 }
 
+/**
+ * Add a chat message to a game's chat, if it is loaded (it is fetched when the game opens; a
+ * message for a game not on screen is read then). The same message twice (sent here, then
+ * echoed by the server) is kept once.
+ */
+export function addChatMessage(queryClient: QueryClient, gameId: string, message: ChatMessage) {
+  queryClient.setQueryData<Chat>(queryKeys.chat(gameId), (chat) => {
+    if (chat === undefined) return chat;
+    const seen = chat.messages.some(
+      (m) => m.side === message.side && m.sent_at === message.sent_at && m.text === message.text,
+    );
+    return seen ? chat : { ...chat, messages: [...chat.messages, message] };
+  });
+}
+
 /** Apply one server message to the cache. */
 export function applyMessage(
   queryClient: QueryClient,
@@ -116,6 +131,13 @@ export function applyMessage(
       break;
     case 'emote':
       showEmote(queryClient, message.game_id, message.side, message.emote);
+      break;
+    case 'chat':
+      addChatMessage(queryClient, message.game_id, {
+        side: message.side,
+        text: message.text,
+        sent_at: message.sent_at,
+      });
       break;
     case 'notification':
       void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });

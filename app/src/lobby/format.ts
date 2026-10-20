@@ -125,6 +125,7 @@ export const LEVELS: readonly { value: Level; label: string }[] = [
 const OUTCOMES: Record<GameSummary['outcome'], string> = {
   won: 'Won',
   lost: 'Lost',
+  drawn: 'Drawn',
   aborted: 'Aborted',
 };
 

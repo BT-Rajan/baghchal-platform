@@ -18,6 +18,8 @@ export type ServerMessage =
   | { type: 'notification' }
   /** My opponent's quick message in a game. */
   | { type: 'emote'; game_id: string; side: 'goat' | 'tiger'; emote: Emote }
+  /** A chat message in one of my games (mine too, for my other devices). */
+  | { type: 'chat'; game_id: string; side: 'goat' | 'tiger'; text: string; sent_at: string }
   | { type: 'error'; code: string; message: string };
 
 export const PING = JSON.stringify({ type: 'ping' });
@@ -88,6 +90,19 @@ export function parseServerMessage(text: unknown): ServerMessage | null {
         (data.side === 'goat' || data.side === 'tiger') &&
         typeof data.emote === 'string'
         ? { type: 'emote', game_id: data.game_id, side: data.side, emote: data.emote as Emote }
+        : null;
+    case 'chat':
+      return typeof data.game_id === 'string' &&
+        (data.side === 'goat' || data.side === 'tiger') &&
+        typeof data.text === 'string' &&
+        typeof data.sent_at === 'string'
+        ? {
+            type: 'chat',
+            game_id: data.game_id,
+            side: data.side,
+            text: data.text,
+            sent_at: data.sent_at,
+          }
         : null;
     case 'error':
       return typeof data.code === 'string' && typeof data.message === 'string'

@@ -39,5 +39,6 @@ test('nothing for a game already over, still on, or without a winner', () => {
   expect(endingFor('active', game({ status: 'active' }), 'tiger')).toBeNull();
   expect(endingFor('active', game({ status: 'finished', result: null }), 'tiger')).toBeNull();
   expect(endingFor('active', over(null, 'aborted'), 'tiger')).toBeNull();
+  expect(endingFor('active', over(null, 'draw_agreed'), 'tiger')).toBeNull();
   expect(endingFor('active', over('goat', 'aborted'), 'tiger')).toBeNull();
 });
