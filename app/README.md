@@ -99,7 +99,11 @@ scripts/        the Expo-cloud guardrail
   to the new one) or password, downloads your data (a file on the web, the share sheet in
   apps) and deletes the account.
 - **Achievements.** Profiles show a player's achievements (`Achievements`, words in
-  `src/lobby/achievements.ts`), earned ones first with their date.
+  `src/lobby/achievements.ts`): the earned ones with their date, the rest folded under "Still
+  to earn". A profile lists its latest five games, and more on asking.
+- **Long pages, folded.** Settings keeps the account (blocked players, email, password, data,
+  deleting) as sections shut until opened (`Disclosure`), with Moderation and Payments under
+  Admin; a player's moderation page and Board, pieces and sounds show one tab at a time.
 - **Quick messages.** In a game against a person, five set phrases (`src/game/emotes.ts`)
   show for a moment on the sender's bar, the opponent's via an `emote` event. The chat button
   beside them hides the opponent's; it is the same `emotes_on` setting as on the Board, pieces

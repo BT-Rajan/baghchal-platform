@@ -47,10 +47,9 @@ export function useLookChoice() {
 
 export type LookChoice = NonNullable<ReturnType<typeof useLookChoice>['ready']>;
 
-/** The boards and piece sets to choose from (Settings → Board, pieces and sounds, and a new
- * player's "Make it yours"), with the Upsell for the ones that come with Plus. */
-export function BoardAndPieces({ choice }: { choice: LookChoice }) {
-  const { current, themes, pick, locked, chooseError } = choice;
+/** Above the choices: the Upsell for the ones that come with Plus, and a choice that failed. */
+export function LookNotices({ choice }: { choice: LookChoice }) {
+  const { themes, chooseError } = choice;
   return (
     <>
       {!themes && (
@@ -59,7 +58,16 @@ export function BoardAndPieces({ choice }: { choice: LookChoice }) {
         </Upsell>
       )}
       {chooseError !== null && <Notice tone="error">{describeError(chooseError)}</Notice>}
+    </>
+  );
+}
 
+/** The boards and piece sets to choose from (Settings → Board, pieces and sounds, and a new
+ * player's "Make it yours"), under the `LookNotices`. */
+export function BoardAndPieces({ choice }: { choice: LookChoice }) {
+  const { current, pick, locked } = choice;
+  return (
+    <>
       <SectionTitle>Board</SectionTitle>
       <View role="radiogroup" aria-label="Board" style={styles.grid}>
         {(Object.keys(BOARDS) as BoardTheme[]).map((board) => (
@@ -129,9 +137,10 @@ function Tile({
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  // Three across a phone, more on a wider screen.
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   tile: {
-    width: 132,
+    width: 110,
     padding: spacing.sm,
     gap: spacing.xs,
     borderRadius: radius.md,
@@ -142,6 +151,6 @@ const styles = StyleSheet.create({
   },
   selected: { borderColor: colors.accent },
   locked: { opacity: 0.6 },
-  preview: { width: 112, height: 112 },
+  preview: { width: '100%', aspectRatio: 1 },
   name: { fontSize: 14, fontWeight: '600', color: colors.text, textAlign: 'center' },
 });

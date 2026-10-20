@@ -33,6 +33,11 @@ async function press(name: string | RegExp) {
   await fireEvent.press(screen.getByRole('button', { name }));
 }
 
+/** A player's record shows one tab at a time. */
+async function tab(name: string | RegExp) {
+  await fireEvent.press(await screen.findByRole('radio', { name }));
+}
+
 function report(overrides: Partial<Report> = {}): Report {
   return {
     id: 'r1',
@@ -209,6 +214,7 @@ describe('the report queue', () => {
     await fireEvent.changeText(screen.getByLabelText('Look up a player'), ' bob ');
     await press("Open the player's record");
     expect(await screen.findByText('No reports.')).toBeOnTheScreen();
+    await tab('History');
     expect(screen.getByText('No moderator has acted on this player.')).toBeOnTheScreen();
   });
 
@@ -294,6 +300,7 @@ describe('fair play', () => {
     expect(
       screen.getByRole('button', { name: 'Dismiss the report from the automatic fair-play check' }),
     ).toBeOnTheScreen();
+    await tab('Fair play');
     expect(await screen.findByText('Figures are being worked out.')).toBeOnTheScreen();
     fail = false;
     await press('Try again');
@@ -323,6 +330,7 @@ describe('fair play', () => {
         body: { games: [], screen: figures(0, 0, 0), confirm: null, screen_passed: false },
       },
     });
+    await tab('Fair play');
     expect(await screen.findByText('No rated games checked yet.')).toBeOnTheScreen();
   });
 });
@@ -352,6 +360,7 @@ describe("a player's record", () => {
       },
     });
     await screen.findByText('In good standing');
+    await tab('Act');
     await press('Suspend for 7 days');
     expect(screen.getByText('Say why; the player is told.')).toBeOnTheScreen();
     await fireEvent.changeText(
@@ -361,12 +370,14 @@ describe("a player's record", () => {
     await press('Suspend for 7 days');
     expect(await screen.findByText('Suspended until 8 January 2099, 12:00 UTC')).toBeOnTheScreen();
     expect(screen.getByText('Reason: Insults.')).toBeOnTheScreen();
+    await tab('History');
     expect(screen.getByText('Suspended · alice · 8 January 2026, 10:00 UTC')).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/mod/players/bob/suspend').body).toEqual({
       days: 7,
       reason: 'Insults.',
     });
 
+    await tab('Act');
     await fireEvent.changeText(
       screen.getByLabelText('Reason (sent to the player for suspensions and renames)'),
       'Appeal accepted.',
@@ -388,6 +399,7 @@ describe("a player's record", () => {
       ),
     });
     await screen.findByText('In good standing');
+    await tab('Act');
     await fireEvent.changeText(
       screen.getByLabelText('Reason (sent to the player for suspensions and renames)'),
       'Cheating.',
@@ -408,6 +420,7 @@ describe("a player's record", () => {
       'GET /api/v1/mod/players/player-1': { status: 200, body: renamed },
     });
     await screen.findByText('In good standing');
+    await tab('Act');
     await fireEvent.changeText(
       screen.getByLabelText('Reason (sent to the player for suspensions and renames)'),
       'Offensive name.',
@@ -463,6 +476,7 @@ describe("a player's record", () => {
       },
     });
     expect(await screen.findByText('Banned')).toBeOnTheScreen();
+    await tab('Act');
     expect(screen.getByRole('button', { name: 'Lift the suspension' })).toBeOnTheScreen();
 
     await asModerator('/moderation/gone', {
@@ -472,7 +486,7 @@ describe("a player's record", () => {
       },
     });
     expect(await screen.findByText('Deleted account')).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: /Suspend/ })).toBeNull();
+    expect(screen.queryByRole('radio', { name: 'Act' })).toBeNull();
 
     await asModerator('/moderation/kate', {
       'GET /api/v1/mod/players/kate': {
@@ -481,7 +495,7 @@ describe("a player's record", () => {
       },
     });
     expect(await screen.findByText('Moderator')).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: /Suspend/ })).toBeNull();
+    expect(screen.queryByRole('radio', { name: 'Act' })).toBeNull();
   });
 
   test('an unknown player', async () => {

@@ -9,6 +9,7 @@ import { useApi, useMe, useSession } from '@/auth/session';
 import { checkEmailChange, checkPasswordChange, checkPasswordGiven } from '@/auth/validation';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
+import { Disclosure } from '@/components/Disclosure';
 import { FeatureLink } from '@/components/FeatureLink';
 import { GuestBanner } from '@/components/GuestBanner';
 import { PlanCard } from '@/components/PlanCard';
@@ -21,14 +22,16 @@ import { TextField } from '@/components/TextField';
 import { colors, spacing } from '@/theme';
 
 /**
- * Settings, all in one place: the plan, the board and sounds, blocked players and moderation;
- * for members, the email address, password, their data and deleting the account; signing out.
+ * Settings, all in one place: the plan, the board and sounds, moderation and payments (for
+ * staff); the account (blocked players, and for members the email address, password, their
+ * data and deleting the account), each folded shut until opened; signing out.
  */
 export default function SettingsScreen() {
   const me = useMe();
   const { session } = useSession();
   const signOut = useMutation({ mutationFn: () => session.signOut() });
   const guest = me.role === 'guest';
+  const staff = me.role === 'moderator' || me.role === 'admin';
   return (
     <Screen align="top">
       <GuestBanner />
@@ -40,7 +43,8 @@ export default function SettingsScreen() {
         text="How games look and sound, on every device you use."
         onPress={() => router.push('/appearance')}
       />
-      {(me.role === 'moderator' || me.role === 'admin') && (
+      {staff && <SectionTitle>Admin</SectionTitle>}
+      {staff && (
         <FeatureLink
           icon="shield"
           title="Moderation"
@@ -56,15 +60,18 @@ export default function SettingsScreen() {
           onPress={() => router.push('/admin/payments')}
         />
       )}
-      <BlockedPlayers />
-      {!guest && (
-        <>
-          <EmailSection />
-          <PasswordSection />
-          <DataSection />
-          <DeleteSection />
-        </>
-      )}
+      <SectionTitle>Account</SectionTitle>
+      <View>
+        <BlockedPlayers />
+        {!guest && (
+          <>
+            <EmailSection />
+            <PasswordSection />
+            <DataSection />
+            <DeleteSection />
+          </>
+        )}
+      </View>
       <SectionTitle>Terms and privacy</SectionTitle>
       <FeatureLink
         icon="document"
@@ -93,8 +100,7 @@ function BlockedPlayers() {
   const blocks = useBlocks();
   const change = useBlock();
   return (
-    <>
-      <SectionTitle>Blocked players</SectionTitle>
+    <Disclosure title="Blocked players">
       {change.error !== null && <Notice tone="error">{describeError(change.error)}</Notice>}
       {blocks.error !== null ? (
         <ErrorState error={blocks.error} onRetry={() => void blocks.refetch()} />
@@ -119,7 +125,7 @@ function BlockedPlayers() {
           ))}
         </Card>
       )}
-    </>
+    </Disclosure>
   );
 }
 
@@ -145,8 +151,7 @@ function EmailSection() {
     if (accept(checkEmailChange({ email, password }, me.email))) change.mutate(email.trim());
   };
   return (
-    <>
-      <SectionTitle>Email address</SectionTitle>
+    <Disclosure title="Email address">
       <Card>
         <Text style={styles.text}>{`Your email address is ${me.email}.`}</Text>
         {change.isSuccess ? (
@@ -180,7 +185,7 @@ function EmailSection() {
           </>
         )}
       </Card>
-    </>
+    </Disclosure>
   );
 }
 
@@ -213,8 +218,7 @@ function PasswordSection() {
     }
   };
   return (
-    <>
-      <SectionTitle>Password</SectionTitle>
+    <Disclosure title="Password">
       <Card>
         {change.isSuccess && (
           <Notice tone="success">
@@ -252,7 +256,7 @@ function PasswordSection() {
         />
         <Button title="Change password" onPress={submit} busy={change.isPending} />
       </Card>
-    </>
+    </Disclosure>
   );
 }
 
@@ -262,8 +266,7 @@ function DataSection() {
     mutationFn: async () => saveExport(await api.exportData()),
   });
   return (
-    <>
-      <SectionTitle>Your data</SectionTitle>
+    <Disclosure title="Your data">
       <Card>
         <Hint>
           A copy of everything we keep about you: your account, ratings, games with their moves,
@@ -277,7 +280,7 @@ function DataSection() {
           busy={download.isPending}
         />
       </Card>
-    </>
+    </Disclosure>
   );
 }
 
@@ -306,8 +309,7 @@ function DeleteSection() {
     if (accept(checkPasswordGiven({ password }))) remove.mutate();
   };
   return (
-    <>
-      <SectionTitle>Delete account</SectionTitle>
+    <Disclosure title="Delete account">
       <Card>
         <Hint>
           Deleting your account removes your email address and password, takes you off the
@@ -346,7 +348,7 @@ function DeleteSection() {
           />
         )}
       </Card>
-    </>
+    </Disclosure>
   );
 }
 

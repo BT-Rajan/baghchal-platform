@@ -1,5 +1,6 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { GameSummary } from '@/api/endpoints';
@@ -23,9 +24,13 @@ const PAGE = 20;
 /** How many games the home screen's preview shows. */
 const PREVIEW = 3;
 
+/** How many a profile shows before "Show more games". */
+const FIRST = 5;
+
 /**
- * A player's finished games, newest first; each opens the game to replay it. As a `preview`
- * (the home screen), only the latest few, with a way to the rest on the Me tab.
+ * A player's finished games, newest first; each opens the game to replay it. A profile shows
+ * the latest few and more on asking; as a `preview` (the home screen), only the latest three,
+ * with a way to the rest on the Me tab.
  */
 export function GameHistory({
   username,
@@ -42,8 +47,15 @@ export function GameHistory({
     getNextPageParam: (last: GameSummary[]) =>
       last.length < PAGE ? undefined : last.at(-1)?.finished_at,
   });
+  const [shown, setShown] = useState(FIRST);
   const all = history.data?.pages.flat() ?? [];
-  const games = preview ? all.slice(0, PREVIEW) : all;
+  const games = all.slice(0, preview ? PREVIEW : shown);
+  // More: first the loaded games not shown yet, then the next page from the server.
+  const more = () => {
+    const next = shown + PAGE;
+    setShown(next);
+    if (next > all.length && history.hasNextPage) void history.fetchNextPage();
+  };
   const mine = useMyPlan();
   const limited = mine.data !== undefined && !has(mine.data, 'full_history');
   return (
@@ -92,12 +104,12 @@ export function GameHistory({
           Your history shows games from the last 30 days. Keep every game.
         </Upsell>
       )}
-      {!preview && history.hasNextPage && (
+      {!preview && (all.length > shown || history.hasNextPage) && (
         <Button
           title="Show more games"
           variant="secondary"
           busy={history.isFetchingNextPage}
-          onPress={() => void history.fetchNextPage()}
+          onPress={more}
         />
       )}
     </>

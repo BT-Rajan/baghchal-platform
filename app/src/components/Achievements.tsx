@@ -4,43 +4,59 @@ import { ACHIEVEMENTS, achievementCount, earnedText } from '@/lobby/achievements
 import { useAchievements } from '@/lobby/hooks';
 import { colors, radius, shadow, spacing, type } from '@/theme';
 
+import type { Achievement } from '@/api/endpoints';
+
 import { SectionTitle } from './Card';
+import { Disclosure } from './Disclosure';
 import { Icon } from './Icon';
 
-/** A player's achievements on their profile: earned ones first, with when; then the rest. */
+/**
+ * A player's achievements on their profile: the earned ones, with when; the rest folded away
+ * under "Still to earn", so a new player's profile is not a wall of locked tiles.
+ */
 export function Achievements({ username }: { username: string }) {
   const achievements = useAchievements(username);
   const list = achievements.data ?? [];
   if (list.length === 0) return null;
-  const sorted = [...list].sort(
-    (a, b) => Number(a.earned_at === null) - Number(b.earned_at === null),
-  );
+  const earned = list.filter((a) => a.earned_at !== null);
+  const locked = list.filter((a) => a.earned_at === null);
   return (
     <>
       <SectionTitle>Achievements</SectionTitle>
       <Text style={styles.count}>{achievementCount(list)}</Text>
-      <View style={styles.grid}>
-        {sorted.map((a) => {
-          const earned = a.earned_at !== null;
-          const { name, text } = ACHIEVEMENTS[a.key];
-          return (
-            <View
-              key={a.key}
-              style={[styles.tile, !earned && styles.locked]}
-              accessible
-              aria-label={`${name}: ${text} ${earned ? earnedText(a.earned_at!) : 'Not yet earned'}`}
-            >
-              <View style={[styles.medal, earned && styles.medalEarned]}>
-                <Icon name="trophy" color={earned ? colors.accentText : colors.muted} size={20} />
-              </View>
-              <Text style={styles.name}>{name}</Text>
-              <Text style={styles.text}>{text}</Text>
-              {earned && <Text style={styles.when}>{earnedText(a.earned_at!)}</Text>}
-            </View>
-          );
-        })}
-      </View>
+      {earned.length > 0 && <Tiles list={earned} />}
+      {locked.length > 0 && (
+        <Disclosure title={`Still to earn (${locked.length})`}>
+          <Tiles list={locked} />
+        </Disclosure>
+      )}
     </>
+  );
+}
+
+function Tiles({ list }: { list: Achievement[] }) {
+  return (
+    <View style={styles.grid}>
+      {list.map((a) => {
+        const earned = a.earned_at !== null;
+        const { name, text } = ACHIEVEMENTS[a.key];
+        return (
+          <View
+            key={a.key}
+            style={[styles.tile, !earned && styles.locked]}
+            accessible
+            aria-label={`${name}: ${text} ${earned ? earnedText(a.earned_at!) : 'Not yet earned'}`}
+          >
+            <View style={[styles.medal, earned && styles.medalEarned]}>
+              <Icon name="trophy" color={earned ? colors.accentText : colors.muted} size={20} />
+            </View>
+            <Text style={styles.name}>{name}</Text>
+            <Text style={styles.text}>{text}</Text>
+            {earned && <Text style={styles.when}>{earnedText(a.earned_at!)}</Text>}
+          </View>
+        );
+      })}
+    </View>
   );
 }
 

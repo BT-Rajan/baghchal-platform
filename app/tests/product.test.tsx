@@ -271,6 +271,8 @@ describe('game history on a profile', () => {
       },
     });
     expect(await screen.findByText('Won · vs alice · 5+3 casual · 20 Oct 2026')).toBeOnTheScreen();
+    // The latest five; the rest of the page, then the next one, on asking.
+    expect(screen.getAllByRole('link', { name: /^Replay:/ })).toHaveLength(5);
     await press('Show more games');
     expect(await screen.findByText('Won · vs alice · 5+3 casual · 30 Sept 2026')).toBeOnTheScreen();
     expect(server.lastTo('GET /api/v1/players/bob/games').query).toEqual({
