@@ -41,13 +41,14 @@ class PairingOut(BaseModel):
     state: PairingState
     game_id: uuid.UUID | None
     winner: PlayerOut | None
+    """None until played, and for a draw."""
 
 
 class StandingOut(BaseModel):
     player: PlayerOut
-    points: int
-    """One for each game won, and one for a bye."""
-    buchholz: int
+    points: float
+    """One for each game won and for a bye, a half for each draw."""
+    buchholz: float
     """The tie-break: the points of everyone this player has played."""
     played: int
 

@@ -39,7 +39,8 @@ goat turn.
 
 "No legal move" includes moves forbidden by the repetition rule. There is no drawn result on
 the board: the number of arrangements is finite and none may repeat, so every game ends with
-a winner. Resignation and timeouts are decided by the server, not the engine.
+a winner. Resignation, timeouts and draws by agreement (below) are decided by the server, not
+the engine.
 
 ## Sources
 These are the traditional rules as described by
@@ -79,7 +80,11 @@ These rules belong to the platform, not the board; the server enforces them.
 - **Blocking**: a player can block another. Neither can then challenge the other (pending
   challenges between them are closed), and they no longer see each other in search or the
   online list. Only the blocker can see or undo the block.
-- No draws by agreement, matching the board rules.
+- **Draws by agreement**: once both sides have moved, either player may offer a draw (not
+  against the computer). The offer stands until the opponent accepts, declines or makes a move
+  (playing on declines it). A player can offer again only after two more of their own moves.
+  A drawn game has no winner: in rated games each player scores half a point for their rating,
+  and a draw is half a point in a match or a tournament.
 
 ## Reports and moderation
 - **Reports**: any player can report another for cheating, abuse, an offensive username or

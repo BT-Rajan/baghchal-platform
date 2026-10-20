@@ -50,14 +50,17 @@ async def current(
     return {uid: as_of(found.get(uid), now) for uid in user_ids}
 
 
-async def record_game(
+async def record_game(  # noqa: PLR0913 - the game's two players, and how it went
     db: AsyncSession,
     category: Category,
     winner_id: uuid.UUID,
     loser_id: uuid.UUID,
     now: datetime,
+    *,
+    score: float = 1.0,
 ) -> tuple[glicko2.Rating, glicko2.Rating, glicko2.Rating, glicko2.Rating]:
-    """Rate a finished game (caller commits). Returns winner and loser before and after.
+    """Rate a finished game (caller commits): ``score`` is the first player's (1 a win, 0.5 a
+    draw, in which case either may come first). Returns both players before and after.
 
     Both players are rated against the other's rating from before the game. A player is in
     at most one live game, so their rating rows are never updated concurrently.
@@ -73,8 +76,8 @@ async def record_game(
     }
     winner_before = as_of(rows.get(winner_id), now)
     loser_before = as_of(rows.get(loser_id), now)
-    winner_after = glicko2.rate(winner_before, [glicko2.Result(loser_before, 1.0)])
-    loser_after = glicko2.rate(loser_before, [glicko2.Result(winner_before, 0.0)])
+    winner_after = glicko2.rate(winner_before, [glicko2.Result(loser_before, score)])
+    loser_after = glicko2.rate(loser_before, [glicko2.Result(winner_before, 1.0 - score)])
     for user_id, after in ((winner_id, winner_after), (loser_id, loser_after)):
         row = rows.get(user_id)
         if row is None:

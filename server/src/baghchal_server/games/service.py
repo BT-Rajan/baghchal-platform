@@ -338,20 +338,33 @@ async def computer_turns_waiting(db: AsyncSession, now: datetime) -> list[uuid.U
     ]
 
 
+def drawn(game: Game) -> bool:
+    """Whether the game ended in a draw both players agreed (no winner, but a result)."""
+    return game.end_reason == EndReason.DRAW_AGREED
+
+
+def points(game: Game, user_id: uuid.UUID) -> float:
+    """What a finished game is worth to one of its players: 1 a win, 0.5 a draw, 0 else."""
+    if drawn(game):
+        return 0.5
+    winner_id = game.goat_id if game.winner == "goat" else game.tiger_id
+    return 1.0 if game.winner is not None and winner_id == user_id else 0.0
+
+
 async def _after_finish(db: AsyncSession, game_id: uuid.UUID, now: datetime) -> None:
     """Consequences of a game ending, in the same transaction: rate it, queue its fair-play
     check, and in a match start the second game (sides swapped) or close the match."""
     game = await get_game(db, game_id)
     queue_fair_play_check(db, game, now)
-    if game.rated and game.winner is not None:
+    if game.rated and (game.winner is not None or drawn(game)):
         category = category_of(game.initial_ms // 1000, game.increment_ms // 1000)
         winner_id, loser_id = (
-            (game.goat_id, game.tiger_id)
-            if game.winner == "goat"
-            else (game.tiger_id, game.goat_id)
+            (game.tiger_id, game.goat_id)
+            if game.winner == "tiger"
+            else (game.goat_id, game.tiger_id)
         )
         w_before, w_after, l_before, l_after = await ratings.record_game(
-            db, category, winner_id, loser_id, now
+            db, category, winner_id, loser_id, now, score=0.5 if drawn(game) else 1.0
         )
         changes = {
             winner_id: round(w_after.rating) - round(w_before.rating),
@@ -533,6 +546,7 @@ async def describe(db: AsyncSession, game: Game, now: datetime) -> GameOut:
         computer=game.bot_level,
         positions=[] if active else _positions(engine_game),
         deadline_at=game.deadline_at,
+        draw_offer=game.draw_offer if active else None,
         server_time=now,
         created_at=game.created_at,
         finished_at=game.finished_at,
@@ -593,7 +607,13 @@ async def history(
                 rated=g.rated,
                 computer=g.bot_level,
                 result=ResultOut(winner=g.winner, reason=EndReason(g.end_reason)),  # type: ignore[arg-type]
-                outcome="aborted" if g.winner is None else "won" if g.winner == side else "lost",
+                outcome="drawn"
+                if drawn(g)
+                else "aborted"
+                if g.winner is None
+                else "won"
+                if g.winner == side
+                else "lost",
                 rating_change=g.goat_rating_change if side == "goat" else g.tiger_rating_change,
                 moves=g.ply,
                 finished_at=g.finished_at,
@@ -608,17 +628,18 @@ async def _describe_match(
     if game.match_id is None or game.match_game is None:
         return None
     games = await match_games(db, game.match_id)
-    points = dict.fromkeys((game.goat_id, game.tiger_id), 0)
+    scores = dict.fromkeys((game.goat_id, game.tiger_id), 0.0)
     for g in games:
-        if g.winner is not None:
-            points[g.goat_id if g.winner == "goat" else g.tiger_id] += 1
+        if g.status == GameStatus.FINISHED:
+            for uid in scores:
+                scores[uid] += points(g, uid)
     return MatchOut(
         id=game.match_id,
         game=game.match_game,
         games=[g.id for g in games],
         score=[
             MatchScoreOut(player=PlayerOut(id=uid, username=names[uid]), points=p)
-            for uid, p in points.items()
+            for uid, p in scores.items()
         ],
     )
 
@@ -671,6 +692,8 @@ async def play(  # noqa: PLR0913 - the move, who plays it when, and their networ
             "turn_started_at": now,
             "lag_ms": 0,
         }
+        if game.draw_offer == _other(side):  # playing on declines the opponent's offer
+            values["draw_offer"] = None
         if outcome is None:
             next_id = game.tiger_id if side == "goat" else game.goat_id
             lag_ms = await _lag_allowance(presence, next_id, new_ply)
@@ -747,6 +770,7 @@ async def _finish(  # noqa: PLR0913 - how the game ended, and who caused an abor
             deadline_at=None,
             finished_at=now,
             aborted_by=aborted_by,
+            draw_offer=None,
         )
     )
     if result.rowcount != 1:  # type: ignore[attr-defined]
@@ -796,6 +820,74 @@ async def abort(db: AsyncSession, game_id: uuid.UUID, user_id: uuid.UUID, now: d
         return None, EndReason.ABORTED
 
     return await _end_by_player(db, game_id, user_id, now, decide)
+
+
+DRAW_OFFER_GAP: Final = 4
+"""Plies before a side may offer a draw again: two more of its own moves."""
+
+
+async def offer_draw(
+    db: AsyncSession, game_id: uuid.UUID, user_id: uuid.UUID, now: datetime
+) -> Game:
+    """Offer a draw, or accept the opponent's open offer (which ends the game drawn). An offer
+    stands until the opponent answers or moves; offering again needs two more moves first."""
+    stale = AppError(409, "stale_position", "The game is changing quickly; try again.")
+    game = await get_game(db, game_id)
+    side = _side_of(game, user_id)
+    if game.status != GameStatus.ACTIVE:
+        raise AppError(409, "game_over", "This game is over.")
+    if game.bot_level is not None:
+        raise AppError(409, "no_draw", "The computer plays every game to the end.")
+    if game.ply < 2:
+        raise AppError(
+            409, "no_draw", "Draws can be offered once both sides have moved; abort instead."
+        )
+    if game.draw_offer == _other(side):
+        if not await _finish(db, game, now, None, EndReason.DRAW_AGREED):
+            raise stale
+        return await get_game(db, game_id)
+    if game.draw_offer == side:
+        return game
+    last = game.goat_offer_ply if side == "goat" else game.tiger_offer_ply
+    if last is not None and game.ply - last < DRAW_OFFER_GAP:
+        raise AppError(
+            409, "draw_offer_wait", "You offered a draw a moment ago: play on a little first."
+        )
+    offered = await db.execute(
+        update(Game)
+        .where(
+            Game.id == game.id,
+            Game.ply == game.ply,
+            Game.status == GameStatus.ACTIVE,
+            Game.draw_offer.is_(None),
+        )
+        .values(draw_offer=side, **{f"{side}_offer_ply": game.ply})
+    )
+    if offered.rowcount != 1:  # type: ignore[attr-defined]
+        await db.rollback()  # a move or the other offer landed first
+        raise stale
+    await db.commit()
+    return await get_game(db, game_id)
+
+
+async def decline_draw(db: AsyncSession, game_id: uuid.UUID, user_id: uuid.UUID) -> Game:
+    """Turn down the opponent's open draw offer; play goes on."""
+    game = await get_game(db, game_id)
+    side = _side_of(game, user_id)
+    declined = await db.execute(
+        update(Game)
+        .where(
+            Game.id == game.id,
+            Game.status == GameStatus.ACTIVE,
+            Game.draw_offer == _other(side),
+        )
+        .values(draw_offer=None)
+    )
+    if declined.rowcount != 1:  # type: ignore[attr-defined]
+        await db.rollback()
+        raise AppError(409, "no_draw_offer", "There is no draw offer to answer.")
+    await db.commit()
+    return await get_game(db, game_id)
 
 
 async def claim_abandonment(
