@@ -44,8 +44,6 @@ export interface BoardProps {
   /** The player's board theme and piece set. */
   theme?: BoardTheme;
   pieces?: PieceSet;
-  /** Goats to mark as in danger (the coach shows them). */
-  danger?: readonly string[];
 }
 
 export function Board({
@@ -55,7 +53,6 @@ export function Board({
   onMove,
   theme = 'wood',
   pieces = 'classic',
-  danger = [],
 }: BoardProps) {
   const palette = BOARDS[theme].palette;
   const [selected, setSelected] = useState<string | null>(null);
@@ -78,12 +75,11 @@ export function Board({
         const isSelected = p.name === selected;
         const isTarget = targets.has(p.name);
         const canPick = movable.has(p.name);
-        const inDanger = danger.includes(p.name);
         return (
           <Pressable
             key={p.name}
             role="button"
-            aria-label={pointLabel(p.name, piece, isSelected, isTarget, canPick, inDanger)}
+            aria-label={pointLabel(p.name, piece, isSelected, isTarget, canPick)}
             aria-disabled={!isTarget && !canPick && selected === null}
             onPress={() => press(p.name)}
             style={(state) => [
@@ -94,7 +90,6 @@ export function Board({
             ]}
           >
             <Svg width="100%" height="100%" viewBox="0 0 100 100">
-              {inDanger && <Circle cx={50} cy={50} r={48} fill={colors.danger} opacity={0.35} />}
               {piece !== undefined && <Coin piece={piece} set={pieces} />}
               {piece === undefined && !isTarget && <Hole palette={palette} />}
               {isTarget && (
@@ -133,10 +128,8 @@ function pointLabel(
   selected: boolean,
   target: boolean,
   movable: boolean,
-  danger: boolean,
 ): string {
   const parts = [name, piece ?? 'empty'];
-  if (danger) parts.push('in danger');
   if (selected) parts.push('selected');
   else if (target) parts.push(piece === undefined ? 'move here' : 'capture');
   else if (movable) parts.push('can move');

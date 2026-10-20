@@ -43,8 +43,8 @@ Each phase ships complete — tested, documented and reviewed — before the nex
    move-by-move replay, and automatic fair-play checks: every rated game is reviewed in the
    background, and players whose games play as only an engine does are reported to the
    moderators (never penalised automatically; [plan and calibration](docs/plans/phase-7-fair-play.md)).
-   The Easy computer coaches newcomers: a tip for each moment of the game, and goats in danger
-   marked on the board; "Play now" on the welcome page starts that game at once.
+   The Easy computer coaches newcomers: a tip for each moment of the game (the board itself
+   never marks goats in danger); "Play now" on the welcome page starts that game at once.
 8. **Ready for players** — what a public service needs:
    - ✅ **Accounts**: change the email address or password, download your data, delete the
      account ([API](#api-v1)).

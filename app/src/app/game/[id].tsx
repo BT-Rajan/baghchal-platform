@@ -125,7 +125,7 @@ export default function GameScreen() {
   const error = move.error ?? action.error;
   const layout = gameLayout(width, height);
   const wide = layout !== 'stacked';
-  // Games against the Easy computer come with tips, and goats in danger marked on the board.
+  // Games against the Easy computer come with tips (the board never marks goats in danger).
   const tip = isCoached(game, mine) ? coachTip(game, mine) : null;
   // On the opponent's turn I may line up my next move.
   const premoving =
@@ -150,7 +150,6 @@ export default function GameScreen() {
         }
         theme={look.board}
         pieces={look.pieces}
-        danger={tip !== null && myTurn && ply === game.ply ? game.goats_in_danger : []}
       />
     );
 
