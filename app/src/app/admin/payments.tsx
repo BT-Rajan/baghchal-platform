@@ -135,8 +135,8 @@ function KeysForm({ page }: { page: PaymentKeys }) {
         </Text>
         <Hint>
           In Account & Settings → Webhooks, send the events payment.captured, order.paid,
-          payment.failed, refund.processed and payment.dispute.lost to this address, with the
-          webhook secret above.
+          payment.authorized, payment.failed, refund.processed and payment.dispute.lost to this
+          address, with the webhook secret above.
         </Hint>
       </Card>
       <Button

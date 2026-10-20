@@ -13,6 +13,7 @@ from fastapi import FastAPI
 from sqlalchemy import select, update
 
 from baghchal_server.accounts.models import User
+from baghchal_server.billing import reminders
 from baghchal_server.billing.models import Grant
 from baghchal_server.billing.service import my_plan
 from baghchal_server.config import Settings
@@ -21,6 +22,7 @@ from baghchal_server.mail import MemoryMailer
 from baghchal_server.payments import keys as payment_keys
 from baghchal_server.payments.gateway import (
     GatewayError,
+    PaymentState,
     RazorpayGateway,
     payment_signed,
     webhook_signed,
@@ -41,12 +43,29 @@ class FakeGateway:
     def __init__(self) -> None:
         self.orders: list[dict[str, Any]] = []
         self.down = False
+        self.capture_down = False
+        self.payments: dict[str, PaymentState] = {}
+        self.captured: list[tuple[str, int]] = []
 
     async def create_order(self, *, amount_paise: int, receipt: str, notes: dict[str, str]) -> str:
         if self.down:
             raise GatewayError("unreachable")
         self.orders.append({"amount": amount_paise, "receipt": receipt, "notes": notes})
         return f"order_{len(self.orders)}"
+
+    async def payment(self, payment_id: str) -> PaymentState:
+        """Paid for the latest order, unless a test says otherwise in ``payments``."""
+        if self.down:
+            raise GatewayError("unreachable")
+        if payment_id in self.payments:
+            return self.payments[payment_id]
+        return PaymentState(f"order_{len(self.orders)}", self.orders[-1]["amount"], "captured")
+
+    async def capture(self, payment_id: str, amount_paise: int) -> str:
+        if self.capture_down:
+            raise GatewayError("unreachable")
+        self.captured.append((payment_id, amount_paise))
+        return "captured"
 
     async def close(self) -> None:
         pass
@@ -571,3 +590,167 @@ async def test_money_back_after_the_account_was_deleted(
         "payload": {"dispute": {"entity": {"payment_id": "pay_2"}}},
     }
     assert (await _webhook(app, lost)).json() == {"status": "ok"}
+
+
+async def test_the_money_is_checked_before_the_plan_is_given(
+    app: FastAPI, players: PlayerFactory, gateway: FakeGateway
+) -> None:
+    alice = await players("alice")
+    order = (await _buy(alice))["order_id"]
+
+    # Razorpay says the order or the amount is not this one's: refused.
+    gateway.payments["pay_1"] = PaymentState(order, 100, "captured")
+    r = await _verify(alice, order, "pay_1")
+    assert (r.status_code, r.json()["error"]["code"]) == (400, "payment_mismatch")
+    gateway.payments["pay_1"] = PaymentState("order_other", 14900, "captured")
+    assert (await _verify(alice, order, "pay_1")).status_code == 400
+    # Not yet captured, nor authorised: refused, the webhook will give it.
+    gateway.payments["pay_1"] = PaymentState(order, 14900, "created")
+    r = await _verify(alice, order, "pay_1")
+    assert (r.status_code, r.json()["error"]["code"]) == (402, "payment_not_captured")
+    gateway.down = True
+    r = await _verify(alice, order, "pay_1")
+    assert (r.status_code, r.json()["error"]["code"]) == (502, "payment_provider_error")
+    gateway.down = False
+    assert (await alice.http.get("/api/v1/me/plan")).json()["plan"] == "free"
+
+    # Authorised only (an account set to capture by hand): captured now, then given.
+    gateway.payments["pay_1"] = PaymentState(order, 14900, "authorized")
+    r = await _verify(alice, order, "pay_1")
+    assert r.status_code == 200, r.text
+    assert gateway.captured == [("pay_1", 14900)]
+    assert (await alice.http.get("/api/v1/me/plan")).json()["plan"] == "plus"
+    # Confirming again asks Razorpay nothing.
+    gateway.down = True
+    assert (await _verify(alice, order, "pay_1")).status_code == 200
+
+
+async def test_a_held_payment_is_captured_from_the_webhook(
+    app: FastAPI, players: PlayerFactory, gateway: FakeGateway
+) -> None:
+    alice = await players("alice")
+    order = (await _buy(alice, "pro"))["order_id"]
+    held = _event("payment.authorized", order, "pay_7")
+    assert (await _webhook(app, held)).json() == {"status": "ok"}
+    assert gateway.captured == [("pay_7", 29900)]
+    gateway.capture_down = True  # Razorpay retries its webhook
+    assert (await _webhook(app, held)).json() == {"status": "ok"}
+    # Other events about a payment are taken and left alone.
+    assert (await _webhook(app, _event("payment.pending", order, "pay_7"))).json() == {
+        "status": "ok"
+    }
+    other = _event("payment.authorized", "order_other", "pay_8")
+    assert (await _webhook(app, other)).json() == {"status": "ignored"}
+
+
+async def test_razorpay_payments_and_captures() -> None:
+    def answer(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/capture"):
+            assert json.loads(request.content) == {"amount": 14900, "currency": "INR"}
+            return httpx.Response(200, json={"id": "pay_A", "status": "captured"})
+        if request.url.path.endswith("/pay_B"):
+            return httpx.Response(404, json={"error": {"description": "no such payment"}})
+        return httpx.Response(
+            200,
+            json={"id": "pay_A", "order_id": "order_X", "amount": 14900, "status": "authorized"},
+        )
+
+    gateway = RazorpayGateway("rzp_test_k", "s3cret", transport=httpx.MockTransport(answer))
+    try:
+        assert await gateway.payment("pay_A") == PaymentState("order_X", 14900, "authorized")
+        assert await gateway.capture("pay_A", 14900) == "captured"
+        with pytest.raises(GatewayError, match="Razorpay answered 404"):
+            await gateway.payment("pay_B")
+        with pytest.raises(GatewayError, match="not a Razorpay payment id"):
+            await gateway.payment("../orders")
+    finally:
+        await gateway.close()
+
+    def odd(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/pay_C"):
+            raise httpx.ConnectError("down")
+        return httpx.Response(200, json={"id": "pay_D"})
+
+    gateway = RazorpayGateway("rzp_test_k", "s3cret", transport=httpx.MockTransport(odd))
+    try:
+        assert await gateway.payment("pay_D") == PaymentState(None, 0, "")
+        with pytest.raises(GatewayError, match="down"):
+            await gateway.payment("pay_C")
+    finally:
+        await gateway.close()
+
+
+async def _reminders(app: FastAPI) -> list[Any]:
+    state: AppState = app.state.ctx
+    async with state.sessions() as db:
+        return await reminders.due(db, state.settings, state.clock())
+
+
+async def test_a_reminder_before_the_plan_runs_out(
+    app: FastAPI, players: PlayerFactory, clock: Clock
+) -> None:
+    alice, bob = await players("alice"), await players("bob")
+    start = clock()
+    await _verify(alice, (await _buy(alice, "pro"))["order_id"], "pay_1")
+    clock.advance(minutes=1)
+    await _verify(alice, (await _buy(alice, "plus"))["order_id"], "pay_2")  # waits for Pro
+    await give_plan(app, bob, "pro")  # for good: nothing to remind
+
+    clock.advance(days=28)  # Pro ends in 2 days, but Plus follows: no reminder yet
+    assert await _reminders(app) == []
+    clock.advance(days=28)  # Plus ends in 4 days
+    assert await _reminders(app) == []
+    clock.advance(days=1, hours=12)
+    (mail,) = await _reminders(app)
+    plus_ends = start + timedelta(days=60)
+    assert (mail.to, mail.subject) == ("alice@example.com", "Your ClawPlay Plus ends soon")
+    assert f"ends on {plus_ends.day} {plus_ends:%b %Y} (or sooner, once its 45 games" in mail.body
+    assert "nothing more will be charged" in mail.body
+    assert "http://localhost:8081/plans" in mail.body
+    assert await _reminders(app) == []  # once
+
+
+async def test_no_reminder_for_a_deleted_account_or_a_given_plan_without_games(
+    app: FastAPI, players: PlayerFactory, clock: Clock
+) -> None:
+    alice, carol = await players("alice"), await players("carol")
+    await _verify(alice, (await _buy(alice, "pro"))["order_id"], "pay_1")
+    state: AppState = app.state.ctx
+    async with state.sessions() as db:
+        await db.execute(update(User).where(User.id == uuid.UUID(alice.id)).values(is_active=False))
+        await db.commit()
+    async with state.sessions() as db:
+        db.add(
+            Grant(
+                user_id=uuid.UUID(carol.id),
+                plan="plus",
+                starts_at=clock(),
+                ends_at=clock() + timedelta(days=2),
+                reason="gift",
+                created_at=clock(),
+            )
+        )
+        await db.commit()
+    (mail,) = await _reminders(app)  # carol only; her gift has no game limit
+    assert mail.to == "carol@example.com"
+    assert "games" not in mail.body.split("Plans never")[0]
+
+
+async def test_two_servers_send_a_reminder_once(
+    app: FastAPI, players: PlayerFactory, clock: Clock
+) -> None:
+    alice = await players("alice")
+    await _verify(alice, (await _buy(alice))["order_id"], "pay_1")
+    clock.advance(days=28)
+    state: AppState = app.state.ctx
+    async with state.sessions() as db:
+        looked = db.scalar
+
+        async def meanwhile(*args: Any, **kwargs: Any) -> Any:
+            async with state.sessions() as other:  # the other server claims it first
+                await other.execute(update(Grant).values(reminded_at=clock()))
+                await other.commit()
+            return await looked(*args, **kwargs)
+
+        db.scalar = meanwhile  # type: ignore[method-assign]
+        assert await reminders.due(db, state.settings, clock()) == []

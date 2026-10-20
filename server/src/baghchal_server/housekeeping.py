@@ -1,6 +1,6 @@
 """Deletes what the privacy policy says we no longer keep (legal/texts/privacy.md, "How long
-we keep it"). Every server runs it about hourly; each step is an idempotent delete, so two
-servers running it at once do no harm.
+we keep it"), and emails players whose plan ends soon (``billing.reminders``). Every server
+runs it about hourly; each step is idempotent, so two servers running it at once do no harm.
 """
 
 import asyncio
@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from baghchal_server.accounts import lifecycle
 from baghchal_server.accounts.models import EmailToken, Session, User
+from baghchal_server.billing import reminders
 from baghchal_server.chat.models import ChatMessage
 from baghchal_server.chat.service import KEPT as CHAT
 from baghchal_server.config import Settings
@@ -21,6 +22,7 @@ from baghchal_server.errors import AppError
 from baghchal_server.fair_play.models import FairPlayCheck, FairPlaySide
 from baghchal_server.legal.age import PENDING
 from baghchal_server.legal.consents import PARENT_DEADLINE
+from baghchal_server.mail import deliver
 from baghchal_server.moderation.models import ModerationAction, Report
 from baghchal_server.payments.models import Payment
 
@@ -112,6 +114,8 @@ async def run(state: "AppState") -> None:
         try:
             async with state.sessions() as db:
                 done = await tidy(db, state.settings, state.clock())
+                for mail in await reminders.due(db, state.settings, state.clock()):
+                    await deliver(state.mailer, mail)
             for kind, count in done.items():
                 state.metrics.housekeeping_deleted.labels(kind).inc(count)
             log.info("housekeeping.done", **done)

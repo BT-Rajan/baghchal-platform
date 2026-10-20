@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Final
 
+import structlog
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +31,8 @@ from baghchal_server.payments.schemas import (
     PaymentStatus,
     Period,
 )
+
+log = structlog.get_logger()
 
 LENGTH: Final = {Period.MONTH: timedelta(days=30), Period.YEAR: timedelta(days=365)}
 FOR: Final = {Period.MONTH: "a month", Period.YEAR: "a year"}
@@ -138,6 +141,48 @@ async def _locked(db: AsyncSession, order_id: str) -> Payment:
     if payment is None:
         raise AppError(404, "payment_not_found", "No such payment.")
     return payment
+
+
+async def captured(gateway: Gateway, payment: Payment, payment_id: str) -> None:
+    """Make sure the money is ours before the plan is given: Razorpay must say the payment is
+    for this order and amount, and captured (an authorised one is captured now), whatever the
+    account's capture setting."""
+    if payment.status == PaymentStatus.PAID:
+        return
+    unavailable = AppError(
+        502,
+        "payment_provider_error",
+        "We could not check your payment with Razorpay. If you were charged, your plan arrives "
+        "within minutes; otherwise try again.",
+    )
+    try:
+        found = await gateway.payment(payment_id)
+        if found.order_id != payment.order_id or found.amount_paise != payment.amount_paise:
+            raise AppError(400, "payment_mismatch", "This payment is not for this order.")
+        status = found.status
+        if status == "authorized":
+            status = await gateway.capture(payment_id, payment.amount_paise)
+    except GatewayError as e:
+        raise unavailable from e
+    if status != "captured":
+        raise AppError(
+            402,
+            "payment_not_captured",
+            "Razorpay has not received the money yet. If you were charged, your plan arrives "
+            "within minutes.",
+        )
+
+
+async def capture_held(gateway: Gateway, db: AsyncSession, order_id: str, payment_id: str) -> None:
+    """A payment the bank holds for one of our orders (webhook ``payment.authorized``): take
+    the money, so the plan follows (``payment.captured``) even if the browser never came back."""
+    payment = await db.scalar(select(Payment).where(Payment.order_id == order_id))
+    if payment is None:
+        raise AppError(404, "payment_not_found", "No such payment.")
+    try:
+        await gateway.capture(payment_id, payment.amount_paise)
+    except GatewayError:
+        log.warning("payments.capture_failed", order_id=order_id)  # Razorpay's webhook retries
 
 
 async def fulfil(

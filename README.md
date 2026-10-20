@@ -257,7 +257,8 @@ for everyone.
 | Board and piece themes, sound packs, badge | — | ✅ | ✅ |
 | Hosting tournaments, the trainer | — | — | ✅ |
 
-Plan time is lined up, never wasted: Pro bought on Plus starts at once and the Plus left
+Three days before a player's last plan time ends, they are emailed once (plans never renew by
+themselves). Plan time is lined up, never wasted: Pro bought on Plus starts at once and the Plus left
 follows it; Plus bought on Pro starts when Pro ends; the same plan again adds on. Admin grants
 follow the same rule.
 
@@ -297,9 +298,13 @@ To take payments:
 1. In the Razorpay Dashboard, create API keys (Account & Settings → API Keys; test mode first,
    `rzp_test_…`).
 2. Add a webhook (Account & Settings → Webhooks) to `https://<your site>/api/v1/payments/webhook`
-   with the events `payment.captured`, `order.paid`, `payment.failed`, `refund.processed` and
+   with the events `payment.captured`, `payment.authorized`, `order.paid`, `payment.failed`, `refund.processed` and
    `payment.dispute.lost`, and a secret. A full refund, or a dispute lost to the player's bank,
    ends the plan time that payment bought.
+   Before a plan is given, the server asks Razorpay whether the payment is for that order and
+   amount and is captured; one only authorised is captured then (and from the
+   `payment.authorized` webhook, if you add it), so the account's capture setting does not
+   matter.
 3. Set `BAGHCHAL_SECRETS_KEY` on the server (any long random string, e.g. from
    `python -c "import secrets; print(secrets.token_urlsafe(32))"`) and restart. It encrypts
    the keys in the database; keep it safe, and if it ever changes, enter the keys again.
