@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, type } from '@/theme';
 
 import { BrandHeader } from './brand/Logo';
+import { SiteFooter } from './site/SiteFooter';
 
 interface ScreenProps {
   /** The page's heading. Leave it out where the header bar already names the page. */
@@ -72,20 +73,25 @@ function Page({
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
-        contentContainerStyle={[styles.scroll, align === 'top' && styles.top]}
+        contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         testID="page"
         refreshControl={refreshControl}
       >
-        <View role="main" style={[styles.column, wide && styles.wide]}>
-          {brand && <BrandHeader />}
-          {title !== undefined && (
-            <Text role="heading" style={styles.title}>
-              {title}
-            </Text>
-          )}
-          {children}
+        {/* The page grows to fill the screen, so the web's footer sits at the bottom. */}
+        <View style={[styles.body, align === 'top' && styles.top]}>
+          <View role="main" style={[styles.column, wide && styles.wide]}>
+            {/* On the web the top bar carries the logo. */}
+            {brand && Platform.OS !== 'web' && <BrandHeader />}
+            {title !== undefined && (
+              <Text role="heading" style={styles.title}>
+                {title}
+              </Text>
+            )}
+            {children}
+          </View>
         </View>
+        {Platform.OS === 'web' && <SiteFooter />}
       </ScrollView>
     </SafeAreaView>
   );
@@ -93,7 +99,8 @@ function Page({
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  scroll: { flexGrow: 1, justifyContent: 'center', padding: spacing.md, paddingBottom: spacing.xl },
+  scroll: { flexGrow: 1, padding: spacing.md, paddingBottom: spacing.xl },
+  body: { flexGrow: 1, justifyContent: 'center' },
   top: { justifyContent: 'flex-start' },
   wide: { maxWidth: 1100 },
   column: { width: '100%', maxWidth: 640, alignSelf: 'center', gap: spacing.md },

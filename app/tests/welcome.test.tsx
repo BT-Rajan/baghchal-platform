@@ -181,8 +181,13 @@ const METRICS = {
   insets: { top: 0, left: 0, right: 0, bottom: 0 },
 };
 
+jest.mock('@/components/site/SiteFooter', () => {
+  const { Text: MockText } = jest.requireActual('react-native');
+  return { SiteFooter: () => <MockText>site footer</MockText> };
+});
+
 describe('the web’s landing page', () => {
-  test('says what ClawPlay is, with buttons to play and links onward', async () => {
+  test('says what ClawPlay is, with a way to play, and ends with the site footer', async () => {
     jest.replaceProperty(Platform, 'OS', 'web');
     const push = jest.spyOn(router, 'push').mockImplementation(() => {});
     await render(
@@ -192,9 +197,11 @@ describe('the web’s landing page', () => {
     );
     expect(screen.getByText('Play your way')).toBeOnTheScreen();
     expect(screen.getByText('Goats trap')).toBeOnTheScreen();
+    // Signing in and up are in the top bar, the terms and privacy in the footer (webChrome).
+    expect(screen.getByText('site footer')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'Play now, no sign-up' }));
     await fireEvent.press(screen.getByRole('button', { name: 'Start playing' }));
-    await fireEvent.press(screen.getByRole('link', { name: 'Create a free account' }));
-    await fireEvent.press(screen.getByRole('link', { name: 'Privacy policy' }));
-    expect(push.mock.calls).toEqual([['/start'], ['/sign-up'], ['/privacy']]);
+    expect(push.mock.calls).toEqual([['/start'], ['/start']]);
   });
 });

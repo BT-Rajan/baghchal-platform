@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { useWindowDimensions, type ColorValue } from 'react-native';
+import { Platform, useWindowDimensions, type ColorValue } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BrandBar } from '@/components/brand/Logo';
@@ -20,9 +20,13 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const sidebar = width >= SIDEBAR_WIDTH;
+  // On the web the top bar has the logo, the same places and the bell (WebTopBar).
+  const web = Platform.OS === 'web';
   return (
     <Tabs
+      {...(web && { tabBar: () => null })}
       screenOptions={{
+        ...(web && { headerShown: false }),
         header: () => <TabsHeader />,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,

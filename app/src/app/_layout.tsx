@@ -16,6 +16,7 @@ import { ConnectionBanner } from '@/components/ConnectionBanner';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { statusBarStyle } from '@/components/statusBar';
+import { WebTopBar } from '@/components/site/WebTopBar';
 import { API_URL } from '@/config';
 import { socketUrl } from '@/realtime/connection';
 import { RealtimeProvider } from '@/realtime/RealtimeProvider';
@@ -76,10 +77,13 @@ function Routes() {
   }
   if (state.status === 'unreachable') {
     return (
-      <Screen title="ClawPlay">
-        <Notice tone="error">{describeError(state.error)}</Notice>
-        <Button title="Try again" onPress={() => void session.retry()} />
-      </Screen>
+      <View style={styles.app}>
+        {Platform.OS === 'web' && <WebTopBar playing={false} />}
+        <Screen title="ClawPlay">
+          <Notice tone="error">{describeError(state.error)}</Notice>
+          <Button title="Try again" onPress={() => void session.retry()} />
+        </Screen>
+      </View>
     );
   }
   const signedIn = state.status === 'signedIn';
@@ -89,6 +93,7 @@ function Routes() {
   return (
     <View style={styles.app}>
       <StatusBar style={statusBarStyle(pathname)} />
+      {Platform.OS === 'web' && <WebTopBar playing={playing} />}
       {playing && <ConnectionBanner />}
       {playing && <ChallengeBanner />}
       <Stack screenOptions={{ headerShown: false, ...APP_BAR }}>
@@ -143,8 +148,15 @@ function Routes() {
         <Stack.Screen name="confirm-email" />
         <Stack.Screen name="parent-consent" />
         {/* The terms and privacy policy can be read by anyone, from anywhere. */}
-        <Stack.Screen name="terms" options={{ headerShown: true, title: 'Terms of service' }} />
-        <Stack.Screen name="privacy" options={{ headerShown: true, title: 'Privacy policy' }} />
+        {/* The web's top bar is enough there: the document's own heading names the page. */}
+        <Stack.Screen
+          name="terms"
+          options={{ headerShown: Platform.OS !== 'web', title: 'Terms of service' }}
+        />
+        <Stack.Screen
+          name="privacy"
+          options={{ headerShown: Platform.OS !== 'web', title: 'Privacy policy' }}
+        />
       </Stack>
     </View>
   );
