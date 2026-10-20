@@ -2,9 +2,10 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { LegalDocumentName } from '@/api/endpoints';
 import { useLegalDocument } from '@/legal/hooks';
-import { parse, type Span } from '@/legal/markdown';
+import { parse, sections, type Body, type Span } from '@/legal/markdown';
 import { colors, spacing, type } from '@/theme';
 
+import { Disclosure } from './Disclosure';
 import { Screen } from './Screen';
 import { ErrorState, Loading } from './States';
 
@@ -25,44 +26,51 @@ export function LegalDocument({ document }: { document: LegalDocumentName }) {
       </Screen>
     );
   }
+  const { intro, sections: parts } = sections(parse(query.data.text));
   return (
     <Screen align="top">
-      {parse(query.data.text).map((block, i) => {
-        switch (block.kind) {
-          case 'title':
-            return (
-              <Text key={i} role="heading" style={styles.title}>
-                {block.text}
-              </Text>
-            );
-          case 'heading':
-            return (
-              <Text key={i} role="heading" style={styles.heading}>
-                {block.text}
-              </Text>
-            );
-          case 'paragraph':
-            return (
-              <Text key={i} style={styles.body}>
-                <Spans spans={block.spans} />
-              </Text>
-            );
-          case 'list':
-            return (
-              <View key={i} role="list" style={styles.list}>
-                {block.items.map((item, j) => (
-                  <Text key={j} role="listitem" style={styles.body}>
-                    {'•  '}
-                    <Spans spans={item} />
-                  </Text>
-                ))}
-              </View>
-            );
-        }
-      })}
+      <Blocks blocks={intro} />
+      {/* Each section shut until asked for: the headings are the contents. */}
+      <View>
+        {parts.map((part) => (
+          <Disclosure key={part.heading} title={part.heading}>
+            <Blocks blocks={part.blocks} />
+          </Disclosure>
+        ))}
+      </View>
       <Text style={styles.version}>{`Version of ${query.data.version}`}</Text>
     </Screen>
   );
+}
+
+function Blocks({ blocks }: { blocks: Body[] }) {
+  return blocks.map((block, i) => {
+    switch (block.kind) {
+      case 'title':
+        return (
+          <Text key={i} role="heading" style={styles.title}>
+            {block.text}
+          </Text>
+        );
+      case 'paragraph':
+        return (
+          <Text key={i} style={styles.body}>
+            <Spans spans={block.spans} />
+          </Text>
+        );
+      case 'list':
+        return (
+          <View key={i} role="list" style={styles.list}>
+            {block.items.map((item, j) => (
+              <Text key={j} role="listitem" style={styles.body}>
+                {'•  '}
+                <Spans spans={item} />
+              </Text>
+            ))}
+          </View>
+        );
+    }
+  });
 }
 
 function Spans({ spans }: { spans: Span[] }) {
@@ -75,7 +83,6 @@ function Spans({ spans }: { spans: Span[] }) {
 
 const styles = StyleSheet.create({
   title: { ...type.title, color: colors.text },
-  heading: { ...type.heading, color: colors.text, marginTop: spacing.sm },
   body: { ...type.body, color: colors.text },
   bold: { fontWeight: '700' },
   list: { gap: spacing.xs },

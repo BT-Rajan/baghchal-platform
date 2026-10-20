@@ -40,7 +40,7 @@ describe('the apps’ start screen', () => {
     });
     expect(await screen.findByText(/^Tigers hunt\./)).toBeOnTheScreen();
     // An app's start screen, not the web's landing page.
-    expect(screen.queryByText('Play your way')).toBeNull();
+    expect(screen.queryByRole('radio', { name: 'Play your way' })).toBeNull();
     await press('Play now, no sign-up');
     await screen.findByRole('heading', { name: 'Your first game' });
     await fireEvent.changeText(screen.getByLabelText('Month of birth'), '01');
@@ -197,13 +197,18 @@ describe('the web’s landing page', () => {
         <Welcome />
       </SafeAreaProvider>,
     );
-    expect(screen.getByText('Play your way')).toBeOnTheScreen();
+    // The rules and the ways to play are two tabs of one section.
     expect(screen.getByText('Goats trap')).toBeOnTheScreen();
+    expect(screen.queryByText('The computer')).toBeNull();
+    await fireEvent.press(screen.getByRole('radio', { name: 'Play your way' }));
+    expect(screen.getByText('The computer')).toBeOnTheScreen();
+    expect(screen.queryByText('Goats trap')).toBeNull();
     // Signing in and up are in the top bar, the terms and privacy in the footer (webChrome).
     expect(screen.getByText('site footer')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull();
+    // One way to play: the hero's button, not a second one at the foot.
+    expect(screen.queryByRole('button', { name: 'Start playing' })).toBeNull();
     await fireEvent.press(screen.getByRole('button', { name: 'Play now, no sign-up' }));
-    await fireEvent.press(screen.getByRole('button', { name: 'Start playing' }));
-    expect(push.mock.calls).toEqual([['/start'], ['/start']]);
+    expect(push.mock.calls).toEqual([['/start']]);
   });
 });
