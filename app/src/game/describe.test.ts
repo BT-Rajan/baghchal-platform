@@ -9,6 +9,7 @@ import {
   movePairs,
   other,
   playerOf,
+  pointsText,
   ratingChangeText,
   resultText,
   sideOf,
@@ -45,12 +46,17 @@ test.each([
   ['goat', 'abandoned', 'tiger', 'You lost: you were away too long.'],
   ['tiger', 'timeout', null, 'Tigers (bob) won on time.'],
   [null, 'aborted', 'goat', 'Game aborted: no result.'],
+  [null, 'draw_agreed', 'goat', 'Drawn by agreement.'],
 ] as const)('resultText: %s by %s, seen by %s', (winner, reason, me, text) => {
   expect(resultText(finished(winner, reason), me)).toBe(text);
 });
 
 test('resultText is null while playing', () => {
   expect(resultText(game(), 'goat')).toBeNull();
+});
+
+test('pointsText writes halves as players do', () => {
+  expect([0, 0.5, 1, 1.5, 2].map(pointsText)).toEqual(['0', '½', '1', '1½', '2']);
 });
 
 test('ratingChangeText', () => {

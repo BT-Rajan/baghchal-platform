@@ -18,7 +18,8 @@ class Record:
     """Where a player stands before a round."""
 
     id: uuid.UUID
-    score: int
+    score: float
+    """1 per win and per bye, 0.5 per draw."""
     rating: float
     opponents: set[uuid.UUID] = field(default_factory=set)
     goats: int = 0

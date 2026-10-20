@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams, useNavigation, usePreventRemove } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { annotate } from '@/analysis/format';
@@ -17,6 +17,7 @@ import { Confirm } from '@/components/Confirm';
 import { AnalysisPanel } from '@/components/game/AnalysisPanel';
 import { Board } from '@/components/game/Board';
 import { Coach } from '@/components/game/Coach';
+import { ChatPanel } from '@/components/game/ChatPanel';
 import { GameActions } from '@/components/game/GameActions';
 import { MoveList } from '@/components/game/MoveList';
 import { PieceCounts } from '@/components/game/PieceCounts';
@@ -45,10 +46,11 @@ import {
 } from '@/game/describe';
 import { EMOTE_SHOWN_MS, EMOTES, emoteText, emotesOpen } from '@/game/emotes';
 import { useGame, useGameAction, useMove, useSendEmote, useShownEmote } from '@/game/hooks';
+import { candidateMoves, premoveDecision } from '@/game/premove';
 import { boardSize, gameLayout } from '@/game/layout';
 import { TIME_CONTROLS } from '@/lobby/format';
 import { useCreateChallenge, useOpenStartedGame } from '@/lobby/hooks';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, type } from '@/theme';
 
 export default function GameScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -77,6 +79,24 @@ export default function GameScreen() {
   const [leaving, setLeaving] = useState<Parameters<typeof navigation.dispatch>[0] | null>(null);
   const [mayLeave, setMayLeave] = useState(false);
   usePreventRemove(playing && !mayLeave, ({ data }) => setLeaving(data.action));
+  // A premove: chosen on the opponent's turn (at `ply`), played as soon as it is my turn if
+  // still legal then. Once the game moves past it, it simply no longer applies.
+  const [premove, setPremove] = useState<{ move: string; ply: number } | null>(null);
+  const played = useRef<string | null>(null);
+  const myTurnNow =
+    game?.status === 'active' && game.side_to_move === sideOf(game, me.id) && !move.isPending;
+  useEffect(() => {
+    if (game === undefined || premove === null || game.ply !== premove.ply + 1) return;
+    const key = `${premove.ply}:${premove.move}`;
+    if (played.current === key) return;
+    if (premoveDecision(premove.move, myTurnNow, game.legal_moves) !== 'play') return;
+    played.current = key;
+    move.mutate({ ply: game.ply, move: premove.move });
+  }, [game, premove, myTurnNow, move]);
+  const waitingPremove =
+    game !== undefined && premove !== null && game.status === 'active' && game.ply === premove.ply
+      ? premove.move
+      : null;
   useEffect(() => {
     if (mayLeave && leaving !== null) navigation.dispatch(leaving);
   }, [mayLeave, leaving, navigation]);
@@ -107,6 +127,14 @@ export default function GameScreen() {
   const wide = layout !== 'stacked';
   // Games against the Easy computer come with tips, and goats in danger marked on the board.
   const tip = isCoached(game, mine) ? coachTip(game, mine) : null;
+  // On the opponent's turn I may line up my next move.
+  const premoving =
+    game.status === 'active' && mine !== null && game.side_to_move !== mine && ply === game.ply;
+  const boardMoves = myTurn
+    ? game.legal_moves
+    : premoving && position !== null
+      ? candidateMoves(position, mine)
+      : [];
 
   const board =
     position === null ? (
@@ -115,9 +143,11 @@ export default function GameScreen() {
       <Board
         key={`${game.ply}-${ply}`}
         position={position}
-        legalMoves={myTurn ? game.legal_moves : []}
-        lastMove={ply > 0 ? game.moves[ply - 1] : undefined}
-        onMove={(m) => move.mutate({ ply: game.ply, move: m })}
+        legalMoves={boardMoves}
+        lastMove={waitingPremove ?? (ply > 0 ? game.moves[ply - 1] : undefined)}
+        onMove={(m) =>
+          myTurn ? move.mutate({ ply: game.ply, move: m }) : setPremove({ move: m, ply: game.ply })
+        }
         theme={look.board}
         pieces={look.pieces}
         danger={tip !== null && myTurn && ply === game.ply ? game.goats_in_danger : []}
@@ -163,6 +193,20 @@ export default function GameScreen() {
           />
         </View>
       )}
+      {waitingPremove !== null && (
+        <View style={styles.premove}>
+          <Text style={styles.premoveText}>
+            {`Premove: ${waitingPremove}, played when it is your turn`}
+          </Text>
+          <Button
+            title="Cancel the premove"
+            label="Cancel"
+            variant="secondary"
+            compact
+            onPress={() => setPremove(null)}
+          />
+        </View>
+      )}
       {tip !== null && <Coach tip={tip} />}
       {replaying && <Replay ply={ply} total={game.ply} onShow={setShown} />}
       {error !== null && <Notice tone="error">{describeError(error)}</Notice>}
@@ -202,6 +246,7 @@ export default function GameScreen() {
           onToggle={() => chooseLook.mutate({ emotes_on: !look.emotes_on })}
         />
       )}
+      {mine !== null && <ChatPanel game={game} mine={mine} />}
       {mine !== null && game.status === 'active' && (
         <GameActions
           game={game}
@@ -459,6 +504,8 @@ const styles = StyleSheet.create({
   panel: { flex: 1, gap: spacing.md, minWidth: 280 },
   next: { gap: spacing.sm },
   quick: { gap: spacing.sm },
+  premove: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  premoveText: { ...type.body, flex: 1, color: colors.text },
   emotes: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
   turn: { fontSize: 18, fontWeight: '700', color: colors.text },
   counts: { fontSize: 14, color: colors.muted },

@@ -52,7 +52,7 @@ export default function AppearanceScreen() {
         }))}
       />
       <Segmented
-        label="Your opponent's quick messages in games"
+        label="Your opponent's messages in games (quick messages and chat)"
         value={current.emotes_on ? 'show' : 'hide'}
         onChange={(value) => pick({ emotes_on: value === 'show' })}
         options={[

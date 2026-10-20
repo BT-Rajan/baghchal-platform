@@ -187,6 +187,9 @@ and the Caddyfile.
 | GET | `/api/v1/games/{id}` | A game: position, moves, legal moves, goats in danger (on the goats' turn), clocks, result; finished games add every position, for replay |
 | POST | `/api/v1/games/{id}/moves` | Play `{"ply": n, "move": "a1-b2"}` (`ply` = moves you have seen) |
 | POST | `/api/v1/games/{id}/resign`, `/abort`, `/claim-abandonment` | End the game (see [rules](docs/rules.md#live-play-platform-rules)) |
+| POST | `/api/v1/games/{id}/draw`, `/draw/decline` | Offer a draw, or accept the opponent's (the game ends drawn, half a point each); decline it. Once both sides have moved, not against the computer; the game's `draw_offer` shows an open offer |
+| GET, POST | `/api/v1/games/{id}/chat` | The game's chat (whether it is open, and what was said); write a message (`text`, up to 200 characters). Only between two adults with accounts and messages on, during the game and 5 minutes after; blocked words are masked; kept 30 days |
+| GET | `/api/v1/mod/games/{id}/chat` | Moderators: a game's chat, for checking a report |
 | GET, POST | `/api/v1/games/{id}/analysis` | Plus and Pro: a finished game's analysis; `POST` works it out if nobody has yet (counts against today's allowance) |
 | GET | `/api/v1/me/payments` | Whether payments are taken, and my payments |
 | POST | `/api/v1/payments/checkout` | Start buying a `plan` (plus, pro) for a `period` (month, year): a Razorpay order |

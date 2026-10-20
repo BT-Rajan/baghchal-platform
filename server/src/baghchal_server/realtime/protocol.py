@@ -11,6 +11,7 @@ quick message in a game), ``error``.
 """
 
 import uuid
+from datetime import datetime
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
@@ -69,6 +70,17 @@ class EmoteEvent(BaseModel):
     side: Literal["goat", "tiger"]
     """Who sent it."""
     emote: str
+
+
+class ChatEvent(BaseModel):
+    """A chat message in a game, to both its players."""
+
+    type: Literal["chat"] = "chat"
+    game_id: uuid.UUID
+    side: Literal["goat", "tiger"]
+    """Who wrote it."""
+    text: str
+    sent_at: datetime
 
 
 class ErrorEvent(BaseModel):

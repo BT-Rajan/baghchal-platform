@@ -23,8 +23,9 @@ export const CLAIM_WAIT_MS = 60_000;
 
 /**
  * Abort (before both sides have moved, except in the second game of a match), resign (with a
- * confirmation), and claim the win once the opponent has been offline for a minute on their
- * turn. The server decides whether each succeeds.
+ * confirmation), offer a draw or answer one (not against the computer), and claim the win once
+ * the opponent has been offline for a minute on their turn. The server decides whether each
+ * succeeds.
  */
 export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
   const [confirming, setConfirming] = useState(false);
@@ -78,8 +79,22 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
       />
     );
   }
+  // Draws: once both have moved, between people. An offer stands until answered or moved past.
+  const drawable = !isComputer(game, other(me));
+  const offeredToMe = drawable && game.draw_offer === other(me);
+  const iOffered = drawable && game.draw_offer === me;
   return (
     <View style={styles.confirm}>
+      {offeredToMe && (
+        <Confirm
+          question={`${opponent.username} offers a draw.`}
+          confirmTitle="Accept the draw"
+          cancelTitle="Decline"
+          busy={pending === 'draw'}
+          onConfirm={() => onAction('draw')}
+          onCancel={() => onAction('draw/decline')}
+        />
+      )}
       {claimIn !== null && claimIn > 0 && (
         <Text style={styles.away} aria-live="polite">
           {`${opponent.username} seems to have left. If they are not back in ` +
@@ -95,6 +110,17 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
             onPress={() => setConfirming(true)}
           />
         </View>
+        {drawable && !offeredToMe && (
+          <View style={styles.cell}>
+            <Button
+              title={iOffered ? 'Draw offered' : 'Offer a draw'}
+              variant="secondary"
+              busy={pending === 'draw'}
+              disabled={iOffered}
+              onPress={() => onAction('draw')}
+            />
+          </View>
+        )}
         {claimIn === 0 && (
           <View style={styles.cell}>
             <Button

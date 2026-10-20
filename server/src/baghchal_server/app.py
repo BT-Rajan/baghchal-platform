@@ -20,6 +20,8 @@ from baghchal_server.appearance import models as _appearance_models  # noqa: F40
 from baghchal_server.appearance.routes import router as appearance_router
 from baghchal_server.billing import models as _billing_models  # noqa: F401  (registers tables)
 from baghchal_server.billing.routes import router as billing_router
+from baghchal_server.chat import models as _chat_models  # noqa: F401  (registers tables)
+from baghchal_server.chat.routes import router as chat_router
 from baghchal_server.config import Settings
 from baghchal_server.db import create_engine, session_factory
 from baghchal_server.deps import AppState
@@ -200,6 +202,7 @@ def create_app(
         tournaments_router,
         friends_router,
         notifications_router,
+        chat_router,
         trainer_router,
         health_router,
         ws_router,

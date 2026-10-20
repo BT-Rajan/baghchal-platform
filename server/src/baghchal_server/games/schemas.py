@@ -12,7 +12,7 @@ SideName = Literal["goat", "tiger"]
 
 class ResultOut(BaseModel):
     winner: SideName | None
-    """None when the game was aborted."""
+    """None when the game was aborted or drawn (``reason`` says which)."""
     reason: EndReason
 
 
@@ -37,7 +37,8 @@ class RatingsOut(BaseModel):
 
 class MatchScoreOut(BaseModel):
     player: PlayerOut
-    points: int
+    points: float
+    """1 for each game won, 0.5 for each draw."""
 
 
 class MatchOut(BaseModel):
@@ -77,6 +78,8 @@ class GameOut(BaseModel):
     """For replaying a finished game: the position (BFEN) before the first move and after each
     one, so ``positions[ply]``. Empty while the game is in progress."""
     deadline_at: datetime | None
+    draw_offer: SideName | None = None
+    """The side whose draw offer is open (the other side may accept or decline it)."""
     server_time: datetime
     created_at: datetime
     finished_at: datetime | None
@@ -120,7 +123,7 @@ class GameSummaryOut(BaseModel):
     rated: bool
     computer: Literal["easy", "medium", "hard"] | None
     result: ResultOut
-    outcome: Literal["won", "lost", "aborted"]
+    outcome: Literal["won", "lost", "drawn", "aborted"]
     """How it went for this player."""
     rating_change: int | None
     moves: int

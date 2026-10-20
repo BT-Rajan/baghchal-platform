@@ -825,6 +825,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/games/{game_id}/draw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Offer Draw
+         * @description Offer a draw, or accept the opponent's open offer (the game ends drawn). Not against the
+         *     computer, and not before both sides have moved.
+         */
+        post: operations["offer_draw_api_v1_games__game_id__draw_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/games/{game_id}/draw/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decline Draw
+         * @description Turn down the opponent's draw offer (moving on does the same).
+         */
+        post: operations["decline_draw_api_v1_games__game_id__draw_decline_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/games/{game_id}/claim-abandonment": {
         parameters: {
             query?: never;
@@ -916,6 +957,26 @@ export interface paths {
          * @description Close a report without acting on the player.
          */
         post: operations["dismiss_report_api_v1_mod_reports__report_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mod/games/{game_id}/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Game Chat
+         * @description What was written in a game (kept 30 days), for checking a report about it.
+         */
+        get: operations["game_chat_api_v1_mod_games__game_id__chat_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1417,6 +1478,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/games/{game_id}/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Chat
+         * @description The game's chat: whether it is open (adults with accounts, both with messages on, no
+         *     block, the game on or just over), and what has been said.
+         */
+        get: operations["read_chat_api_v1_games__game_id__chat_get"];
+        put?: never;
+        /**
+         * Send Chat
+         * @description Write to the other player. Blocked words are masked; both players get a ``chat`` event.
+         *     Kept 30 days, so a report about it can be checked.
+         */
+        post: operations["send_chat_api_v1_games__game_id__chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trainer": {
         parameters: {
             query?: never;
@@ -1651,6 +1738,38 @@ export interface components {
          * @enum {string}
          */
         ChallengeStatus: "pending" | "accepted" | "declined" | "cancelled" | "expired";
+        /** ChatIn */
+        ChatIn: {
+            /** Text */
+            text: string;
+        };
+        /** ChatMessageOut */
+        ChatMessageOut: {
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "goat" | "tiger";
+            /** Text */
+            text: string;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
+        };
+        /**
+         * ChatOut
+         * @description A game's chat, as one of its players sees it.
+         */
+        ChatOut: {
+            /** Open */
+            open: boolean;
+            /** Closed Because */
+            closed_because: ("computer" | "guest" | "under_18" | "messages_off" | "blocked" | "game_over") | null;
+            /** Messages */
+            messages: components["schemas"]["ChatMessageOut"][];
+        };
         /** CheckedGameOut */
         CheckedGameOut: {
             /**
@@ -1850,7 +1969,7 @@ export interface components {
          * EndReason
          * @enum {string}
          */
-        EndReason: "five_captured" | "tigers_trapped" | "goats_blocked" | "timeout" | "resigned" | "abandoned" | "aborted";
+        EndReason: "five_captured" | "tigers_trapped" | "goats_blocked" | "timeout" | "resigned" | "abandoned" | "aborted" | "draw_agreed";
         /** ExportAccount */
         ExportAccount: {
             /**
@@ -1901,6 +2020,21 @@ export interface components {
             rated: boolean;
             /** Status */
             status: string;
+        };
+        /** ExportChatMessage */
+        ExportChatMessage: {
+            /**
+             * Game Id
+             * Format: uuid
+             */
+            game_id: string;
+            /** Text */
+            text: string;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
         };
         /** ExportConsent */
         ExportConsent: {
@@ -1987,6 +2121,11 @@ export interface components {
             friends: string[];
             /** Notifications */
             notifications: components["schemas"]["ExportNotification"][];
+            /**
+             * Chat Messages
+             * @default []
+             */
+            chat_messages: components["schemas"]["ExportChatMessage"][];
             /** Sessions */
             sessions: components["schemas"]["ExportSession"][];
         };
@@ -2109,6 +2248,8 @@ export interface components {
             positions: string[];
             /** Deadline At */
             deadline_at: string | null;
+            /** Draw Offer */
+            draw_offer?: ("goat" | "tiger") | null;
             /**
              * Server Time
              * Format: date-time
@@ -2154,7 +2295,7 @@ export interface components {
              * Outcome
              * @enum {string}
              */
-            outcome: "won" | "lost" | "aborted";
+            outcome: "won" | "lost" | "drawn" | "aborted";
             /** Rating Change */
             rating_change: number | null;
             /** Moves */
@@ -2316,6 +2457,28 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** ModChatMessageOut */
+        ModChatMessageOut: {
+            /** Username */
+            username: string;
+            /** Text */
+            text: string;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
+        };
+        /** ModChatOut */
+        ModChatOut: {
+            /**
+             * Game Id
+             * Format: uuid
+             */
+            game_id: string;
+            /** Messages */
+            messages: components["schemas"]["ModChatMessageOut"][];
         };
         /**
          * ModPlayerOut
@@ -4435,6 +4598,68 @@ export interface operations {
             };
         };
     };
+    offer_draw_api_v1_games__game_id__draw_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decline_draw_api_v1_games__game_id__draw_decline_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     claim_abandonment_api_v1_games__game_id__claim_abandonment_post: {
         parameters: {
             query?: never;
@@ -4588,6 +4813,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    game_chat_api_v1_mod_games__game_id__chat_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModChatOut"];
                 };
             };
             /** @description Validation Error */
@@ -5403,6 +5659,72 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    read_chat_api_v1_games__game_id__chat_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_chat_api_v1_games__game_id__chat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatMessageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

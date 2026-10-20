@@ -198,3 +198,20 @@ test('after a reconnect, challenges, friends and games are fetched again', async
     ['game'],
   ]);
 });
+
+describe('chat', () => {
+  test('a message joins a loaded chat once; an unloaded chat is left to be fetched', () => {
+    const qc = new QueryClient();
+    const message = { side: 'tiger' as const, text: 'hi', sent_at: '2026-01-01T12:00:00Z' };
+    applyMessage(qc, { type: 'chat', game_id: 'g1', ...message }, ME.id);
+    expect(qc.getQueryData(queryKeys.chat('g1'))).toBeUndefined();
+    qc.setQueryData(queryKeys.chat('g1'), { open: true, closed_because: null, messages: [] });
+    applyMessage(qc, { type: 'chat', game_id: 'g1', ...message }, ME.id);
+    applyMessage(qc, { type: 'chat', game_id: 'g1', ...message }, ME.id);
+    expect(qc.getQueryData(queryKeys.chat('g1'))).toEqual({
+      open: true,
+      closed_because: null,
+      messages: [message],
+    });
+  });
+});

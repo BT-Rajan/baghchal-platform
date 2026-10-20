@@ -14,6 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from baghchal_server.accounts import lifecycle
 from baghchal_server.accounts.models import EmailToken, Session, User
+from baghchal_server.chat.models import ChatMessage
+from baghchal_server.chat.service import KEPT as CHAT
 from baghchal_server.config import Settings
 from baghchal_server.errors import AppError
 from baghchal_server.fair_play.models import FairPlayCheck, FairPlaySide
@@ -94,6 +96,9 @@ async def tidy(db: AsyncSession, settings: Settings, now: datetime) -> dict[str,
             db, delete(ModerationAction).where(ModerationAction.created_at < now - MODERATION)
         ),
         "payments": await _delete(db, delete(Payment).where(Payment.created_at < now - PAYMENTS)),
+        "chat_messages": await _delete(
+            db, delete(ChatMessage).where(ChatMessage.created_at < now - CHAT)
+        ),
     }
     await db.commit()
     done["accounts_without_parent"] = await _without_parent(db, settings, now)

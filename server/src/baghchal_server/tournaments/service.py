@@ -221,7 +221,9 @@ async def finish(db: AsyncSession, now: datetime, user_id: uuid.UUID, code: str)
 
 
 def _state(game: Game | None) -> PairingState:
-    if game is None or (game.status == GameStatus.FINISHED and game.winner is None):
+    if game is None or (
+        game.status == GameStatus.FINISHED and game.winner is None and not games.drawn(game)
+    ):
         return PairingState.WAITING  # not started, or aborted: to be played (again)
     return PairingState.PLAYING if game.status == GameStatus.ACTIVE else PairingState.DONE
 
@@ -281,8 +283,11 @@ async def play(  # noqa: PLR0913, PLR0917 - who starts which pairing of which to
     return game
 
 
-def _winner(p: Pairing, game: Game) -> uuid.UUID:
-    return p.goat_id if game.winner == "goat" else p.tiger_id  # type: ignore[return-value]
+def _winner(p: Pairing, game: Game) -> uuid.UUID | None:
+    """Who won the pairing's game: None for a draw."""
+    if games.drawn(game):
+        return None
+    return p.goat_id if game.winner == "goat" else p.tiger_id
 
 
 async def describe(db: AsyncSession, now: datetime, tournament: Tournament) -> TournamentOut:
@@ -331,7 +336,7 @@ async def describe(db: AsyncSession, now: datetime, tournament: Tournament) -> T
     def who(uid: uuid.UUID) -> PlayerOut:
         return PlayerOut(id=uid, username=names[uid])
 
-    points = dict.fromkeys(players, 0)
+    points = dict.fromkeys(players, 0.0)
     played = dict.fromkeys(players, 0)
     met: dict[uuid.UUID, list[uuid.UUID]] = {uid: [] for uid in players}
     out_pairings, byes = [], []
@@ -345,7 +350,8 @@ async def describe(db: AsyncSession, now: datetime, tournament: Tournament) -> T
         if states[p.id] == PairingState.DONE:
             assert game is not None  # noqa: S101 - done means a finished game
             winner = _winner(p, game)
-            points[winner] += 1
+            for uid in (p.goat_id, p.tiger_id):
+                points[uid] += games.points(game, uid)
             for a, b in ((p.goat_id, p.tiger_id), (p.tiger_id, p.goat_id)):
                 played[a] += 1
                 met[a].append(b)
@@ -393,12 +399,12 @@ async def describe(db: AsyncSession, now: datetime, tournament: Tournament) -> T
 
 def _records(
     pairings: list[Pairing],
-    games: dict[uuid.UUID, Game],
+    played: dict[uuid.UUID, Game],
     players: list[uuid.UUID],
     ratings: dict[uuid.UUID, float],
 ) -> list[swiss.Record]:
     """Where each player stands after the rounds played, for pairing the next."""
-    records = {uid: swiss.Record(uid, 0, ratings.get(uid, 1500.0)) for uid in players}
+    records = {uid: swiss.Record(uid, 0.0, ratings.get(uid, 1500.0)) for uid in players}
     for p in sorted(pairings, key=lambda p: p.round):
         if p.tiger_id is None:
             records[p.goat_id].score += 1
@@ -409,6 +415,8 @@ def _records(
         tiger.opponents.add(goat.id)
         goat.goats, goat.last_side = goat.goats + 1, "goat"
         tiger.tigers, tiger.last_side = tiger.tigers + 1, "tiger"
-        # The rounds played are over: every game in them has a winner.
-        records[_winner(p, games[cast(uuid.UUID, p.game_id)])].score += 1
+        # The rounds played are over: every game in them has a result (a win, or a draw).
+        game = played[cast(uuid.UUID, p.game_id)]
+        goat.score += games.points(game, goat.id)
+        tiger.score += games.points(game, tiger.id)
     return list(records.values())

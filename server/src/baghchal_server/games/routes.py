@@ -143,6 +143,21 @@ async def abort(game_id: uuid.UUID, user: CurrentUser, state: State, db: DB) -> 
     return await notify(state, db, await service.abort(db, game_id, user.id, state.clock()))
 
 
+@router.post("/games/{game_id}/draw")
+async def offer_draw(game_id: uuid.UUID, user: CurrentUser, state: State, db: DB) -> GameOut:
+    """Offer a draw, or accept the opponent's open offer (the game ends drawn). Not against the
+    computer, and not before both sides have moved."""
+    await _settle(state, db, game_id)
+    return await notify(state, db, await service.offer_draw(db, game_id, user.id, state.clock()))
+
+
+@router.post("/games/{game_id}/draw/decline")
+async def decline_draw(game_id: uuid.UUID, user: CurrentUser, state: State, db: DB) -> GameOut:
+    """Turn down the opponent's draw offer (moving on does the same)."""
+    await _settle(state, db, game_id)
+    return await notify(state, db, await service.decline_draw(db, game_id, user.id))
+
+
 @router.post("/games/{game_id}/claim-abandonment")
 async def claim_abandonment(game_id: uuid.UUID, user: CurrentUser, state: State, db: DB) -> GameOut:
     await _settle(state, db, game_id)

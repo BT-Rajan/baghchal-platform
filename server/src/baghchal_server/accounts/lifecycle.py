@@ -15,6 +15,7 @@ from baghchal_server.accounts.models import EmailToken, Session, User
 from baghchal_server.accounts.schemas import (
     ExportAccount,
     ExportChallenge,
+    ExportChatMessage,
     ExportConsent,
     ExportGame,
     ExportNotification,
@@ -23,6 +24,7 @@ from baghchal_server.accounts.schemas import (
     ExportSession,
 )
 from baghchal_server.accounts.service import DELETED_PREFIX
+from baghchal_server.chat.models import ChatMessage
 from baghchal_server.config import Settings
 from baghchal_server.errors import AppError
 from baghchal_server.friends import service as friends
@@ -149,6 +151,14 @@ async def export(db: AsyncSession, user: User, now: datetime) -> ExportOut:
                 .order_by(Notification.created_at)
             )
         ],
+        chat_messages=[
+            ExportChatMessage(game_id=m.game_id, text=m.text, sent_at=m.created_at)
+            for m in await db.scalars(
+                select(ChatMessage)
+                .where(ChatMessage.user_id == user.id)
+                .order_by(ChatMessage.created_at)
+            )
+        ],
         sessions=[
             ExportSession(
                 created_at=s.created_at, last_used_at=s.last_used_at, expires_at=s.expires_at
@@ -219,6 +229,7 @@ async def delete_account(
         delete(Block).where(or_(Block.blocker_id == user.id, Block.blocked_id == user.id))
     )
     await db.execute(delete(Notification).where(Notification.user_id == user.id))
+    await db.execute(delete(ChatMessage).where(ChatMessage.user_id == user.id))
     await db.execute(
         delete(Friendship).where(
             or_(Friendship.requester_id == user.id, Friendship.addressee_id == user.id)

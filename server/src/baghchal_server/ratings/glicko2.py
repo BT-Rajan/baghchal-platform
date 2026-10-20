@@ -32,7 +32,7 @@ class Rating:
 class Result:
     opponent: Rating
     score: float
-    """1 for a win, 0 for a loss (0.5 for a draw, which Bagh Chal does not have)."""
+    """1 for a win, 0 for a loss, 0.5 for a draw (agreed by both players)."""
 
 
 def _g(phi: float) -> float:

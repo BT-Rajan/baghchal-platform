@@ -25,6 +25,7 @@ Grievance Officer: [[grievance_officer]], [[grievance_email]].
 - Notifications we show you in the app (someone challenged you, asked to be friends, a tournament started).
 - Achievements are worked out from your games and puzzles whenever they are shown; nothing extra is stored.
 - Quick messages in games (such as "Good luck") are passed to your opponent and not stored.
+- Chat messages in games: players who are both adults (18 or over, with an account) can write to each other during a game and for a few minutes after it, unless either of them turned messages off. We keep what you write for 30 days, so that if someone reports a message a moderator can read it, and we hide words on our blocked list. Players under 18 never see or send chat.
 - Whether you are online right now (kept only in short-lived memory, not stored).
 
 **Fair play and safety**
@@ -53,7 +54,8 @@ You can withdraw your consent at any time by deleting your account (see *Your ri
 ## Who else sees your data
 
 - **Other players** see your username, ratings, online status, achievements, your games and your game history. Your friends see that you are friends. Nobody sees your email address.
-- **Moderators** see reports, moderation records and fair-play figures, to do their job.
+- **Your opponent** sees the chat messages you write to them in a game.
+- **Moderators** see reports, moderation records and fair-play figures, and the chat of a game when they check a report about it, to do their job.
 - **Service providers** who process data for us, only as we instruct:
   - Razorpay (payments, India);
   - our email provider, to deliver emails: [[email_provider]];
@@ -69,12 +71,13 @@ Our servers are in [[hosting_location]]. Our email and hosting providers may pro
 ## How long we keep it
 
 - **Your account and games**: while your account exists.
-- **When you delete your account**: your email address, password, sessions, links and blocks are deleted at once. Your username is replaced with an anonymous one; games you played stay in your opponents' history under that anonymous name, without anything that identifies you.
+- **When you delete your account**: your email address, password, sessions, links, blocks and chat messages are deleted at once. Your username is replaced with an anonymous one; games you played stay in your opponents' history under that anonymous name, without anything that identifies you.
 - **Sign-ups never confirmed**: deleted after 7 days.
 - **Accounts of 13-to-17-year-olds whose parent has not agreed**: deleted after 7 days.
 - **Sessions**: deleted when they expire, 30 days after you sign in.
 - **Email links** (confirmations, password resets): deleted 7 days after they expire or are used.
 - **Notifications**: your newest 100.
+- **Chat messages**: 30 days, then deleted (and at once if you delete your account).
 - **Fair-play figures**: 1 year.
 - **Reports and moderation records**: 3 years after they were dealt with.
 - **Payment records**: 8 years, as Indian accounting and tax law requires.

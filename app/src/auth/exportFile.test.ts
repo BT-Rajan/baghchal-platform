@@ -23,6 +23,7 @@ const DATA = {
   blocked_players: [],
   friends: [],
   notifications: [],
+  chat_messages: [],
   sessions: [],
 } satisfies DataExport;
 

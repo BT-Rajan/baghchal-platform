@@ -24,6 +24,8 @@ class EndReason(StrEnum):
     ABANDONED = "abandoned"
     ABORTED = "aborted"
     """No result: a player did not make a first move in time, or someone aborted early."""
+    DRAW_AGREED = "draw_agreed"
+    """A draw: one player offered it and the other accepted (no winner, half a point each)."""
 
 
 class Game(Base):
@@ -80,6 +82,11 @@ class Game(Base):
     )
     """Who caused an abort: the player who aborted, or the side that did not make a first
     move in time. Too many aborts in a day keep a player from starting new games for a while."""
+    draw_offer: Mapped[str | None] = mapped_column(String(8))
+    """The side whose draw offer is open: it lapses when the other side moves."""
+    goat_offer_ply: Mapped[int | None] = mapped_column(Integer)
+    tiger_offer_ply: Mapped[int | None] = mapped_column(Integer)
+    """When each side last offered a draw, so offers cannot be repeated move after move."""
     bot_level: Mapped[str | None] = mapped_column(String(8))
     """For a game against the computer: its level (``easy``, ``medium``, ``hard``)."""
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)

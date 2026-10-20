@@ -71,7 +71,7 @@ export function GameHistory({
                 focusRing(state),
               ]}
             >
-              {/* The result at a glance: green won, red lost, grey aborted. */}
+              {/* The result at a glance: green won, red lost, dark drawn, grey aborted. */}
               <View style={[styles.mark, { backgroundColor: OUTCOME_COLORS[game.outcome] }]} />
               <Text style={styles.text}>{historyText(game)}</Text>
               <Icon name="chevron" color={colors.muted} size={18} />
@@ -107,6 +107,7 @@ export function GameHistory({
 const OUTCOME_COLORS: Record<GameSummary['outcome'], string> = {
   won: colors.success,
   lost: colors.danger,
+  drawn: colors.ink,
   aborted: colors.offline,
 };
 

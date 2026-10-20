@@ -74,3 +74,12 @@ test.each([
 ])('ignores %s', (_name, data) => {
   expect(parseServerMessage(data)).toBeNull();
 });
+
+test('chat messages are read, and malformed ones dropped', () => {
+  const chat = { type: 'chat', game_id: 'g1', side: 'goat', text: 'hi', sent_at: 'x' };
+  expect(parseServerMessage(text(chat))).toEqual(chat);
+  expect(parseServerMessage(text({ ...chat, side: 'x' }))).toBeNull();
+  expect(parseServerMessage(text({ ...chat, text: 1 }))).toBeNull();
+  expect(parseServerMessage(text({ ...chat, sent_at: undefined }))).toBeNull();
+  expect(parseServerMessage(text({ ...chat, game_id: undefined }))).toBeNull();
+});

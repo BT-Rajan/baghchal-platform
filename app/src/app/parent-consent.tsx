@@ -91,7 +91,7 @@ export default function ParentConsent() {
       ) : (
         <>
           <Hint>
-            {`${link.username} made a ClawPlay account and told us they are under 18. ClawPlay is an online game of Bagh Chal: players play the computer, and with your agreement, other people (live games, friends, tournaments and short preset messages; there is no free chat).`}
+            {`${link.username} made a ClawPlay account and told us they are under 18. ClawPlay is an online game of Bagh Chal: players play the computer, and with your agreement, other people (live games, friends, tournaments and short preset messages; free chat is only between adults, never with players under 18).`}
           </Hint>
           <Hint>
             If you agree, they can play other people. If you do not, we delete their account. Until

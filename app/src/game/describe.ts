@@ -35,7 +35,7 @@ export function nameOf(game: Game, side: Piece): string {
 }
 
 /** How a game ended, to follow "You won" / "You lost" / "Goats (alice) won". */
-const HOW: Record<Exclude<EndReason, 'aborted'>, string> = {
+const HOW: Record<Exclude<EndReason, 'aborted' | 'draw_agreed'>, string> = {
   five_captured: ': the tigers captured five goats',
   tigers_trapped: ': the tigers could not move',
   goats_blocked: ': the goats could not move',
@@ -48,6 +48,7 @@ const HOW: Record<Exclude<EndReason, 'aborted'>, string> = {
 export function resultText(game: Game, me: Piece | null): string | null {
   if (game.result === null) return null;
   const { winner, reason } = game.result;
+  if (reason === 'draw_agreed') return 'Drawn by agreement.';
   if (winner === null || reason === 'aborted') return 'Game aborted: no result.';
   if (me === null) return `${SIDE_PLURAL[winner]} (${nameOf(game, winner)}) won${HOW[reason]}.`;
   if (reason === 'abandoned' && winner !== me) return 'You lost: you were away too long.';
@@ -69,6 +70,13 @@ export function ratingChangeText(change: number | null): string | null {
   return '±0';
 }
 
+/** Points as players write them: 1, ½, 1½. */
+export function pointsText(points: number): string {
+  const whole = Math.floor(points);
+  const half = points - whole >= 0.5 ? '½' : '';
+  return whole === 0 && half !== '' ? half : `${whole}${half}`;
+}
+
 export interface MatchSummary {
   /** "Rated match · game 1 of 2" */
   title: string;
@@ -85,7 +93,10 @@ export function matchSummary(game: Game): MatchSummary | null {
   const otherGameId = match.games.find((id) => id !== game.id) ?? null;
   return {
     title: `Rated match · game ${match.game} of 2`,
-    score: a && b ? `${a.player.username} ${a.points} – ${b.points} ${b.player.username}` : '',
+    score:
+      a && b
+        ? `${a.player.username} ${pointsText(a.points)} – ${pointsText(b.points)} ${b.player.username}`
+        : '',
     otherGameId,
   };
 }
