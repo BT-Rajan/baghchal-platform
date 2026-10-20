@@ -124,12 +124,14 @@ describe('a guest', () => {
         return { status: 200, body: me };
       },
     });
-    await screen.findByRole('heading', { name: 'Make your free account' });
+    // Under the app bar the screen's title is in the bar (drawn natively), not in the page.
+    expect(await screen.findByLabelText('Username')).toBeOnTheScreen();
+    expect(screen.queryByRole('heading', { name: 'Make your free account' })).toBeNull();
     await fireEvent.changeText(screen.getByLabelText('Username'), 'Sita');
     await fireEvent.changeText(screen.getByLabelText('Email'), ' sita@example.com ');
     await fireEvent.changeText(screen.getByLabelText('Password'), 'correct horse');
     await press('Make my account');
-    expect(await screen.findByRole('heading', { name: 'Welcome, Sita!' })).toBeOnTheScreen();
+    expect(await screen.findByText(/^Your account is ready/)).toBeOnTheScreen();
     // The age given when the guest started playing is kept, not asked again.
     expect(screen.queryByLabelText('Month of birth')).toBeNull();
     expect(server.lastTo('POST /api/v1/me/claim').body).toEqual({

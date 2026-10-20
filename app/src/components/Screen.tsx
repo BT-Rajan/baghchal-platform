@@ -1,6 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useState, type ReactElement, type ReactNode } from 'react';
+import { HeaderHeightContext, NavigationContext } from 'expo-router/react-navigation';
+import { BottomTabBarHeightContext } from 'expo-router/tabs';
+import { useContext, useLayoutEffect, useState, type ReactElement, type ReactNode } from 'react';
 import {
+  KeyboardAvoidingView,
   Platform,
   RefreshControl,
   ScrollView,
@@ -9,10 +12,11 @@ import {
   View,
   type RefreshControlProps,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { colors, spacing, type } from '@/theme';
 
+import { AppBanners, BannersOnScreens } from './AppBanners';
 import { BrandHeader } from './brand/Logo';
 import { SiteFooter } from './site/SiteFooter';
 
@@ -70,29 +74,52 @@ function Page({
   refreshControl,
   children,
 }: Omit<ScreenProps, 'refreshable'> & { refreshControl?: ReactElement<RefreshControlProps> }) {
+  // A header bar above (a screen's app bar, or the tabs' brand bar) already keeps clear of the
+  // status bar, and the tab bar of the home indicator: the page does not add that room again.
+  const headerHeight = useContext(HeaderHeightContext) ?? 0;
+  const inTabs = useContext(BottomTabBarHeightContext) !== undefined;
+  const edges: Edge[] = ['left', 'right'];
+  if (headerHeight === 0) edges.push('top');
+  if (!inTabs) edges.push('bottom');
+  // Under a screen's own app bar, the title goes in the bar, not again in the page.
+  const navigation = useContext(NavigationContext);
+  const titleInBar = headerHeight > 0 && !inTabs && title !== undefined && navigation !== undefined;
+  useLayoutEffect(() => {
+    if (titleInBar) navigation?.setOptions({ title });
+  }, [titleInBar, navigation, title]);
+  const banners = useContext(BannersOnScreens) && Platform.OS !== 'web';
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        testID="page"
-        refreshControl={refreshControl}
+    <SafeAreaView edges={edges} style={styles.safe}>
+      {banners && <AppBanners />}
+      {/* In the apps the page makes room for the keyboard, so the field being typed in shows. */}
+      <KeyboardAvoidingView
+        style={styles.safe}
+        behavior="padding"
+        enabled={Platform.OS !== 'web'}
+        keyboardVerticalOffset={headerHeight}
       >
-        {/* The page grows to fill the screen, so the web's footer sits at the bottom. */}
-        <View style={[styles.body, align === 'top' && styles.top]}>
-          <View role="main" style={[styles.column, wide && styles.wide]}>
-            {/* On the web the top bar carries the logo. */}
-            {brand && Platform.OS !== 'web' && <BrandHeader />}
-            {title !== undefined && (
-              <Text role="heading" style={styles.title}>
-                {title}
-              </Text>
-            )}
-            {children}
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          testID="page"
+          refreshControl={refreshControl}
+        >
+          {/* The page grows to fill the screen, so the web's footer sits at the bottom. */}
+          <View style={[styles.body, align === 'top' && styles.top]}>
+            <View role="main" style={[styles.column, wide && styles.wide]}>
+              {/* On the web the top bar carries the logo. */}
+              {brand && Platform.OS !== 'web' && <BrandHeader />}
+              {title !== undefined && !titleInBar && (
+                <Text role="heading" style={styles.title}>
+                  {title}
+                </Text>
+              )}
+              {children}
+            </View>
           </View>
-        </View>
-        {Platform.OS === 'web' && <SiteFooter />}
-      </ScrollView>
+          {Platform.OS === 'web' && <SiteFooter />}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
