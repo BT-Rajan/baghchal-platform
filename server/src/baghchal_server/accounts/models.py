@@ -55,6 +55,9 @@ class Session(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
     expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
     last_used_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    admin_checked_until: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    """Until when an admin on this device may use the payments page, after entering the
+    code emailed to them (see ``admin_check``)."""
 
 
 class EmailToken(Base):

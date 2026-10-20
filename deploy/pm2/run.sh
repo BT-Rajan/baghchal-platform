@@ -24,8 +24,13 @@ if [[ -n "${SMTP_HOST:-}" ]]; then
   export BAGHCHAL_SMTP_PORT="${SMTP_PORT:-587}" BAGHCHAL_SMTP_USERNAME="${SMTP_USERNAME:-}"
   export BAGHCHAL_SMTP_PASSWORD="${SMTP_PASSWORD:-}" BAGHCHAL_MAIL_FROM="${MAIL_FROM:-Bagh Chal <no-reply@localhost>}"
 fi
-export BAGHCHAL_RAZORPAY_KEY_ID="${RAZORPAY_KEY_ID:-}" BAGHCHAL_RAZORPAY_KEY_SECRET="${RAZORPAY_KEY_SECRET:-}"
-export BAGHCHAL_RAZORPAY_WEBHOOK_SECRET="${RAZORPAY_WEBHOOK_SECRET:-}"
+# The key that encrypts the Razorpay keys an admin enters: made once, never committed.
+SECRETS_FILE="$ROOT/.secrets_key"
+if [[ ! -s "$SECRETS_FILE" ]]; then
+  (umask 077 && head -c 32 /dev/urandom | base64 | tr -d '\n=' >"$SECRETS_FILE")
+fi
+BAGHCHAL_SECRETS_KEY="$(cat "$SECRETS_FILE")"
+export BAGHCHAL_SECRETS_KEY
 export WEB_PORT API_PORT PYTHONUNBUFFERED=1
 
 "$ROOT/.venv/bin/uvicorn" baghchal_server.asgi:app --host 127.0.0.1 --port "$API_PORT" \

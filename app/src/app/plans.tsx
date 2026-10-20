@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
 
 import type { MyPlan, Period, PlanInfo } from '@/api/endpoints';
 import { comparisonRows, myPlanText, PLAN_NAMES, priceText, yearlySaving } from '@/billing/format';
@@ -17,6 +17,7 @@ import {
   thanksText,
 } from '@/payments/format';
 import { useBuy, usePayments } from '@/payments/hooks';
+import { WEB_URL } from '@/config';
 import { colors, radius, spacing, type } from '@/theme';
 
 /** Free, Plus and Pro: what each costs, a way to buy it, and a table of what each includes. */
@@ -29,6 +30,8 @@ export default function Plans() {
   const buyError = buy.error === null ? null : buyErrorText(buy.error);
   // Under 18: the server told their parent; buying stays off.
   const minor = refusedAsMinor(buy.error);
+  // The apps do not sell plans (Razorpay Checkout runs on the website only): they send there.
+  const inApp = Platform.OS !== 'web';
   return (
     <Screen align="top" wide>
       {error !== null ? (
@@ -65,7 +68,7 @@ export default function Plans() {
                   // The server lists the plans cheapest first.
                   cheaper={i < plans.data.findIndex((p) => p.plan === mine.data.plan)}
                   onBuy={
-                    payments.data.enabled && paid !== null
+                    payments.data.enabled && paid !== null && !inApp
                       ? (period) => buy.mutate({ plan: paid, period })
                       : null
                   }
@@ -74,6 +77,16 @@ export default function Plans() {
               );
             })}
           </View>
+          {inApp && payments.data.enabled && (
+            <>
+              <Notice tone="info">Plans are bought on the ClawPlay website.</Notice>
+              <Button
+                title="Buy on the website"
+                variant="secondary"
+                onPress={() => void Linking.openURL(`${WEB_URL}/plans`)}
+              />
+            </>
+          )}
           <Comparison plans={plans.data} mine={mine.data} />
           <Hint>
             {payments.data.enabled

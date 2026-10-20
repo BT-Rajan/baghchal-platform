@@ -13,29 +13,30 @@ from fastapi import FastAPI
 from sqlalchemy import select, update
 
 from baghchal_server.accounts.models import User
-from baghchal_server.app import create_app
 from baghchal_server.billing.models import Grant
 from baghchal_server.billing.service import my_plan
 from baghchal_server.config import Settings
 from baghchal_server.deps import AppState
 from baghchal_server.mail import MemoryMailer
+from baghchal_server.payments import keys as payment_keys
 from baghchal_server.payments.gateway import (
     GatewayError,
     RazorpayGateway,
     payment_signed,
     webhook_signed,
 )
-from baghchal_server.payments.models import Payment
+from baghchal_server.payments.models import Payment, PaymentKeys
 
 from .conftest import ORIGIN, Clock, Player, PlayerFactory
 from .test_billing import give_plan
 
+SECRETS_KEY = "test-secrets-key-for-the-database"
 KEY_SECRET = "test-key-secret"
 WEBHOOK_SECRET = "test-webhook-secret"
 
 
 class FakeGateway:
-    key_id = "rzp_test_fake"
+    key_id = "rzp_test_fake00"
 
     def __init__(self) -> None:
         self.orders: list[dict[str, Any]] = []
@@ -63,15 +64,36 @@ def settings(database_url: str) -> Settings:
         computer_workers=0,
         fair_play_checks=False,
         housekeeping=False,
-        razorpay_key_id=FakeGateway.key_id,
-        razorpay_key_secret=KEY_SECRET,
-        razorpay_webhook_secret=WEBHOOK_SECRET,
+        secrets_key=SECRETS_KEY,
     )
 
 
 @pytest.fixture
 def gateway() -> FakeGateway:
     return FakeGateway()
+
+
+@pytest.fixture(autouse=True)
+async def _keys(app: FastAPI) -> None:
+    """The keys an admin entered on the payments page."""
+    await store_keys(app)
+
+
+async def store_keys(app: FastAPI, key_id: str = FakeGateway.key_id) -> None:
+    state: AppState = app.state.ctx
+    box = payment_keys._box(state.settings)
+    assert box is not None
+    async with state.sessions() as db:
+        db.add(
+            PaymentKeys(
+                id=1,
+                key_id=key_id,
+                key_secret=box.encrypt(KEY_SECRET.encode()).decode(),
+                webhook_secret=box.encrypt(WEBHOOK_SECRET.encode()).decode(),
+                updated_at=state.clock(),
+            )
+        )
+        await db.commit()
 
 
 def _sign(message: str | bytes, secret: str) -> str:
@@ -122,7 +144,7 @@ async def test_buy_a_month_of_plus(
     alice = await players("alice")
     order = await _buy(alice)
     assert order == {
-        "key_id": "rzp_test_fake",
+        "key_id": "rzp_test_fake00",
         "order_id": "order_1",
         "amount_paise": 14900,
         "currency": "INR",
@@ -361,12 +383,17 @@ async def test_razorpay_orders() -> None:
         await gateway.close()
 
 
-async def test_razorpay_is_used_when_configured(settings: Settings) -> None:
-    app = create_app(settings)
-    async with app.router.lifespan_context(app):
-        state: AppState = app.state.ctx
-        assert isinstance(state.gateway, RazorpayGateway)
-        assert state.gateway.key_id == "rzp_test_fake"
+async def test_razorpay_is_used_with_the_stored_keys(app: FastAPI) -> None:
+    state = payment_keys.Gateways()
+    keys = payment_keys.Keys("rzp_test_abcdef", "s", "w")
+    try:
+        made = state.get(keys)
+        assert isinstance(made, RazorpayGateway)
+        assert made.key_id == "rzp_test_abcdef"
+        assert state.get(keys) is made  # one per set of keys
+        assert state.get(payment_keys.Keys("rzp_test_other1", "s", "w")) is not made
+    finally:
+        await state.close()
 
 
 async def test_plus_lasts_45_games(app: FastAPI, players: PlayerFactory, clock: Clock) -> None:
@@ -446,3 +473,101 @@ async def test_under_18s_cannot_buy_and_their_parent_is_told(
     clock.advance(days=2)
     r = await kid.http.post(checkout, json={"plan": "plus", "period": "month"})
     assert r.json()["error"]["message"] == "Players under 18 cannot buy plans."
+
+
+def _refund(refund_id: str, payment_id: str, amount: int) -> dict[str, Any]:
+    return {
+        "event": "refund.processed",
+        "payload": {
+            "refund": {"entity": {"id": refund_id, "payment_id": payment_id, "amount": amount}}
+        },
+    }
+
+
+async def test_a_refund_ends_the_plan_time_it_bought(
+    app: FastAPI, players: PlayerFactory, mailer: MemoryMailer, clock: Clock
+) -> None:
+    alice = await players("alice")
+    await _verify(alice, (await _buy(alice, "pro"))["order_id"], "pay_pro")
+    clock.advance(minutes=1)
+    plus = (await _verify(alice, (await _buy(alice, "plus"))["order_id"], "pay_plus")).json()
+    pro_ends = clock() - timedelta(minutes=1) + timedelta(days=30)
+    assert plus["starts"] == _z(pro_ends)  # waiting for Pro
+
+    # Part of Pro back: recorded, the plan stays; Razorpay saying so twice counts once.
+    assert (await _webhook(app, _refund("rfnd_1", "pay_pro", 10000))).json() == {"status": "ok"}
+    assert "We have refunded ₹100 of your payment pay_pro" in mailer.outbox[-1].body
+    sent = len(mailer.outbox)
+    await _webhook(app, _refund("rfnd_1", "pay_pro", 10000))
+    assert len(mailer.outbox) == sent
+    assert (await alice.http.get("/api/v1/me/plan")).json()["plan"] == "pro"
+
+    # The rest: Pro ends now, and the Plus waiting behind it starts.
+    clock.advance(minutes=1)
+    await _webhook(app, _refund("rfnd_2", "pay_pro", 19900))
+    assert "ClawPlay Pro for a month from that payment has ended" in mailer.outbox[-1].body
+    mine = (await alice.http.get("/api/v1/me/plan")).json()
+    assert (mine["plan"], mine["plan_until"]) == ("plus", _z(clock() + timedelta(days=30)))
+    listed = (await alice.http.get("/api/v1/me/payments")).json()["payments"]
+    assert [(p["plan"], p["status"]) for p in listed] == [("plus", "paid"), ("pro", "refunded")]
+    # Later refunds on it change nothing more.
+    await _webhook(app, _refund("rfnd_3", "pay_pro", 1))
+    assert (await alice.http.get("/api/v1/me/plan")).json()["plan"] == "plus"
+
+    # Payments from elsewhere, and refunds without what is needed, are ignored.
+    ignored = {"status": "ignored"}
+    assert (await _webhook(app, _refund("rfnd_9", "pay_other", 100))).json() == ignored
+    bad = {"event": "refund.processed", "payload": {"refund": {"entity": {"id": "rfnd_8"}}}}
+    assert (await _webhook(app, bad)).json() == ignored
+
+
+async def test_a_lost_dispute_ends_the_plan_time(
+    app: FastAPI, players: PlayerFactory, mailer: MemoryMailer
+) -> None:
+    alice = await players("alice")
+    await _verify(alice, (await _buy(alice))["order_id"], "pay_1")
+    lost = {
+        "event": "payment.dispute.lost",
+        "payload": {"dispute": {"entity": {"id": "disp_1", "payment_id": "pay_1"}}},
+    }
+    assert (await _webhook(app, lost)).json() == {"status": "ok"}
+    assert mailer.outbox[-1].subject == "Your ClawPlay payment was reversed"
+    assert (await alice.http.get("/api/v1/me/plan")).json()["plan"] == "free"
+    listed = (await alice.http.get("/api/v1/me/payments")).json()["payments"]
+    assert [p["status"] for p in listed] == ["reversed"]
+    sent = len(mailer.outbox)
+    await _webhook(app, lost)  # again: nothing more
+    assert len(mailer.outbox) == sent
+    no_payment = {"event": "payment.dispute.lost", "payload": {"dispute": {"entity": {}}}}
+    assert (await _webhook(app, no_payment)).json() == {"status": "ignored"}
+
+
+async def test_money_back_after_the_account_was_deleted(
+    app: FastAPI, players: PlayerFactory
+) -> None:
+    alice = await players("alice")
+    order = (await _buy(alice))["order_id"]
+    await _verify(alice, order, "pay_1")
+    state: AppState = app.state.ctx
+    async with state.sessions() as db:
+        await db.execute(update(Payment).where(Payment.order_id == order).values(user_id=None))
+        await db.commit()
+    assert (await _webhook(app, _refund("rfnd_1", "pay_1", 100))).json() == {"status": "ok"}
+    assert (await _webhook(app, _refund("rfnd_2", "pay_1", 14800))).json() == {"status": "ok"}
+    async with state.sessions() as db:
+        payment = await db.scalar(select(Payment).where(Payment.order_id == order))
+        assert payment is not None
+        assert payment.status == "refunded"
+    # And a dispute lost on a payment whose plan time is gone with the account.
+    second = (await _buy(alice))["order_id"]
+    await _verify(alice, second, "pay_2")
+    async with state.sessions() as db:
+        await db.execute(
+            update(Payment).where(Payment.order_id == second).values(user_id=None, grant_id=None)
+        )
+        await db.commit()
+    lost = {
+        "event": "payment.dispute.lost",
+        "payload": {"dispute": {"entity": {"payment_id": "pay_2"}}},
+    }
+    assert (await _webhook(app, lost)).json() == {"status": "ok"}

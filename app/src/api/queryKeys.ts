@@ -27,6 +27,7 @@ export const queryKeys = {
   analysis: (id: string) => ['analysis', id] as const,
   appearance: ['me', 'appearance'] as const,
   payments: ['me', 'payments'] as const,
+  paymentKeys: ['admin', 'payment-keys'] as const,
   tournaments: ['tournaments'] as const,
   tournament: (code: string) => ['tournament', code] as const,
   trainer: (kind: string) => ['trainer', kind] as const,

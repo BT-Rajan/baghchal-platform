@@ -70,8 +70,9 @@ Each phase ships complete — tested, documented and reviewed — before the nex
      inaccuracy, mistake, blunder, with its own choice), 5 new games a day on Plus.
    - ✅ **Themes, sound packs and badges**: five boards, four piece sets and four sound packs
      (the first of each free), and a Plus or Pro badge by the player's name.
-   - ✅ **Payments with Razorpay**: Plus and Pro for a month or a year, confirmed by signature and
-     webhook.
+   - ✅ **Payments with Razorpay**: Plus for 45 games or a month, Pro for a month or a year,
+     confirmed by signature and webhook; refunds and lost disputes end the time bought. On the
+     website only; under-18s cannot buy (their parent is told). Keys entered by an admin.
    - ✅ **Pro extras**: Swiss tournaments among friends, and an opening and
      endgame puzzle trainer. (Inviting a friend by link is a free challenge, for everyone, and
      so is the trainer's daily puzzle.)
@@ -194,7 +195,7 @@ and the Caddyfile.
 | GET | `/api/v1/me/payments` | Whether payments are taken, and my payments |
 | POST | `/api/v1/payments/checkout` | Start buying a `plan` (plus, pro) for a `period` (month, year): a Razorpay order |
 | POST | `/api/v1/payments/verify` | Confirm a payment with what Razorpay Checkout returned (`order_id`, `payment_id`, `signature`) |
-| POST | `/api/v1/payments/webhook` | Razorpay's webhook (`payment.captured`, `order.paid`, `payment.failed`), checked by its signature |
+| POST | `/api/v1/payments/webhook` | Razorpay's webhook (`payment.captured`, `order.paid`, `payment.failed`, `refund.processed`, `payment.dispute.lost`), checked by its signature |
 | GET, POST | `/api/v1/tournaments` | Tournaments I am in; host one (Pro: `name`, `time_control`, `max_players` 3–32) |
 | GET | `/api/v1/tournaments/{code}` | A tournament: players, the round, standings (points, Buchholz), every pairing by round and the byes |
 | POST | `/api/v1/tournaments/{code}/join`, `/leave`, `/start`, `/finish` | Join or leave while open; the host starts it or ends it |
@@ -208,6 +209,9 @@ and the Caddyfile.
 | GET | `/api/v1/admin/players/{username}/plan` | Admins: a player's plan and every grant |
 | POST | `/api/v1/admin/players/{username}/grants` | Admins: grant a `plan` or a `feature` for `days` (`null`: until revoked), with a `reason` |
 | POST | `/api/v1/admin/grants/{id}/revoke` | Admins: end a grant now, with a `reason` |
+| POST | `/api/v1/admin/code` | Admins: email me a 6-digit code for the payments page |
+| POST | `/api/v1/admin/code/check` | Admins: enter the `code`; this session may use the payments page for 15 minutes |
+| GET, PUT, DELETE | `/api/v1/admin/payment-keys` | Admins with a code: whether payments are on (never the secrets); set the Razorpay `key_id`, `key_secret` and `webhook_secret`; remove them. Every admin is emailed |
 | GET | `/api/v1/leaderboards/{blitz\|rapid\|sand}` | Top established players (the app calls these Quick, Standard and Sand clock) |
 | GET | `/api/v1/mod/reports?status=open` | Moderators: the report queue (or closed reports) |
 | POST | `/api/v1/mod/reports/{id}/dismiss` | Moderators: close a report without acting |
@@ -243,14 +247,19 @@ Code checks features, never plans, so admins can give a single feature as well a
 Nothing paid changes who wins a rated game: live play, rated matches and quick pairing are free
 for everyone.
 
-| | Free | Plus (₹149/month, ₹1,490/year) | Pro (₹299/month, ₹2,990/year) |
+| | Free | Plus (₹149 for 45 games or a month) | Pro (₹299/month, ₹2,990/year) |
 |---|---|---|---|
+| How long it lasts | Always | 45 finished games or a month, whichever first | A month or a year, no limits |
 | Live and rated games, quick pairing | ✅ | ✅ | ✅ |
 | The computer | Easy, Medium | + Hard | + Hard |
 | History and replay | Last 30 days | Everything | Everything |
 | Post-game analysis | — | 5 new games a day | Unlimited |
 | Board and piece themes, sound packs, badge | — | ✅ | ✅ |
 | Hosting tournaments, the trainer | — | — | ✅ |
+
+Plan time is lined up, never wasted: Pro bought on Plus starts at once and the Plus left
+follows it; Plus bought on Pro starts when Pro ends; the same plan again adds on. Admin grants
+follow the same rule.
 
 A player's features are their plan's plus whatever admins have **granted**. Admins grant a plan
 or one feature for 7, 30, 90 or 365 days or until revoked, always with a reason; the player is
@@ -288,11 +297,19 @@ To take payments:
 1. In the Razorpay Dashboard, create API keys (Account & Settings → API Keys; test mode first,
    `rzp_test_…`).
 2. Add a webhook (Account & Settings → Webhooks) to `https://<your site>/api/v1/payments/webhook`
-   with the events `payment.captured`, `order.paid` and `payment.failed`, and a secret.
-3. Set `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` in
-   `bhagchal2.env` (or `BAGHCHAL_RAZORPAY_…` elsewhere) and restart. Until they are set, the
-   plans page says paying online is coming soon.
-4. Try a payment with Razorpay's test cards, then switch to live keys.
+   with the events `payment.captured`, `order.paid`, `payment.failed`, `refund.processed` and
+   `payment.dispute.lost`, and a secret. A full refund, or a dispute lost to the player's bank,
+   ends the plan time that payment bought.
+3. Set `BAGHCHAL_SECRETS_KEY` on the server (any long random string, e.g. from
+   `python -c "import secrets; print(secrets.token_urlsafe(32))"`) and restart. It encrypts
+   the keys in the database; keep it safe, and if it ever changes, enter the keys again.
+4. Signed in as an admin, open Settings → Payments. A 6-digit code is emailed to you; it opens
+   the page on that device for 15 minutes. Enter the key id, key secret and webhook secret.
+   Payments are taken at once, and every admin is emailed whenever the keys change. Until
+   keys are set, the plans page says paying online is coming soon.
+5. Try a payment with Razorpay's test cards, then enter the live keys.
+
+The apps for Android and iOS do not sell plans: they send players to the website to buy.
 
 **Challenges by link** (`lobby/`, free): a challenge with no opponent named, sent as a link to
 a friend who may not be on ClawPlay yet. It is casual, with the challenger's time control and

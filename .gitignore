@@ -12,6 +12,7 @@ dist/
 build/
 *.egg-info/
 .env
+.secrets_key
 .env.*
 !.env.example
 node_modules/

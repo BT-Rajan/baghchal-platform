@@ -30,6 +30,7 @@ Rated games are checked automatically after they end, and players can report eac
 - **Changing plan**: Pro bought while you have Plus starts at once, and the Plus you had left follows it. Plus bought while you have Pro starts when your Pro ends. Buying the same plan again adds on.
 - **Refunds**: if something you paid for does not work and we cannot fix it, we refund it. Otherwise payments are not refundable, except where the law gives you a right to a refund. Write to [[contact_email]].
 - If we close your account for breaking these terms, the rest of a paid period is not refunded.
+- If a payment is refunded in full, or taken back by your bank after a dispute, the plan it bought ends.
 
 ## Your content and ours
 

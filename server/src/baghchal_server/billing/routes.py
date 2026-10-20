@@ -1,10 +1,8 @@
 import uuid
-from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks
 
-from baghchal_server.accounts.models import User
-from baghchal_server.accounts.service import ADMIN
+from baghchal_server.admin_check import Admin
 from baghchal_server.billing import service
 from baghchal_server.billing.plans import ANALYSES_PER_DAY, FEATURES, GAMES, NAMES, PRICES, Plan
 from baghchal_server.billing.schemas import (
@@ -16,21 +14,11 @@ from baghchal_server.billing.schemas import (
     RevokeIn,
 )
 from baghchal_server.deps import DB, CurrentUser, State
-from baghchal_server.errors import AppError
 from baghchal_server.lobby.schemas import UsernameQuery
 from baghchal_server.mail import deliver
 from baghchal_server.moderation.service import find_any
 
 router = APIRouter(prefix="/api/v1")
-
-
-async def get_admin(user: CurrentUser) -> User:
-    if user.role != ADMIN:
-        raise AppError(403, "not_an_admin", "Only admins can do this.")
-    return user
-
-
-Admin = Annotated[User, Depends(get_admin)]
 
 
 @router.get("/plans")

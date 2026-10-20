@@ -48,6 +48,14 @@ export default function SettingsScreen() {
           onPress={() => router.push('/moderation')}
         />
       )}
+      {me.role === 'admin' && (
+        <FeatureLink
+          icon="shield"
+          title="Payments"
+          text="The Razorpay keys plans are paid with. Needs a code we email you."
+          onPress={() => router.push('/admin/payments')}
+        />
+      )}
       <BlockedPlayers />
       {!guest && (
         <>

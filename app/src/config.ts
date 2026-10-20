@@ -3,6 +3,9 @@ import { apiUrlProblem } from './apiUrl';
 /** The API's address. Public by nature: set EXPO_PUBLIC_API_URL when building. */
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000';
 
+/** The website: it shares the API's address (plans are bought there, not in the apps). */
+export const WEB_URL = API_URL;
+
 // Never send credentials over an unencrypted connection from a release build.
 const problem = apiUrlProblem(
   API_URL,

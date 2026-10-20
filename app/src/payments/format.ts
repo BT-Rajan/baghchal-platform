@@ -1,11 +1,20 @@
 /** Words for payments. */
-import type { Payment, Period, PlanInfo } from '@/api/endpoints';
+import type { Payment, PaymentKeys, Period, PlanInfo } from '@/api/endpoints';
 import { ApiError, describeError } from '@/api/errors';
 import { PLAN_NAMES } from '@/billing/format';
+import { dateTimeText } from '@/lobby/moderation';
 
 import { CheckoutClosed } from './razorpay';
 
 const FOR: Record<Period, string> = { month: 'a month', year: 'a year' };
+
+const STATUS: Record<Payment['status'], string> = {
+  paid: 'paid',
+  created: 'not paid',
+  failed: 'not paid',
+  refunded: 'refunded',
+  reversed: 'reversed by the bank',
+};
 
 export function rupees(paise: number): string {
   return `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
@@ -60,7 +69,7 @@ export function paymentText(payment: Payment, games: number | null = null): stri
     `ClawPlay ${PLAN_NAMES[payment.plan]} for ${lasts}`,
     rupees(payment.amount_paise),
     dayText(payment.created_at),
-    payment.status === 'paid' ? 'paid' : 'not paid',
+    STATUS[payment.status],
   ].join(' · ');
 }
 
@@ -69,4 +78,35 @@ export function buyErrorText(error: unknown): string | null {
   if (error instanceof CheckoutClosed) return error.failure;
   if (error instanceof ApiError) return describeError(error);
   return error instanceof Error ? error.message : describeError(error);
+}
+
+/**
+ * "Payments are on, with the live keys rzp_live_… (set by boss, 20 Oct 2026, 10:00).", or why
+ * they are off.
+ */
+export function keysText(page: PaymentKeys): string {
+  const set =
+    page.updated_at === null
+      ? ''
+      : ` (set by ${page.updated_by ?? 'a former admin'}, ${dateTimeText(page.updated_at)})`;
+  if (page.on && page.key_id !== null) {
+    const mode = page.key_id.startsWith('rzp_live_') ? 'live' : 'test';
+    return `Payments are on, with the ${mode} keys ${page.key_id}${set}.`;
+  }
+  if (page.key_id !== null)
+    return `Payments are off: the keys stored${set} cannot be read with the server's secrets key. Enter them again.`;
+  return 'Payments are off: the plans page says paying online is coming soon.';
+}
+
+/** What is wrong with the keys typed in, or null. */
+export function keysProblem(
+  keyId: string,
+  keySecret: string,
+  webhookSecret: string,
+): string | null {
+  if (!/^rzp_(test|live)_[A-Za-z0-9]{6,40}$/.test(keyId.trim()))
+    return 'The key id starts rzp_test_ or rzp_live_.';
+  if (keySecret.length < 8) return 'Enter the key secret.';
+  if (webhookSecret.length < 8) return 'Enter the webhook secret (at least 8 characters).';
+  return null;
 }

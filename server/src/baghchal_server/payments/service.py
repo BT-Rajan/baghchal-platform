@@ -1,4 +1,4 @@
-"""Buying a plan for a month or a year.
+"""Buying a plan: Plus for 45 games or a month, Pro for a month or a year.
 
 A paid period is an ordinary grant (see ``billing``), so everything that checks features
 just works. Bought time is lined up with the rest (``billing.service.lay_out``): buying again
@@ -22,7 +22,7 @@ from baghchal_server.config import Settings
 from baghchal_server.errors import AppError
 from baghchal_server.mail import Mail
 from baghchal_server.payments.gateway import Gateway, GatewayError
-from baghchal_server.payments.models import Payment
+from baghchal_server.payments.models import Payment, Refund
 from baghchal_server.payments.schemas import (
     CheckoutIn,
     CheckoutOut,
@@ -193,6 +193,79 @@ async def fulfil(
         f"Payment: {payment_id}\nOrder: {payment.order_id}\n\nEnjoy your games!",
     )
     return payment, mail
+
+
+async def _by_payment_id(db: AsyncSession, payment_id: str) -> Payment:
+    payment = await db.scalar(
+        select(Payment).where(Payment.payment_id == payment_id).with_for_update()
+    )
+    if payment is None:
+        raise AppError(404, "payment_not_found", "No such payment.")
+    return payment
+
+
+async def _end_time(db: AsyncSession, payment: Payment, now: datetime) -> User | None:
+    """End the plan time a payment bought (the time lined up after it moves up); its player."""
+    grant = None if payment.grant_id is None else await db.get(Grant, payment.grant_id)
+    if grant is not None and grant.revoked_at is None:
+        grant.revoked_at = now
+        await lay_out(db, grant.user_id, now)
+    return None if payment.user_id is None else await db.get(User, payment.user_id)
+
+
+async def refunded(
+    db: AsyncSession, now: datetime, payment_id: str, refund_id: str, amount_paise: int
+) -> Mail | None:
+    """Record a refund, once; refunded in full, the payment's plan time ends. The email."""
+    payment = await _by_payment_id(db, payment_id)
+    if await db.get(Refund, refund_id) is not None:
+        await db.commit()
+        return None
+    db.add(
+        Refund(
+            refund_id=refund_id, payment_id=payment.id, amount_paise=amount_paise, created_at=now
+        )
+    )
+    await db.flush()
+    total = await db.scalar(
+        select(func.sum(Refund.amount_paise)).where(Refund.payment_id == payment.id)
+    )
+    full = (total or 0) >= payment.amount_paise and payment.status == PaymentStatus.PAID
+    user = None
+    if full:
+        payment.status = PaymentStatus.REFUNDED
+        user = await _end_time(db, payment, now)
+    elif payment.user_id is not None:
+        user = await db.get(User, payment.user_id)
+    await db.commit()
+    if user is None:
+        return None
+    ended = f" {_what(payment)} from that payment has ended." if full else ""
+    return Mail(
+        user.email,
+        "Your ClawPlay refund",
+        f"Hello {user.username},\n\nWe have refunded {rupees(amount_paise)} of your payment "
+        f"{payment_id}. It reaches you in 5 to 7 working days.{ended}",
+    )
+
+
+async def reversed_(db: AsyncSession, now: datetime, payment_id: str) -> Mail | None:
+    """The player's bank took a payment back after a dispute: its plan time ends."""
+    payment = await _by_payment_id(db, payment_id)
+    if payment.status != PaymentStatus.PAID:
+        await db.commit()
+        return None
+    payment.status = PaymentStatus.REVERSED
+    user = await _end_time(db, payment, now)
+    await db.commit()
+    if user is None:
+        return None
+    return Mail(
+        user.email,
+        "Your ClawPlay payment was reversed",
+        f"Hello {user.username},\n\nYour bank took back payment {payment_id} after a dispute, "
+        f"so {_what(payment)} from it has ended.",
+    )
 
 
 async def failed(db: AsyncSession, order_id: str) -> None:

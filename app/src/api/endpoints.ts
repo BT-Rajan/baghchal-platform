@@ -60,6 +60,8 @@ export type Period = S['Period'];
 export type Payment = S['PaymentOut'];
 export type Payments = S['PaymentsOut'];
 export type PaymentProof = S['VerifyIn'];
+export type PaymentKeys = S['PaymentKeysOut'];
+export type PaymentKeysRequest = S['PaymentKeysIn'];
 export type Tournament = S['TournamentOut'];
 export type TournamentRequest = S['TournamentIn'];
 export type Pairing = S['PairingOut'];
@@ -224,6 +226,14 @@ export function createApi(client: Client, transport: Transport) {
     payments: (signal?: AbortSignal) => client.get<Payments>(`${V1}/me/payments`, { signal }),
     checkout: (body: CheckoutRequest) => client.post<Checkout>(`${V1}/payments/checkout`, { body }),
     verifyPayment: (body: PaymentProof) => client.post<Payment>(`${V1}/payments/verify`, { body }),
+    sendAdminCode: () => client.post<{ status: string }>(`${V1}/admin/code`),
+    checkAdminCode: (code: string) =>
+      client.post<{ until: string }>(`${V1}/admin/code/check`, { body: { code } }),
+    paymentKeys: (signal?: AbortSignal) =>
+      client.get<PaymentKeys>(`${V1}/admin/payment-keys`, { signal }),
+    setPaymentKeys: (body: PaymentKeysRequest) =>
+      client.put<PaymentKeys>(`${V1}/admin/payment-keys`, { body }),
+    removePaymentKeys: () => client.delete<PaymentKeys>(`${V1}/admin/payment-keys`),
 
     // Tournaments
     tournaments: (signal?: AbortSignal) =>

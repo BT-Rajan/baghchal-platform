@@ -102,7 +102,7 @@ def settings(database_url: str) -> Settings:
 
 @pytest.fixture
 def gateway() -> Gateway | None:
-    """No payments, unless a test module provides a gateway (and Razorpay settings)."""
+    """No payments, unless a test module provides a gateway (and stores keys)."""
     return None
 
 
@@ -111,13 +111,18 @@ async def app(
     settings: Settings, mailer: MemoryMailer, clock: Clock, gateway: Gateway | None
 ) -> AsyncIterator[FastAPI]:
     app = create_app(
-        settings, mailer=mailer, limiter=MemoryRateLimiter(), clock=clock, gateway=gateway
+        settings,
+        mailer=mailer,
+        limiter=MemoryRateLimiter(),
+        clock=clock,
+        make_gateway=None if gateway is None else lambda _id, _secret: gateway,
     )
     async with app.router.lifespan_context(app):
         yield app
         state: AppState = app.state.ctx
         async with state.engine.begin() as conn:
             for table in (
+                "payment_keys",
                 "consents",
                 "fair_play_sides",
                 "fair_play_checks",
@@ -139,6 +144,7 @@ async def app(
                 "seeks",
                 "reports",
                 "moderation_actions",
+                "payment_refunds",
                 "payments",
                 "grants",
                 "appearances",

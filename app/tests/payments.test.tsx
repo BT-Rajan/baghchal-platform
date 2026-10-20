@@ -1,4 +1,5 @@
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { Linking, Platform } from 'react-native';
 
 import { renderApp } from './support/app';
 import { ME, error, type Route } from './support/fakeServer';
@@ -50,10 +51,12 @@ const PAID: Payment = {
 };
 
 beforeEach(() => {
+  jest.replaceProperty(Platform, 'OS', 'web'); // buying happens on the website
   opened = [];
   (globalThis as { Razorpay?: unknown }).Razorpay = FakeRazorpay;
 });
 afterEach(() => {
+  jest.restoreAllMocks();
   delete (globalThis as { Razorpay?: unknown }).Razorpay;
 });
 
@@ -221,4 +224,15 @@ test('under 18: buying is refused, the parent is told, and the buttons turn off'
     plan: 'plus',
     period: 'month',
   });
+});
+
+test('the apps send buyers to the website, and make no order', async () => {
+  jest.replaceProperty(Platform, 'OS', 'android');
+  const open_ = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+  const { server } = await open();
+  expect(await screen.findByText('Plans are bought on the ClawPlay website.')).toBeOnTheScreen();
+  expect(screen.queryByRole('button', { name: /^Buy ClawPlay/ })).toBeNull();
+  await fireEvent.press(screen.getByRole('button', { name: 'Buy on the website' }));
+  expect(open_).toHaveBeenCalledWith('http://localhost:8000/plans');
+  expect(server.requests.some((r) => r.path === '/api/v1/payments/checkout')).toBe(false);
 });

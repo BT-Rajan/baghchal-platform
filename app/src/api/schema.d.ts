@@ -1259,6 +1259,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admin Code
+         * @description Email me a code that opens the payments page on this device.
+         */
+        post: operations["admin_code_api_v1_admin_code_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/code/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admin Code Check
+         * @description Enter the emailed code: this device may use the payments page for 15 minutes.
+         */
+        post: operations["admin_code_check_api_v1_admin_code_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payment-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Payment Keys
+         * @description Whether payments are on, with which key id, set when and by whom (never the secrets).
+         */
+        get: operations["get_payment_keys_api_v1_admin_payment_keys_get"];
+        /**
+         * Put Payment Keys
+         * @description Set the Razorpay keys: payments are taken with them at once. Every admin is told.
+         */
+        put: operations["put_payment_keys_api_v1_admin_payment_keys_put"];
+        post?: never;
+        /**
+         * Delete Payment Keys
+         * @description Remove the keys: payments are off. Every admin is told.
+         */
+        delete: operations["delete_payment_keys_api_v1_admin_payment_keys_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tournaments": {
         parameters: {
             query?: never;
@@ -1593,6 +1661,19 @@ export interface components {
          * @enum {string}
          */
         ActionKind: "suspend" | "unsuspend" | "rename" | "dismiss_report" | "grant" | "revoke";
+        /** AdminCheckOut */
+        AdminCheckOut: {
+            /**
+             * Until
+             * Format: date-time
+             */
+            until: string;
+        };
+        /** AdminCodeIn */
+        AdminCodeIn: {
+            /** Code */
+            code: string;
+        };
         /** AnalysisOut */
         AnalysisOut: {
             /**
@@ -2660,6 +2741,42 @@ export interface components {
              */
             email: string;
         };
+        /**
+         * PaymentKeysIn
+         * @description The Razorpay keys (Dashboard → Account & Settings → API Keys, and → Webhooks).
+         */
+        PaymentKeysIn: {
+            /** Key Id */
+            key_id: string;
+            /**
+             * Key Secret
+             * Format: password
+             */
+            key_secret: string;
+            /**
+             * Webhook Secret
+             * Format: password
+             */
+            webhook_secret: string;
+        };
+        /**
+         * PaymentKeysOut
+         * @description What the payments page shows: never the secrets.
+         */
+        PaymentKeysOut: {
+            /** On */
+            on: boolean;
+            /** Key Id */
+            key_id: string | null;
+            /** Updated At */
+            updated_at: string | null;
+            /** Updated By */
+            updated_by: string | null;
+            /** Can Store */
+            can_store: boolean;
+            /** Webhook Url */
+            webhook_url: string;
+        };
         /** PaymentOut */
         PaymentOut: {
             /**
@@ -2692,7 +2809,7 @@ export interface components {
          * PaymentStatus
          * @enum {string}
          */
-        PaymentStatus: "created" | "paid" | "failed";
+        PaymentStatus: "created" | "paid" | "failed" | "refunded" | "reversed";
         /** PaymentsOut */
         PaymentsOut: {
             /** Enabled */
@@ -5314,6 +5431,134 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_code_api_v1_admin_code_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    admin_code_check_api_v1_admin_code_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminCodeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCheckOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_payment_keys_api_v1_admin_payment_keys_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentKeysOut"];
+                };
+            };
+        };
+    };
+    put_payment_keys_api_v1_admin_payment_keys_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentKeysIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentKeysOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_payment_keys_api_v1_admin_payment_keys_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentKeysOut"];
                 };
             };
         };
