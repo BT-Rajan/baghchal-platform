@@ -77,7 +77,7 @@ ABORT_COOLDOWN: Final = timedelta(hours=1)
 """After ABORT_LIMIT aborts within ABORT_WINDOW, a player cannot start new games until
 ABORT_COOLDOWN after the last one."""
 SWEEP_BATCH: Final = 100
-COMPUTER_TURN_OVERDUE: Final = timedelta(seconds=3)
+COMPUTER_TURN_OVERDUE: Final = timedelta(seconds=15)
 _CACHE_SIZE: Final = 10_000
 _INITIAL: Final = format_position(Position.initial())
 

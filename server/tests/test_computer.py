@@ -164,7 +164,7 @@ async def test_a_missed_turn_is_played_by_the_sweeper(
     game_id = str(game.id)
     async with state.sessions() as db:
         assert await service.computer_turns_waiting(db, clock()) == []  # not overdue yet
-    clock.advance(seconds=4)
+    clock.advance(seconds=16)
     async with state.sessions() as db:
         assert await service.computer_turns_waiting(db, clock()) == [game.id]
     await sweeper.sweep(state)
@@ -331,3 +331,30 @@ async def test_stopping_cancels_a_turn_in_progress(
     await thinking.wait()
     await state.computer.stop()
     assert await _done(state.computer)
+
+
+def test_the_pause_is_human_not_instant() -> None:
+    for level in Level:
+        low, high = computer.THINK_SECONDS[level]
+        pauses = [computer.human_pause(level, ply=10) for _ in range(300)]
+        assert all(0 <= p <= high for p in pauses)
+        assert max(pauses) > low  # not one fixed number: it varies
+    easy = sum(computer.human_pause(Level.EASY, 10) for _ in range(500))
+    hard = sum(computer.human_pause(Level.HARD, 10) for _ in range(500))
+    assert hard > easy  # a stronger player thinks longer
+
+
+def test_the_opening_is_quicker() -> None:
+    opening = sum(computer.human_pause(Level.MEDIUM, 0) for _ in range(500))
+    middle = sum(computer.human_pause(Level.MEDIUM, 20) for _ in range(500))
+    assert opening < middle
+
+
+def test_the_pause_never_eats_a_short_clock() -> None:
+    assert computer.human_pause(Level.HARD, 20, remaining_ms=10_000) <= 1.0
+    assert computer.human_pause(Level.HARD, 20, remaining_ms=0) == 0.0
+
+
+def test_a_fixed_pause_overrides_the_level() -> None:
+    assert computer.human_pause(Level.HARD, 20, override=(0.0, 0.0)) == 0.0
+    assert computer.human_pause(Level.HARD, 20, override=(0.2, 0.2)) == 0.2

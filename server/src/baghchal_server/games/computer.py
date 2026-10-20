@@ -7,7 +7,8 @@ reported, and their games are casual.
 When it is the computer's turn, the server that saw the last move (or the one sweeping, if a
 turn has been waiting a few seconds, for example after a restart) asks the engine for a move.
 The search runs in a separate process, so a long think never slows the API down, and the
-move is played through the same path as a player's, after a short pause so it feels human.
+move is played through the same path as a player's, after a pause so it feels human: how long
+depends on the level, how far into the game it is and a little luck (see ``human_pause``).
 """
 
 import asyncio
@@ -41,8 +42,51 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger(__name__)
 
-THINK_SECONDS: Final = (0.6, 1.4)
-"""The computer waits at least this long before moving, so its moves do not land at once."""
+THINK_SECONDS: Final[dict[Level, tuple[float, float]]] = {
+    Level.EASY: (1.5, 4.0),
+    Level.MEDIUM: (2.5, 6.0),
+    Level.HARD: (3.0, 8.0),
+}
+"""The shortest and longest the computer waits before moving, per level, so its moves do not
+land at once. Stronger levels "think" longer, as a stronger player would."""
+
+OPENING_PLIES: Final = 4
+OPENING_SPEED: Final = 0.6
+"""The first moves of a game are quicker (people play their openings fast)."""
+
+SNAP_CHANCE: Final = 0.15
+SNAP_SPEED: Final = 0.4
+"""Now and then a person replies almost at once; so does the computer."""
+
+CLOCK_SHARE: Final = 0.1
+"""The most of its remaining clock the computer spends pretending to think on one move, so a
+short game is never lost to the pause."""
+
+
+def human_pause(
+    level: Level,
+    ply: int,
+    remaining_ms: int | None = None,
+    override: tuple[float, float] | None = None,
+) -> float:
+    """Seconds the computer should take over a move, counted from when it was asked.
+
+    Skewed towards the shorter end with the odd long think, quicker in the opening and now and
+    then a snap reply, never more than ``CLOCK_SHARE`` of the time it has left. ``override`` (a
+    fixed range) replaces the level's range, for tests.
+    """
+    low, high = override if override is not None else THINK_SECONDS[level]
+    if high <= low:
+        pause = low
+    else:
+        pause = random.triangular(low, high, low + 0.3 * (high - low))  # noqa: S311
+        if ply < OPENING_PLIES:
+            pause *= OPENING_SPEED
+        elif random.random() < SNAP_CHANCE:  # noqa: S311
+            pause *= SNAP_SPEED
+    if override is None and remaining_ms is not None:
+        pause = min(pause, remaining_ms / 1000 * CLOCK_SHARE)
+    return max(0.0, pause)
 
 
 def username(level: Level) -> str:
@@ -106,7 +150,9 @@ class ComputerPlayers:
     """Plays the computer's turns in the background, one at a time per game."""
 
     def __init__(self, workers: int) -> None:
-        self.think_seconds = THINK_SECONDS
+        self.think_seconds: tuple[float, float] | None = None
+        """A fixed (shortest, longest) pause for every level; None for the human-like default.
+        Tests set it."""
         self._pool = ProcessPoolExecutor(max_workers=workers) if workers else None
         self._tasks: set[asyncio.Task[None]] = set()
         self._games: set[uuid.UUID] = set()
@@ -160,9 +206,12 @@ class ComputerPlayers:
                 return False
             moves = await service.move_list(db, game)
             ply = game.ply
+            remaining_ms = min(service.clocks_at(game, state.clock()))
         started = time.monotonic()
         move = await self._search(moves, level)
-        pause = random.uniform(*self.think_seconds) - (time.monotonic() - started)  # noqa: S311
+        pause = human_pause(level, ply, remaining_ms, self.think_seconds) - (
+            time.monotonic() - started
+        )
         if pause > 0:
             await asyncio.sleep(pause)
         async with state.sessions() as db:
