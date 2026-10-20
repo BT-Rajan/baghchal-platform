@@ -58,14 +58,19 @@ ANALYSES_PER_DAY: Final[dict[Plan, int | None]] = {Plan.FREE: 0, Plan.PLUS: 5, P
 @dataclass(frozen=True)
 class Price:
     monthly_paise: int
-    yearly_paise: int
+    yearly_paise: int | None
+    """None: not sold for a year."""
 
 
 PRICES: Final = {
-    Plan.PLUS: Price(monthly_paise=149_00, yearly_paise=1_490_00),
+    Plan.PLUS: Price(monthly_paise=149_00, yearly_paise=None),
     Plan.PRO: Price(monthly_paise=299_00, yearly_paise=2_990_00),
 }
-"""In Indian rupees (paise), charged through Razorpay. Yearly is ten months' price."""
+"""In Indian rupees (paise), charged through Razorpay. Pro's year is ten months' price."""
+
+GAMES: Final[dict[Plan, int | None]] = {Plan.FREE: None, Plan.PLUS: 45, Plan.PRO: None}
+"""Finished games one purchase lasts, whichever comes first with its month (None: no limit).
+Plus is the light plan; Pro has no limits."""
 
 NAMES: Final = {Plan.FREE: "Free", Plan.PLUS: "Plus", Plan.PRO: "Pro"}
 

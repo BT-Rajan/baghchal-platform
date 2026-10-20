@@ -37,6 +37,7 @@ from baghchal_engine import (
 )
 from baghchal_server.accounts.models import User
 from baghchal_server.appearance import service as appearance
+from baghchal_server.billing import service as billing
 from baghchal_server.errors import AppError
 from baghchal_server.fair_play.queue import enqueue as queue_fair_play_check
 from baghchal_server.games.models import (
@@ -356,6 +357,8 @@ async def _after_finish(db: AsyncSession, game_id: uuid.UUID, now: datetime) -> 
     check, and in a match start the second game (sides swapped) or close the match."""
     game = await get_game(db, game_id)
     queue_fair_play_check(db, game, now)
+    if game.end_reason != EndReason.ABORTED:  # a game played uses one of a Plus purchase's
+        await billing.count_game(db, (game.goat_id, game.tiger_id), now)
     if game.rated and (game.winner is not None or drawn(game)):
         category = category_of(game.initial_ms // 1000, game.increment_ms // 1000)
         winner_id, loser_id = (

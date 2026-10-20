@@ -21,10 +21,20 @@ function rupees(paise: number): string {
   return `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 }
 
-/** "₹149 a month · ₹1,490 a year", or "Free for everyone". */
+/** "45 games or a month", "A month or a year", or "Always" (Free). */
+export function lastsText(plan: PlanInfo): string {
+  if (plan.monthly_paise === null) return 'Always';
+  if (plan.games !== null) return `${plan.games} games or a month`;
+  return plan.yearly_paise === null ? 'A month' : 'A month or a year';
+}
+
+/** "₹299 a month · ₹2,990 a year", "₹149 for 45 games or a month", or "Free for everyone". */
 export function priceText(plan: PlanInfo): string {
-  if (plan.monthly_paise === null || plan.yearly_paise === null) return 'Free for everyone';
-  return `${rupees(plan.monthly_paise)} a month · ${rupees(plan.yearly_paise)} a year`;
+  if (plan.monthly_paise === null) return 'Free for everyone';
+  if (plan.games !== null)
+    return `${rupees(plan.monthly_paise)} for ${plan.games} games or a month`;
+  const year = plan.yearly_paise === null ? '' : ` · ${rupees(plan.yearly_paise)} a year`;
+  return `${rupees(plan.monthly_paise)} a month${year}`;
 }
 
 function dayText(iso: string): string {
@@ -56,7 +66,10 @@ export function myPlanText(mine: MyPlan, who: string | null = null): string {
   if (mine.plan === 'free')
     return `${who ?? 'You'} ${who === null ? 'are' : 'is'} on the Free plan.${then}`;
   const until = mine.plan_until === null ? '' : ` until ${dayText(mine.plan_until)}`;
-  return `${who ?? 'You'} ${who === null ? 'have' : 'has'} ClawPlay ${PLAN_NAMES[mine.plan]}${until}.${then}`;
+  const has = `${who ?? 'You'} ${who === null ? 'have' : 'has'} ClawPlay ${PLAN_NAMES[mine.plan]}`;
+  if (mine.games_left !== null)
+    return `${has} for up to ${mine.games_left} more ${mine.games_left === 1 ? 'game' : 'games'}${until} at the latest.${then}`;
+  return `${has}${until}.${then}`;
 }
 
 /**
@@ -79,8 +92,9 @@ export function grantText(grant: Grant, now: number = Date.now()): string {
         : Date.parse(grant.starts_at) > now
           ? `from ${dayText(grant.starts_at)} until ${dayText(grant.ends_at)}`
           : `${grant.active ? 'until' : 'ended'} ${dayText(grant.ends_at)}`;
+  const games = grant.games_left === null ? '' : ` · ${grant.games_left} games left`;
   return grant.paid
-    ? `${what} · ${when} · ${grant.reason}`
+    ? `${what} · ${when}${games} · ${grant.reason}`
     : `${what} · ${when} · given by ${grant.granted_by ?? 'a former admin'}: ${grant.reason}`;
 }
 
@@ -95,6 +109,7 @@ export interface ComparisonRow {
 export function comparisonRows(plans: readonly PlanInfo[]): ComparisonRow[] {
   const all = (label: string) => ({ label, cells: plans.map(() => '✓') });
   return [
+    { label: 'How long it lasts', cells: plans.map(lastsText) },
     all('Live and rated games, quick pairing'),
     all('The Easy and Medium computer'),
     all('The daily puzzle'),

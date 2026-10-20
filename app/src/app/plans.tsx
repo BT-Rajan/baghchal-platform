@@ -8,7 +8,14 @@ import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
-import { buyErrorText, buyLabel, paymentText, thanksText } from '@/payments/format';
+import {
+  buyErrorText,
+  buyLabel,
+  paymentText,
+  periodsOf,
+  refusedAsMinor,
+  thanksText,
+} from '@/payments/format';
 import { useBuy, usePayments } from '@/payments/hooks';
 import { colors, radius, spacing, type } from '@/theme';
 
@@ -20,6 +27,8 @@ export default function Plans() {
   const buy = useBuy();
   const error = plans.error ?? mine.error ?? payments.error;
   const buyError = buy.error === null ? null : buyErrorText(buy.error);
+  // Under 18: the server told their parent; buying stays off.
+  const minor = refusedAsMinor(buy.error);
   return (
     <Screen align="top" wide>
       {error !== null ? (
@@ -60,7 +69,7 @@ export default function Plans() {
                       ? (period) => buy.mutate({ plan: paid, period })
                       : null
                   }
-                  buying={buy.isPending}
+                  buying={buy.isPending || minor}
                 />
               );
             })}
@@ -68,7 +77,7 @@ export default function Plans() {
           <Comparison plans={plans.data} mine={mine.data} />
           <Hint>
             {payments.data.enabled
-              ? 'Payments are taken by Razorpay: cards, UPI, net banking and wallets. Plans are paid in advance for a month or a year and never renew by themselves; buying again adds on to the time you have. A plan bought while a better one runs starts when that one ends, and time left on a cheaper plan moves to after a better one.'
+              ? 'Payments are taken by Razorpay: cards, UPI, net banking and wallets. Plus lasts 45 finished games or a month, whichever comes first; Pro has no limits. Plans are paid in advance and never renew by themselves; buying again adds on. Pro starts at once, and Plus you had left follows it; Plus bought while you have Pro starts when Pro ends. Players under 18 cannot buy plans: their parent or guardian is told instead.'
               : 'Paying online is coming soon. Until then, ClawPlay can add a plan to your account.'}
           </Hint>
           {payments.data.payments.length > 0 && (
@@ -77,7 +86,7 @@ export default function Plans() {
               <Card>
                 {payments.data.payments.map((p) => (
                   <Text key={p.id} style={styles.payment}>
-                    {paymentText(p)}
+                    {paymentText(p, plans.data.find((info) => info.plan === p.plan)?.games ?? null)}
                   </Text>
                 ))}
               </Card>
@@ -122,12 +131,12 @@ function PlanColumn({
           <Hint>{`Starts when your ${PLAN_NAMES[mine.plan]} ends, so none of it is spent underneath it.`}</Hint>
         )}
         {onBuy !== null &&
-          (['year', 'month'] as const).map((period) => (
+          periodsOf(plan).map((period, i) => (
             <Button
               key={period}
               title={`Buy ClawPlay ${PLAN_NAMES[plan.plan]} for a ${period}`}
               label={buyLabel(plan, period)}
-              variant={period === 'year' ? 'primary' : 'secondary'}
+              variant={i === 0 ? 'primary' : 'secondary'}
               disabled={buying}
               onPress={() => onBuy(period)}
             />

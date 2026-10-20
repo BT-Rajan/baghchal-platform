@@ -6,7 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends
 from baghchal_server.accounts.models import User
 from baghchal_server.accounts.service import ADMIN
 from baghchal_server.billing import service
-from baghchal_server.billing.plans import ANALYSES_PER_DAY, FEATURES, NAMES, PRICES, Plan
+from baghchal_server.billing.plans import ANALYSES_PER_DAY, FEATURES, GAMES, NAMES, PRICES, Plan
 from baghchal_server.billing.schemas import (
     GrantIn,
     GrantOut,
@@ -43,6 +43,7 @@ async def plans() -> list[PlanInfo]:
             features=sorted(FEATURES[plan]),
             monthly_paise=PRICES[plan].monthly_paise if plan in PRICES else None,
             yearly_paise=PRICES[plan].yearly_paise if plan in PRICES else None,
+            games=GAMES[plan],
             analyses_per_day=ANALYSES_PER_DAY[plan],
         )
         for plan in Plan

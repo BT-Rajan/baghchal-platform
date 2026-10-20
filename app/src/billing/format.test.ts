@@ -5,6 +5,7 @@ import {
   GRANTABLE,
   featureText,
   grantBody,
+  lastsText,
   grantText,
   has,
   myPlanText,
@@ -22,6 +23,7 @@ const grant = (overrides: Partial<Grant> = {}): Grant => ({
   feature: null,
   starts_at: '2026-01-01T12:00:00Z',
   ends_at: '2026-01-31T12:00:00Z',
+  games_left: null,
   reason: 'Welcome gift',
   granted_by: 'boss',
   created_at: '2026-01-01T12:00:00Z',
@@ -34,10 +36,14 @@ const grant = (overrides: Partial<Grant> = {}): Grant => ({
 test('plans and prices in words', () => {
   expect(PLANS.map(priceText)).toEqual([
     'Free for everyone',
-    '₹149 a month · ₹1,490 a year',
+    '₹149 for 45 games or a month',
     '₹299 a month · ₹2,990 a year',
   ]);
   expect(myPlanText(FREE)).toBe('You are on the Free plan.');
+  expect(myPlanText({ ...PLUS_UNTIL, games_left: 12 })).toBe(
+    'You have ClawPlay Plus for up to 12 more games until 1 Feb 2026 at the latest.',
+  );
+  expect(myPlanText({ ...PLUS_UNTIL, games_left: 1 })).toContain('up to 1 more game until');
   expect(myPlanText(PLUS_UNTIL)).toBe('You have ClawPlay Plus until 1 Feb 2026.');
   expect(myPlanText({ ...PLUS_UNTIL, plan: 'pro', plan_until: null })).toBe(
     'You have ClawPlay Pro.',
@@ -79,6 +85,9 @@ test('grants in words', () => {
       }),
     ),
   ).toBe('ClawPlay Plus · until 31 Jan 2026 · Paid ₹149 for a month (pay_1)');
+  expect(grantText(grant({ plan: 'plus', paid: true, games_left: 12, reason: 'Paid' }))).toBe(
+    'ClawPlay Plus · until 31 Jan 2026 · 12 games left · Paid',
+  );
   expect(grantText(grant({ plan: null, feature: 'themes', ends_at: null }))).toBe(
     'Board and coin themes, and sound packs · until revoked · given by boss: Welcome gift',
   );
@@ -105,7 +114,13 @@ test('what an admin can grant, and for how long', () => {
 
 test('the plans side by side, from the server', () => {
   const rows = comparisonRows(PLANS);
-  expect(rows[0]).toEqual({ label: 'Live and rated games, quick pairing', cells: ['✓', '✓', '✓'] });
+  expect(rows[0]).toEqual({
+    label: 'How long it lasts',
+    cells: ['Always', '45 games or a month', 'A month or a year'],
+  });
+  expect(rows[1]).toEqual({ label: 'Live and rated games, quick pairing', cells: ['✓', '✓', '✓'] });
+  expect(lastsText({ ...PLANS[2]!, yearly_paise: null })).toBe('A month');
+  expect(priceText({ ...PLANS[2]!, yearly_paise: null })).toBe('₹299 a month');
   const row = (label: string) => rows.find((r) => r.label === label)?.cells;
   expect(row('Play the Hard computer')).toEqual(['—', '✓', '✓']);
   expect(row('Your whole game history')).toEqual(['30 days', '✓', '✓']);
@@ -115,11 +130,12 @@ test('the plans side by side, from the server', () => {
 
 test('the yearly saving', () => {
   expect(yearlySaving(PLANS[0]!)).toBeNull();
-  expect(yearlySaving(PLANS[1]!)).toBe('2 months free when you pay for a year');
-  expect(yearlySaving({ ...PLANS[1]!, yearly_paise: 163900 })).toBe(
+  expect(yearlySaving(PLANS[1]!)).toBeNull(); // Plus is sold a month at a time
+  expect(yearlySaving(PLANS[2]!)).toBe('2 months free when you pay for a year');
+  expect(yearlySaving({ ...PLANS[2]!, yearly_paise: 328900 })).toBe(
     '1 month free when you pay for a year',
   );
-  expect(yearlySaving({ ...PLANS[1]!, yearly_paise: 178800 })).toBeNull();
+  expect(yearlySaving({ ...PLANS[2]!, yearly_paise: 358800 })).toBeNull();
 });
 
 test('the plan that has a feature: the cheapest, from the server’s list', () => {

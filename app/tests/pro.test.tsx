@@ -10,6 +10,7 @@ const ALICE = { id: ME.id, username: 'alice' };
 const PRO: MyPlan = {
   plan: 'pro',
   plan_until: null,
+  games_left: null,
   features: [
     'analysis',
     'badge',

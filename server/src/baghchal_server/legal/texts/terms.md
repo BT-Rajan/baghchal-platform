@@ -24,8 +24,10 @@ Rated games are checked automatically after they end, and players can report eac
 ## ClawPlay Plus and Pro
 
 - Free play is free. Plus and Pro add features, described in the app before you buy.
-- You pay through Razorpay, in Indian rupees, for a month or a year. Prices include any taxes we must charge.
-- **There is no automatic renewal.** A plan ends at the end of the period you paid for unless you buy again.
+- You pay through Razorpay, in Indian rupees. Prices include any taxes we must charge.
+- **Plus** lasts 45 finished games or a month, whichever comes first (aborted games do not count). **Pro** has no limits and lasts a month or a year.
+- **There is no automatic renewal.** A plan ends at the end of what you paid for unless you buy again.
+- **Changing plan**: Pro bought while you have Plus starts at once, and the Plus you had left follows it. Plus bought while you have Pro starts when your Pro ends. Buying the same plan again adds on.
 - **Refunds**: if something you paid for does not work and we cannot fix it, we refund it. Otherwise payments are not refundable, except where the law gives you a right to a refund. Write to [[contact_email]].
 - If we close your account for breaking these terms, the rest of a paid period is not refunded.
 

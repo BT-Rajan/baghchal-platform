@@ -85,6 +85,7 @@ async def test_everyone_starts_free_and_hard_needs_plus(players: PlayerFactory) 
     assert await _plan(alice) == {
         "plan": "free",
         "plan_until": None,
+        "games_left": None,
         "features": [],
         "grants": [],
         "waiting": [],

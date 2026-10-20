@@ -16,8 +16,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from baghchal_server.accounts.models import User
 from baghchal_server.billing.models import Grant
-from baghchal_server.billing.plans import NAMES, PRICES, RANK, Plan
+from baghchal_server.billing.plans import GAMES, NAMES, PRICES, RANK, Plan
 from baghchal_server.billing.service import entitlements, lay_out
+from baghchal_server.config import Settings
 from baghchal_server.errors import AppError
 from baghchal_server.mail import Mail
 from baghchal_server.payments.gateway import Gateway, GatewayError
@@ -35,7 +36,8 @@ FOR: Final = {Period.MONTH: "a month", Period.YEAR: "a year"}
 LISTED: Final = 50
 
 
-def price(plan: Plan, period: Period) -> int:
+def price(plan: Plan, period: Period) -> int | None:
+    """None: the plan is not sold for that long."""
     found = PRICES[plan]
     return found.monthly_paise if period == Period.MONTH else found.yearly_paise
 
@@ -44,12 +46,42 @@ def rupees(paise: int) -> str:
     return f"₹{paise // 100:,}" if paise % 100 == 0 else f"₹{paise / 100:,.2f}"
 
 
+def under_18(user: User, now: datetime) -> bool:
+    """Players under 18 cannot buy (a minor's contract is void): their parent is asked."""
+    return user.adult_from is not None and user.adult_from > now
+
+
+def parent_mail(settings: Settings, user: User, plan: Plan) -> Mail | None:
+    """The email telling a player's parent that they wanted to buy a plan (None: no address)."""
+    if user.parent_email is None:
+        return None
+    lasts = f"{GAMES[plan]} games or a month" if GAMES[plan] is not None else "a month or a year"
+    cost = rupees(PRICES[plan].monthly_paise)
+    help_ = (
+        f"If you would like them to have it, write to {settings.contact_email} and we will help. "
+        if settings.contact_email
+        else ""
+    )
+    return Mail(
+        user.parent_email,
+        f"{user.username} would like ClawPlay {NAMES[plan]}",
+        f"Hello,\n\n{user.username} tried to buy ClawPlay {NAMES[plan]} ({cost} for {lasts}). "
+        "Players under 18 cannot buy plans themselves, so nothing was charged.\n\n"
+        f"{help_}Otherwise there is nothing to do: free play stays free.\n\n"
+        f"Plans: {settings.public_base_url}/plans",
+    )
+
+
 def _day(at: datetime) -> str:
     return f"{at.day} {at:%b %Y}"
 
 
 def _what(payment: Payment) -> str:
-    return f"ClawPlay {NAMES[Plan(payment.plan)]} for {FOR[Period(payment.period)]}"
+    games = GAMES[Plan(payment.plan)]
+    lasts = FOR[Period(payment.period)]
+    if games is not None:
+        lasts = f"{games} games or {lasts}"
+    return f"ClawPlay {NAMES[Plan(payment.plan)]} for {lasts}"
 
 
 async def checkout(
@@ -65,6 +97,10 @@ async def checkout(
             f"You have ClawPlay {NAMES[held.plan]} for good, so there is nothing to buy.",
         )
     amount = price(plan, data.period)
+    if amount is None:
+        raise AppError(
+            422, "not_sold_for_a_year", f"ClawPlay {NAMES[plan]} is sold a month at a time."
+        )
     payment = Payment(
         id=uuid.uuid4(),
         user_id=user.id,
@@ -123,6 +159,7 @@ async def fulfil(
         plan=payment.plan,
         starts_at=now,
         ends_at=now + LENGTH[Period(payment.period)],
+        games_left=GAMES[Plan(payment.plan)],
         reason=f"Paid {rupees(payment.amount_paise)} for {FOR[Period(payment.period)]} "
         f"({payment_id})",
         created_at=now,
@@ -133,6 +170,8 @@ async def fulfil(
     await db.commit()
     name = NAMES[Plan(payment.plan)]
     when = f"until {_day(grant.ends_at)}"  # type: ignore[arg-type]
+    if grant.games_left is not None:
+        when = f"for {grant.games_left} games, {when} at the latest"
     if grant.starts_at > now:
         when = f"from {_day(grant.starts_at)}, when your better plan ends, {when}"
     after = await db.scalar(  # cheaper plan time this pushed on

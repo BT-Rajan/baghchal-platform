@@ -30,23 +30,23 @@ class FakeRazorpay {
 const ORDER: Checkout = {
   key_id: 'rzp_test_k',
   order_id: 'order_1',
-  amount_paise: 149000,
+  amount_paise: 14900,
   currency: 'INR',
   name: 'ClawPlay',
-  description: 'ClawPlay Plus for a year',
+  description: 'ClawPlay Plus for 45 games or a month',
   email: 'alice@example.com',
   username: 'alice',
 };
 const PAID: Payment = {
   id: 'p1',
   plan: 'plus',
-  period: 'year',
-  amount_paise: 149000,
+  period: 'month',
+  amount_paise: 14900,
   status: 'paid',
   created_at: '2026-01-01T12:00:00Z',
   paid_at: '2026-01-01T12:01:00Z',
   starts: '2026-01-01T12:01:00Z',
-  until: '2027-01-01T12:01:00Z',
+  until: '2026-01-31T12:01:00Z',
 };
 
 beforeEach(() => {
@@ -69,7 +69,7 @@ function open(routes: Record<string, Route> = {}) {
   });
 }
 
-test('buy a year of Plus', async () => {
+test('buy Plus: 45 games or a month', async () => {
   let paid = false;
   const { server } = await open({
     'POST /api/v1/payments/verify': () => {
@@ -90,14 +90,21 @@ test('buy a year of Plus', async () => {
   });
   expect(await screen.findByText(/^Payments are taken by Razorpay: cards, UPI/)).toBeOnTheScreen();
   expect(screen.getByRole('button', { name: 'Buy ClawPlay Pro for a month' })).toBeOnTheScreen();
-  await fireEvent.press(screen.getByRole('button', { name: 'Buy ClawPlay Plus for a year' }));
+  expect(screen.getByLabelText('Buy ClawPlay Pro for a year')).toHaveTextContent(
+    'Buy a year · ₹2,990',
+  );
+  expect(screen.queryByRole('button', { name: 'Buy ClawPlay Plus for a year' })).toBeNull();
+  expect(screen.getByLabelText('Buy ClawPlay Plus for a month')).toHaveTextContent(
+    'Buy 45 games or a month · ₹149',
+  );
+  await fireEvent.press(screen.getByRole('button', { name: 'Buy ClawPlay Plus for a month' }));
   await waitFor(() => expect(opened).toHaveLength(1));
   expect(server.lastTo('POST /api/v1/payments/checkout').body).toEqual({
     plan: 'plus',
-    period: 'year',
+    period: 'month',
   });
   await waitFor(() =>
-    expect(screen.getByRole('button', { name: 'Buy ClawPlay Plus for a month' })).toBeDisabled(),
+    expect(screen.getByRole('button', { name: 'Buy ClawPlay Pro for a month' })).toBeDisabled(),
   );
 
   await act(() =>
@@ -108,7 +115,7 @@ test('buy a year of Plus', async () => {
     }),
   );
   expect(
-    await screen.findByText('Thank you! You have ClawPlay Plus until 1 Jan 2027.'),
+    await screen.findByText('Thank you! You have ClawPlay Plus until 31 Jan 2026.'),
   ).toBeOnTheScreen();
   expect(server.lastTo('POST /api/v1/payments/verify').body).toEqual({
     order_id: 'order_1',
@@ -116,7 +123,7 @@ test('buy a year of Plus', async () => {
     signature: 'sig',
   });
   expect(
-    await screen.findByText('ClawPlay Plus for a year · ₹1,490 · 1 Jan 2026 · paid'),
+    await screen.findByText('ClawPlay Plus for 45 games or a month · ₹149 · 1 Jan 2026 · paid'),
   ).toBeOnTheScreen();
   expect(await screen.findByLabelText('Plus, your plan')).toBeOnTheScreen();
 });
@@ -168,14 +175,14 @@ test('Plus bought on Pro waits for Pro to end', async () => {
     'GET /api/v1/me/plan': { status: 200, body: pro },
     'POST /api/v1/payments/verify': {
       status: 200,
-      body: { ...PAID, starts: '2027-01-01T12:00:00Z', until: '2028-01-01T12:00:00Z' },
+      body: { ...PAID, starts: '2027-01-01T12:00:00Z', until: '2027-01-31T12:00:00Z' },
     },
   });
   expect(
     await screen.findByText('Starts when your Pro ends, so none of it is spent underneath it.'),
   ).toBeOnTheScreen();
   expect(screen.getAllByText(/^Starts when your Pro ends/)).toHaveLength(1); // only on Plus
-  await fireEvent.press(screen.getByRole('button', { name: 'Buy ClawPlay Plus for a year' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Buy ClawPlay Plus for a month' }));
   await waitFor(() => expect(opened).toHaveLength(1));
   await act(() =>
     opened[0]!.options.handler({
@@ -186,7 +193,32 @@ test('Plus bought on Pro waits for Pro to end', async () => {
   );
   expect(
     await screen.findByText(
-      'Thank you! Your ClawPlay Plus starts on 1 Jan 2027, when your better plan ends, and runs until 1 Jan 2028.',
+      'Thank you! Your ClawPlay Plus starts on 1 Jan 2027, when your better plan ends, and runs until 31 Jan 2027.',
     ),
   ).toBeOnTheScreen();
+});
+
+test('under 18: buying is refused, the parent is told, and the buttons turn off', async () => {
+  const { server } = await open({
+    'POST /api/v1/payments/checkout': error(
+      403,
+      'under_18',
+      'Players under 18 cannot buy plans. We have told your parent or guardian by email.',
+    ),
+  });
+  await fireEvent.press(
+    await screen.findByRole('button', { name: 'Buy ClawPlay Plus for a month' }),
+  );
+  expect(
+    await screen.findByText(
+      'Players under 18 cannot buy plans. We have told your parent or guardian by email.',
+    ),
+  ).toBeOnTheScreen();
+  expect(opened).toHaveLength(0);
+  for (const name of ['Buy ClawPlay Plus for a month', 'Buy ClawPlay Pro for a year'])
+    expect(screen.getByRole('button', { name })).toBeDisabled();
+  expect(server.lastTo('POST /api/v1/payments/checkout').body).toEqual({
+    plan: 'plus',
+    period: 'month',
+  });
 });

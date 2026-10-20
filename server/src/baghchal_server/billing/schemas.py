@@ -15,6 +15,9 @@ class PlanInfo(BaseModel):
     monthly_paise: int | None
     """None for Free."""
     yearly_paise: int | None
+    """None for Free, and for a plan not sold for a year."""
+    games: int | None
+    """Finished games one purchase lasts, if it ends on that as well as its month."""
     analyses_per_day: int | None
     """None: no limit."""
 
@@ -25,6 +28,8 @@ class GrantOut(BaseModel):
     feature: Feature | None
     starts_at: datetime
     ends_at: datetime | None
+    games_left: int | None
+    """Finished games it still lasts, if it ends on that too."""
     reason: str
     granted_by: str | None
     """The admin's username, while their account exists."""
@@ -38,7 +43,9 @@ class GrantOut(BaseModel):
 class MyPlanOut(BaseModel):
     plan: Plan
     plan_until: datetime | None
-    """When the current plan ends (None: it does not, or it is Free)."""
+    """When the current plan ends at the latest (None: it does not, or it is Free)."""
+    games_left: int | None
+    """Finished games the current plan still lasts, if it ends on that too (bought Plus)."""
     features: list[Feature]
     grants: list[GrantOut]
     """Grants in force now."""

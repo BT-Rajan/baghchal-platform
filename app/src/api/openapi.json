@@ -5348,6 +5348,17 @@
             ],
             "title": "Ends At"
           },
+          "games_left": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Games Left"
+          },
           "reason": {
             "type": "string",
             "title": "Reason"
@@ -5396,6 +5407,7 @@
           "feature",
           "starts_at",
           "ends_at",
+          "games_left",
           "reason",
           "granted_by",
           "created_at",
@@ -5912,6 +5924,17 @@
             ],
             "title": "Plan Until"
           },
+          "games_left": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Games Left"
+          },
           "features": {
             "items": {
               "$ref": "#/components/schemas/Feature"
@@ -5938,6 +5961,7 @@
         "required": [
           "plan",
           "plan_until",
+          "games_left",
           "features",
           "grants",
           "waiting"
@@ -6414,6 +6438,17 @@
             ],
             "title": "Yearly Paise"
           },
+          "games": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Games"
+          },
           "analyses_per_day": {
             "anyOf": [
               {
@@ -6433,6 +6468,7 @@
           "features",
           "monthly_paise",
           "yearly_paise",
+          "games",
           "analyses_per_day"
         ],
         "title": "PlanInfo"
@@ -6488,6 +6524,17 @@
             ],
             "title": "Plan Until"
           },
+          "games_left": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Games Left"
+          },
           "features": {
             "items": {
               "$ref": "#/components/schemas/Feature"
@@ -6525,6 +6572,7 @@
         "required": [
           "plan",
           "plan_until",
+          "games_left",
           "features",
           "grants",
           "waiting",

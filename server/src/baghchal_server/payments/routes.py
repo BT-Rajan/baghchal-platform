@@ -3,6 +3,7 @@ from typing import Annotated, Any, Final
 
 from fastapi import APIRouter, BackgroundTasks, Header, Request
 
+from baghchal_server.billing.plans import Plan
 from baghchal_server.deps import DB, AppState, CurrentUser, Member, State, enforce_limit
 from baghchal_server.errors import AppError
 from baghchal_server.mail import deliver
@@ -20,6 +21,8 @@ from baghchal_server.ratelimit import Limit
 router = APIRouter(prefix="/api/v1")
 
 CHECKOUTS_PER_USER: Final = Limit("checkout", 30, 3600)
+PARENT_TOLD: Final = Limit("parent_told_of_plan", 1, 86400)
+"""A parent hears of each plan a player under 18 tried to buy once a day at most."""
 
 
 def _gateway(state: AppState) -> Gateway:
@@ -39,7 +42,15 @@ async def checkout(data: CheckoutIn, user: Member, state: State, db: DB) -> Chec
     """Start buying a plan for a month or a year: an order to pay with Razorpay Checkout."""
     gateway = _gateway(state)
     await enforce_limit(state, CHECKOUTS_PER_USER, str(user.id))
-    return await service.checkout(db, gateway, user, state.clock(), data)
+    now = state.clock()
+    if service.under_18(user, now):
+        plan = Plan(data.plan)
+        mail = service.parent_mail(state.settings, user, plan)
+        if mail is not None and not await state.limiter.hit(PARENT_TOLD, f"{user.id}:{plan}"):
+            await deliver(state.mailer, mail)  # now: the error below drops background tasks
+        told = " We have told your parent or guardian by email." if mail is not None else ""
+        raise AppError(403, "under_18", f"Players under 18 cannot buy plans.{told}")
+    return await service.checkout(db, gateway, user, now, data)
 
 
 @router.post("/payments/verify")

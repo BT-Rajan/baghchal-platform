@@ -2331,6 +2331,8 @@ export interface components {
             starts_at: string;
             /** Ends At */
             ends_at: string | null;
+            /** Games Left */
+            games_left: number | null;
             /** Reason */
             reason: string;
             /** Granted By */
@@ -2547,6 +2549,8 @@ export interface components {
             plan: components["schemas"]["Plan"];
             /** Plan Until */
             plan_until: string | null;
+            /** Games Left */
+            games_left: number | null;
             /** Features */
             features: components["schemas"]["Feature"][];
             /** Grants */
@@ -2722,6 +2726,8 @@ export interface components {
             monthly_paise: number | null;
             /** Yearly Paise */
             yearly_paise: number | null;
+            /** Games */
+            games: number | null;
             /** Analyses Per Day */
             analyses_per_day: number | null;
         };
@@ -2745,6 +2751,8 @@ export interface components {
             plan: components["schemas"]["Plan"];
             /** Plan Until */
             plan_until: string | null;
+            /** Games Left */
+            games_left: number | null;
             /** Features */
             features: components["schemas"]["Feature"][];
             /** Grants */

@@ -81,6 +81,25 @@ async def lay_out(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> None:
             g.ends_at = cursor = cursor + left
 
 
+async def count_game(db: AsyncSession, user_ids: Collection[uuid.UUID], now: datetime) -> None:
+    """A finished game uses one game of each player's Plus, where it is counted in games; the
+    last one ends it, and the time lined up after it moves up. Pro is never counted."""
+    for user_id in sorted(user_ids):  # the same order everywhere, so locks never cross
+        # Two of the player's games ending at once count twice.
+        await db.execute(select(User.id).where(User.id == user_id).with_for_update())
+        grants = await _grants(db, user_id, now)
+        if _entitlements(grants).plan != Plan.PLUS:
+            continue
+        running = [g for g in grants if g.plan == Plan.PLUS]
+        if any(g.games_left is None for g in running):
+            continue  # a Plus without a game limit covers this game
+        g = min(running, key=lambda g: (g.starts_at, g.id))
+        g.games_left = (g.games_left or 1) - 1
+        if g.games_left == 0:
+            g.ends_at = now
+            await lay_out(db, user_id, now)
+
+
 async def _grants(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> list[Grant]:
     """The grants in force now."""
     found = await db.scalars(
@@ -158,6 +177,7 @@ async def _out(db: AsyncSession, grants: list[Grant], now: datetime) -> list[Gra
             feature=g.feature,
             starts_at=g.starts_at,
             ends_at=g.ends_at,
+            games_left=g.games_left,
             reason=g.reason,
             granted_by=names.get(g.granted_by) if g.granted_by is not None else None,
             created_at=g.created_at,
@@ -184,12 +204,18 @@ async def my_plan(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> MyPlan
     waiting = await _waiting(db, user_id, now)
     found = _entitlements(grants)
     until = found.plan_until
+    running = [g for g in grants if g.plan == found.plan]
+    games: int | None = None
+    if running and all(g.games_left is not None for g in running):
+        games = min(g.games_left or 0 for g in running)
     for g in waiting:  # the same plan's time lined up straight after: it simply goes on
         if until is not None and g.plan == found.plan and g.starts_at <= until:
             until = None if g.ends_at is None else max(until, g.ends_at)
+            games = None if games is None or g.games_left is None else games + g.games_left
     return MyPlanOut(
         plan=found.plan,
         plan_until=until,
+        games_left=games,
         features=sorted(found.features),
         grants=await _out(db, grants, now),
         waiting=await _out(db, waiting, now),

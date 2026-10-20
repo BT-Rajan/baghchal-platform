@@ -10,6 +10,7 @@ export const PLANS: PlanInfo[] = [
     features: [],
     monthly_paise: null,
     yearly_paise: null,
+    games: null,
     analyses_per_day: 0,
   },
   {
@@ -17,7 +18,8 @@ export const PLANS: PlanInfo[] = [
     name: 'Plus',
     features: PLUS,
     monthly_paise: 14900,
-    yearly_paise: 149000,
+    yearly_paise: null,
+    games: 45,
     analyses_per_day: 5,
   },
   {
@@ -26,6 +28,7 @@ export const PLANS: PlanInfo[] = [
     features: [...PLUS, 'tournaments', 'trainer'],
     monthly_paise: 29900,
     yearly_paise: 299000,
+    games: null,
     analyses_per_day: null,
   },
 ];
@@ -33,6 +36,7 @@ export const PLANS: PlanInfo[] = [
 export const FREE: MyPlan = {
   plan: 'free',
   plan_until: null,
+  games_left: null,
   features: [],
   grants: [],
   waiting: [],
@@ -41,6 +45,7 @@ export const FREE: MyPlan = {
 export const PLUS_UNTIL: MyPlan = {
   plan: 'plus',
   plan_until: '2026-02-01T12:00:00Z',
+  games_left: null,
   features: PLUS,
   grants: [],
   waiting: [],

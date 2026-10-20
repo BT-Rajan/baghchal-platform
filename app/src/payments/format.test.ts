@@ -26,6 +26,7 @@ test('prices and buttons', () => {
     features: [],
     monthly_paise: 14900,
     yearly_paise: 149000,
+    games: null,
     analyses_per_day: 5,
   };
   expect(buyLabel(plus, 'month')).toBe('Buy a month · ₹149');
