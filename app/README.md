@@ -79,9 +79,11 @@ scripts/        the Expo-cloud guardrail
   (`Icon`, also on `IconButton` for utility toggles like sound). Wide screens get a sidebar
   instead of the bottom tab bar. The game shows whose move it is on the player's bar, and the
   goats to place and the tigers' captures as a coin tray and five slots (`PieceCounts`).
-- **The front door.** Signed-out visitors land on `/welcome`: what Bagh Chal is, how it's
-  played, and "Play now, no sign-up", which signs them in as a guest (`guest-3fa9c1`) and
-  starts their first game at once: goats, against the Easy computer, at 5+3.
+- **The front door.** Signed-out visitors land on `/welcome`, about a screen long on the web:
+  what Bagh Chal is, then one section with two tabs (how it's played; the ways to play), and
+  "Play now, no sign-up", which signs them in as a guest (`guest-3fa9c1`) and starts their first
+  game at once: goats, against the Easy computer, at 5+3. The terms and privacy policy
+  (`LegalDocument`) show their sections shut, a list of headings to open (`Disclosure`).
   Guests play the computer and casual games; rated play, challenges, reports and payments ask
   for an account. A banner on Play and Me leads to `/claim`, which turns the guest into a real
   account and keeps its games.

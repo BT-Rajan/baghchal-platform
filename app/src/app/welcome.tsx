@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import type { ReactNode } from 'react';
+import { useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg from 'react-native-svg';
@@ -8,6 +8,7 @@ import { Brand } from '@/components/brand/Logo';
 import { Button } from '@/components/Button';
 import { BoardPreview } from '@/components/game/BoardPreview';
 import { Coin } from '@/components/game/Coin';
+import { Segmented } from '@/components/Segmented';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import type { Piece } from '@/game/bfen';
 import { colors, radius, spacing } from '@/theme';
@@ -39,6 +40,13 @@ const FEATURES: readonly { title: string; text: string }[] = [
   { title: 'Friends', text: 'Send a friend a link to a game, or run a small tournament.' },
   { title: 'Get better', text: 'The engine reviews your games; puzzles sharpen your openings.' },
 ];
+
+const TABS = [
+  { value: 'rules', label: "How it's played" },
+  { value: 'ways', label: 'Play your way' },
+] as const;
+
+type Tab = (typeof TABS)[number]['value'];
 
 /**
  * The front door: what ClawPlay is, and a first game without signing up (`/start`). The web
@@ -84,6 +92,7 @@ function StartScreen() {
 function LandingPage() {
   const { width } = useWindowDimensions();
   const wide = width >= WIDE;
+  const [tab, setTab] = useState<Tab>('rules');
   const play = () => router.push('/start');
 
   return (
@@ -108,66 +117,46 @@ function LandingPage() {
               </Text>
             </View>
             <View style={[styles.boardBox, wide && styles.half]} aria-hidden>
-              <View style={styles.board}>
+              <View style={[styles.board, !wide && styles.boardNarrow]}>
                 <BoardPreview theme="wood" pieces="classic" />
               </View>
             </View>
           </View>
         </View>
 
-        <Section title="How it's played">
-          <View style={[styles.cards, wide && styles.row]}>
-            {STEPS.map((step) => (
-              <View key={step.title} style={[styles.card, wide && styles.third]}>
-                <View style={styles.coin} aria-hidden>
-                  <Svg width="100%" height="100%" viewBox="0 0 100 100">
-                    <Coin piece={step.piece} />
-                  </Svg>
-                </View>
-                <Text style={styles.cardTitle}>{step.title}</Text>
-                <Text style={styles.cardText}>{step.text}</Text>
-              </View>
-            ))}
-          </View>
-        </Section>
-
-        <Section title="Play your way">
-          <View style={[styles.cards, styles.wrap]}>
-            {FEATURES.map((f) => (
-              <View key={f.title} style={[styles.card, styles.feature]}>
-                <Text style={styles.cardTitle}>{f.title}</Text>
-                <Text style={styles.cardText}>{f.text}</Text>
-              </View>
-            ))}
-          </View>
-        </Section>
-
-        <View style={styles.closing}>
+        <View style={styles.section}>
           <View style={styles.inner}>
-            <Text role="heading" style={styles.closingTitle}>
-              Your first game is a moment away.
-            </Text>
-            <View style={wide ? styles.actionsWide : styles.actions}>
-              <Button title="Start playing" variant="bright" onPress={play} />
+            {/* One section, two tabs: the page stays about a screen long. */}
+            <Segmented label="Find out more" options={TABS} value={tab} onChange={setTab} />
+            <View style={[styles.cards, styles.wrap]}>
+              {tab === 'rules'
+                ? STEPS.map((step) => (
+                    <View key={step.title} style={[styles.card, styles.step]}>
+                      <View style={styles.coin} aria-hidden>
+                        <Svg width="100%" height="100%" viewBox="0 0 100 100">
+                          <Coin piece={step.piece} />
+                        </Svg>
+                      </View>
+                      <View style={styles.cardWords}>
+                        <Text style={styles.cardTitle}>{step.title}</Text>
+                        <Text style={styles.cardText}>{step.text}</Text>
+                      </View>
+                    </View>
+                  ))
+                : FEATURES.map((f) => (
+                    <View key={f.title} style={[styles.card, styles.feature]}>
+                      <View style={styles.cardWords}>
+                        <Text style={styles.cardTitle}>{f.title}</Text>
+                        <Text style={styles.cardText}>{f.text}</Text>
+                      </View>
+                    </View>
+                  ))}
             </View>
           </View>
         </View>
         <SiteFooter />
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <View style={styles.inner}>
-        <Text role="heading" style={styles.sectionTitle}>
-          {title}
-        </Text>
-        {children}
-      </View>
-    </View>
   );
 }
 
@@ -195,7 +184,6 @@ const styles = StyleSheet.create({
   inner: { width: '100%', maxWidth: 1100, alignSelf: 'center', gap: spacing.lg },
   row: { flexDirection: 'row', alignItems: 'center' },
   half: { flex: 1 },
-  third: { flex: 1 },
   hero: {
     backgroundColor: colors.brandInk,
     paddingHorizontal: spacing.lg,
@@ -218,27 +206,24 @@ const styles = StyleSheet.create({
   small: { fontSize: 14, color: colors.brandCream, opacity: 0.75 },
   boardBox: { alignItems: 'center' },
   board: { width: '100%', maxWidth: 440, aspectRatio: 1 },
-  section: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xl },
-  sectionTitle: { fontSize: 28, fontWeight: '800', color: colors.text },
-  cards: { gap: spacing.md },
+  boardNarrow: { maxWidth: 280 },
+  section: { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg },
+  cards: { gap: spacing.sm },
   wrap: { flexDirection: 'row', flexWrap: 'wrap' },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.sm,
-    alignItems: 'flex-start',
+    padding: spacing.md,
+    gap: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
+  step: { flexGrow: 1, flexBasis: 300 },
   feature: { flexGrow: 1, flexBasis: 240 },
-  coin: { width: 56, height: 56 },
+  cardWords: { flex: 1, gap: spacing.xs },
+  coin: { width: 44, height: 44 },
   cardTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
   cardText: { fontSize: 15, lineHeight: 22, color: colors.muted },
-  closing: {
-    backgroundColor: colors.brandInk,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
-  },
-  closingTitle: { fontSize: 26, fontWeight: '800', color: colors.brandCream },
 });

@@ -89,9 +89,14 @@ describe('the terms and privacy policy', () => {
     await fireEvent.press(await screen.findByRole('link', { name: 'Terms of service' }));
     await waitFor(() => expect(app.getPathname()).toBe('/terms'));
     expect(await screen.findByRole('heading', { name: 'Terms' })).toBeOnTheScreen();
-    expect(screen.getByRole('heading', { name: 'Accounts' })).toBeOnTheScreen();
     expect(screen.getByText('fair')).toBeOnTheScreen();
+    // Each section is shut until opened: its heading holds the button.
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+    const accounts = screen.getByRole('button', { name: 'Accounts', expanded: false });
+    await fireEvent.press(accounts);
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    await fireEvent.press(screen.getByRole('button', { name: 'Accounts', expanded: true }));
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
     expect(screen.getByText(`Version of ${LEGAL.terms}`)).toBeOnTheScreen();
   });
 

@@ -52,3 +52,22 @@ export function parse(markdown: string): Block[] {
   flush();
   return blocks;
 }
+
+/** What is under a heading: everything but headings. */
+export type Body = Exclude<Block, { kind: 'heading' }>;
+
+export type Section = { heading: string; blocks: Body[] };
+
+/**
+ * The blocks before the first `##` heading (the title and what it says first), and each
+ * `##` section with its blocks, so a page can show a long text a section at a time.
+ */
+export function sections(blocks: Block[]): { intro: Body[]; sections: Section[] } {
+  const intro: Body[] = [];
+  const out: Section[] = [];
+  for (const block of blocks) {
+    if (block.kind === 'heading') out.push({ heading: block.text, blocks: [] });
+    else (out.at(-1)?.blocks ?? intro).push(block);
+  }
+  return { intro, sections: out };
+}
