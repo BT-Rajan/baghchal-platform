@@ -14,6 +14,10 @@ class NotificationKind(StrEnum):
     FRIEND_ACCEPTED = "friend_accepted"
     TOURNAMENT_STARTED = "tournament_started"
     """A tournament I play in has started; see ``tournament``."""
+    TOURNAMENT_ROUND = "tournament_round"
+    """A new round of ``tournament``: my game is against ``actor`` (none: I have the bye)."""
+    TOURNAMENT_FINISHED = "tournament_finished"
+    """``tournament`` has ended: the final standings are in."""
 
 
 class TournamentRef(BaseModel):

@@ -30,6 +30,24 @@ test('what each notification says, and where it leads', () => {
   expect(notificationText(note({ kind: 'tournament_started' }))).toBe(
     'A tournament has started: your games are ready.',
   );
+  expect(notificationText(note({ kind: 'tournament_round', tournament: cup }))).toBe(
+    'New round in Friday cup: you play alice.',
+  );
+  expect(notificationText(note({ kind: 'tournament_round', actor: null }))).toBe(
+    'New round in your tournament: you have the bye (a point).',
+  );
+  expect(notificationText(note({ kind: 'tournament_finished', tournament: cup }))).toBe(
+    'Friday cup has ended: see the final standings.',
+  );
+  expect(notificationText(note({ kind: 'tournament_finished' }))).toBe(
+    'A tournament has ended: see the final standings.',
+  );
+  expect(
+    notificationText(note({ kind: 'tournament_round', actor: null, tournament: cup })),
+  ).toMatch(/^New round in Friday cup: you have the bye/);
+  expect(notificationText(note({ kind: 'tournament_round' }))).toBe(
+    'New round in your tournament: you play alice.',
+  );
   expect(notificationLink(note({ tournament: cup }))).toBe('/tournament/cup1');
   expect(notificationLink(note({}))).toBe('/player/alice');
   expect(notificationLink(note({ actor: null }))).toBeNull();

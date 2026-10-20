@@ -3048,6 +3048,67 @@
         }
       }
     },
+    "/api/v1/tournaments/{code}/pairings/{pairing_id}/award": {
+      "post": {
+        "summary": "Award Pairing",
+        "description": "The host gives this round's unplayed game to the player who turned up (a point), so\nthe round can move on.",
+        "operationId": "award_pairing_api_v1_tournaments__code__pairings__pairing_id__award_post",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,16}$",
+              "title": "Code"
+            }
+          },
+          {
+            "name": "pairing_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Pairing Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AwardIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TournamentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tournaments/{code}/pairings/{pairing_id}/play": {
       "post": {
         "summary": "Play Pairing",
@@ -3712,6 +3773,24 @@
         ],
         "title": "AppearanceOut",
         "description": "What the app uses now: without the themes feature, the free board, pieces and sounds."
+      },
+      "AwardIn": {
+        "properties": {
+          "winner": {
+            "type": "string",
+            "enum": [
+              "goat",
+              "tiger"
+            ],
+            "title": "Winner"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "winner"
+        ],
+        "title": "AwardIn"
       },
       "BoardTheme": {
         "type": "string",
@@ -6139,7 +6218,9 @@
           "challenge",
           "friend_request",
           "friend_accepted",
-          "tournament_started"
+          "tournament_started",
+          "tournament_round",
+          "tournament_finished"
         ],
         "title": "NotificationKind"
       },
@@ -6268,6 +6349,10 @@
                 "type": "null"
               }
             ]
+          },
+          "forfeit": {
+            "type": "boolean",
+            "title": "Forfeit"
           }
         },
         "type": "object",
@@ -6278,7 +6363,8 @@
           "tiger",
           "state",
           "game_id",
-          "winner"
+          "winner",
+          "forfeit"
         ],
         "title": "PairingOut"
       },

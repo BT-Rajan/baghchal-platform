@@ -40,6 +40,8 @@ from baghchal_server.notifications.schemas import NotificationKind
 from baghchal_server.ratelimit import Limit
 from baghchal_server.ratings import service as ratings
 from baghchal_server.realtime.protocol import ChallengeEvent
+from baghchal_server.tournaments import progress as tournament_progress
+from baghchal_server.tournaments import service as tournaments
 
 router = APIRouter(prefix="/api/v1")
 
@@ -246,6 +248,10 @@ async def block_player(username: UsernameQuery, user: CurrentUser, state: State,
     blocked_id = await _player(state, db, username)
     for challenge in await service.block(db, state.clock(), user.id, blocked_id):
         await notify_challenge(state, db, challenge)
+    # This round's tournament game between them goes to the one blocked.
+    await tournament_progress.moved_on(
+        state, db, await tournaments.blocked(db, user.id, blocked_id)
+    )
 
 
 @router.delete("/blocks/{username}", status_code=status.HTTP_204_NO_CONTENT)

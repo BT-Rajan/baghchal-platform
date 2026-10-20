@@ -19,6 +19,8 @@ const ICONS: Record<Notification['kind'], IconName> = {
   friend_request: 'people',
   friend_accepted: 'people',
   tournament_started: 'trophy',
+  tournament_round: 'trophy',
+  tournament_finished: 'trophy',
 };
 
 /** What happened while I was away, newest first; each leads to where it happened. */

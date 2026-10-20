@@ -244,6 +244,10 @@ export function createApi(client: Client, transport: Transport) {
       client.post<Tournament>(`${V1}/tournaments`, { body }),
     tournamentAction: (code: string, action: 'join' | 'leave' | 'start' | 'finish') =>
       client.post<Tournament>(`${V1}/tournaments/${seg(code)}/${action}`),
+    awardPairing: (code: string, pairingId: string, winner: 'goat' | 'tiger') =>
+      client.post<Tournament>(`${V1}/tournaments/${seg(code)}/pairings/${seg(pairingId)}/award`, {
+        body: { winner },
+      }),
     playPairing: (code: string, pairingId: string) =>
       client.post<Game>(`${V1}/tournaments/${seg(code)}/pairings/${seg(pairingId)}/play`),
 

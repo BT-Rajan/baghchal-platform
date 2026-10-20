@@ -18,6 +18,12 @@ export function notificationText(n: Notification): string {
       return `${who} accepted your friend request.`;
     case 'tournament_started':
       return `${n.tournament?.name ?? 'A tournament'} has started: your games are ready.`;
+    case 'tournament_round':
+      return n.actor === null
+        ? `New round in ${n.tournament?.name ?? 'your tournament'}: you have the bye (a point).`
+        : `New round in ${n.tournament?.name ?? 'your tournament'}: you play ${n.actor.username}.`;
+    case 'tournament_finished':
+      return `${n.tournament?.name ?? 'A tournament'} has ended: see the final standings.`;
   }
 }
 

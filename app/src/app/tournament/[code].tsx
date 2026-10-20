@@ -14,7 +14,7 @@ import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
 import { shareLink, timeControlName } from '@/lobby/format';
 import { isMine, pairingText, roundsOf, tournamentStatusText } from '@/pro/format';
-import { usePlayPairing, useTournament, useTournamentAction } from '@/pro/hooks';
+import { useAwardPairing, usePlayPairing, useTournament, useTournamentAction } from '@/pro/hooks';
 import { colors, spacing } from '@/theme';
 
 /** A tournament: who is in, the standings, and my games to play. */
@@ -141,6 +141,8 @@ function Details({ tournament: t }: { tournament: Tournament }) {
         </Hint>
       )}
 
+      {host && t.status === 'running' && <NoShows tournament={t} />}
+
       {host &&
         t.status === 'running' &&
         (ending ? (
@@ -154,6 +156,57 @@ function Details({ tournament: t }: { tournament: Tournament }) {
         ) : (
           <Button title="End the tournament" variant="secondary" onPress={() => setEnding(true)} />
         ))}
+    </>
+  );
+}
+
+/** For the host: this round's games nobody has started, to give to whoever turned up. */
+function NoShows({ tournament: t }: { tournament: Tournament }) {
+  const award = useAwardPairing(t.code);
+  const [giving, setGiving] = useState<{ pairing: Pairing; winner: 'goat' | 'tiger' } | null>(null);
+  const waiting = t.pairings.filter((p) => p.round === t.round && p.state === 'waiting');
+  if (waiting.length === 0) return null;
+  return (
+    <>
+      <SectionTitle>Games not played yet</SectionTitle>
+      <Hint>
+        If a player does not turn up, give the game to the other: a point for them, and the round
+        can go on.
+      </Hint>
+      {award.error !== null && <Notice tone="error">{describeError(award.error)}</Notice>}
+      {waiting.map((p) =>
+        giving?.pairing.id === p.id ? (
+          <Confirm
+            key={p.id}
+            question={`Give this game to ${(giving.winner === 'goat' ? p.goat : p.tiger).username}? ${(giving.winner === 'goat' ? p.tiger : p.goat).username} gets no point, and it is not played.`}
+            confirmTitle="Give the game"
+            busy={award.isPending}
+            onConfirm={() =>
+              award.mutate(
+                { pairingId: p.id, winner: giving.winner },
+                { onSettled: () => setGiving(null) },
+              )
+            }
+            onCancel={() => setGiving(null)}
+          />
+        ) : (
+          <Card key={p.id}>
+            <Text style={styles.text}>{pairingText(p)}</Text>
+            <View style={styles.row}>
+              {(['goat', 'tiger'] as const).map((side) => (
+                <Button
+                  key={side}
+                  title={`Give the game to ${p[side].username}`}
+                  label={`Give to ${p[side].username}`}
+                  variant="secondary"
+                  compact
+                  onPress={() => setGiving({ pairing: p, winner: side })}
+                />
+              ))}
+            </View>
+          </Card>
+        ),
+      )}
     </>
   );
 }

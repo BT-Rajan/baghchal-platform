@@ -24,6 +24,13 @@ if TYPE_CHECKING:
     from baghchal_server.deps import AppState
 
 KEEP: Final = 100
+ABOUT_TOURNAMENTS: Final = frozenset(
+    {
+        NotificationKind.TOURNAMENT_STARTED,
+        NotificationKind.TOURNAMENT_ROUND,
+        NotificationKind.TOURNAMENT_FINISHED,
+    }
+)
 SHOWN: Final = 50
 
 
@@ -86,9 +93,7 @@ async def mine(db: AsyncSession, user_id: uuid.UUID) -> NotificationList:
     names = dict(
         (await db.execute(select(User.id, User.username).where(User.id.in_(actors)))).all()
     )
-    codes = {
-        r.ref for r in rows if r.kind == NotificationKind.TOURNAMENT_STARTED and r.ref is not None
-    }
+    codes = {r.ref for r in rows if r.kind in ABOUT_TOURNAMENTS and r.ref is not None}
     tournaments = dict(
         (
             await db.execute(
@@ -104,7 +109,7 @@ async def mine(db: AsyncSession, user_id: uuid.UUID) -> NotificationList:
     items = []
     for r in rows:
         tournament = None
-        if r.kind == NotificationKind.TOURNAMENT_STARTED:
+        if r.kind in ABOUT_TOURNAMENTS:
             if r.ref not in tournaments:
                 continue  # the tournament is gone
             tournament = TournamentRef(code=r.ref, name=tournaments[r.ref])
