@@ -206,10 +206,9 @@ async def logout(request: Request, response: Response, state: State, db: DB) -> 
         user = await resolve_session(db, token, state.clock())
         await service.revoke_session(db, token)
         if user is not None and user.role == GUEST:
-            with contextlib.suppress(AppError):  # a live game: housekeeping, later
-                closed, _ = await lifecycle.delete_account(db, state.settings, state.clock(), user)
-                for challenge in closed:
-                    await notify_challenge(state, db, challenge)
+            # Guests make no challenges, so none close. A live game: housekeeping, later.
+            with contextlib.suppress(AppError):
+                await lifecycle.delete_account(db, state.settings, state.clock(), user)
     if transport == "cookie":
         _clear_cookie(response, state)
 

@@ -77,6 +77,10 @@ class Game(Base):
     """Set when a rated game ends with a result."""
     lag_ms: Mapped[int] = mapped_column(Integer, default=0)
     """Network delay allowed to the side to move this turn: never charged to their clock."""
+    goat_lag_left_ms: Mapped[int] = mapped_column(Integer, default=10_000)
+    tiger_lag_left_ms: Mapped[int] = mapped_column(Integer, default=10_000)
+    """What is left of each side's network delay allowance for the whole game, so a client
+    that answers its probes slowly on purpose gains a few seconds at most."""
     aborted_by: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="SET NULL")
     )

@@ -17,7 +17,7 @@ from collections.abc import Awaitable, Callable, Sequence
 from datetime import datetime, timedelta
 from typing import Final
 
-from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy import and_, case, delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -70,6 +70,8 @@ from baghchal_server.realtime.presence import Presence
 FIRST_MOVE_GRACE: Final = timedelta(seconds=30)
 ABANDON_AFTER: Final = timedelta(seconds=60)
 MAX_LAG_MS: Final = 500
+LAG_QUOTA_MS: Final = 10_000
+"""The most network delay allowance a side gets in one game (see Game.goat_lag_left_ms)."""
 """The most network delay (the mover's measured round trip) not charged to a clock per move."""
 ABORT_LIMIT: Final = 3
 ABORT_WINDOW: Final = timedelta(hours=24)
@@ -156,12 +158,13 @@ def _deadline(ply: int, turn_started_at: datetime, clock_ms: int, lag_ms: int) -
     return turn_started_at + timedelta(milliseconds=clock_ms + lag_ms)
 
 
-async def _lag_allowance(presence: Presence, user_id: uuid.UUID, ply: int) -> int:
+async def _lag_allowance(presence: Presence, user_id: uuid.UUID, ply: int, left_ms: int) -> int:
     """Network delay not to charge the player about to move: their measured round trip
-    (requests and events each cross the network once), capped. None before clocks run."""
+    (requests and events each cross the network once), capped, and no more than is left of
+    their allowance for the game. None before clocks run."""
     if ply < 2:
         return 0
-    return min(MAX_LAG_MS, await presence.round_trip_ms(user_id) or 0)
+    return min(MAX_LAG_MS, left_ms, await presence.round_trip_ms(user_id) or 0)
 
 
 # ── Starting ──────────────────────────────────────────────────────────────
@@ -239,6 +242,8 @@ async def _create_game(  # noqa: PLR0913 - every field of a new game
         turn_started_at=now,
         deadline_at=now + FIRST_MOVE_GRACE,
         lag_ms=0,
+        goat_lag_left_ms=LAG_QUOTA_MS,
+        tiger_lag_left_ms=LAG_QUOTA_MS,
         goat_rating=round(current[goat_id].rating),
         tiger_rating=round(current[tiger_id].rating),
         bot_level=bot_level,
@@ -687,19 +692,23 @@ async def play(  # noqa: PLR0913 - the move, who plays it when, and their networ
         think_ms = _charged_ms(game, now)
         clock_ms, other_ms = _clocks_after_move(game, side, think_ms)
         new_ply = game.ply + 1
+        # The allowance this turn is spent as far as the move used it.
+        used = min(game.lag_ms, _ms(now - game.turn_started_at))
         values: dict[str, object] = {
             "ply": new_ply,
             "position": format_position(engine_game.position),
             f"{side}_ms": clock_ms,
             f"{_other(side)}_ms": other_ms,
+            f"{side}_lag_left_ms": max(0, getattr(game, f"{side}_lag_left_ms") - used),
             "turn_started_at": now,
             "lag_ms": 0,
         }
-        if game.draw_offer == _other(side):  # playing on declines the opponent's offer
-            values["draw_offer"] = None
+        # Playing on declines the opponent's offer, even one made since this move was read.
+        values["draw_offer"] = case((Game.draw_offer == _other(side), None), else_=Game.draw_offer)
         if outcome is None:
             next_id = game.tiger_id if side == "goat" else game.goat_id
-            lag_ms = await _lag_allowance(presence, next_id, new_ply)
+            left = getattr(game, f"{_other(side)}_lag_left_ms")
+            lag_ms = await _lag_allowance(presence, next_id, new_ply, left)
             values["lag_ms"] = lag_ms
             values["deadline_at"] = _deadline(new_ply, now, other_ms, lag_ms)
         else:
@@ -798,6 +807,9 @@ async def _end_by_player(
         side = _side_of(game, user_id)
         if game.status != GameStatus.ACTIVE:
             raise AppError(409, "game_over", "This game is over.")
+        if game.deadline_at is not None and game.deadline_at <= now:  # the flag fell first
+            await expire(db, game, now)
+            return await get_game(db, game_id)
         winner, reason = await decide(game, side)
         aborted_by = user_id if reason == EndReason.ABORTED else None
         if await _finish(db, game, now, winner, reason, aborted_by=aborted_by):

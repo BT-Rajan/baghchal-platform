@@ -815,3 +815,23 @@ async def test_a_moved_plan_is_reminded_again(
     clock.advance(days=30)
     (mail,) = await _reminders(app)
     assert mail.subject == "Your ClawPlay Plus ends soon"
+
+
+async def test_a_payment_moved_on_elsewhere_is_not_claimed(
+    app: FastAPI, players: PlayerFactory
+) -> None:
+    from baghchal_server.payments import service  # noqa: PLC0415
+
+    alice = await players("alice")
+    order = (await _buy(alice))["order_id"]
+    state: AppState = app.state.ctx
+    async with state.sessions() as db:
+        payment = await db.scalar(select(Payment).where(Payment.order_id == order))
+        assert payment is not None
+        async with state.sessions() as other:  # another server paid it first
+            await other.execute(
+                update(Payment).where(Payment.id == payment.id).values(status="paid")
+            )
+            await other.commit()
+        assert not await service._claim(db, payment, service.OPEN, status="paid")
+        assert payment.status == "paid"  # read again

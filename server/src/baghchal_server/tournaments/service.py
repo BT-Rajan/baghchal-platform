@@ -315,13 +315,34 @@ async def describe(db: AsyncSession, now: datetime, tournament: Tournament) -> T
         and current
         and all(states[p.id] == PairingState.DONE for p in current)
     ):
-        if tournament.round < tournament.rounds:
-            tournament.round += 1
-            _add_round(
-                db,
-                tournament,
-                _records(pairings, found, players, await _ratings(db, tournament, players)),
+        # Two people looking at once must not both pair the next round: one claims it.
+        more = tournament.round < tournament.rounds
+        records = (
+            _records(pairings, found, players, await _ratings(db, tournament, players))
+            if more
+            else None
+        )
+        claimed = await db.execute(
+            update(Tournament)
+            .where(
+                Tournament.id == tournament.id,
+                Tournament.round == tournament.round,
+                Tournament.status == TournamentStatus.RUNNING,
             )
+            .values(
+                {"round": tournament.round + 1}
+                if more
+                else {"status": TournamentStatus.FINISHED, "finished_at": now}
+            )
+            .execution_options(synchronize_session=False)  # set below, as claimed
+        )
+        if claimed.rowcount != 1:  # type: ignore[attr-defined]
+            await db.rollback()
+            await db.refresh(tournament)
+            return await describe(db, now, tournament)
+        if records is not None:
+            tournament.round += 1
+            _add_round(db, tournament, records)
         else:
             tournament.status, tournament.finished_at = TournamentStatus.FINISHED, now
         await db.commit()

@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 from contextlib import AsyncExitStack
+from datetime import timedelta
 from typing import Any
 
 import httpx
@@ -330,6 +331,32 @@ async def test_a_move_after_the_flag_is_refused(
         assert r.json()["error"]["code"] == "game_over"
         game = (await alice.http.get(f"/api/v1/games/{game['id']}")).json()
         assert game["result"] == {"winner": "tiger", "reason": "timeout"}
+
+
+async def test_a_resignation_after_the_flag_is_a_timeout(
+    app: FastAPI, pair: tuple[Player, Player], clock: Clock
+) -> None:
+    alice, bob = pair
+    async with AsyncExitStack() as stack:
+        await _online(app, stack, bob)
+        game = await _start(alice, bob, "3+2")
+        game = await _play(alice, bob, game, ["c3", "a1-b2"])
+        clock.advance(seconds=181)
+        state = app.state.ctx
+        async with state.sessions() as db:  # past the deadline, not yet settled
+            ended = await game_service.resign(db, uuid.UUID(game["id"]), uuid.UUID(bob.id), clock())
+        assert (ended.winner, ended.end_reason) == ("tiger", "timeout")
+
+
+async def test_the_network_allowance_has_a_limit_per_game() -> None:
+    class Slow:
+        async def round_trip_ms(self, user_id: uuid.UUID) -> int:
+            return 4900
+
+    who = uuid.uuid4()
+    assert await game_service._lag_allowance(Slow(), who, 5, 10_000) == 500  # type: ignore[arg-type]
+    assert await game_service._lag_allowance(Slow(), who, 5, 120) == 120  # type: ignore[arg-type]
+    assert await game_service._lag_allowance(Slow(), who, 1, 10_000) == 0  # type: ignore[arg-type]
 
 
 async def test_last_moment_flag_race(
@@ -673,7 +700,10 @@ async def test_a_game_ended_meanwhile_is_not_ended_twice(
 
     async def resign_first(db: Any, row: Any, now: Any) -> bool:
         async with state.sessions() as other:
-            await game_service.resign(other, row.id, uuid.UUID(alice.id), now)
+            # just before the flag fell
+            await game_service.resign(
+                other, row.id, uuid.UUID(alice.id), now - timedelta(seconds=2)
+            )
         return await real_expire(db, row, now)
 
     monkeypatch.setattr(game_service, "expire", resign_first)

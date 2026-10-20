@@ -1465,7 +1465,7 @@
     "/api/v1/games/{game_id}/emote": {
       "post": {
         "summary": "Emote",
-        "description": "A quick message to my opponent, during the game or just after it. It reaches them\nunless they have turned quick messages off; nothing is kept.",
+        "description": "A quick message to my opponent, during the game or just after it. It reaches them\nunless they have turned quick messages off, or either has blocked the other (as chat);\nnothing is kept.",
         "operationId": "emote_api_v1_games__game_id__emote_post",
         "parameters": [
           {

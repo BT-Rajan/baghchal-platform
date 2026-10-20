@@ -179,7 +179,7 @@ async def _active(app: FastAPI, user_id: str) -> bool:
     async with app.state.ctx.sessions() as db:
         user = await db.get(User, uuid.UUID(user_id))
         assert user is not None
-        return user.is_active
+        return bool(user.is_active)
 
 
 async def test_signing_out_deletes_a_guest_account(app: FastAPI) -> None:

@@ -1,5 +1,6 @@
 """Tournaments: a Pro host's Swiss tournament among friends."""
 
+import asyncio
 import uuid
 from contextlib import AsyncExitStack
 from typing import Any
@@ -269,3 +270,36 @@ async def test_pairings_belong_to_their_tournament_and_one_start_wins(
             409,
             "This game has just been started.",
         )
+
+
+async def test_two_people_looking_at_once_pair_the_next_round_once(
+    app: FastAPI, players: PlayerFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from baghchal_server.tournaments import service as tournaments  # noqa: PLC0415
+
+    names = ("alice", "bob", "carol", "dave")
+    ps = [await players(n) for n in names]
+    people = dict(zip(names, ps, strict=True))
+    code = (await _host(app, ps[0]))["code"]
+    for p in ps[1:]:
+        await p.http.post(f"{URL}/{code}/join")
+    started = (await ps[0].http.post(f"{URL}/{code}/start")).json()
+    async with AsyncExitStack() as stack:
+        await _online(app, stack, *ps)
+        for pairing in [p for p in started["pairings"] if p["round"] == 1]:
+            goat = people[pairing["goat"]["username"]]
+            game = (await _play(goat, code, pairing)).json()
+            assert (await goat.http.post(f"/api/v1/games/{game['id']}/resign")).status_code == 200
+    real = tournaments._ratings
+
+    async def slow(*args: Any, **kwargs: Any) -> Any:
+        found = await real(*args, **kwargs)
+        await asyncio.sleep(0.2)  # both read before either writes
+        return found
+
+    monkeypatch.setattr(tournaments, "_ratings", slow)
+    await asyncio.gather(_get(ps[0], code), _get(ps[1], code))
+    monkeypatch.setattr(tournaments, "_ratings", real)
+    final = await _get(ps[2], code)
+    assert final["round"] == 2
+    assert len([p for p in final["pairings"] if p["round"] == 2]) == 2

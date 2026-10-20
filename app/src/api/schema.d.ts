@@ -741,7 +741,8 @@ export interface paths {
         /**
          * Emote
          * @description A quick message to my opponent, during the game or just after it. It reaches them
-         *     unless they have turned quick messages off; nothing is kept.
+         *     unless they have turned quick messages off, or either has blocked the other (as chat);
+         *     nothing is kept.
          */
         post: operations["emote_api_v1_games__game_id__emote_post"];
         delete?: never;

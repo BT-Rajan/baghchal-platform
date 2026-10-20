@@ -49,7 +49,7 @@ async def of(db: AsyncSession, user_id: uuid.UUID) -> list[AchievementOut]:
             .where(
                 or_(Game.goat_id == user_id, Game.tiger_id == user_id),
                 Game.rated,
-                Game.winner.is_not(None),
+                or_(Game.winner.is_not(None), Game.end_reason == EndReason.DRAW_AGREED),
             )
             .order_by(Game.finished_at)
             .offset(RATED_GAMES - 1)
