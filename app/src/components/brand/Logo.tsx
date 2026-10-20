@@ -8,7 +8,7 @@ import { useId } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
-import { colors, spacing, type } from '@/theme';
+import { colors, spacing, tight, type } from '@/theme';
 
 export const BRAND = 'ClawPlay';
 export const TAGLINE = 'Bagh Chal · tigers and goats, played live';
@@ -63,7 +63,10 @@ export function ClawMark({ size = 48 }: { size?: number }) {
 /** "ClawPlay", with "Play" in amber. Read as one word by screen readers. */
 export function Wordmark({ size = 28, onDark = false }: { size?: number; onDark?: boolean }) {
   return (
-    <Text aria-label={BRAND} style={[styles.word, { fontSize: size, letterSpacing: -size / 40 }]}>
+    <Text
+      aria-label={BRAND}
+      style={[styles.word, { fontSize: size, letterSpacing: tight(-size / 40) }]}
+    >
       <Text style={{ color: onDark ? colors.brandCream : colors.brandInk }}>Claw</Text>
       <Text style={{ color: onDark ? colors.brandLight : colors.brandDeep }}>Play</Text>
     </Text>

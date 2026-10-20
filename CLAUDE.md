@@ -38,7 +38,8 @@
   link (`/invite`), both from `app/src/components/ChallengeForm.tsx` and `POST /challenges`.
 - **Share a link**: `shareLink` in `app/src/lobby/format.ts`.
 - **Confirm an action that is hard to undo** (resign, block, leave a live game):
-  `app/src/components/Confirm.tsx`, shown in place of the button that asked.
+  `app/src/components/Confirm.tsx`, shown in place of the button that asked on the web, and as
+  the apps' own dialog in Android and iOS (the same component either way).
 - **Look and feel**: the tokens in `app/src/theme.ts` (colours by role, the `type` scale,
   `radius`, `shadow`) and the shared components (`Button`, `Segmented`, `Card`, `Notice`,
   `Screen`, `Icon`, `IconButton`). One `primary` button per screen for its main action; other

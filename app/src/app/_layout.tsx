@@ -112,7 +112,7 @@ function Routes() {
             <Stack.Screen name="plans" options={{ headerShown: true, title: 'Plans' }} />
             <Stack.Screen
               name="appearance"
-              options={{ headerShown: true, title: 'Board, pieces and sounds' }}
+              options={{ headerShown: true, title: 'Look and sound' }}
             />
             <Stack.Screen name="invite" options={{ presentation: 'modal' }} />
             <Stack.Screen name="c/[code]" options={{ headerShown: true, title: 'Challenge' }} />

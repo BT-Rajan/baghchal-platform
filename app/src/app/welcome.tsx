@@ -11,7 +11,7 @@ import { Coin } from '@/components/game/Coin';
 import { Segmented } from '@/components/Segmented';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import type { Piece } from '@/game/bfen';
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius, spacing, tight } from '@/theme';
 
 /** Wide enough to put the board beside the words. */
 const WIDE = 880;
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     lineHeight: 42,
     fontWeight: '800',
     color: colors.brandCream,
-    letterSpacing: -0.5,
+    letterSpacing: tight(-0.5),
   },
   page: { flexGrow: 1, backgroundColor: colors.background },
   inner: { width: '100%', maxWidth: 1100, alignSelf: 'center', gap: spacing.lg },
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     lineHeight: 50,
     fontWeight: '800',
     color: colors.brandCream,
-    letterSpacing: -1,
+    letterSpacing: tight(-1),
     marginTop: spacing.md,
   },
   headlineWide: { fontSize: 64, lineHeight: 70 },
