@@ -45,3 +45,10 @@
   actions are `secondary`, utility toggles are an `IconButton`. No one-off colours, font sizes or
   icons in a screen; add a token or an icon to the shared set instead. A screen with a header bar
   does not repeat its title.
+
+## CI is off
+
+The project does not use the CI workflow (`.github/workflows/ci.yml`): never start it, and do
+not wait for it before merging. Check changes locally instead (the server's ruff, mypy and
+pytest; the app's typecheck, lint, format check and tests). The Android test build
+(`.github/workflows/android.yml`) is separate and stays: it makes the APKs.
