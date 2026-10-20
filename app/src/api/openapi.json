@@ -2650,6 +2650,141 @@
         }
       }
     },
+    "/api/v1/admin/code": {
+      "post": {
+        "summary": "Admin Code",
+        "description": "Email me a code that opens the payments page on this device.",
+        "operationId": "admin_code_api_v1_admin_code_post",
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Admin Code Api V1 Admin Code Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/code/check": {
+      "post": {
+        "summary": "Admin Code Check",
+        "description": "Enter the emailed code: this device may use the payments page for 15 minutes.",
+        "operationId": "admin_code_check_api_v1_admin_code_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminCodeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCheckOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/payment-keys": {
+      "get": {
+        "summary": "Get Payment Keys",
+        "description": "Whether payments are on, with which key id, set when and by whom (never the secrets).",
+        "operationId": "get_payment_keys_api_v1_admin_payment_keys_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentKeysOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Put Payment Keys",
+        "description": "Set the Razorpay keys: payments are taken with them at once. Every admin is told.",
+        "operationId": "put_payment_keys_api_v1_admin_payment_keys_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentKeysIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentKeysOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Payment Keys",
+        "description": "Remove the keys: payments are off. Every admin is told.",
+        "operationId": "delete_payment_keys_api_v1_admin_payment_keys_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentKeysOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tournaments": {
       "get": {
         "summary": "My Tournaments",
@@ -3352,6 +3487,35 @@
           "revoke"
         ],
         "title": "ActionKind"
+      },
+      "AdminCheckOut": {
+        "properties": {
+          "until": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Until"
+          }
+        },
+        "type": "object",
+        "required": [
+          "until"
+        ],
+        "title": "AdminCheckOut"
+      },
+      "AdminCodeIn": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[0-9]{6}$",
+            "title": "Code"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "AdminCodeIn"
       },
       "AnalysisOut": {
         "properties": {
@@ -5348,6 +5512,17 @@
             ],
             "title": "Ends At"
           },
+          "games_left": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Games Left"
+          },
           "reason": {
             "type": "string",
             "title": "Reason"
@@ -5396,6 +5571,7 @@
           "feature",
           "starts_at",
           "ends_at",
+          "games_left",
           "reason",
           "granted_by",
           "created_at",
@@ -5912,6 +6088,17 @@
             ],
             "title": "Plan Until"
           },
+          "games_left": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Games Left"
+          },
           "features": {
             "items": {
               "$ref": "#/components/schemas/Feature"
@@ -5925,14 +6112,23 @@
             },
             "type": "array",
             "title": "Grants"
+          },
+          "waiting": {
+            "items": {
+              "$ref": "#/components/schemas/GrantOut"
+            },
+            "type": "array",
+            "title": "Waiting"
           }
         },
         "type": "object",
         "required": [
           "plan",
           "plan_until",
+          "games_left",
           "features",
-          "grants"
+          "grants",
+          "waiting"
         ],
         "title": "MyPlanOut"
       },
@@ -6230,6 +6426,101 @@
         ],
         "title": "PasswordResetRequestIn"
       },
+      "PaymentKeysIn": {
+        "properties": {
+          "key_id": {
+            "type": "string",
+            "pattern": "^rzp_(test|live)_[A-Za-z0-9]{6,40}$",
+            "title": "Key Id"
+          },
+          "key_secret": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "format": "password",
+            "title": "Key Secret",
+            "writeOnly": true
+          },
+          "webhook_secret": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "format": "password",
+            "title": "Webhook Secret",
+            "writeOnly": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key_id",
+          "key_secret",
+          "webhook_secret"
+        ],
+        "title": "PaymentKeysIn",
+        "description": "The Razorpay keys (Dashboard → Account & Settings → API Keys, and → Webhooks)."
+      },
+      "PaymentKeysOut": {
+        "properties": {
+          "on": {
+            "type": "boolean",
+            "title": "On"
+          },
+          "key_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Id"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          },
+          "can_store": {
+            "type": "boolean",
+            "title": "Can Store"
+          },
+          "webhook_url": {
+            "type": "string",
+            "title": "Webhook Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "on",
+          "key_id",
+          "updated_at",
+          "updated_by",
+          "can_store",
+          "webhook_url"
+        ],
+        "title": "PaymentKeysOut",
+        "description": "What the payments page shows: never the secrets."
+      },
       "PaymentOut": {
         "properties": {
           "id": {
@@ -6272,6 +6563,18 @@
             ],
             "title": "Paid At"
           },
+          "starts": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts"
+          },
           "until": {
             "anyOf": [
               {
@@ -6294,6 +6597,7 @@
           "status",
           "created_at",
           "paid_at",
+          "starts",
           "until"
         ],
         "title": "PaymentOut"
@@ -6303,7 +6607,9 @@
         "enum": [
           "created",
           "paid",
-          "failed"
+          "failed",
+          "refunded",
+          "reversed"
         ],
         "title": "PaymentStatus"
       },
@@ -6393,6 +6699,17 @@
             ],
             "title": "Yearly Paise"
           },
+          "games": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Games"
+          },
           "analyses_per_day": {
             "anyOf": [
               {
@@ -6412,6 +6729,7 @@
           "features",
           "monthly_paise",
           "yearly_paise",
+          "games",
           "analyses_per_day"
         ],
         "title": "PlanInfo"
@@ -6467,6 +6785,17 @@
             ],
             "title": "Plan Until"
           },
+          "games_left": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Games Left"
+          },
           "features": {
             "items": {
               "$ref": "#/components/schemas/Feature"
@@ -6480,6 +6809,13 @@
             },
             "type": "array",
             "title": "Grants"
+          },
+          "waiting": {
+            "items": {
+              "$ref": "#/components/schemas/GrantOut"
+            },
+            "type": "array",
+            "title": "Waiting"
           },
           "username": {
             "type": "string",
@@ -6497,8 +6833,10 @@
         "required": [
           "plan",
           "plan_until",
+          "games_left",
           "features",
           "grants",
+          "waiting",
           "username",
           "history"
         ],

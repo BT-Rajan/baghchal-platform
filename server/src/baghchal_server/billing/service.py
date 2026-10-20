@@ -1,7 +1,11 @@
 """What a player may use: their plan's features plus whatever admins have granted them.
 
 Every grant and revocation is written to the moderation log with its reason, and the player is
-told by email. Admins are made from the command line only (``baghchal_server.moderators``).
+told by email.
+
+Plan time is lined up, never stacked (``lay_out``): the dearest plan's time runs first and a
+cheaper plan's waits until it ends, so time bought or given is never spent underneath a better
+plan. Admins are made from the command line only (``baghchal_server.moderators``).
 """
 
 import uuid
@@ -40,6 +44,60 @@ def _active(grant: Grant, now: datetime) -> bool:
         and grant.starts_at <= now
         and (grant.ends_at is None or grant.ends_at > now)
     )
+
+
+async def lay_out(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> None:
+    """Line up the player's plan time from now: Pro's first, then Plus's.
+
+    Each plan's grants run back to back, oldest first, keeping how much time each has left; a
+    running grant keeps its start, a waiting one starts when the time before it ends. Called
+    whenever plan time is added or taken away, before the commit. A plan held for good covers
+    every cheaper one for good, so those are left as they are.
+    """
+    await db.flush()  # the grant just added or revoked
+    # One change at a time per player (two payments confirmed at once).
+    await db.execute(select(User.id).where(User.id == user_id).with_for_update())
+    grants = (
+        await db.scalars(
+            select(Grant)
+            .where(
+                Grant.user_id == user_id,
+                Grant.plan.is_not(None),
+                Grant.revoked_at.is_(None),
+                or_(Grant.ends_at.is_(None), Grant.ends_at > now),
+            )
+            .order_by(Grant.created_at, Grant.starts_at, Grant.id)
+        )
+    ).all()
+    cursor = now
+    for plan in sorted((p for p in Plan if RANK[p] > 0), key=RANK.__getitem__, reverse=True):
+        mine = [g for g in grants if g.plan == plan]
+        if any(g.ends_at is None for g in mine):
+            return
+        for g in mine:
+            left = g.ends_at - max(now, g.starts_at)  # type: ignore[operator]
+            if cursor > now or g.starts_at > now:
+                g.starts_at = cursor
+            g.ends_at = cursor = cursor + left
+
+
+async def count_game(db: AsyncSession, user_ids: Collection[uuid.UUID], now: datetime) -> None:
+    """A finished game uses one game of each player's Plus, where it is counted in games; the
+    last one ends it, and the time lined up after it moves up. Pro is never counted."""
+    for user_id in sorted(user_ids):  # the same order everywhere, so locks never cross
+        # Two of the player's games ending at once count twice.
+        await db.execute(select(User.id).where(User.id == user_id).with_for_update())
+        grants = await _grants(db, user_id, now)
+        if _entitlements(grants).plan != Plan.PLUS:
+            continue
+        running = [g for g in grants if g.plan == Plan.PLUS]
+        if any(g.games_left is None for g in running):
+            continue  # a Plus without a game limit covers this game
+        g = min(running, key=lambda g: (g.starts_at, g.id))
+        g.games_left = (g.games_left or 1) - 1
+        if g.games_left == 0:
+            g.ends_at = now
+            await lay_out(db, user_id, now)
 
 
 async def _grants(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> list[Grant]:
@@ -119,6 +177,7 @@ async def _out(db: AsyncSession, grants: list[Grant], now: datetime) -> list[Gra
             feature=g.feature,
             starts_at=g.starts_at,
             ends_at=g.ends_at,
+            games_left=g.games_left,
             reason=g.reason,
             granted_by=names.get(g.granted_by) if g.granted_by is not None else None,
             created_at=g.created_at,
@@ -130,14 +189,36 @@ async def _out(db: AsyncSession, grants: list[Grant], now: datetime) -> list[Gra
     ]
 
 
+async def _waiting(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> list[Grant]:
+    """Plan time lined up to start later, soonest first."""
+    found = await db.scalars(
+        select(Grant)
+        .where(Grant.user_id == user_id, Grant.revoked_at.is_(None), Grant.starts_at > now)
+        .order_by(Grant.starts_at, Grant.id)
+    )
+    return list(found)
+
+
 async def my_plan(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> MyPlanOut:
     grants = await _grants(db, user_id, now)
+    waiting = await _waiting(db, user_id, now)
     found = _entitlements(grants)
+    until = found.plan_until
+    running = [g for g in grants if g.plan == found.plan]
+    games: int | None = None
+    if running and all(g.games_left is not None for g in running):
+        games = min(g.games_left or 0 for g in running)
+    for g in waiting:  # the same plan's time lined up straight after: it simply goes on
+        if until is not None and g.plan == found.plan and g.starts_at <= until:
+            until = None if g.ends_at is None else max(until, g.ends_at)
+            games = None if games is None or g.games_left is None else games + g.games_left
     return MyPlanOut(
         plan=found.plan,
-        plan_until=found.plan_until,
+        plan_until=until,
+        games_left=games,
         features=sorted(found.features),
         grants=await _out(db, grants, now),
+        waiting=await _out(db, waiting, now),
     )
 
 
@@ -194,10 +275,14 @@ async def grant(
         created_at=now,
     )
     db.add(row)
+    if row.plan is not None:
+        await lay_out(db, target.id, now)
     what = _what(row)
     _log(db, now, admin, target, action=ActionKind.GRANT, reason=f"{what}: {data.reason}")
     await db.commit()
     until = "for good" if row.ends_at is None else f"until {row.ends_at:%d %B %Y}"
+    if row.starts_at > now:
+        until = f"from {row.starts_at:%d %B %Y}, when your better plan ends, {until}"
     mail = Mail(
         target.email,
         f"You have {what}",
@@ -213,12 +298,14 @@ async def revoke(
     row = await db.get(Grant, grant_id)
     if row is None:
         raise AppError(404, "grant_not_found", "No such grant.")
-    if not _active(row, now):
+    if row.revoked_at is not None or (row.ends_at is not None and row.ends_at <= now):
         raise AppError(409, "grant_not_active", "This grant has already ended.")
     target = await db.get(User, row.user_id)
     assert target is not None  # noqa: S101 - grants go when their player does
     row.revoked_at = now
     row.revoked_by = admin.id
+    if row.plan is not None:  # the time lined up after it moves up
+        await lay_out(db, target.id, now)
     what = _what(row)
     _log(db, now, admin, target, action=ActionKind.REVOKE, reason=f"{what}: {reason}")
     await db.commit()

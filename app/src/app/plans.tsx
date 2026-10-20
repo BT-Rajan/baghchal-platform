@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
 
 import type { MyPlan, Period, PlanInfo } from '@/api/endpoints';
 import { comparisonRows, myPlanText, PLAN_NAMES, priceText, yearlySaving } from '@/billing/format';
@@ -8,8 +8,16 @@ import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
-import { buyErrorText, buyLabel, paymentText, thanksText } from '@/payments/format';
+import {
+  buyErrorText,
+  buyLabel,
+  paymentText,
+  periodsOf,
+  refusedAsMinor,
+  thanksText,
+} from '@/payments/format';
 import { useBuy, usePayments } from '@/payments/hooks';
+import { WEB_URL } from '@/config';
 import { colors, radius, spacing, type } from '@/theme';
 
 /** Free, Plus and Pro: what each costs, a way to buy it, and a table of what each includes. */
@@ -20,6 +28,10 @@ export default function Plans() {
   const buy = useBuy();
   const error = plans.error ?? mine.error ?? payments.error;
   const buyError = buy.error === null ? null : buyErrorText(buy.error);
+  // Under 18: the server told their parent; buying stays off.
+  const minor = refusedAsMinor(buy.error);
+  // The apps do not sell plans (Razorpay Checkout runs on the website only): they send there.
+  const inApp = Platform.OS !== 'web';
   return (
     <Screen align="top" wide>
       {error !== null ? (
@@ -46,27 +58,39 @@ export default function Plans() {
             be bought: paid plans add extras, not advantages.
           </Hint>
           <View style={styles.grid}>
-            {plans.data.map((plan) => {
+            {plans.data.map((plan, i) => {
               const paid = plan.plan === 'free' ? null : plan.plan;
               return (
                 <PlanColumn
                   key={plan.plan}
                   plan={plan}
                   mine={mine.data}
+                  // The server lists the plans cheapest first.
+                  cheaper={i < plans.data.findIndex((p) => p.plan === mine.data.plan)}
                   onBuy={
-                    payments.data.enabled && paid !== null
+                    payments.data.enabled && paid !== null && !inApp
                       ? (period) => buy.mutate({ plan: paid, period })
                       : null
                   }
-                  buying={buy.isPending}
+                  buying={buy.isPending || minor}
                 />
               );
             })}
           </View>
+          {inApp && payments.data.enabled && (
+            <>
+              <Notice tone="info">Plans are bought on the ClawPlay website.</Notice>
+              <Button
+                title="Buy on the website"
+                variant="secondary"
+                onPress={() => void Linking.openURL(`${WEB_URL}/plans`)}
+              />
+            </>
+          )}
           <Comparison plans={plans.data} mine={mine.data} />
           <Hint>
             {payments.data.enabled
-              ? 'Payments are taken by Razorpay: cards, UPI, net banking and wallets. Plans are paid in advance for a month or a year and never renew by themselves; buying again adds on to the time you have.'
+              ? 'Payments are taken by Razorpay: cards, UPI, net banking and wallets. Plus lasts 45 finished games or a month, whichever comes first; Pro has no limits. Plans are paid in advance and never renew by themselves; buying again adds on. Pro starts at once, and Plus you had left follows it; Plus bought while you have Pro starts when Pro ends. Players under 18 cannot buy plans: their parent or guardian is told instead.'
               : 'Paying online is coming soon. Until then, ClawPlay can add a plan to your account.'}
           </Hint>
           {payments.data.payments.length > 0 && (
@@ -75,7 +99,7 @@ export default function Plans() {
               <Card>
                 {payments.data.payments.map((p) => (
                   <Text key={p.id} style={styles.payment}>
-                    {paymentText(p)}
+                    {paymentText(p, plans.data.find((info) => info.plan === p.plan)?.games ?? null)}
                   </Text>
                 ))}
               </Card>
@@ -90,11 +114,14 @@ export default function Plans() {
 function PlanColumn({
   plan,
   mine,
+  cheaper,
   onBuy,
   buying,
 }: {
   plan: PlanInfo;
   mine: MyPlan;
+  /** Cheaper than the player's plan: time bought now waits for it to end. */
+  cheaper: boolean;
   /** Null where this plan cannot be bought (Free, or payments off). */
   onBuy: ((period: Period) => void) | null;
   buying: boolean;
@@ -113,13 +140,16 @@ function PlanColumn({
         {current && <Text style={styles.badge}>Your plan</Text>}
         <Text style={styles.price}>{priceText(plan)}</Text>
         {saving !== null && <Text style={styles.saving}>{saving}</Text>}
+        {onBuy !== null && cheaper && (
+          <Hint>{`Starts when your ${PLAN_NAMES[mine.plan]} ends, so none of it is spent underneath it.`}</Hint>
+        )}
         {onBuy !== null &&
-          (['year', 'month'] as const).map((period) => (
+          periodsOf(plan).map((period, i) => (
             <Button
               key={period}
               title={`Buy ClawPlay ${PLAN_NAMES[plan.plan]} for a ${period}`}
               label={buyLabel(plan, period)}
-              variant={period === 'year' ? 'primary' : 'secondary'}
+              variant={i === 0 ? 'primary' : 'secondary'}
               disabled={buying}
               onPress={() => onBuy(period)}
             />

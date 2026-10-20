@@ -10,6 +10,7 @@ const ALICE = { id: ME.id, username: 'alice' };
 const PRO: MyPlan = {
   plan: 'pro',
   plan_until: null,
+  games_left: null,
   features: [
     'analysis',
     'badge',
@@ -20,6 +21,7 @@ const PRO: MyPlan = {
     'trainer',
   ],
   grants: [],
+  waiting: [],
 };
 
 function open(url: string, routes: Record<string, Route> = {}, plan: MyPlan | null = PRO) {

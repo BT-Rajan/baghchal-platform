@@ -23,13 +23,13 @@ export function error(status: number, code: string, message = code, fields?: unk
 }
 
 /** The versions of the terms and privacy policy the server has now. */
-export const LEGAL = { terms: '2026-10-19', privacy: '2026-10-19' };
+export const LEGAL = { terms: '2026-10-20', privacy: '2026-10-20' };
 
 /** What a form sends for an adult who agrees to the current texts. */
 export const AGREED = {
   birth_month: '1990-01',
-  terms_version: '2026-10-19',
-  privacy_version: '2026-10-19',
+  terms_version: '2026-10-20',
+  privacy_version: '2026-10-20',
 };
 
 export function fakeServer(routes: Record<string, Route> = {}) {

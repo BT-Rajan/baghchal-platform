@@ -50,7 +50,7 @@ from baghchal_server.moderation.routes import router as moderation_router
 from baghchal_server.notifications import models as _notification_models  # noqa: F401  (registers tables)
 from baghchal_server.notifications.routes import router as notifications_router
 from baghchal_server.payments import models as _payments_models  # noqa: F401  (registers tables)
-from baghchal_server.payments.gateway import Gateway, RazorpayGateway
+from baghchal_server.payments.keys import Gateways, MakeGateway
 from baghchal_server.payments.routes import router as payments_router
 from baghchal_server.ratelimit import MemoryRateLimiter, RateLimiter, RedisRateLimiter
 from baghchal_server.ratings import models as _rating_models  # noqa: F401  (registers tables)
@@ -108,7 +108,7 @@ def create_app(
     mailer: Mailer | None = None,
     limiter: RateLimiter | None = None,
     clock: Callable[[], datetime] | None = None,
-    gateway: Gateway | None = None,
+    make_gateway: MakeGateway | None = None,
 ) -> FastAPI:
     settings = settings or Settings()
     configure_logging(settings)
@@ -146,14 +146,7 @@ def create_app(
             metrics=metrics,
             computer=ComputerPlayers(settings.computer_workers),
             fair_play=FairPlayChecker(settings.fair_play_workers),
-            gateway=gateway
-            or (
-                RazorpayGateway(
-                    settings.razorpay_key_id, settings.razorpay_key_secret.get_secret_value()
-                )
-                if settings.payments_enabled
-                else None
-            ),
+            gateways=Gateways(make_gateway) if make_gateway else Gateways(),
         )
         loops = [
             (settings.game_sweeper, run_sweeper),
@@ -171,8 +164,7 @@ def create_app(
                     await task
             await app.state.ctx.computer.stop()
             app.state.ctx.fair_play.stop()
-            if app.state.ctx.gateway is not None:
-                await app.state.ctx.gateway.close()
+            await app.state.ctx.gateways.close()
             await hub.stop()
             await engine.dispose()
             if redis is not None:

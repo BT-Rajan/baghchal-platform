@@ -31,10 +31,10 @@ describe('plans', () => {
     await press('See Plus and Pro');
     await waitFor(() => expect(app.getPathname()).toBe('/plans'));
     expect(await screen.findByRole('heading', { name: 'Plus' })).toBeOnTheScreen();
-    expect(screen.getByText('₹149 a month · ₹1,490 a year')).toBeOnTheScreen();
+    expect(screen.getByText('₹149 for 45 games or a month')).toBeOnTheScreen();
     expect(screen.getByText('Opening and endgame trainer')).toBeOnTheScreen();
     expect(screen.getAllByLabelText('Pro: included').length).toBeGreaterThan(3);
-    expect(screen.getAllByText('2 months free when you pay for a year')).toHaveLength(2);
+    expect(screen.getAllByText('2 months free when you pay for a year')).toHaveLength(1);
     expect(screen.getByLabelText('Plus: 5 a day')).toBeOnTheScreen();
     expect(screen.getByLabelText('Free, your plan')).toBeOnTheScreen();
   });
@@ -94,6 +94,7 @@ describe('admins', () => {
     feature: null,
     starts_at: '2026-01-01T12:00:00Z',
     ends_at: '2026-01-31T12:00:00Z',
+    games_left: null,
     reason: 'Welcome gift',
     granted_by: 'alice',
     created_at: '2026-01-01T12:00:00Z',

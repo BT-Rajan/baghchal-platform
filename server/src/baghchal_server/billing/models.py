@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, Index, String, Uuid
+from sqlalchemy import ForeignKey, Index, Integer, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from baghchal_server.db import MYSQL_TABLE_ARGS, Base, UTCDateTime
@@ -27,6 +27,8 @@ class Grant(Base):
     starts_at: Mapped[datetime] = mapped_column(UTCDateTime)
     ends_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     """None: until revoked."""
+    games_left: Mapped[int | None] = mapped_column(Integer)
+    """Finished games it still lasts (bought Plus); None: no limit. At 0 it ends."""
     reason: Mapped[str] = mapped_column(String(500))
     granted_by: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="SET NULL")

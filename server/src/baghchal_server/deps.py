@@ -17,7 +17,6 @@ from baghchal_server.errors import AppError
 from baghchal_server.legal.age import plays_people
 from baghchal_server.mail import Mailer
 from baghchal_server.metrics import Metrics
-from baghchal_server.payments.gateway import Gateway
 from baghchal_server.ratelimit import Limit, RateLimiter
 from baghchal_server.realtime.hub import Hub
 from baghchal_server.realtime.presence import Presence
@@ -26,6 +25,7 @@ from baghchal_server.security import PasswordHasher
 if TYPE_CHECKING:
     from baghchal_server.fair_play.worker import FairPlayChecker
     from baghchal_server.games.computer import ComputerPlayers
+    from baghchal_server.payments.keys import Gateways
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,8 +43,8 @@ class AppState:
     metrics: Metrics
     computer: "ComputerPlayers"
     fair_play: "FairPlayChecker"
-    gateway: Gateway | None
-    """Razorpay, when payments are configured."""
+    gateways: "Gateways"
+    """Razorpay, for the keys an admin entered (see ``payments.keys``)."""
 
 
 def get_state(request: Request) -> AppState:

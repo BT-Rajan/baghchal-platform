@@ -135,6 +135,7 @@ function Routes() {
             name="moderation/[username]"
             options={{ headerShown: true, title: 'Moderation' }}
           />
+          <Stack.Screen name="admin/payments" options={{ headerShown: true, title: 'Payments' }} />
         </Stack.Protected>
         <Stack.Protected guard={agreeing} redirectTo="/welcome">
           <Stack.Screen name="agree" />
