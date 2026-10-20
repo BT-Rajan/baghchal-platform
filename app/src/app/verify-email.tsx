@@ -20,7 +20,8 @@ export default function VerifyEmail() {
     mutationFn: async (linkToken: string) => {
       await session.start(await session.api.verifyEmail(linkToken));
     },
-    onSuccess: () => router.replace('/'),
+    // A new account's first stop: an optional board, pieces and friends.
+    onSuccess: () => router.replace('/make-it-yours'),
   });
   // The token is single-use: send it once, even when effects run twice in development.
   const sent = useRef(false);

@@ -139,6 +139,8 @@ describe('a guest', () => {
       email: 'sita@example.com',
       password: 'correct horse',
     });
+    // Making it yours is offered; it is optional.
+    expect(screen.getByRole('button', { name: 'Make it yours' })).toBeOnTheScreen();
     await press('Back to playing');
     await waitFor(() => expect(app.getPathname()).toBe('/'));
     expect(screen.queryByText(/^You are playing as/)).toBeNull();
