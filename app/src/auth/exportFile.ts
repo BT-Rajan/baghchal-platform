@@ -11,14 +11,14 @@ export async function saveExport(data: DataExport, os: string = Platform.OS): Pr
   const json = JSON.stringify(data, null, 2);
   if (os === 'web') {
     const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-    try {
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = exportFileName(data);
-      link.click();
-    } finally {
-      URL.revokeObjectURL(url);
-    }
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = exportFileName(data);
+    // In the page, and the address kept a moment: some browsers drop the download otherwise.
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
     return;
   }
   // Apps: the share sheet saves it to Files, mails it, or opens it in another app.

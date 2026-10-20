@@ -32,10 +32,13 @@ test('the file is named after the player', () => {
 });
 
 test('the web downloads a JSON file', async () => {
+  jest.useFakeTimers();
   const click = jest.fn();
-  const link = { href: '', download: '', click };
+  const remove = jest.fn();
+  const link = { href: '', download: '', click, remove };
   const createElement = jest.fn(() => link);
-  Object.assign(globalThis, { document: { createElement } });
+  const appendChild = jest.fn();
+  Object.assign(globalThis, { document: { createElement, body: { appendChild } } });
   const blobs: Blob[] = [];
   URL.createObjectURL = jest.fn((blob: Blob) => {
     blobs.push(blob);
@@ -46,8 +49,13 @@ test('the web downloads a JSON file', async () => {
   await saveExport(DATA, 'web');
   expect(createElement).toHaveBeenCalledWith('a');
   expect(link).toMatchObject({ href: 'blob:export', download: 'clawplay-alice.json' });
+  expect(appendChild).toHaveBeenCalledWith(link);
   expect(click).toHaveBeenCalled();
+  expect(remove).toHaveBeenCalled();
+  expect(URL.revokeObjectURL).not.toHaveBeenCalled(); // kept a moment for the download
+  jest.advanceTimersByTime(60_000);
   expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:export');
+  jest.useRealTimers();
   expect(blobs[0]?.type).toBe('application/json');
   expect(JSON.parse(await blobs[0]!.text())).toEqual(DATA);
 });

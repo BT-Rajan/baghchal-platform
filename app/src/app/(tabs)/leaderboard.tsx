@@ -113,7 +113,7 @@ function Podium({ entry, medal, isMe }: { entry: LeaderboardEntry; medal: string
       </View>
       <Name entry={entry} isMe={isMe} />
       <Text style={styles.bigRating}>{String(entry.rating)}</Text>
-      <Text style={styles.games}>{`${entry.games} games`}</Text>
+      <Text style={styles.games}>{`${entry.games} ${entry.games === 1 ? 'game' : 'games'}`}</Text>
     </View>
   );
 }
@@ -124,7 +124,7 @@ function Row({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
       <Text style={styles.rank}>{`#${entry.rank}`}</Text>
       <Name entry={entry} isMe={isMe} />
       <Text style={styles.rating}>{String(entry.rating)}</Text>
-      <Text style={styles.games}>{`${entry.games} games`}</Text>
+      <Text style={styles.games}>{`${entry.games} ${entry.games === 1 ? 'game' : 'games'}`}</Text>
     </View>
   );
 }

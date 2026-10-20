@@ -21,7 +21,7 @@ const MAX_LENGTH = 200;
  * computer, a guest or a player under 18, who keep the quick messages.
  */
 export function ChatPanel({ game, mine }: { game: Game; mine: Piece }) {
-  const chat = useChat(game.id, game.computer === null);
+  const chat = useChat(game.id, game.computer === null, game.status !== 'active');
   const send = useSendChat(game.id);
   const [text, setText] = useState('');
   const data = chat.data;
@@ -31,7 +31,7 @@ export function ChatPanel({ game, mine }: { game: Game; mine: Piece }) {
 
   const submit = () => {
     const message = text.trim();
-    if (message === '') return;
+    if (message === '' || send.isPending) return; // Enter pressed twice sends once
     send.mutate(message, { onSuccess: () => setText('') });
   };
 
@@ -40,8 +40,7 @@ export function ChatPanel({ game, mine }: { game: Game; mine: Piece }) {
       <SectionTitle>Chat</SectionTitle>
       {data.closed_because === 'messages_off' ? (
         <Hint>
-          Chat is off because one of you turned messages off. Turn them on with the speech bubble
-          above to chat.
+          Chat is off because one of you has turned messages off (the speech bubble above).
         </Hint>
       ) : (
         <>

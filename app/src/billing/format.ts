@@ -1,5 +1,6 @@
 /** Words for plans, features, prices and grants. */
 import type { Feature, Grant, MyPlan, PaidPlan, Plan, PlanInfo } from '@/api/endpoints';
+import { dayText } from '@/lobby/format';
 
 export const PLAN_NAMES: Record<Plan, string> = { free: 'Free', plus: 'Plus', pro: 'Pro' };
 
@@ -35,15 +36,6 @@ export function priceText(plan: PlanInfo): string {
     return `${rupees(plan.monthly_paise)} for ${plan.games} games or a month`;
   const year = plan.yearly_paise === null ? '' : ` · ${rupees(plan.yearly_paise)} a year`;
   return `${rupees(plan.monthly_paise)} a month${year}`;
-}
-
-function dayText(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
 }
 
 /** " Then ClawPlay Plus until 30 Jan 2028.": plan time lined up after the current plan. */
@@ -92,7 +84,10 @@ export function grantText(grant: Grant, now: number = Date.now()): string {
         : Date.parse(grant.starts_at) > now
           ? `from ${dayText(grant.starts_at)} until ${dayText(grant.ends_at)}`
           : `${grant.active ? 'until' : 'ended'} ${dayText(grant.ends_at)}`;
-  const games = grant.games_left === null ? '' : ` · ${grant.games_left} games left`;
+  const games =
+    grant.games_left === null
+      ? ''
+      : ` · ${grant.games_left} ${grant.games_left === 1 ? 'game' : 'games'} left`;
   return grant.paid
     ? `${what} · ${when}${games} · ${grant.reason}`
     : `${what} · ${when} · given by ${grant.granted_by ?? 'a former admin'}: ${grant.reason}`;

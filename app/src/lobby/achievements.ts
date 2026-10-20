@@ -1,4 +1,5 @@
 /** Words for achievements. */
+import { dayText } from './format';
 import type { Achievement } from '@/api/endpoints';
 
 export const ACHIEVEMENTS: Record<Achievement['key'], { name: string; text: string }> = {
@@ -20,11 +21,5 @@ export function achievementCount(list: readonly Achievement[]): string {
 
 /** "Earned 3 Oct 2026". */
 export function earnedText(iso: string): string {
-  const day = new Date(iso).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
-  return `Earned ${day}`;
+  return `Earned ${dayText(iso)}`;
 }

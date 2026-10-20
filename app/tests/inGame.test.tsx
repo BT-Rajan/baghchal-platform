@@ -148,7 +148,7 @@ describe('chat', () => {
       [CHAT]: { status: 200, body: { open: false, closed_because: 'messages_off', messages: [] } },
     });
     expect(
-      await screen.findByText(/^Chat is off because one of you turned messages off/),
+      await screen.findByText(/^Chat is off because one of you has turned messages off/),
     ).toBeOnTheScreen();
   });
 });
@@ -226,6 +226,9 @@ describe('premoves', () => {
     });
     expect(await screen.findByText('Your move')).toBeOnTheScreen();
     expect(screen.queryByText(/^Premove:/)).toBeNull();
+    expect(
+      screen.getByText('Your premove e3 is no longer possible: make your move.'),
+    ).toBeOnTheScreen();
     expect(server.requests.some((r) => r.path === '/api/v1/games/g1/moves')).toBe(false);
   });
 });

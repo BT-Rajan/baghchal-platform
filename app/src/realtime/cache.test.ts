@@ -196,6 +196,7 @@ test('after a reconnect, challenges, friends and games are fetched again', async
     queryKeys.notifications,
     queryKeys.activeGames,
     ['game'],
+    ['chat'],
   ]);
 });
 
@@ -214,4 +215,18 @@ describe('chat', () => {
       messages: [message],
     });
   });
+});
+
+test('a game that ends asks again for results, the plan and its chat', () => {
+  const qc = new QueryClient();
+  const live = game({ status: 'active', ply: 4, server_time: '2026-01-01T12:00:00Z' });
+  applyGame(qc, live);
+  const invalidate = jest.spyOn(qc, 'invalidateQueries');
+  applyGame(qc, { ...live, status: 'finished', ply: 5, server_time: '2026-01-01T12:00:05Z' });
+  expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
+    ['chat', live.id],
+    ['me', 'plan'],
+    ['player-games'],
+    ['player'],
+  ]);
 });

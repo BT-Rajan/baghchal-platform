@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { Level, Side, TimeControl } from '@/api/endpoints';
@@ -17,7 +18,7 @@ import { Segmented } from '@/components/Segmented';
 import { Upsell } from '@/components/Upsell';
 import { useServerNow } from '@/components/useNow';
 import { TimeControlPicker } from '@/components/TimeControlPicker';
-import { LEVELS, secondsLeft, waitingText } from '@/lobby/format';
+import { LEVELS, secondsLeft, timeControlName, waitingText } from '@/lobby/format';
 import { PRESENCE_REFRESH_MS, useOpenStartedGame } from '@/lobby/hooks';
 import { colors, spacing } from '@/theme';
 
@@ -54,6 +55,8 @@ function FindOpponent({ timeControl }: { timeControl: TimeControl }) {
   const openStarted = useOpenStartedGame();
   const [mode, setMode] = useState<'casual' | 'rated'>('casual');
   const [waitingUntil, setWaitingUntil] = useState<string | null>(null);
+  // What the search is for: the pickers may change while it runs.
+  const [sought, setSought] = useState('');
   const counts = useQuery({
     queryKey: queryKeys.seekCounts,
     queryFn: ({ signal }) => api.seekCounts(signal),
@@ -63,7 +66,10 @@ function FindOpponent({ timeControl }: { timeControl: TimeControl }) {
     mutationFn: () => api.seek(timeControl, mode === 'rated'),
     onSuccess: (result) => {
       if (result.game) openStarted(result.game);
-      else setWaitingUntil(result.expires_at);
+      else {
+        setSought(`${timeControlName(timeControl)} ${mode}`);
+        setWaitingUntil(result.expires_at);
+      }
     },
   });
   const stop = useMutation({
@@ -71,16 +77,21 @@ function FindOpponent({ timeControl }: { timeControl: TimeControl }) {
     onSettled: () => setWaitingUntil(null),
   });
 
-  // Leaving the screen stops the search (a pairing opens the game, which also leaves it).
+  // Leaving the screen stops the search; a pairing opens the game, which also leaves it, and
+  // coming back shows no search for a seek the server has already used.
   const waitingRef = useRef(false);
   useEffect(() => {
     waitingRef.current = waitingUntil !== null;
   }, [waitingUntil]);
-  useEffect(
-    () => () => {
-      if (waitingRef.current) void api.stopSeeking().catch(() => {});
-    },
-    [api],
+  useFocusEffect(
+    useCallback(
+      () => () => {
+        if (!waitingRef.current) return;
+        void api.stopSeeking().catch(() => {});
+        setWaitingUntil(null);
+      },
+      [api],
+    ),
   );
 
   const left = waitingUntil === null ? 0 : secondsLeft(waitingUntil, now);
@@ -101,9 +112,7 @@ function FindOpponent({ timeControl }: { timeControl: TimeControl }) {
         {seek.error !== null && <Notice tone="error">{describeError(seek.error)}</Notice>}
         {waiting ? (
           <>
-            <Notice tone="info">
-              {`Looking for an opponent for ${timeControl} ${mode}… ${left} s`}
-            </Notice>
+            <Notice tone="info">{`Looking for an opponent for ${sought}… ${left} s`}</Notice>
             <Button
               title="Stop looking"
               variant="secondary"

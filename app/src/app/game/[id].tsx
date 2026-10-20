@@ -93,6 +93,14 @@ export default function GameScreen() {
     played.current = key;
     move.mutate({ ply: game.ply, move: premove.move });
   }, [game, premove, myTurnNow, move]);
+  // A premove the opponent's reply made impossible: say so, rather than let it vanish.
+  const droppedPremove =
+    game !== undefined &&
+    premove !== null &&
+    game.ply === premove.ply + 1 &&
+    premoveDecision(premove.move, myTurnNow, game.legal_moves) === 'drop'
+      ? premove.move
+      : null;
   const waitingPremove =
     game !== undefined && premove !== null && game.status === 'active' && game.ply === premove.ply
       ? premove.move
@@ -191,6 +199,9 @@ export default function GameScreen() {
             onPress={() => router.navigate('/')}
           />
         </View>
+      )}
+      {droppedPremove !== null && (
+        <Notice tone="info">{`Your premove ${droppedPremove} is no longer possible: make your move.`}</Notice>
       )}
       {waitingPremove !== null && (
         <View style={styles.premove}>

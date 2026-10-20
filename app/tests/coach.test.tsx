@@ -17,7 +17,7 @@ function openGame(served: ReturnType<typeof game>) {
 }
 
 describe('the coach', () => {
-  test('marks goats in danger in games against the Easy computer', async () => {
+  test('tips about goats in danger against the Easy computer; the board marks none', async () => {
     await openGame(
       game({
         tiger: CPU,
@@ -31,7 +31,7 @@ describe('the coach', () => {
       }),
     );
     expect(await screen.findByText('A goat in danger')).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: /^a2, goat, in danger/ })).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: /in danger/ })).toBeNull();
   });
 
   test('stays out of other games', async () => {
