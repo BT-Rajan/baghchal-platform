@@ -8,7 +8,7 @@ import { useId } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
-import { colors, spacing } from '@/theme';
+import { colors, spacing, type } from '@/theme';
 
 export const BRAND = 'ClawPlay';
 export const TAGLINE = 'Bagh Chal · tigers and goats, played live';
@@ -100,12 +100,27 @@ export function BrandHeader() {
   );
 }
 
-/** A slim bar across the top of the main tabs. */
-/** The ClawPlay bar above the tabs; `children` sit at its right end (the notifications bell). */
-export function BrandBar({ children }: { children?: ReactNode }) {
+/**
+ * The bar above the tabs: the ClawPlay logo on the first tab, the tab's own title on the
+ * others (as Android and iOS apps name the place you are in); `children` sit at its right end
+ * (the notifications bell).
+ */
+export function BrandBar({
+  title = null,
+  children,
+}: {
+  title?: string | null;
+  children?: ReactNode;
+}) {
   return (
     <View role="banner" style={styles.bar}>
-      <Brand size={30} onDark />
+      {title === null ? (
+        <Brand size={30} onDark />
+      ) : (
+        <Text role="heading" numberOfLines={1} style={styles.barTitle}>
+          {title}
+        </Text>
+      )}
       {children !== undefined && <View style={styles.end}>{children}</View>}
     </View>
   );
@@ -117,6 +132,14 @@ const styles = StyleSheet.create({
   tagline: { fontSize: 14, color: colors.muted, marginTop: 2 },
   header: { alignItems: 'center', marginBottom: spacing.md },
   end: { marginLeft: 'auto' },
+  // As tall as the logo, so the bar keeps its height from tab to tab.
+  barTitle: {
+    ...type.heading,
+    fontSize: 20,
+    lineHeight: 30,
+    color: colors.brandCream,
+    flexShrink: 1,
+  },
   bar: {
     backgroundColor: colors.brandInk,
     paddingHorizontal: spacing.md,

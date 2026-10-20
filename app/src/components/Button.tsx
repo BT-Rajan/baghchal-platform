@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing, type } from '@/theme';
 
@@ -36,6 +36,7 @@ export function Button({
   variant = 'primary',
 }: ButtonProps) {
   const inactive = busy || disabled;
+  const android = Platform.OS === 'android';
   return (
     <Pressable
       role="button"
@@ -44,10 +45,13 @@ export function Button({
       aria-disabled={inactive}
       disabled={inactive}
       onPress={onPress}
+      // Android's buttons are 40 tall; the touch area still reaches 48.
+      hitSlop={android ? 4 : undefined}
       {...ripple(variant !== 'secondary')}
       style={(state) => [
         styles.button,
-        compact && styles.compact,
+        android && styles.android,
+        compact && (android ? styles.androidCompact : styles.compact),
         styles[variant],
         pressedLook(state.pressed, styles.pressed),
         inactive && styles.dim,
@@ -59,7 +63,14 @@ export function Button({
       ) : (
         <View style={styles.content}>
           {icon !== undefined && <Icon name={icon} color={TEXT[variant]} size={20} />}
-          <Text style={[styles.text, compact && styles.compactText, { color: TEXT[variant] }]}>
+          <Text
+            style={[
+              styles.text,
+              compact && styles.compactText,
+              android && styles.androidText,
+              { color: TEXT[variant] },
+            ]}
+          >
             {label}
           </Text>
         </View>
@@ -96,4 +107,8 @@ const styles = StyleSheet.create({
   dim: { opacity: 0.55 },
   text: { ...type.body, fontWeight: '700' },
   compactText: { fontSize: 15 },
+  // Android: a full pill, 40 tall, medium-weight text, as its own buttons are.
+  android: { minHeight: 40, borderRadius: radius.pill, paddingHorizontal: spacing.lg },
+  androidCompact: { paddingHorizontal: spacing.md },
+  androidText: { fontSize: 14, lineHeight: 20, fontWeight: '500', letterSpacing: 0.1 },
 });

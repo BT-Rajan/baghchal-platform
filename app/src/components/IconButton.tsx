@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet } from 'react-native';
+import { Platform, Pressable, StyleSheet } from 'react-native';
 
 import { colors, radius } from '@/theme';
 
@@ -31,6 +31,7 @@ export function IconButton({
       {...ripple()}
       style={(state) => [
         styles.button,
+        Platform.OS === 'android' && styles.androidTouch,
         pressedLook(state.pressed, styles.pressed),
         focusRing(state),
       ]}
@@ -41,7 +42,9 @@ export function IconButton({
 }
 
 const styles = StyleSheet.create({
-  // 44 points: the smallest comfortable touch target.
+  // Android's guidelines ask for 48.
+  androidTouch: { minWidth: 48, minHeight: 48 },
+  // 44 points: the smallest comfortable touch target (48 on Android, as its guidelines ask).
   button: {
     width: 44,
     height: 44,

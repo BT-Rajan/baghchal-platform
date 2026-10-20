@@ -1,5 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { HeaderHeightContext, NavigationContext } from 'expo-router/react-navigation';
+import {
+  HeaderHeightContext,
+  NavigationContext,
+  NavigationRouteContext,
+} from 'expo-router/react-navigation';
 import { BottomTabBarHeightContext } from 'expo-router/tabs';
 import { useContext, useLayoutEffect, useState, type ReactElement, type ReactNode } from 'react';
 import {
@@ -19,6 +23,7 @@ import { colors, spacing, type } from '@/theme';
 import { AppBanners, BannersOnScreens } from './AppBanners';
 import { BrandHeader } from './brand/Logo';
 import { SiteFooter } from './site/SiteFooter';
+import { LOGO_TAB } from './tabs';
 
 interface ScreenProps {
   /** The page's heading. Leave it out where the header bar already names the page. */
@@ -81,9 +86,14 @@ function Page({
   const edges: Edge[] = ['left', 'right'];
   if (headerHeight === 0) edges.push('top');
   if (!inTabs) edges.push('bottom');
-  // Under a screen's own app bar, the title goes in the bar, not again in the page.
+  // Under a header bar (a screen's app bar, or the tabs' bar), the title goes in the bar, not
+  // again in the page.
+  // (The home tab's bar carries the logo instead, so its title stays in the page.)
   const navigation = useContext(NavigationContext);
-  const titleInBar = headerHeight > 0 && !inTabs && title !== undefined && navigation !== undefined;
+  const route = useContext(NavigationRouteContext);
+  const logoBar = inTabs && route?.name === LOGO_TAB;
+  const titleInBar =
+    headerHeight > 0 && title !== undefined && navigation !== undefined && !logoBar;
   useLayoutEffect(() => {
     if (titleInBar) navigation?.setOptions({ title });
   }, [titleInBar, navigation, title]);
