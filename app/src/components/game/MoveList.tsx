@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { movePairs } from '@/game/describe';
+import { t } from '@/i18n';
 import { colors, radius, spacing } from '@/theme';
 
 import { Hint } from '../Card';
@@ -20,7 +21,7 @@ export function MoveList({
   current?: number;
   onShow?: (ply: number) => void;
 }) {
-  if (moves.length === 0) return <Hint>No moves yet. Goats move first.</Hint>;
+  if (moves.length === 0) return <Hint>{t('No moves yet. Goats move first.')}</Hint>;
   const move = (text: string | undefined, ply: number) => {
     if (text === undefined) return null;
     if (onShow === undefined) return <Text style={styles.move}>{text}</Text>;
@@ -28,7 +29,7 @@ export function MoveList({
     return (
       <Pressable
         role="button"
-        aria-label={`Show move ${ply}: ${text}`}
+        aria-label={t('Show move {ply}: {move}', { ply, move: text })}
         aria-pressed={selected}
         onPress={() => onShow(ply)}
         {...ripple(selected)}
@@ -39,7 +40,7 @@ export function MoveList({
     );
   };
   return (
-    <View style={styles.list} aria-label="Moves">
+    <View style={styles.list} aria-label={t('Moves')}>
       {movePairs(moves).map(([number, goat, tiger], i) => (
         <View key={number} style={styles.pair}>
           <Text style={styles.number}>{number}</Text>
@@ -52,7 +53,14 @@ export function MoveList({
 }
 
 const styles = StyleSheet.create({
-  list: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.md, rowGap: spacing.xs },
+  // Moves are written in coordinates ("c3-d4"): left to right in every language.
+  list: {
+    direction: 'ltr',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: spacing.md,
+    rowGap: spacing.xs,
+  },
   pair: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   number: { fontSize: 15, color: colors.muted, fontVariant: ['tabular-nums'] },
   move: { fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },

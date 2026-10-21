@@ -12,6 +12,7 @@ import { BOARDS } from '@/appearance/catalog';
 import type { Piece, Position } from '@/game/bfen';
 import { EDGES, POINTS, SIZE, type Point } from '@/game/board';
 import { highlights, movePoints, tap } from '@/game/moveInput';
+import { t } from '@/i18n';
 import { colors } from '@/theme';
 
 import { focusRing } from '../focus';
@@ -66,7 +67,7 @@ export function Board({
   };
 
   return (
-    <View style={[styles.board, { backgroundColor: palette.base }]} aria-label="Board">
+    <View style={[styles.board, { backgroundColor: palette.base }]} aria-label={t('Board')}>
       <Svg width="100%" height="100%" viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
         <Wood grooves={GROOVES} palette={palette} />
       </Svg>
@@ -129,15 +130,17 @@ function pointLabel(
   target: boolean,
   movable: boolean,
 ): string {
-  const parts = [name, piece ?? 'empty'];
-  if (selected) parts.push('selected');
-  else if (target) parts.push(piece === undefined ? 'move here' : 'capture');
-  else if (movable) parts.push('can move');
+  const parts = [name, piece === 'goat' ? t('goat') : piece === 'tiger' ? t('tiger') : t('empty')];
+  if (selected) parts.push(t('selected'));
+  else if (target) parts.push(piece === undefined ? t('move here') : t('capture'));
+  else if (movable) parts.push(t('can move'));
   return parts.join(', ');
 }
 
 const styles = StyleSheet.create({
   board: {
+    // The board's points are named by file and rank: it stays left to right in every language.
+    direction: 'ltr',
     width: '100%',
     aspectRatio: 1,
     borderRadius: 12,

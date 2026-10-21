@@ -6,6 +6,7 @@ import { describeError } from '@/api/errors';
 import type { Piece } from '@/game/bfen';
 import { nameOf } from '@/game/describe';
 import { useChat, useSendChat } from '@/game/hooks';
+import { t } from '@/i18n';
 import { colors, spacing, type } from '@/theme';
 
 import { Button } from '../Button';
@@ -37,20 +38,24 @@ export function ChatPanel({ game, mine }: { game: Game; mine: Piece }) {
 
   return (
     <View style={styles.panel}>
-      <SectionTitle>Chat</SectionTitle>
+      <SectionTitle>{t('Chat')}</SectionTitle>
       {data.closed_because === 'messages_off' ? (
         <Hint>
-          Chat is off because one of you has turned messages off (the speech bubble above).
+          {t('Chat is off because one of you has turned messages off (the speech bubble above).')}
         </Hint>
       ) : (
         <>
           {data.messages.length === 0 ? (
-            <Hint>Say hello. Be kind: messages are kept 30 days so reports can be checked.</Hint>
+            <Hint>
+              {t('Say hello. Be kind: messages are kept 30 days so reports can be checked.')}
+            </Hint>
           ) : (
             <Card>
               {data.messages.map((m, i) => (
                 <Text key={`${m.sent_at}-${i}`} style={styles.message}>
-                  <Text style={styles.who}>{m.side === mine ? 'You' : nameOf(game, m.side)}</Text>
+                  <Text style={styles.who}>
+                    {m.side === mine ? t('You') : nameOf(game, m.side)}
+                  </Text>
                   {`  ${m.text}`}
                 </Text>
               ))}
@@ -61,7 +66,7 @@ export function ChatPanel({ game, mine }: { game: Game; mine: Piece }) {
             <View style={styles.compose}>
               <View style={styles.field}>
                 <TextField
-                  label="Message"
+                  label={t('Message')}
                   value={text}
                   onChangeText={setText}
                   maxLength={MAX_LENGTH}
@@ -70,7 +75,7 @@ export function ChatPanel({ game, mine }: { game: Game; mine: Piece }) {
                 />
               </View>
               <Button
-                title="Send"
+                title={t('Send')}
                 variant="secondary"
                 compact
                 busy={send.isPending}

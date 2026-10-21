@@ -1,6 +1,7 @@
 import { StyleSheet, Text } from 'react-native';
 
 import type { Tip } from '@/game/coach';
+import { t } from '@/i18n';
 import { colors } from '@/theme';
 
 import { Card } from '../Card';
@@ -9,7 +10,7 @@ import { Card } from '../Card';
 export function Coach({ tip }: { tip: Tip }) {
   return (
     <Card>
-      <Text style={styles.label}>Tip</Text>
+      <Text style={styles.label}>{t('Tip')}</Text>
       <Text style={styles.title} aria-live="polite">
         {tip.title}
       </Text>

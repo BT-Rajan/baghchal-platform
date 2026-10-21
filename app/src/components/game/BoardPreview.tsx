@@ -1,4 +1,5 @@
 /** A small, still picture of a board theme and piece set, for choosing between them. */
+import { StyleSheet } from 'react-native';
 import Svg, { G } from 'react-native-svg';
 
 import type { BoardTheme, PieceSet } from '@/api/endpoints';
@@ -34,7 +35,7 @@ export function BoardPreview({ theme, pieces }: { theme: BoardTheme; pieces: Pie
   const at = (x: number, y: number) =>
     `translate(${x - SIZE / 2} ${y - SIZE / 2}) scale(${SIZE / 100})`;
   return (
-    <Svg width="100%" height="100%" viewBox="0 0 100 100" aria-hidden>
+    <Svg width="100%" height="100%" viewBox="0 0 100 100" style={styles.ltr} aria-hidden>
       <Wood grooves={GROOVES} palette={palette} />
       {HOLES.map(([x, y]) => (
         <G key={`${x}-${y}`} transform={at(x, y)}>
@@ -49,3 +50,6 @@ export function BoardPreview({ theme, pieces }: { theme: BoardTheme; pieces: Pie
     </Svg>
   );
 }
+
+// Like the board itself, left to right in every language.
+const styles = StyleSheet.create({ ltr: { direction: 'ltr' } });

@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Svg from 'react-native-svg';
 
 import type { PieceSet } from '@/api/endpoints';
+import { t } from '@/i18n';
 import { colors, radius, spacing, type } from '@/theme';
 
 import { Coin } from './Coin';
@@ -24,7 +25,10 @@ export function PieceCounts({
   return (
     <View
       accessible
-      aria-label={`Goats to place: ${inHand} · Goats captured: ${captured} of 5`}
+      aria-label={t('Goats to place: {inHand} · Goats captured: {captured} of 5', {
+        inHand,
+        captured,
+      })}
       style={styles.row}
     >
       <View style={styles.group}>
@@ -34,7 +38,7 @@ export function PieceCounts({
           </Svg>
         </View>
         <Text style={styles.number}>{inHand}</Text>
-        <Text style={styles.caption}>to place</Text>
+        <Text style={styles.caption}>{t('to place')}</Text>
       </View>
       <View style={styles.group}>
         <View style={styles.slots}>
@@ -48,7 +52,7 @@ export function PieceCounts({
             </View>
           ))}
         </View>
-        <Text style={styles.caption}>captured</Text>
+        <Text style={styles.caption}>{t('captured')}</Text>
       </View>
     </View>
   );
