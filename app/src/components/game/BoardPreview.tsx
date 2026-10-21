@@ -1,4 +1,7 @@
-/** A small, still picture of a board theme and piece set, for choosing between them. */
+/**
+ * A small picture of a board theme and piece set, for choosing between them; given `placed`
+ * (pieces by point, such as `{ a1: 'tiger' }`), it shows that position instead.
+ */
 import { StyleSheet } from 'react-native';
 import Svg, { G } from 'react-native-svg';
 
@@ -30,19 +33,40 @@ const HOLES: readonly [number, number][] = [
 ];
 const SIZE = 17;
 
-export function BoardPreview({ theme, pieces }: { theme: BoardTheme; pieces: PieceSet }) {
+/** Where a point (a1 at the bottom left, e5 at the top right) sits in the 100×100 box. */
+function spot(point: string): [number, number] {
+  return [10 + (point.charCodeAt(0) - 97) * 20, 90 - (Number(point.slice(1)) - 1) * 20];
+}
+
+const POINTS = [...'abcde'].flatMap((file) => [1, 2, 3, 4, 5].map((rank) => `${file}${rank}`));
+
+export function BoardPreview({
+  theme,
+  pieces,
+  placed,
+}: {
+  theme: BoardTheme;
+  pieces: PieceSet;
+  placed?: Readonly<Record<string, Piece>>;
+}) {
   const palette = BOARDS[theme].palette;
   const at = (x: number, y: number) =>
     `translate(${x - SIZE / 2} ${y - SIZE / 2}) scale(${SIZE / 100})`;
+  const shown: readonly [number, number, Piece][] =
+    placed === undefined
+      ? PIECES
+      : Object.entries(placed).map(([point, piece]) => [...spot(point), piece]);
+  const holes: readonly [number, number][] =
+    placed === undefined ? HOLES : POINTS.filter((p) => !(p in placed)).map(spot);
   return (
     <Svg width="100%" height="100%" viewBox="0 0 100 100" style={styles.ltr} aria-hidden>
       <Wood grooves={GROOVES} palette={palette} />
-      {HOLES.map(([x, y]) => (
+      {holes.map(([x, y]) => (
         <G key={`${x}-${y}`} transform={at(x, y)}>
           <Hole palette={palette} />
         </G>
       ))}
-      {PIECES.map(([x, y, piece]) => (
+      {shown.map(([x, y, piece]) => (
         <G key={`${x}-${y}`} transform={at(x, y)}>
           <Coin piece={piece} set={pieces} />
         </G>
