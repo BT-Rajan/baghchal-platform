@@ -7,7 +7,9 @@ tab or two servers can never play twice. Clocks are computed from server time on
 Clocks start after each side's first move: until then a side has ``FIRST_MOVE_GRACE`` to move,
 or the game is aborted without a result. The second game of a rated match is the exception: it
 cannot be aborted, and a side that does not make its first move loses on time, so nobody can
-skip the side they would rather not play.
+skip the side they would rather not play. It starts ``MATCH_BREAK`` after the first game ends,
+so both players see game 1's result first: its first-move grace only begins then (a player who
+moves sooner may).
 """
 
 import secrets
@@ -66,8 +68,11 @@ from baghchal_server.lobby.schemas import PlayerOut
 from baghchal_server.lobby.time_controls import category_of, is_sand, label_of
 from baghchal_server.ratings import service as ratings
 from baghchal_server.realtime.presence import Presence
+from baghchal_server.tournaments.models import Pairing, Tournament
 
 FIRST_MOVE_GRACE: Final = timedelta(seconds=30)
+MATCH_BREAK: Final = timedelta(seconds=10)
+"""Between the two games of a rated match: game 1's result stays on screen, then game 2."""
 ABANDON_AFTER: Final = timedelta(seconds=60)
 MAX_LAG_MS: Final = 500
 LAG_QUOTA_MS: Final = 10_000
@@ -221,7 +226,10 @@ async def _create_game(  # noqa: PLR0913 - every field of a new game
     match_game: int | None,
     bot_level: str | None = None,
     computer_id: uuid.UUID | None = None,
+    starts_at: datetime | None = None,
 ) -> Game:
+    """``starts_at``: when the first-move grace begins, if not ``now``."""
+    starts_at = now if starts_at is None else starts_at
     category = category_of(initial_ms // 1000, increment_ms // 1000)
     current = await ratings.current(db, [goat_id, tiger_id], category, now)
     game = Game(
@@ -239,8 +247,8 @@ async def _create_game(  # noqa: PLR0913 - every field of a new game
         position=_INITIAL,
         goat_ms=initial_ms,
         tiger_ms=initial_ms,
-        turn_started_at=now,
-        deadline_at=now + FIRST_MOVE_GRACE,
+        turn_started_at=starts_at,
+        deadline_at=starts_at + FIRST_MOVE_GRACE,
         lag_ms=0,
         goat_lag_left_ms=LAG_QUOTA_MS,
         tiger_lag_left_ms=LAG_QUOTA_MS,
@@ -259,33 +267,6 @@ async def _create_game(  # noqa: PLR0913 - every field of a new game
     )
     await db.flush()
     return game
-
-
-async def start_casual_game(  # noqa: PLR0913 - who plays which side, how fast
-    db: AsyncSession,
-    now: datetime,
-    *,
-    goat_id: uuid.UUID,
-    tiger_id: uuid.UUID,
-    initial_seconds: int,
-    increment_seconds: int,
-) -> Game:
-    """Start an unrated game between two players (tournaments; caller commits).
-
-    Raises IntegrityError if either player is already in a live game.
-    """
-    return await _create_game(
-        db,
-        now,
-        goat_id=goat_id,
-        tiger_id=tiger_id,
-        rated=False,
-        initial_ms=initial_seconds * 1000,
-        increment_ms=increment_seconds * 1000,
-        challenge_id=None,
-        match_id=None,
-        match_game=None,
-    )
 
 
 async def start_computer_game(  # noqa: PLR0913 - who plays whom, which side, how fast
@@ -394,6 +375,7 @@ async def _after_finish(db: AsyncSession, game_id: uuid.UUID, now: datetime) -> 
             challenge_id=None,
             match_id=game.match_id,
             match_game=2,
+            starts_at=now + MATCH_BREAK,
         )
     else:
         await db.execute(
@@ -552,12 +534,22 @@ async def describe(db: AsyncSession, game: Game, now: datetime) -> GameOut:
         ),
         match=await _describe_match(db, game, names),
         computer=game.bot_level,
+        tournament=await _tournament_code(db, game.id),
         positions=[] if active else _positions(engine_game),
         deadline_at=game.deadline_at,
         draw_offer=game.draw_offer if active else None,
         server_time=now,
         created_at=game.created_at,
         finished_at=game.finished_at,
+    )
+
+
+async def _tournament_code(db: AsyncSession, game_id: uuid.UUID) -> str | None:
+    return await db.scalar(
+        select(Tournament.code)
+        .join(Pairing, Pairing.tournament_id == Tournament.id)
+        .where(Pairing.game_id == game_id)
+        .limit(1)
     )
 
 
@@ -649,6 +641,9 @@ async def _describe_match(
             MatchScoreOut(player=PlayerOut(id=uid, username=names[uid]), points=p)
             for uid, p in scores.items()
         ],
+        game_2_starts_at=games[0].finished_at + MATCH_BREAK
+        if len(games) == 2 and games[0].finished_at is not None
+        else None,
     )
 
 
@@ -693,14 +688,17 @@ async def play(  # noqa: PLR0913 - the move, who plays it when, and their networ
         clock_ms, other_ms = _clocks_after_move(game, side, think_ms)
         new_ply = game.ply + 1
         # The allowance this turn is spent as far as the move used it.
-        used = min(game.lag_ms, _ms(now - game.turn_started_at))
+        used = max(0, min(game.lag_ms, _ms(now - game.turn_started_at)))
+        # Before the clocks run, a turn starts no sooner than the game does: in a match's
+        # second game, a first move made during the break leaves the reply its whole grace.
+        turn_start = max(now, game.turn_started_at) if new_ply < 2 else now
         values: dict[str, object] = {
             "ply": new_ply,
             "position": format_position(engine_game.position),
             f"{side}_ms": clock_ms,
             f"{_other(side)}_ms": other_ms,
             f"{side}_lag_left_ms": max(0, getattr(game, f"{side}_lag_left_ms") - used),
-            "turn_started_at": now,
+            "turn_started_at": turn_start,
             "lag_ms": 0,
         }
         # Playing on declines the opponent's offer, even one made since this move was read.
@@ -710,7 +708,7 @@ async def play(  # noqa: PLR0913 - the move, who plays it when, and their networ
             left = getattr(game, f"{_other(side)}_lag_left_ms")
             lag_ms = await _lag_allowance(presence, next_id, new_ply, left)
             values["lag_ms"] = lag_ms
-            values["deadline_at"] = _deadline(new_ply, now, other_ms, lag_ms)
+            values["deadline_at"] = _deadline(new_ply, turn_start, other_ms, lag_ms)
         else:
             values.update(
                 status=GameStatus.FINISHED,

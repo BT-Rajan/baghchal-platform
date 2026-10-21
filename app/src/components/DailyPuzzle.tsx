@@ -1,9 +1,6 @@
 import { router } from 'expo-router';
 import { StyleSheet, Text } from 'react-native';
 
-import { describeError } from '@/api/errors';
-import { has } from '@/billing/format';
-import { useMyPlan } from '@/billing/hooks';
 import { t } from '@/i18n';
 import { answerText, dailyStreakText } from '@/pro/format';
 import { useAnswerPuzzle, useDailyPuzzle } from '@/pro/hooks';
@@ -15,7 +12,7 @@ import { Disclosure } from './Disclosure';
 import { Notice } from './Notice';
 import { PuzzleBoard } from './PuzzleBoard';
 import { ErrorState, Loading } from './States';
-import { Upsell } from './Upsell';
+import { ErrorNotice } from './ErrorNotice';
 
 /**
  * Today's puzzle, from the trainer, for everyone: one move to find, then the answer and a new
@@ -25,7 +22,6 @@ import { Upsell } from './Upsell';
 export function DailyPuzzle() {
   const daily = useDailyPuzzle();
   const answer = useAnswerPuzzle();
-  const plan = useMyPlan();
   const result = daily.data?.answer ?? null;
   const streak = dailyStreakText(daily.data?.streak ?? 0);
   const board = daily.data !== undefined && (
@@ -51,26 +47,20 @@ export function DailyPuzzle() {
         <Card>
           {streak !== null && <Text style={styles.streak}>{streak}</Text>}
           {result === null ? board : <Disclosure title={t("Today's position")}>{board}</Disclosure>}
-          {answer.error !== null && <Notice tone="error">{describeError(answer.error)}</Notice>}
+          <ErrorNotice error={answer.error} />
           {result !== null && (
             <>
               <Notice tone={result.correct ? 'success' : 'info'}>{answerText(result)}</Notice>
               <Hint>{t('A new puzzle comes tomorrow.')}</Hint>
             </>
           )}
-          {plan.data !== undefined &&
-            (has(plan.data, 'trainer') ? (
-              <Button
-                title={t('More puzzles in the trainer')}
-                icon="puzzle"
-                variant="secondary"
-                onPress={() => router.push('/trainer')}
-              />
-            ) : (
-              <Upsell feature="trainer">
-                {t('Train every day with opening and endgame puzzles from real games.')}
-              </Upsell>
-            ))}
+          {/* The trainer's own screen says what it is and which plan has it: one upsell. */}
+          <Button
+            title={t('More puzzles in the trainer')}
+            icon="puzzle"
+            variant="secondary"
+            onPress={() => router.push('/trainer')}
+          />
         </Card>
       )}
     </>

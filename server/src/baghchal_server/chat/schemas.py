@@ -24,7 +24,7 @@ class ChatMessageOut(BaseModel):
     sent_at: datetime
 
 
-ChatClosed = Literal["computer", "guest", "under_18", "messages_off", "blocked", "game_over"]
+ChatClosed = Literal["computer", "guest", "messages_off", "blocked", "game_over"]
 
 
 class ChatOut(BaseModel):
@@ -33,7 +33,7 @@ class ChatOut(BaseModel):
     open: bool
     """Whether messages can be sent now."""
     closed_because: ChatClosed | None
-    """Why not: against the computer, a guest or a player under 18 in the game, either player
+    """Why not: against the computer, a guest in the game, either player
     has messages off, a block between them, or the game ended a while ago."""
     messages: list[ChatMessageOut]
 

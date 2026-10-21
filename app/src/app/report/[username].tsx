@@ -3,7 +3,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
 import type { ReportReason } from '@/api/endpoints';
-import { describeError } from '@/api/errors';
 import { useApi } from '@/auth/session';
 import { Button } from '@/components/Button';
 import { Hint } from '@/components/Card';
@@ -13,6 +12,7 @@ import { Segmented } from '@/components/Segmented';
 import { TextField } from '@/components/TextField';
 import { t } from '@/i18n';
 import { REPORT_REASONS } from '@/lobby/moderation';
+import { ErrorNotice } from '@/components/ErrorNotice';
 
 function leave() {
   if (router.canGoBack()) router.back();
@@ -44,7 +44,7 @@ export default function ReportForm() {
   }
   return (
     <Screen title={t('Report {name}', { name: username })}>
-      {send.error !== null && <Notice tone="error">{describeError(send.error)}</Notice>}
+      <ErrorNotice error={send.error} />
       <Hint>
         {game !== undefined
           ? t('The report includes this game, so moderators can replay it.')

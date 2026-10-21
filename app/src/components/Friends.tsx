@@ -1,14 +1,13 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { describeError } from '@/api/errors';
 import { t } from '@/i18n';
 import { useFriends, useFriendship } from '@/lobby/hooks';
 import { colors, spacing } from '@/theme';
 
 import { Button } from './Button';
 import { Card, SectionTitle } from './Card';
-import { Notice } from './Notice';
 import { PlayerRow } from './PlayerRow';
+import { ErrorNotice } from './ErrorNotice';
 
 /** Friend requests waiting for my answer, on the home screen. */
 export function FriendRequests() {
@@ -19,7 +18,7 @@ export function FriendRequests() {
   return (
     <>
       <SectionTitle>{t('Friend requests')}</SectionTitle>
-      {change.error !== null && <Notice tone="error">{describeError(change.error)}</Notice>}
+      <ErrorNotice error={change.error} />
       <Card>
         {incoming.map((player) => {
           const busy = change.isPending && change.variables.username === player.username;

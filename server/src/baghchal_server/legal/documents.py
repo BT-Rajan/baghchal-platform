@@ -19,7 +19,7 @@ class Document(StrEnum):
     PRIVACY = "privacy"
 
 
-VERSIONS: Final = {Document.TERMS: "2026-10-20", Document.PRIVACY: "2026-10-20"}
+VERSIONS: Final = {Document.TERMS: "2026-10-21", Document.PRIVACY: "2026-10-21"}
 """The current version of each document: the date it takes effect."""
 
 _FIELD = re.compile(r"\[\[([a-z_]+)\]\]")

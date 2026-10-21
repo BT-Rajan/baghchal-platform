@@ -125,7 +125,7 @@
     "/api/v1/auth/verify-email": {
       "post": {
         "summary": "Verify Email",
-        "description": "Confirm the address and sign in. For a player under 18, this is when their parent is\nemailed to agree.",
+        "description": "Confirm the address and sign in.",
         "operationId": "verify_email_api_v1_auth_verify_email_post",
         "requestBody": {
           "content": {
@@ -560,7 +560,7 @@
     "/api/v1/me/consents": {
       "post": {
         "summary": "Accept",
-        "description": "Accept the current terms and privacy policy (asked again after they change), and give\nthe month of birth if the account predates that question.",
+        "description": "Accept the current terms and privacy policy (asked again after they change).",
         "operationId": "accept_api_v1_me_consents_post",
         "requestBody": {
           "content": {
@@ -579,84 +579,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MeOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/parent-consent/look-up": {
-      "post": {
-        "summary": "Look Up",
-        "description": "Who a parent's link is about, before they decide.",
-        "operationId": "look_up_api_v1_parent_consent_look_up_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ParentLinkIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ParentLinkOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/parent-consent": {
-      "post": {
-        "summary": "Decide",
-        "description": "A parent or guardian agrees, refuses, or withdraws an earlier agreement (which deletes\nthe account).",
-        "operationId": "decide_api_v1_parent_consent_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ParentDecisionIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ParentLinkOut"
                 }
               }
             }
@@ -956,7 +878,7 @@
     "/api/v1/challenges/{challenge_id}/accept": {
       "post": {
         "summary": "Accept Challenge",
-        "description": "Accept and start the game (its id is in ``game_id``; both players get a ``game`` event).",
+        "description": "Accept and start the game (its id is in ``game_id``; both players get a ``game`` event).\nFor a tournament's challenge, it is that pairing's game.",
         "operationId": "accept_challenge_api_v1_challenges__challenge_id__accept_post",
         "parameters": [
           {
@@ -1260,6 +1182,7 @@
       },
       "post": {
         "summary": "Seek Game",
+        "description": "Play anyone who wants the same kind of game: paired at once with whoever has waited\nlongest, or wait (two minutes) for the next person. Rated games are for members.",
         "operationId": "seek_game_api_v1_seeks_post",
         "requestBody": {
           "content": {
@@ -3112,7 +3035,7 @@
     "/api/v1/tournaments/{code}/pairings/{pairing_id}/play": {
       "post": {
         "summary": "Play Pairing",
-        "description": "Start one of my games; my opponent must be online (both get a ``game`` event).",
+        "description": "\"Play now\": challenge my opponent in this game, who must be online. Accepting it\n(``/challenges/{id}/accept``, like any challenge) starts the game.",
         "operationId": "play_pairing_api_v1_tournaments__code__pairings__pairing_id__play_post",
         "parameters": [
           {
@@ -3137,12 +3060,12 @@
           }
         ],
         "responses": {
-          "200": {
+          "201": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GameOut"
+                  "$ref": "#/components/schemas/ChallengeOut"
                 }
               }
             }
@@ -3286,7 +3209,7 @@
     "/api/v1/games/{game_id}/chat": {
       "get": {
         "summary": "Read Chat",
-        "description": "The game's chat: whether it is open (adults with accounts, both with messages on, no\nblock, the game on or just over), and what has been said.",
+        "description": "The game's chat: whether it is open (players with accounts, both with messages on, no\nblock, the game on or just over), and what has been said.",
         "operationId": "read_chat_api_v1_games__game_id__chat_get",
         "parameters": [
           {
@@ -4001,6 +3924,16 @@
               }
             ],
             "title": "Game Id"
+          },
+          "tournament": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChallengeTournamentOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -4027,6 +3960,30 @@
           "expired"
         ],
         "title": "ChallengeStatus"
+      },
+      "ChallengeTournamentOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "round": {
+            "type": "integer",
+            "title": "Round"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "round"
+        ],
+        "title": "ChallengeTournamentOut",
+        "description": "The tournament a challenge plays a game of."
       },
       "ChatIn": {
         "properties": {
@@ -4085,7 +4042,6 @@
                 "enum": [
                   "computer",
                   "guest",
-                  "under_18",
                   "messages_off",
                   "blocked",
                   "game_over"
@@ -4247,6 +4203,18 @@
       },
       "ClaimIn": {
         "properties": {
+          "terms_version": {
+            "type": "string",
+            "maxLength": 16,
+            "minLength": 1,
+            "title": "Terms Version"
+          },
+          "privacy_version": {
+            "type": "string",
+            "maxLength": 16,
+            "minLength": 1,
+            "title": "Privacy Version"
+          },
           "username": {
             "type": "string",
             "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{2,19}$",
@@ -4263,56 +4231,19 @@
             "maxLength": 128,
             "minLength": 10,
             "title": "Password"
-          },
-          "terms_version": {
-            "type": "string",
-            "maxLength": 16,
-            "minLength": 1,
-            "title": "Terms Version"
-          },
-          "privacy_version": {
-            "type": "string",
-            "maxLength": 16,
-            "minLength": 1,
-            "title": "Privacy Version"
-          },
-          "birth_month": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Birth Month"
-          },
-          "parent_email": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 254,
-                "format": "email"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Email"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "terms_version",
+          "privacy_version",
           "username",
           "email",
-          "password",
-          "terms_version",
-          "privacy_version"
+          "password"
         ],
         "title": "ClaimIn",
-        "description": "A guest's account: as for sign-up, but the month of birth the guest gave is kept, so\nit is asked again only of guests who never gave one."
+        "description": "A guest's account: as for sign-up."
       },
       "ClocksOut": {
         "properties": {
@@ -4399,31 +4330,6 @@
             "maxLength": 16,
             "minLength": 1,
             "title": "Privacy Version"
-          },
-          "birth_month": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Birth Month"
-          },
-          "parent_email": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 254,
-                "format": "email"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Email"
           }
         },
         "additionalProperties": false,
@@ -4433,7 +4339,7 @@
           "privacy_version"
         ],
         "title": "ConsentsIn",
-        "description": "Accepting the current documents again, after they changed; an account made before we\nasked for the month of birth gives it here too."
+        "description": "Accepting the current documents again, after they changed."
       },
       "DailyAnswerOut": {
         "properties": {
@@ -4655,41 +4561,6 @@
               }
             ],
             "title": "Email Verified At"
-          },
-          "adult_from": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Adult From"
-          },
-          "parent_email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Email"
-          },
-          "parent_consented_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Consented At"
           }
         },
         "type": "object",
@@ -4698,10 +4569,7 @@
           "username",
           "email",
           "created_at",
-          "email_verified_at",
-          "adult_from",
-          "parent_email",
-          "parent_consented_at"
+          "email_verified_at"
         ],
         "title": "ExportAccount"
       },
@@ -5328,6 +5196,17 @@
             ],
             "title": "Computer"
           },
+          "tournament": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tournament"
+          },
           "positions": {
             "items": {
               "type": "string"
@@ -5677,11 +5556,6 @@
       },
       "GuestIn": {
         "properties": {
-          "birth_month": {
-            "type": "string",
-            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
-            "title": "Birth Month"
-          },
           "terms_version": {
             "type": "string",
             "maxLength": 16,
@@ -5707,7 +5581,6 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "birth_month",
           "terms_version",
           "privacy_version"
         ],
@@ -5830,6 +5703,18 @@
             },
             "type": "array",
             "title": "Score"
+          },
+          "game_2_starts_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Game 2 Starts At"
           }
         },
         "type": "object",
@@ -5888,29 +5773,6 @@
             ],
             "title": "Role"
           },
-          "plays_people": {
-            "type": "boolean",
-            "title": "Plays People"
-          },
-          "parent_consent": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "pending",
-                  "given"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Consent"
-          },
-          "age_needed": {
-            "type": "boolean",
-            "title": "Age Needed"
-          },
           "consents_needed": {
             "items": {
               "type": "string",
@@ -5930,9 +5792,6 @@
           "created_at",
           "email",
           "role",
-          "plays_people",
-          "parent_consent",
-          "age_needed",
           "consents_needed"
         ],
         "title": "MeOut"
@@ -6402,81 +6261,6 @@
           "done"
         ],
         "title": "PairingState"
-      },
-      "ParentDecisionIn": {
-        "properties": {
-          "token": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9_-]{43}$",
-            "title": "Token"
-          },
-          "decision": {
-            "type": "string",
-            "enum": [
-              "agree",
-              "refuse"
-            ],
-            "title": "Decision"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "token",
-          "decision"
-        ],
-        "title": "ParentDecisionIn"
-      },
-      "ParentLinkIn": {
-        "properties": {
-          "token": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9_-]{43}$",
-            "title": "Token"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "token"
-        ],
-        "title": "ParentLinkIn"
-      },
-      "ParentLinkOut": {
-        "properties": {
-          "username": {
-            "type": "string",
-            "title": "Username"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "given",
-              "deleted"
-            ],
-            "title": "Status"
-          },
-          "adult_from": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Adult From"
-          }
-        },
-        "type": "object",
-        "required": [
-          "username",
-          "status",
-          "adult_from"
-        ],
-        "title": "ParentLinkOut"
       },
       "PasswordChangeIn": {
         "properties": {
@@ -7187,11 +6971,6 @@
       },
       "RegisterIn": {
         "properties": {
-          "birth_month": {
-            "type": "string",
-            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
-            "title": "Birth Month"
-          },
           "terms_version": {
             "type": "string",
             "maxLength": 16,
@@ -7220,25 +6999,11 @@
             "maxLength": 128,
             "minLength": 10,
             "title": "Password"
-          },
-          "parent_email": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 254,
-                "format": "email"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Email"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "birth_month",
           "terms_version",
           "privacy_version",
           "username",

@@ -11,8 +11,7 @@ from baghchal_server.games import service
 
 from .conftest import Player, PlayerFactory
 from .test_games import _event, _online, _start
-from .test_tournaments import URL, _get, _host
-from .test_tournaments import _play as _play_pairing
+from .test_tournaments import URL, _get, _host, _start_pairing
 
 
 async def _moves(goat: Player, tiger: Player, game: dict[str, Any], count: int) -> dict[str, Any]:
@@ -121,7 +120,7 @@ async def test_a_tournament_draw_is_half_a_point_each(app: FastAPI, players: Pla
     goat, tiger = people[pairing["goat"]["username"]], people[pairing["tiger"]["username"]]
     async with AsyncExitStack() as stack:
         await _online(app, stack, alice, bob, carol)
-        game = (await _play_pairing(goat, t["code"], pairing)).json()
+        game = await _start_pairing(people, t["code"], pairing)
         game = await _moves(goat, tiger, game, 2)
         await _draw(goat, game)
         await _draw(tiger, game)

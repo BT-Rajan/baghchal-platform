@@ -107,9 +107,6 @@ async def export(db: AsyncSession, user: User, now: datetime) -> ExportOut:
             email=user.email,
             created_at=user.created_at,
             email_verified_at=user.email_verified_at,
-            adult_from=user.adult_from,
-            parent_email=user.parent_email,
-            parent_consented_at=user.parent_consented_at,
         ),
         consents=[
             ExportConsent(document=c.document, version=c.version, accepted_at=c.accepted_at)
@@ -196,7 +193,7 @@ async def delete_account(
 ) -> tuple[Sequence[Challenge], Mail]:
     """Delete a player's account; returns the challenges it closed and a goodbye mail.
 
-    Personal data goes: email, password, a parent's email, sessions, links, blocks,
+    Personal data goes: email, password, sessions, links, blocks,
     friends. The row itself stays under a meaningless name, so the games of the players they
     met keep an opponent, and ratings stay as they were (deleted players are left out of
     leaderboards and the lobby).
@@ -219,7 +216,6 @@ async def delete_account(
     user.username = user.username_key = anonymous
     user.email = user.email_key = f"{user.id.hex}@deleted.invalid"
     user.password_hash = "!"  # noqa: S105 - not a valid hash, so no password matches it
-    user.parent_email = None
     user.is_active = False
     user.deleted_at = now
     user.updated_at = now

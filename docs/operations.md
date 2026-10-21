@@ -153,8 +153,7 @@ it to the internet). Prometheus finds the replicas through Docker's DNS.
 
 **Housekeeping**: once an hour each replica deletes what the privacy policy says is no longer
 kept: expired sessions; email links a week past use or expiry; sign-ups never confirmed after
-7 days; accounts of players under 18 whose parent did not answer within 7 days (not while they
-are in a live game); fair-play figures and checks after a year; closed reports and the
+7 days; fair-play figures and checks after a year; closed reports and the
 moderation log after 3 years; payment records after 8 years. The periods are in
 `housekeeping.py` and tested against the policy; change both together.
 

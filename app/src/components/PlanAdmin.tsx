@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
-import { describeError } from '@/api/errors';
 import { DURATIONS, GRANTABLE, grantBody, grantText, myPlanText } from '@/billing/format';
 import { useChangeGrant, usePlayerPlan } from '@/billing/hooks';
 import { mark, t } from '@/i18n';
@@ -10,10 +9,10 @@ import { colors } from '@/theme';
 
 import { Button } from './Button';
 import { Card, Hint, SectionTitle } from './Card';
-import { Notice } from './Notice';
 import { Segmented } from './Segmented';
 import { ErrorState, Loading } from './States';
 import { TextField } from './TextField';
+import { ErrorNotice } from './ErrorNotice';
 
 const KINDS = [
   { value: 'plus', label: 'Plus' },
@@ -61,7 +60,7 @@ export function PlanAdmin({ username }: { username: string }) {
       <Card>
         <Text style={styles.title}>{myPlanText(plan, username)}</Text>
       </Card>
-      {change.error !== null && <Notice tone="error">{describeError(change.error)}</Notice>}
+      <ErrorNotice error={change.error} />
       <Segmented
         label={t('Give')}
         options={KINDS.map((k) => (k.value === 'feature' ? { ...k, label: t(k.label) } : k))}

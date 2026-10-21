@@ -43,9 +43,10 @@ describe('the apps’ start screen', () => {
     expect(screen.queryByRole('radio', { name: 'Play your way' })).toBeNull();
     await press('Play now, no sign-up');
     await screen.findByRole('heading', { name: 'Your first game' });
-    await fireEvent.changeText(screen.getByLabelText('Month of birth'), '01');
-    await fireEvent.changeText(screen.getByLabelText('Year of birth'), '1990');
-    await press('Start playing');
+    // Nothing to type: only the agreement, accepted by the one button.
+    expect(screen.getByText(/confirm you are 13 or older/)).toBeOnTheScreen();
+    await screen.findByRole('button', { name: 'Accept and play', busy: false });
+    await press('Accept and play');
     await waitFor(() => expect(app.getPathname()).toBe('/game/g1'));
     expect(server.lastTo('POST /api/v1/auth/guest').body).toEqual({
       ...AGREED,
@@ -61,30 +62,22 @@ describe('the apps’ start screen', () => {
     expect(await screen.findByText('Place a goat')).toBeOnTheScreen();
   });
 
-  test('a young guest plays the computer only, and a refusal is shown', async () => {
-    const { server } = await renderApp('/start', {
+  test('a refusal is shown', async () => {
+    await renderApp('/start', {
       routes: { 'POST /api/v1/auth/guest': error(429, 'rate_limited', 'Slow down.') },
     });
-    await screen.findByRole('button', { name: 'Start playing', busy: false });
-    await press('Start playing');
-    expect(screen.getByText('Enter the month and year you were born.')).toBeOnTheScreen();
-    await fireEvent.changeText(screen.getByLabelText('Month of birth'), '5');
-    await fireEvent.changeText(
-      screen.getByLabelText('Year of birth'),
-      String(new Date().getFullYear() - 10),
-    );
-    await press('Start playing');
-    expect(screen.getByText('You must be at least 13 to play on ClawPlay.')).toBeOnTheScreen();
-    await fireEvent.changeText(
-      screen.getByLabelText('Year of birth'),
-      String(new Date().getFullYear() - 15),
-    );
-    // A young guest may play the computer; no parent is asked until they make an account.
-    expect(screen.getByText(/^Under 18, you can play the computer as a guest/)).toBeOnTheScreen();
-    expect(screen.queryByLabelText("Parent's or guardian's email")).toBeNull();
-    await press('Start playing');
+    await screen.findByRole('button', { name: 'Accept and play', busy: false });
+    await press('Accept and play');
     expect(await screen.findByText('Slow down.')).toBeOnTheScreen();
-    expect(server.lastTo('POST /api/v1/auth/guest').body).not.toHaveProperty('parent_email');
+  });
+
+  test('waits for the versions, and says when they cannot be had', async () => {
+    const { server } = await renderApp('/start', {
+      routes: { 'GET /api/v1/legal': error(429, 'rate_limited', 'Try again soon.') },
+    });
+    expect(await screen.findByText('Try again soon.')).toBeOnTheScreen();
+    await press('Accept and play');
+    expect(server.requests.filter((r) => r.path === '/api/v1/auth/guest')).toHaveLength(0);
   });
 
   test('leads to sign in and sign up', async () => {
@@ -130,10 +123,8 @@ describe('a guest', () => {
     await fireEvent.changeText(screen.getByLabelText('Username'), 'Sita');
     await fireEvent.changeText(screen.getByLabelText('Email'), ' sita@example.com ');
     await fireEvent.changeText(screen.getByLabelText('Password'), 'correct horse');
-    await press('Make my account');
+    await press('Accept and make my account');
     expect(await screen.findByText(/^Your account is ready/)).toBeOnTheScreen();
-    // The age given when the guest started playing is kept, not asked again.
-    expect(screen.queryByLabelText('Month of birth')).toBeNull();
     expect(server.lastTo('POST /api/v1/me/claim').body).toEqual({
       terms_version: AGREED.terms_version,
       privacy_version: AGREED.privacy_version,
@@ -152,13 +143,13 @@ describe('a guest', () => {
     await asGuest('/claim', {
       'POST /api/v1/me/claim': error(409, 'username_taken', 'That username is taken.'),
     });
-    await screen.findByRole('button', { name: 'Make my account', busy: false });
-    await press('Make my account');
+    await screen.findByRole('button', { name: 'Accept and make my account', busy: false });
+    await press('Accept and make my account');
     expect(screen.getByText('Choose a username.', { exact: false })).toBeDefined();
     await fireEvent.changeText(screen.getByLabelText('Username'), 'bob');
     await fireEvent.changeText(screen.getByLabelText('Email'), 'b@example.com');
     await fireEvent.changeText(screen.getByLabelText('Password'), 'correct horse');
-    await press('Make my account');
+    await press('Accept and make my account');
     expect(await screen.findByText('That username is taken.')).toBeOnTheScreen();
   });
 

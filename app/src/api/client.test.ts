@@ -9,6 +9,7 @@ function client(server: ReturnType<typeof fakeServer>, options: Partial<ClientOp
     transport: 'bearer',
     auth: () => ({ token: 'tok', epoch: 7 }),
     onSignedOut: jest.fn(),
+    onConsentsNeeded: jest.fn(),
     fetch: server.fetch,
     ...options,
   });
@@ -103,6 +104,17 @@ test('not_authenticated reports the end of the session, with the epoch of the re
   expect(onSignedOut).toHaveBeenCalledWith(7);
 });
 
+test('consents_needed reports the changed terms, with the epoch of the request', async () => {
+  const server = fakeServer({ 'GET /games': error(403, 'consents_needed') });
+  const onConsentsNeeded = jest.fn();
+  const onSignedOut = jest.fn();
+  await expect(
+    client(server, { onConsentsNeeded, onSignedOut }).get('/games'),
+  ).rejects.toMatchObject({ status: 403, code: 'consents_needed' });
+  expect(onConsentsNeeded).toHaveBeenCalledWith(7);
+  expect(onSignedOut).not.toHaveBeenCalled();
+});
+
 test('wrong credentials do not end the session', async () => {
   const server = fakeServer({ 'POST /login': error(401, 'invalid_credentials') });
   const onSignedOut = jest.fn();
@@ -122,6 +134,7 @@ test('uses the global fetch by default', async () => {
       transport: 'cookie',
       auth: () => ({ token: null, epoch: 0 }),
       onSignedOut: jest.fn(),
+      onConsentsNeeded: jest.fn(),
     });
     await expect(c.get('/x')).resolves.toBe(1);
   } finally {
@@ -136,6 +149,7 @@ test('a failed fetch is a network error', async () => {
     transport: 'cookie',
     auth: () => ({ token: null, epoch: 0 }),
     onSignedOut: jest.fn(),
+    onConsentsNeeded: jest.fn(),
     fetch,
   });
   await expect(c.get('/x')).rejects.toMatchObject({ status: 0, code: 'network_error' });
@@ -160,6 +174,7 @@ describe('timeouts and cancellation', () => {
     transport: 'cookie' as const,
     auth: () => ({ token: null, epoch: 0 }),
     onSignedOut: jest.fn(),
+    onConsentsNeeded: jest.fn(),
   };
 
   test('a request that takes too long times out', async () => {

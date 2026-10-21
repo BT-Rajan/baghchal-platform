@@ -1,11 +1,12 @@
 # Terms of service
 
-These terms are the agreement between you and [[operator_name]] ("we", "us"), which runs ClawPlay. By creating an account or playing as a guest you accept them. Please read them; they are short.
+These terms are the agreement between you and [[operator_name]] ("we", "us"), which runs ClawPlay. When you press Accept, to play as a guest or to create an account, you accept them. Please read them; they are short.
 
 ## Who can play
 
 - You must be at least 13 years old.
-- If you are 13 to 17, a parent or guardian must agree before you play other people (see our privacy policy). Until they do, you can play the computer.
+- If you are under 18, you need your parent's or guardian's permission to use ClawPlay, including to chat with other players and to buy a plan.
+- By pressing Accept you confirm both of these. We do not ask your age or check it.
 - One account per person. Your account is personal: do not share it, sell it or let anyone else use it.
 - Keep your password secret. You are responsible for what happens on your account until you tell us it was misused.
 

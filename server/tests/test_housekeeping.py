@@ -7,10 +7,10 @@ from datetime import timedelta
 import httpx
 import pytest
 from fastapi import FastAPI
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select
 
 from baghchal_server import housekeeping
-from baghchal_server.accounts.models import EmailToken, Session, User
+from baghchal_server.accounts.models import EmailToken, Session
 from baghchal_server.app import create_app
 from baghchal_server.billing import reminders
 from baghchal_server.config import Settings
@@ -22,7 +22,6 @@ from baghchal_server.payments.models import Payment
 from baghchal_server.ratelimit import MemoryRateLimiter
 
 from .conftest import AGREE, PASSWORD, Clock, PlayerFactory
-from .test_legal import _minor
 
 
 def _state(app: FastAPI) -> AppState:
@@ -57,15 +56,13 @@ async def test_everything_past_its_time_goes(
     alice_id = uuid.UUID(alice.id)
     state = _state(app)
     start = clock()
-    # A sign-up never confirmed, and minors whose parents never answer (one is playing).
+    # A sign-up never confirmed; a player whose confirmation link was used.
     r = await app_client.post(
         "/api/v1/auth/register",
         json={**AGREE, "username": "ghost", "email": "ghost@example.com", "password": PASSWORD},
     )
     assert r.status_code == 202
-    kid = await _minor(app, mailer)
-    busy = await _minor(app, mailer, "busy", "pa@example.com")
-    await busy.http.post("/api/v1/games/computer", json={"level": "easy"})
+    await players("bob")
     game = (await alice.http.post("/api/v1/games/computer", json={"level": "easy"})).json()
     await alice.http.post(f"/api/v1/games/{game['id']}/resign")
     game_id = uuid.UUID(game["id"])
@@ -122,14 +119,8 @@ async def test_everything_past_its_time_goes(
     clock.advance(days=8)
     done = await _tidy(app)
     assert done["unconfirmed_sign_ups"] == 1
-    assert done["accounts_without_parent"] == 1  # the one in a live game waits
+    assert "accounts_without_parent" not in done  # no age rules any more
     assert done["email_links"] >= 2  # the confirmations used 8 days ago
-    async with state.sessions() as db:
-        kid_row = await db.get(User, uuid.UUID(kid.id))
-        busy_row = await db.get(User, uuid.UUID(busy.id))
-        assert kid_row is not None
-        assert busy_row is not None
-        assert (kid_row.is_active, busy_row.is_active) == (False, True)
 
     clock.advance(days=30)  # the sessions from sign-up expire
     assert (await _tidy(app))["sessions"] >= 1
@@ -143,27 +134,6 @@ async def test_everything_past_its_time_goes(
     assert (await _tidy(app))["payments"] == 1
     for model in (Session, EmailToken, Report, ModerationAction, Payment, FairPlaySide):
         assert await _count(app, model) == 0, model
-
-
-async def test_pending_minors_are_counted_from_when_they_were_asked(
-    app: FastAPI, mailer: MemoryMailer, clock: Clock
-) -> None:
-    kid = await _minor(app, mailer)
-    clock.advance(days=6)
-    async with _state(app).sessions() as db:  # asked again (an older account answering now)
-        await db.execute(
-            update(User).where(User.id == uuid.UUID(kid.id)).values(age_checked_at=clock())
-        )
-        await db.commit()
-    clock.advance(days=2)
-    assert (await _tidy(app))["accounts_without_parent"] == 0
-    clock.advance(days=6)
-    state = _state(app)
-    outbox: list[Mail] = []
-    async with state.sessions() as db:
-        done = await housekeeping.tidy(db, state.settings, state.clock(), outbox)
-    assert done["accounts_without_parent"] == 1
-    assert [m.subject for m in outbox] == ["Your ClawPlay account was deleted"]
 
 
 async def test_the_loop_runs_and_survives_errors(

@@ -28,3 +28,23 @@ test('development allows plain http, and defaults to the local server', () => {
   expect(loadConfig('http://192.168.1.20:8000', true)).toBe('http://192.168.1.20:8000');
   expect(loadConfig(undefined, false)).toBe('http://localhost:8000');
 });
+
+test('the website is at the address of the API unless told otherwise', () => {
+  const load = (web: string | undefined) => {
+    const saved = process.env.EXPO_PUBLIC_WEB_URL;
+    if (web === undefined) delete process.env.EXPO_PUBLIC_WEB_URL;
+    else process.env.EXPO_PUBLIC_WEB_URL = web;
+    try {
+      let url: string | undefined;
+      jest.isolateModules(() => {
+        url = jest.requireActual<{ WEB_URL: string }>('@/config').WEB_URL;
+      });
+      return url;
+    } finally {
+      if (saved === undefined) delete process.env.EXPO_PUBLIC_WEB_URL;
+      else process.env.EXPO_PUBLIC_WEB_URL = saved;
+    }
+  };
+  expect(load(undefined)).toBe('http://localhost:8000');
+  expect(load('https://clawplay.example/')).toBe('https://clawplay.example');
+});

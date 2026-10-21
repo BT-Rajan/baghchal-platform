@@ -92,7 +92,7 @@ describe('play now', () => {
       await screen.findByText('Nobody came along yet. Try again, or play the computer.'),
     ).toBeOnTheScreen();
     expires = inSeconds(120);
-    await press('Find an opponent');
+    await press('Keep looking');
     await screen.findByRole('button', { name: 'Stop looking' });
     await act(async () => router.replace('/'));
     expect(await screen.findByRole('heading', { name: 'Play' })).toBeOnTheScreen();

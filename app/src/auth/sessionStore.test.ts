@@ -1,4 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
+import { waitFor } from '@testing-library/react-native';
 
 import { ME, error, fakeServer, type Reply } from '../../tests/support/fakeServer';
 import { deferred, memoryTokenStore } from '../../tests/support/memoryTokenStore';
@@ -186,6 +187,60 @@ describe('refresh', () => {
     await store.start({ user: BOB, token: 'bob' });
     answer.resolve({ status: 200, body: ME });
     await refreshing;
+    expect(store.getState()).toEqual({ status: 'signedIn', user: BOB });
+  });
+});
+
+describe('terms that changed mid-session', () => {
+  const CHANGED = { ...ME, consents_needed: ['terms' as const] };
+
+  test('a request refused for them asks who we are again, so the agreement shows', async () => {
+    const { store, server } = setup({
+      saved: 'tok',
+      routes: {
+        'GET /api/v1/me': { status: 200, body: ME },
+        'GET /api/v1/games': error(403, 'consents_needed'),
+      },
+    });
+    await store.restore();
+    server.on('GET /api/v1/me', { status: 200, body: CHANGED });
+    await expect(store.api.activeGames()).rejects.toMatchObject({ code: 'consents_needed' });
+    await waitFor(() => expect(store.getState()).toEqual({ status: 'signedIn', user: CHANGED }));
+  });
+
+  test('a refresh that fails leaves the session as it was', async () => {
+    const { store, server } = setup({
+      saved: 'tok',
+      routes: {
+        'GET /api/v1/me': { status: 200, body: ME },
+        'GET /api/v1/games': error(403, 'consents_needed'),
+      },
+    });
+    await store.restore();
+    server.on('GET /api/v1/me', error(503, 'unavailable'));
+    await expect(store.api.activeGames()).rejects.toMatchObject({ code: 'consents_needed' });
+    await waitFor(() => expect(server.requests.at(-1)?.path).toBe('/api/v1/me'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(store.getState()).toEqual({ status: 'signedIn', user: ME });
+  });
+
+  test('an answer for an earlier session is ignored', async () => {
+    const { store, server } = setup({
+      saved: 'tok',
+      routes: {
+        'GET /api/v1/me': { status: 200, body: ME },
+        'GET /api/v1/games': () => error(403, 'consents_needed'),
+      },
+    });
+    await store.restore();
+    const answer = deferred<Reply>();
+    server.on('GET /api/v1/games', () => answer.promise);
+    const games = store.api.activeGames();
+    await store.start({ user: BOB, token: 'bob' });
+    const before = server.requests.length;
+    answer.resolve(error(403, 'consents_needed'));
+    await expect(games).rejects.toMatchObject({ code: 'consents_needed' });
+    expect(server.requests).toHaveLength(before);
     expect(store.getState()).toEqual({ status: 'signedIn', user: BOB });
   });
 });

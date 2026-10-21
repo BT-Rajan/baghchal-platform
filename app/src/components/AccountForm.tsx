@@ -1,57 +1,53 @@
 import type { UseMutationResult } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { describeError } from '@/api/errors';
+import type { Agreement } from '@/api/endpoints';
 import { checkSignUp } from '@/auth/validation';
 import { t } from '@/i18n';
-import { AGREEMENT_CODE_FIELDS, AGREEMENT_FIELDS, type KnownAge } from '@/legal/agreement';
 
-import { AgreementFields, useAgreement, type AgreementBody } from './AgreementFields';
+import { AgreementLine, useAgreement } from './AgreementLine';
 import { Button } from './Button';
 import { useFormErrors } from './form';
 import { Notice } from './Notice';
 import { TextField } from './TextField';
 
-export type AccountDetails = AgreementBody & {
+export type AccountDetails = Agreement & {
   username: string;
   email: string;
   password: string;
 };
 
-const FIELDS = ['username', 'email', 'password', ...AGREEMENT_FIELDS] as const;
+const FIELDS = ['username', 'email', 'password'] as const;
 const CODE_FIELDS = {
   username_taken: 'username',
   username_unavailable: 'username',
   weak_password: 'password',
-  ...AGREEMENT_CODE_FIELDS,
 } as const;
 
 /**
- * The one form for a new account's username, email and password, with the age and agreement
- * every account gives (`AgreementFields`): checked here, then sent with `action` (signing up,
- * or a guest making their account). Its errors show by the field they are about; what follows
- * a success is the caller's.
+ * The one form for a new account's username, email and password, with the agreement every
+ * account gives (`AgreementLine`): checked here, then sent with `action` (signing up, or a guest
+ * making their account) when its button, which says it accepts, is pressed. Its errors show by
+ * the field they are about; what follows a success is the caller's.
  */
 export function AccountForm({
   action,
   submitTitle,
-  knownAge,
 }: {
   action: UseMutationResult<unknown, Error, AccountDetails>;
+  /** "Accept and …": pressing it accepts the agreement. */
   submitTitle: string;
-  /** The age the server already has (a guest's): it is not asked again. */
-  knownAge?: KnownAge;
 }) {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const agreement = useAgreement({ guest: false, ...(knownAge && { known: knownAge }) });
+  const agreement = useAgreement();
   const { fieldError, formMessage, accept } = useFormErrors(FIELDS, action.error, CODE_FIELDS);
 
   const submit = () => {
     action.reset();
-    const { problems, body } = agreement.check(email);
-    if (accept({ ...checkSignUp({ username, email, password }), ...problems }) && body) {
+    const { body } = agreement;
+    if (accept(checkSignUp({ username, email, password })) && body) {
       action.mutate({ ...body, username, email: email.trim(), password });
     }
   };
@@ -59,9 +55,6 @@ export function AccountForm({
   return (
     <>
       {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
-      {agreement.versions.isError && (
-        <Notice tone="error">{describeError(agreement.versions.error)}</Notice>
-      )}
       <TextField
         label={t('Username')}
         value={username}
@@ -93,7 +86,7 @@ export function AccountForm({
         autoComplete="new-password"
         textContentType="newPassword"
       />
-      <AgreementFields agreement={agreement} fieldError={fieldError} />
+      <AgreementLine agreement={agreement} />
       <Button
         title={submitTitle}
         onPress={submit}

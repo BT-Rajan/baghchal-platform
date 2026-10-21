@@ -85,13 +85,12 @@ listing say so; until then, the listing does not claim it.
   interact" (chat and quick messages) and **yes** to "users can share personal information"
   only if the questionnaire counts chat that way. Expect a 3+ or 7+ rating, with "Users
   Interact".
-- **Target audience:** 13 and over. ClawPlay refuses players under 13, so choose the 13–15,
-  16–17 and 18+ groups and not the children's groups, which would bring in the Families
-  policy.
+- **Target audience:** 13 and over. The terms, which every player accepts before playing,
+  require players to be 13 or older, so choose the 13–15, 16–17 and 18+ groups and not the
+  children's groups, which would bring in the Families policy.
 - **Data safety:** describe what the privacy policy says:
-  - Collected: email address, username, month and year of birth (to check age), a parent's
-    email for players under 18, games played, chat messages (kept 30 days), and device
-    connection details for security.
+  - Collected: email address, username, games played, chat messages (kept 30 days), and
+    device connection details for security.
   - Not sold, and no advertising.
   - Encrypted in transit.
   - Deletion: in the app (Me → Settings → Delete account), and at `/delete-account` on the

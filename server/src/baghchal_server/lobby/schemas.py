@@ -71,6 +71,14 @@ class ChallengeIn(BaseModel):
         return self
 
 
+class ChallengeTournamentOut(BaseModel):
+    """The tournament a challenge plays a game of."""
+
+    code: str
+    name: str
+    round: int
+
+
 class ChallengeOut(BaseModel):
     id: uuid.UUID
     challenger: PlayerOut
@@ -86,6 +94,8 @@ class ChallengeOut(BaseModel):
     expires_at: datetime
     game_id: uuid.UUID | None = None
     """The game started by accepting this challenge."""
+    tournament: ChallengeTournamentOut | None = None
+    """A tournament game ("Play now"): casual, sides as paired."""
 
 
 class ChallengeList(BaseModel):

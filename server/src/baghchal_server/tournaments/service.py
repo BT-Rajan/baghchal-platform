@@ -3,8 +3,9 @@
 When the host starts it, the number of rounds is set (``swiss.rounds_for``) and round 1 is
 paired, by rating. Each round is paired when the one before is finished: players on the same
 score meet, nobody twice if it can be avoided, sides alternate, and an odd player out has a
-bye (a point). Games are casual; either player starts a pairing's game whenever the other is
-online, and an aborted game can be played again. Standings come from the games: a point for a
+bye (a point). Games are casual; either player asks the other, who must be online, with "Play
+now": a challenge for the pairing, which starts its game when accepted (``pairings``). An
+aborted game can be played again. Standings come from the games: a point for a
 win or a bye, ties broken by Buchholz. The tournament ends after the last round, or when the
 host ends it.
 """
@@ -15,8 +16,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Final, cast
 
-from sqlalchemy import ColumnElement, and_, delete, or_, select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import and_, delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from baghchal_server.accounts.models import User
@@ -24,15 +24,16 @@ from baghchal_server.billing import service as billing
 from baghchal_server.billing.plans import Feature
 from baghchal_server.errors import AppError
 from baghchal_server.games import service as games
-from baghchal_server.games.models import Game, GameStatus
+from baghchal_server.games.models import Game
 from baghchal_server.lobby import service as lobby
-from baghchal_server.lobby.models import Block
+from baghchal_server.lobby.models import Block, Challenge, ChallengeStatus
 from baghchal_server.lobby.schemas import PlayerOut
 from baghchal_server.lobby.time_controls import TIME_CONTROLS, category_of
 from baghchal_server.ratings.models import PlayerRating
 from baghchal_server.realtime.presence import Presence
 from baghchal_server.tournaments import swiss
 from baghchal_server.tournaments.models import Entry, Pairing, Tournament
+from baghchal_server.tournaments.pairings import check_waiting, state_of, unstarted
 from baghchal_server.tournaments.schemas import (
     MIN_PLAYERS,
     ByeOut,
@@ -264,25 +265,19 @@ async def finish(db: AsyncSession, now: datetime, user_id: uuid.UUID, code: str)
 def _pairing_state(p: Pairing, found: dict[uuid.UUID, Game]) -> PairingState:
     if p.tiger_id is None or p.forfeit_to is not None:
         return PairingState.DONE  # a bye, or won without a game
-    return _state(None if p.game_id is None else found.get(p.game_id))
+    return state_of(None if p.game_id is None else found.get(p.game_id))
 
 
-def _state(game: Game | None) -> PairingState:
-    if game is None or (
-        game.status == GameStatus.FINISHED and game.winner is None and not games.drawn(game)
-    ):
-        return PairingState.WAITING  # not started, or aborted: to be played (again)
-    return PairingState.PLAYING if game.status == GameStatus.ACTIVE else PairingState.DONE
-
-
-async def play(  # noqa: PLR0913, PLR0917 - who starts which pairing of which tournament
+async def play(  # noqa: PLR0913, PLR0917 - who asks for which pairing of which tournament
     db: AsyncSession,
     presence: Presence,
     now: datetime,
     user: User,
     code: str,
     pairing_id: uuid.UUID,
-) -> Game:
+) -> Challenge:
+    """ "Play now": challenge the opponent (who must be online) to this pairing's game; their
+    accepting it starts the game."""
     tournament = await find(db, code)
     if tournament.status != TournamentStatus.RUNNING:
         raise AppError(409, "tournament_not_running", "This tournament is not being played.")
@@ -291,44 +286,38 @@ async def play(  # noqa: PLR0913, PLR0917 - who starts which pairing of which to
         raise AppError(404, "pairing_not_found", "No such game in this tournament.")
     if user.id not in (pairing.goat_id, pairing.tiger_id):
         raise AppError(403, "not_your_game", "This is not your game.")
-    if pairing.tiger_id is None:
-        raise AppError(409, "pairing_played", "This round is a bye: there is no game to play.")
-    before = None if pairing.game_id is None else await db.get(Game, pairing.game_id)
-    if pairing.forfeit_to is not None or _state(before) != PairingState.WAITING:
-        raise AppError(409, "pairing_played", "This game has already been played.")
-    opponent = pairing.tiger_id if user.id == pairing.goat_id else pairing.goat_id
-    if await lobby.has_blocked(db, user.id, opponent) or await lobby.has_blocked(
-        db, opponent, user.id
+    await check_waiting(db, pairing)
+    opponent_id = pairing.tiger_id if user.id == pairing.goat_id else pairing.goat_id
+    assert opponent_id is not None  # noqa: S101 - not a bye (checked)
+    if await lobby.has_blocked(db, user.id, opponent_id) or await lobby.has_blocked(
+        db, opponent_id, user.id
     ):
         raise AppError(
             403, "player_blocked", "One of you has blocked the other: the host decides this game."
         )
-    if not await presence.online([opponent]):
+    if not await presence.online([opponent_id]):
         raise AppError(409, "player_offline", "Your opponent is not online.")
+    opponent = await db.get(User, opponent_id)
+    assert opponent is not None  # noqa: S101 - entries go with their players
     await lobby.check_abort_cooldown(db, user.id, now)
+    await lobby.check_abort_cooldown(db, opponent.id, now, name=opponent.username)
+    await lobby.check_free(db, user.id, opponent.id)
     tc = TIME_CONTROLS[tournament.time_control]
-    try:
-        game = await games.start_casual_game(
-            db,
-            now,
-            goat_id=pairing.goat_id,
-            tiger_id=pairing.tiger_id,
-            initial_seconds=tc.initial_seconds,
-            increment_seconds=tc.increment_seconds,
-        )
-    except IntegrityError:
-        await db.rollback()
-        raise lobby.busy_error() from None
-    claimed = await db.execute(
-        update(Pairing)
-        .where(Pairing.id == pairing.id, Pairing.forfeit_to.is_(None), _unstarted(pairing))
-        .values(game_id=game.id)
+    challenge = Challenge(
+        id=uuid.uuid4(),
+        challenger_id=user.id,
+        opponent_id=opponent.id,
+        pair_key=lobby.pair_key(user.id, opponent.id),
+        initial_seconds=tc.initial_seconds,
+        increment_seconds=tc.increment_seconds,
+        rated=False,
+        challenger_side="goat" if user.id == pairing.goat_id else "tiger",
+        status=ChallengeStatus.PENDING,
+        created_at=now,
+        expires_at=now + lobby.CHALLENGE_TTL,
+        pairing_id=pairing.id,
     )
-    if claimed.rowcount != 1:  # type: ignore[attr-defined]
-        await db.rollback()
-        raise AppError(409, "pairing_played", "This game has just been started.")
-    await db.commit()
-    return game
+    return await lobby.send_challenge(db, now, challenge, opponent.username)
 
 
 def _winner(p: Pairing, game: Game) -> uuid.UUID | None:
@@ -448,11 +437,11 @@ async def award(
     if pairing.round != tournament.round or pairing.tiger_id is None:
         raise AppError(409, "pairing_played", "Only this round's games can be given.")
     game = None if pairing.game_id is None else await db.get(Game, pairing.game_id)
-    if pairing.forfeit_to is not None or _state(game) != PairingState.WAITING:
+    if pairing.forfeit_to is not None or state_of(game) != PairingState.WAITING:
         raise AppError(409, "pairing_played", "This game has been played, or is being played.")
     given = await db.execute(
         update(Pairing)
-        .where(Pairing.id == pairing.id, Pairing.forfeit_to.is_(None), _unstarted(pairing))
+        .where(Pairing.id == pairing.id, Pairing.forfeit_to.is_(None), unstarted(pairing))
         .values(forfeit_to=pairing.goat_id if winner == "goat" else pairing.tiger_id)
     )
     if given.rowcount != 1:  # type: ignore[attr-defined]
@@ -460,13 +449,6 @@ async def award(
         raise AppError(409, "pairing_played", "This game has just been started.")
     await db.commit()
     return tournament
-
-
-def _unstarted(pairing: Pairing) -> ColumnElement[bool]:
-    """The pairing still has the game it had when read (none, or an aborted one)."""
-    return (
-        Pairing.game_id.is_(None) if pairing.game_id is None else Pairing.game_id == pairing.game_id
-    )
 
 
 async def _forfeit_waiting(

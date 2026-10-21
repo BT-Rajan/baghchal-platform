@@ -28,8 +28,8 @@ from baghchal_server.lobby.models import Challenge, ChallengeStatus, Seek
 from baghchal_server.lobby.schemas import TimeControlLabel
 from baghchal_server.lobby.service import (
     RATED_MATCH_EVERY,
-    busy_error,
     check_abort_cooldown,
+    check_free,
     hidden_from,
 )
 from baghchal_server.lobby.time_controls import TIME_CONTROLS
@@ -73,8 +73,7 @@ async def seek(  # noqa: PLR0913 - who wants which game, and where to look
     """Pair ``user`` now if possible (returns the game), or leave them waiting. Also returns
     when the wait ends."""
     user_id = user.id  # a rollback below expires ``user``
-    if await games.busy(db, [user_id]):
-        raise busy_error()
+    await check_free(db, user_id)  # only mine: the others are looked at below
     await check_abort_cooldown(db, user_id, now)
     tc = TIME_CONTROLS[time_control]
     # Start afresh: a new request replaces this player's old one; lapsed ones go too.

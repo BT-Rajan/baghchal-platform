@@ -1,27 +1,17 @@
-"""Consents to the terms and privacy policy, and the email asking a parent to agree.
+"""Consents to the terms and privacy policy.
 
 Kept free of the accounts service, which uses it during sign-up.
 """
 
 import uuid
-from datetime import datetime, timedelta
-from typing import Final
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from baghchal_server.accounts.models import User
-from baghchal_server.config import Settings
 from baghchal_server.errors import AppError
 from baghchal_server.legal.documents import VERSIONS, Document
 from baghchal_server.legal.models import Consent
-from baghchal_server.mail import Mail
-
-PARENT: Final = "parent"
-"""Email-token purpose: a parent's link to agree (or later withdraw)."""
-PARENT_DEADLINE: Final = timedelta(days=7)
-"""A parent has this long to agree; then the account is deleted (see housekeeping)."""
-
 
 # ── Terms and privacy policy ──────────────────────────────────────────────
 
@@ -67,24 +57,4 @@ async def history(db: AsyncSession, user_id: uuid.UUID) -> list[Consent]:
                 .order_by(Consent.accepted_at, Consent.document)
             )
         ).all()
-    )
-
-
-# ── Asking a parent ───────────────────────────────────────────────────────
-
-
-def parent_mail(settings: Settings, user: User, token: str) -> Mail:
-    """The email asking a parent or guardian to agree (the link also lets them withdraw)."""
-    assert user.parent_email is not None  # noqa: S101 - only asked when one was given
-    return Mail(
-        user.parent_email,
-        f"{user.username} would like to play ClawPlay",
-        f"Hello,\n\n{user.username} has signed up to ClawPlay, an online game of Bagh Chal "
-        "(tigers and goats), and gave this address as their parent's or guardian's. Players "
-        "under 18 need a parent or guardian to agree before they play other people.\n\n"
-        "Read what we do with their data and agree (or refuse) here, within 7 days:\n\n"
-        f"{settings.public_base_url}/parent-consent?token={token}\n\n"
-        "If you do nothing, the account and its data are deleted after 7 days. If you do not "
-        "know who this is, ignore this email.\n\n"
-        f"Privacy policy: {settings.public_base_url}/privacy",
     )

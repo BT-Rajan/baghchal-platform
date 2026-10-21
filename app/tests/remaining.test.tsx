@@ -33,9 +33,10 @@ describe('the challenge banner', () => {
       },
       'GET /api/v1/games/g1': { status: 200, body: game({ server_time: now() }) },
     });
-    expect(
-      await screen.findByText(/^bob challenges you: 5\+3 · casual · random sides · \d+ s$/),
-    ).toBeOnTheScreen();
+    // The lobby's own card, on the leaderboard.
+    expect(await screen.findByText('bob challenges you')).toBeOnTheScreen();
+    expect(screen.getByText('5+3 · casual · random sides')).toBeOnTheScreen();
+    expect(screen.getByText(/^Expires in \d+ s$/)).toBeOnTheScreen();
     await press("Accept bob's challenge");
     expect(await screen.findByText('alice (you)')).toBeOnTheScreen();
     expect(app.getPathname()).toBe('/game/g1');
@@ -55,7 +56,7 @@ describe('the challenge banner', () => {
         body: { ...first, status: 'declined' },
       },
     });
-    expect(await screen.findByText(/\(and 1 more in the lobby\)$/)).toBeOnTheScreen();
+    expect(await screen.findByText('And 1 more in the lobby.')).toBeOnTheScreen();
     await press("Decline bob's challenge");
     expect(await screen.findByText(/^carol challenges you/)).toBeOnTheScreen();
   });
@@ -86,7 +87,7 @@ describe('the challenge banner', () => {
       },
     });
     expect(await screen.findByText('bob challenges you')).toBeOnTheScreen();
-    expect(screen.queryByText(/^bob challenges you:/)).toBeNull();
+    expect(screen.getAllByText('bob challenges you')).toHaveLength(1);
   });
 
   test('is not shown during a game of my own', async () => {
@@ -123,8 +124,9 @@ describe('rematch', () => {
     });
     await screen.findByText('You lost: the tigers captured five goats.');
     await press('Rematch bob');
-    expect(await screen.findByText('Waiting for bob')).toBeOnTheScreen();
-    expect(app.getPathname()).toBe('/');
+    // The answer comes here, so the chat after the game stays open.
+    expect(await screen.findByText('Rematch sent. Waiting for bob to answer…')).toBeOnTheScreen();
+    expect(app.getPathname()).toBe('/game/g1');
     expect(server.lastTo('POST /api/v1/challenges').body).toEqual({
       opponent: 'bob',
       time_control: '5+3',

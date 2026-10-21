@@ -15,7 +15,6 @@ from baghchal_server.accounts.service import resolve_session
 from baghchal_server.config import Settings
 from baghchal_server.errors import AppError
 from baghchal_server.legal import consents
-from baghchal_server.legal.age import plays_people
 from baghchal_server.mail import Mailer
 from baghchal_server.metrics import Metrics
 from baghchal_server.ratelimit import Limit, RateLimiter
@@ -77,8 +76,7 @@ def session_token(
 UNAGREED_MAY: Final = frozenset(
     {"/api/v1/me/consents", "/api/v1/auth/logout", "/api/v1/me/delete", "/api/v1/me/claim"}
 )
-"""What a player may still change before answering the age question or accepting changed
-terms: answer them, or leave."""
+"""What a player may still do before accepting changed terms: accept them, or leave."""
 
 
 async def get_current_user(request: Request, state: State, db: DB) -> User:
@@ -86,13 +84,14 @@ async def get_current_user(request: Request, state: State, db: DB) -> User:
     user = await resolve_session(db, token, state.clock()) if token else None
     if user is None:
         raise AppError(401, "not_authenticated", "Please sign in.")
-    if request.method not in {"GET", "HEAD"} and request.url.path not in UNAGREED_MAY:
-        if user.age_checked_at is None:
-            raise AppError(403, "age_needed", "Please give your month and year of birth first.")
-        if await consents.needed(db, user.id):
-            raise AppError(
-                403, "consents_needed", "Please accept the updated terms and privacy policy first."
-            )
+    if (
+        request.method not in {"GET", "HEAD"}
+        and request.url.path not in UNAGREED_MAY
+        and await consents.needed(db, user.id)
+    ):
+        raise AppError(
+            403, "consents_needed", "Please accept the updated terms and privacy policy first."
+        )
     return user
 
 
@@ -107,22 +106,6 @@ async def get_member(user: CurrentUser) -> User:
 
 
 Member = Annotated[User, Depends(get_member)]
-
-
-async def get_people_player(user: CurrentUser, state: State) -> User:
-    """A signed-in player who may play other people: not a player under 18 whose parent has
-    not agreed yet (they play the computer meanwhile)."""
-    if not plays_people(user, state.clock()):
-        raise AppError(
-            403,
-            "parent_consent_needed",
-            "A parent or guardian needs to agree before you play other people. You can play "
-            "the computer meanwhile.",
-        )
-    return user
-
-
-PeoplePlayer = Annotated[User, Depends(get_people_player)]
 
 
 def client_ip(request: Request) -> str:

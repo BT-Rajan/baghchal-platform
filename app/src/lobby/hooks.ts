@@ -1,13 +1,29 @@
 /** Lobby data: queries over the shared cache, and the actions that change it. */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
+import { useEffect } from 'react';
 
-import type { Category, ChallengeAnswer, ChallengeRequest, Game } from '@/api/endpoints';
+import type {
+  Category,
+  Challenge,
+  ChallengeAnswer,
+  ChallengeRequest,
+  ComputerGameRequest,
+  Game,
+} from '@/api/endpoints';
 import { isApiError } from '@/api/errors';
 import { queryKeys } from '@/api/queryKeys';
 import { useApi, useMe } from '@/auth/session';
 import { serverClock } from '@/game/serverClock';
-import { applyChallenge, applyGame } from '@/realtime/cache';
+import {
+  applyChallenge,
+  applyGame,
+  CHALLENGE_OUTCOMES,
+  type ChallengeOutcome,
+  recordOutcome,
+} from '@/realtime/cache';
+
+import { isOpen } from './format';
 
 /** Presence is not pushed over the socket, so lists of players are polled. */
 export const PRESENCE_REFRESH_MS = 15_000;
@@ -111,6 +127,47 @@ export function useCreateChallenge() {
   return useMutation({
     mutationFn: (request: ChallengeRequest) => api.challenge(request),
     onSuccess: (challenge) => applyChallenge(queryClient, challenge, me.id),
+  });
+}
+
+/** How long I am told that a challenge of mine was declined or ran out. */
+export const OUTCOME_SHOWN_MS = 60_000;
+
+/**
+ * My challenges to players that were just declined (the server says so) or ran out (seen here
+ * when their time is up), for a moment after: newest last.
+ */
+export function useChallengeOutcomes(serverNowMs: number): Challenge[] {
+  const queryClient = useQueryClient();
+  const lists = useChallenges().data;
+  const outcomes = useQuery({
+    queryKey: CHALLENGE_OUTCOMES,
+    // Only ever set by recordOutcome (here and on realtime events), starting empty; a refetch
+    // keeps what is there.
+    queryFn: () =>
+      queryClient.getQueryData<ChallengeOutcome[]>(CHALLENGE_OUTCOMES) as ChallengeOutcome[],
+    initialData: [],
+    staleTime: Infinity,
+  }).data;
+  useEffect(() => {
+    for (const c of lists?.outgoing ?? []) {
+      if (c.opponent !== null && !isOpen(c, serverNowMs))
+        recordOutcome(queryClient, { ...c, status: 'expired' });
+    }
+  }, [lists, serverNowMs, queryClient]);
+  return outcomes.filter((o) => serverNowMs - o.at < OUTCOME_SHOWN_MS).map((o) => o.challenge);
+}
+
+/**
+ * Start a game against the computer and open it: the one way every "play the computer" button
+ * does it.
+ */
+export function usePlayComputer() {
+  const api = useApi();
+  const openStarted = useOpenStartedGame();
+  return useMutation({
+    mutationFn: (request: ComputerGameRequest) => api.playComputer(request),
+    onSuccess: openStarted,
   });
 }
 

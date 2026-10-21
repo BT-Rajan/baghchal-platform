@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
 import type { TrainerKind } from '@/api/endpoints';
-import { describeError } from '@/api/errors';
 import { has } from '@/billing/format';
 import { useMyPlan } from '@/billing/hooks';
 import { Button } from '@/components/Button';
@@ -17,6 +16,7 @@ import { mark, t } from '@/i18n';
 import { answerText, progressText } from '@/pro/format';
 import { useAnswerPuzzle, useTrainer } from '@/pro/hooks';
 import { colors } from '@/theme';
+import { ErrorNotice } from '@/components/ErrorNotice';
 
 const KINDS: readonly { value: TrainerKind; label: string }[] = [
   { value: 'opening', label: mark('Openings') },
@@ -82,7 +82,7 @@ function Puzzles({ kind }: { kind: TrainerKind }) {
           onMove={(move) => answer.mutate({ id: puzzle.id, move })}
         />
       )}
-      {answer.error !== null && <Notice tone="error">{describeError(answer.error)}</Notice>}
+      <ErrorNotice error={answer.error} />
       {answer.data !== undefined && (
         <>
           <Notice tone={answer.data.correct ? 'success' : 'info'}>{answerText(answer.data)}</Notice>

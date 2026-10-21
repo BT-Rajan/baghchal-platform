@@ -1,19 +1,26 @@
-import { useMutation } from '@tanstack/react-query';
-import { router, Stack, useLocalSearchParams, useNavigation, usePreventRemove } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import {
+  router,
+  Stack,
+  useFocusEffect,
+  useLocalSearchParams,
+  useNavigation,
+  usePreventRemove,
+} from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { annotate } from '@/analysis/format';
 import { useAnalysis } from '@/analysis/hooks';
 import type { Game } from '@/api/endpoints';
 import { useAppearance, useChooseAppearance } from '@/appearance/hooks';
-import { describeError } from '@/api/errors';
-import { useApi, useMe } from '@/auth/session';
+import { useMe } from '@/auth/session';
 import { has } from '@/billing/format';
 import { useMyPlan } from '@/billing/hooks';
 import { Button } from '@/components/Button';
 import { Card, SectionTitle } from '@/components/Card';
+import { ChallengeOutcome } from '@/components/ChallengeOutcome';
 import { Confirm } from '@/components/Confirm';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { AnalysisPanel } from '@/components/game/AnalysisPanel';
 import { Board } from '@/components/game/Board';
 import { Coach } from '@/components/game/Coach';
@@ -46,11 +53,17 @@ import {
 } from '@/game/describe';
 import { EMOTE_SHOWN_MS, EMOTES, emoteText, emotesOpen } from '@/game/emotes';
 import { useGame, useGameAction, useMove, useSendEmote, useShownEmote } from '@/game/hooks';
+import { showingGame } from '@/game/onScreen';
 import { candidateMoves, premoveDecision } from '@/game/premove';
 import { boardSize, gameLayout } from '@/game/layout';
-import { TIME_CONTROLS } from '@/lobby/format';
-import { t } from '@/i18n';
-import { useCreateChallenge, useOpenStartedGame } from '@/lobby/hooks';
+import { isOpen, TIME_CONTROLS } from '@/lobby/format';
+import { plural, t } from '@/i18n';
+import {
+  useChallengeOutcomes,
+  useChallenges,
+  useCreateChallenge,
+  usePlayComputer,
+} from '@/lobby/hooks';
 import { colors, spacing, type } from '@/theme';
 
 export default function GameScreen() {
@@ -80,6 +93,8 @@ export default function GameScreen() {
   const [leaving, setLeaving] = useState<Parameters<typeof navigation.dispatch>[0] | null>(null);
   const [mayLeave, setMayLeave] = useState(false);
   usePreventRemove(playing && !mayLeave, ({ data }) => setLeaving(data.action));
+  // While this screen is in front, a match's game 2 is opened from here, after its countdown.
+  useFocusEffect(useCallback(() => showingGame(id), [id]));
   // A premove: chosen on the opponent's turn (at `ply`), played as soon as it is my turn if
   // still legal then. Once the game moves past it, it simply no longer applies.
   const [premove, setPremove] = useState<{ move: string; ply: number } | null>(null);
@@ -186,14 +201,10 @@ export default function GameScreen() {
       {layout === 'short' && myBar}
       <Status game={game} mine={mine} />
       {game.status === 'finished' && (
-        // What next, straight after the result: play again, or back to the lobby.
+        // What next, straight after the result: game 2 of the match, back to the tournament,
+        // or play again; or back to the lobby.
         <View style={styles.next}>
-          {mine !== null &&
-            (game.computer === null ? (
-              <Rematch game={game} mine={mine} />
-            ) : (
-              <PlayAgain game={game} mine={mine} />
-            ))}
+          {mine !== null && <NextGame game={game} mine={mine} guest={me.role === 'guest'} />}
           <Button
             title={t('Back to the lobby')}
             variant="secondary"
@@ -224,7 +235,7 @@ export default function GameScreen() {
       )}
       {tip !== null && <Coach tip={tip} />}
       {replaying && <Replay ply={ply} total={game.ply} onShow={setShown} />}
-      {error !== null && <Notice tone="error">{describeError(error)}</Notice>}
+      <ErrorNotice error={error} />
       {position !== null && (
         <View style={styles.countsRow}>
           <View style={styles.grow}>
@@ -300,7 +311,16 @@ export default function GameScreen() {
       />
       {leaving !== null && !mayLeave && (
         <Confirm
-          question={t('Leave the game? It goes on without you, and your clock keeps running.')}
+          question={
+            game.ply < 2 &&
+            game.match?.game !== 2 &&
+            mine !== null &&
+            !isComputer(game, other(mine))
+              ? t(
+                  'Leave the game? If you do not make your first move it is aborted, which counts toward the limit of 3 a day.',
+                )
+              : t('Leave the game? It goes on without you, and your clock keeps running.')
+          }
           confirmTitle={t('Leave the game')}
           cancelTitle={t('Keep playing')}
           onConfirm={() => setMayLeave(true)}
@@ -325,26 +345,87 @@ export default function GameScreen() {
 }
 
 /**
+ * The main next step after a game, if there is one: game 2 of a rated match (after a short
+ * countdown), back to the tournament it was played in, the computer again, or a rematch.
+ */
+function NextGame({ game, mine, guest }: { game: Game; mine: Piece; guest: boolean }) {
+  const second = game.match?.game === 1 ? game.match.games[1] : undefined;
+  if (second !== undefined) {
+    return <GameTwoCountdown gameId={second} startsAt={game.match?.game_2_starts_at ?? null} />;
+  }
+  if (game.tournament !== null && game.tournament !== undefined) {
+    const code = game.tournament;
+    return (
+      <Button
+        title={t('Back to the tournament')}
+        onPress={() => router.navigate(`/tournament/${code}`)}
+      />
+    );
+  }
+  if (game.computer !== null) return <PlayAgain game={game} mine={mine} />;
+  // Guests cannot challenge by name, and game 1 of a match is followed by game 2.
+  return guest || game.match !== null ? null : <Rematch game={game} mine={mine} />;
+}
+
+/**
+ * Game 1's result stays on screen while game 2 counts down, then game 2 opens. Seen later
+ * (from the history), game 1 just leads to game 2.
+ */
+function GameTwoCountdown({ gameId, startsAt }: { gameId: string; startsAt: string | null }) {
+  const now = useServerNow(250);
+  const left = startsAt === null ? 0 : Math.max(0, Math.ceil((Date.parse(startsAt) - now) / 1000));
+  const [counting] = useState(left > 0);
+  useEffect(() => {
+    if (counting && left === 0) router.replace(`/game/${gameId}`);
+  }, [counting, left, gameId]);
+  const open = (
+    <Button title={t('Play game 2 now')} onPress={() => router.replace(`/game/${gameId}`)} />
+  );
+  if (!counting)
+    return <Button title={t('Go to game 2')} onPress={() => router.replace(`/game/${gameId}`)} />;
+  return (
+    <Card tone="accent">
+      <Text style={styles.matchTitle} aria-live="polite">
+        {plural(left, 'Game 2 starts in {count} second…', 'Game 2 starts in {count} seconds…')}
+      </Text>
+      {open}
+    </Card>
+  );
+}
+
+/**
  * Challenge the same player again: a casual game (rated matches are limited to one a day per
- * pair) with sides swapped. The answer comes in the lobby.
+ * pair) with sides swapped. The answer is shown here, so the chat after the game stays open.
  */
 function Rematch({ game, mine }: { game: Game; mine: Piece }) {
   const create = useCreateChallenge();
+  const serverNow = useServerNow(1000);
+  const outgoing = useChallenges().data?.outgoing ?? [];
+  const outcomes = useChallengeOutcomes(serverNow);
   const timeControl = TIME_CONTROLS.find((tc) => tc.label === game.time_control)?.label;
   if (timeControl === undefined) return null;
   const opponent = playerOf(game, other(mine)).username;
+  const sent = create.data;
+  const waiting =
+    sent !== undefined && outgoing.some((c) => c.id === sent.id && isOpen(c, serverNow));
+  const outcome = sent === undefined ? undefined : outcomes.find((c) => c.id === sent.id);
+  if (waiting) {
+    return (
+      <Notice tone="info">
+        {t('Rematch sent. Waiting for {name} to answer…', { name: opponent })}
+      </Notice>
+    );
+  }
   return (
     <>
-      {create.error !== null && <Notice tone="error">{describeError(create.error)}</Notice>}
+      {outcome !== undefined && <ChallengeOutcome challenge={outcome} />}
+      <ErrorNotice error={create.error} />
       <Button
         title={t('Rematch {name}', { name: opponent })}
         label={t('Rematch (casual, sides swapped)')}
         busy={create.isPending}
         onPress={() =>
-          create.mutate(
-            { opponent, time_control: timeControl, rated: false, side: other(mine) },
-            { onSuccess: () => router.navigate('/') },
-          )
+          create.mutate({ opponent, time_control: timeControl, rated: false, side: other(mine) })
         }
       />
     </>
@@ -388,7 +469,7 @@ function QuickMessages({
           onPress={onToggle}
         />
       </View>
-      {send.error !== null && <Notice tone="error">{describeError(send.error)}</Notice>}
+      <ErrorNotice error={send.error} />
     </View>
   );
 }
@@ -448,26 +529,22 @@ function Replay({
 
 /** Another game against the computer at the same level, sides swapped. */
 function PlayAgain({ game, mine }: { game: Game; mine: Piece }) {
-  const api = useApi();
-  const openStarted = useOpenStartedGame();
+  const start = usePlayComputer();
   const timeControl = TIME_CONTROLS.find((tc) => tc.label === game.time_control)?.label;
-  const start = useMutation({
-    mutationFn: () =>
-      api.playComputer({
-        level: game.computer ?? 'medium',
-        side: other(mine),
-        time_control: timeControl ?? '5+3',
-      }),
-    onSuccess: openStarted,
-  });
   return (
     <>
-      {start.error !== null && <Notice tone="error">{describeError(start.error)}</Notice>}
+      <ErrorNotice error={start.error} />
       <Button
         title={t('Play the computer again')}
         label={t('Play again (sides swapped)')}
         busy={start.isPending}
-        onPress={() => start.mutate()}
+        onPress={() =>
+          start.mutate({
+            level: game.computer ?? 'medium',
+            side: other(mine),
+            time_control: timeControl ?? '5+3',
+          })
+        }
       />
     </>
   );
@@ -499,16 +576,20 @@ function Status({ game, mine }: { game: Game; mine: Piece | null }) {
                   turn,
                   seconds: firstMove,
                 })
-              : t('{turn} · {seconds} s to make a first move', { turn, seconds: firstMove })}
+              : t('{turn} · {seconds} s to make a first move, or the game is aborted', {
+                  turn,
+                  seconds: firstMove,
+                })}
         </Text>
       )}
       {match !== null && (
         <Card>
           <Text style={styles.matchTitle}>{match.title}</Text>
           {match.score !== '' && <Text style={styles.matchScore}>{match.score}</Text>}
-          {match.otherGameId !== null && (
+          {/* Game 1 leads on to game 2 with its countdown (NextGame). */}
+          {match.otherGameId !== null && game.match?.game === 2 && (
             <Button
-              title={game.match?.game === 1 ? t('Go to game 2') : t('Back to game 1')}
+              title={t('Back to game 1')}
               variant="secondary"
               onPress={() => router.replace(`/game/${match.otherGameId}`)}
             />

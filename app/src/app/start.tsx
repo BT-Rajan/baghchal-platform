@@ -1,15 +1,14 @@
 import { useMutation } from '@tanstack/react-query';
 
-import { describeError } from '@/api/errors';
+import type { Agreement } from '@/api/endpoints';
+import { peekReturn } from '@/auth/returnTo';
 import { useApi, useSession } from '@/auth/session';
-import { AgreementFields, useAgreement } from '@/components/AgreementFields';
+import { AgreementLine, useAgreement } from '@/components/AgreementLine';
 import { t } from '@/i18n';
 import { Button } from '@/components/Button';
-import { useFormErrors } from '@/components/form';
-import { Notice } from '@/components/Notice';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { Screen } from '@/components/Screen';
 import { TextLink } from '@/components/TextLink';
-import { AGREEMENT_CODE_FIELDS, AGREEMENT_FIELDS, withAge } from '@/legal/agreement';
 import { useOpenStartedGame } from '@/lobby/hooks';
 
 /**
@@ -18,16 +17,20 @@ import { useOpenStartedGame } from '@/lobby/hooks';
  */
 const FIRST_GAME = { level: 'easy', side: 'goat', time_control: '5+3' } as const;
 
-/** Play at once as a guest: only the age and the agreement are asked first. */
+/**
+ * Play at once as a guest: nothing to type, only the agreement to accept. Someone who came from
+ * a friend's link goes on to it (see the route guards in _layout) instead of the computer.
+ */
 export default function Start() {
   const { session } = useSession();
   const api = useApi();
   const openStarted = useOpenStartedGame();
-  const agreement = useAgreement({ guest: true });
+  const agreement = useAgreement();
   const play = useMutation({
-    mutationFn: async (body: NonNullable<ReturnType<typeof agreement.check>['body']>) => {
-      const { parent_email: _, ...guest } = body;
-      await session.playAsGuest(withAge(guest));
+    mutationFn: async (body: Agreement) => {
+      const goingOn = peekReturn() !== null;
+      await session.playAsGuest(body);
+      if (goingOn) return;
       const game = await api.playComputer(FIRST_GAME);
       // Open it once the screens for signed-in players are in place, or their guard would send
       // the game back to the welcome page.
@@ -35,27 +38,18 @@ export default function Start() {
       openStarted(game);
     },
   });
-  const { fieldError, formMessage, accept } = useFormErrors(
-    AGREEMENT_FIELDS,
-    play.error,
-    AGREEMENT_CODE_FIELDS,
-  );
 
   const start = () => {
     play.reset();
-    const { problems, body } = agreement.check();
-    if (accept(problems) && body) play.mutate(body);
+    if (agreement.body) play.mutate(agreement.body);
   };
 
   return (
     <Screen title={t('Your first game')} brand>
-      {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
-      {agreement.versions.isError && (
-        <Notice tone="error">{describeError(agreement.versions.error)}</Notice>
-      )}
-      <AgreementFields agreement={agreement} fieldError={fieldError} />
+      <ErrorNotice error={play.error} />
+      <AgreementLine agreement={agreement} />
       <Button
-        title={t('Start playing')}
+        title={t('Accept and play')}
         onPress={start}
         busy={play.isPending || agreement.versions.isPending}
       />

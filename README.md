@@ -58,9 +58,9 @@ Each phase ships complete — tested, documented and reviewed — before the nex
    - ✅ **Security review** of the whole platform, with the fixes it called for
      ([`SECURITY.md`](SECURITY.md)).
    - ✅ **Privacy policy and terms**, for India (DPDP Act 2023, IT Rules) and players worldwide
-     (GDPR): versioned texts every player agrees to (and agrees again when they change), a
-     month and year of birth at sign-up (13 and over; under 18, a parent or guardian agrees by
-     email before the player meets other people), and data deleted on the policy's schedule
+     (GDPR): versioned texts every player accepts with one Accept (and again when they change);
+     the terms say who may play (13 and over; under 18, with a parent's or guardian's
+     permission), and no age is asked or kept; data deleted on the policy's schedule
      ([plan](docs/plans/phase-8-ready-for-players.md)).
    - Still to do: store builds for the apps, and testing on real devices.
 9. **Plans** — Free, Plus and Pro ([below](#plans)):
@@ -147,12 +147,11 @@ and the Caddyfile.
 ## API (v1)
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/api/v1/auth/guest` | Play at once without signing up: a guest account, signed in (`transport`, `birth_month`, `terms_version`, `privacy_version`); a guest under 18 plays only the computer |
+| POST | `/api/v1/auth/guest` | Play at once without signing up: a guest account, signed in (`transport`, `terms_version`, `privacy_version`) |
 | POST | `/api/v1/me/claim` | A guest makes a real account (`username`, `email`, `password`, and the agreement as for sign-up), keeping their games; the email works once its link is opened |
-| POST | `/api/v1/auth/register` | Start sign-up (`username`, `email`, `password`, `birth_month` as `YYYY-MM`, `terms_version`, `privacy_version`, and under 18 `parent_email`); emails a confirmation link (always 202) |
+| POST | `/api/v1/auth/register` | Start sign-up (`username`, `email`, `password`, `terms_version`, `privacy_version`); emails a confirmation link (always 202) |
 | GET | `/api/v1/legal`, `/api/v1/legal/{terms\|privacy}` | The current versions; a document's text (Markdown) |
-| POST | `/api/v1/me/consents` | Agree to the current versions (and give the `birth_month`, for an account made before it was asked); `GET /me` says what is needed (`consents_needed`, `age_needed`) |
-| POST | `/api/v1/parent-consent/look-up`, `/api/v1/parent-consent` | From the email to a parent: whose account it is; `decision` agree (the player may play people) or refuse (the account is deleted). The same link withdraws until the player turns 18 |
+| POST | `/api/v1/me/consents` | Accept the current versions; `GET /me` says which changed since (`consents_needed`) |
 | POST | `/api/v1/auth/verify-email` | Confirm the address and sign in |
 | POST | `/api/v1/auth/login` | Sign in with username or email |
 | POST | `/api/v1/auth/logout` | End this session |

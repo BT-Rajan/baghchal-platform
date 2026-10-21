@@ -138,9 +138,9 @@ describe('chat', () => {
     expect(screen.getAllByText(/you too/)).toHaveLength(1);
   });
 
-  test('there is no chat with a player under 18; turned off, it says how to turn it on', async () => {
+  test('there is no chat with a guest; turned off, it says how to turn it on', async () => {
     await openGame(game({ ...UNDER_WAY, server_time: now() }), {
-      [CHAT]: { status: 200, body: { open: false, closed_because: 'under_18', messages: [] } },
+      [CHAT]: { status: 200, body: { open: false, closed_because: 'guest', messages: [] } },
     });
     expect(await screen.findByRole('button', { name: 'Resign' })).toBeOnTheScreen();
     expect(screen.queryByText('Chat')).toBeNull();

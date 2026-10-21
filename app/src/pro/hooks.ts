@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { TournamentRequest, TrainerKind } from '@/api/endpoints';
 import { queryKeys } from '@/api/queryKeys';
 import { useApi } from '@/auth/session';
-import { useOpenStartedGame } from '@/lobby/hooks';
 
 /** How often an open tournament page looks for new players, games and results. */
 export const TOURNAMENT_REFRESH_MS = 5_000;
@@ -58,14 +57,15 @@ export function useAwardPairing(code: string) {
   });
 }
 
-/** Start one of my tournament games; it opens for both players. */
+/**
+ * Ask my opponent to play one of my tournament games now: a challenge they accept like any
+ * other, which opens the game for both of us.
+ */
 export function usePlayPairing(code: string) {
   const api = useApi();
   const queryClient = useQueryClient();
-  const openStarted = useOpenStartedGame();
   return useMutation({
     mutationFn: (pairingId: string) => api.playPairing(code, pairingId),
-    onSuccess: openStarted,
     onSettled: () => void queryClient.invalidateQueries({ queryKey: queryKeys.tournament(code) }),
   });
 }

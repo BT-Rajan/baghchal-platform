@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { Profile } from '@/api/endpoints';
-import { describeError } from '@/api/errors';
 import { plural, t } from '@/i18n';
 import { CATEGORIES, canChallenge, joinedText, presenceText } from '@/lobby/format';
 import { useBlock } from '@/lobby/hooks';
@@ -15,9 +14,9 @@ import { BadgePill } from './BadgePill';
 import { Button } from './Button';
 import { Card, Hint } from './Card';
 import { Confirm } from './Confirm';
+import { ErrorNotice } from './ErrorNotice';
 import { FriendControl } from './FriendControl';
 import { GameHistory } from './GameHistory';
-import { Notice } from './Notice';
 import { PresenceDot } from './PlayerRow';
 
 export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean }) {
@@ -81,17 +80,14 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
         </Hint>
       )}
       {/* Guests have no friends; their names start with "guest-". */}
-      {!isMe &&
-        !profile.blocked &&
-        guestViewer === false &&
-        me.plays_people &&
-        !profile.username.startsWith('guest-') && (
-          <FriendControl username={profile.username} relation={profile.friend ?? 'none'} />
-        )}
-      {!isMe && !profile.blocked && (
+      {!isMe && !profile.blocked && !guestViewer && !profile.username.startsWith('guest-') && (
+        <FriendControl username={profile.username} relation={profile.friend ?? 'none'} />
+      )}
+      {/* Guests cannot challenge anyone by name (a free account can). */}
+      {!isMe && !profile.blocked && !guestViewer && (
         <Button
           title={t('Challenge {name}', { name: profile.username })}
-          disabled={!me.plays_people || !canChallenge(profile)}
+          disabled={!canChallenge(profile)}
           onPress={() => router.push(`/challenge/${profile.username}`)}
         />
       )}
@@ -117,7 +113,7 @@ function BlockControl({ username, blocked }: { username: string; blocked: boolea
     change.mutate({ username, block }, { onSuccess: () => setConfirming(false) });
   return (
     <View style={styles.block}>
-      {change.error !== null && <Notice tone="error">{describeError(change.error)}</Notice>}
+      <ErrorNotice error={change.error} />
       {blocked ? (
         <>
           <Text style={styles.muted}>

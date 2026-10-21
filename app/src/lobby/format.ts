@@ -1,5 +1,6 @@
 /** Words and numbers for the lobby, profiles and leaderboards. */
 import type { GameSummary, Level, Category, Challenge, Side, TimeControl } from '@/api/endpoints';
+import { WEB_URL } from '@/config';
 import { ratingChangeText } from '@/game/describe';
 import { locale, mark, plural, t } from '@/i18n';
 
@@ -42,12 +43,15 @@ export function canChallenge(player: { online: boolean; playing: boolean }): boo
   return player.online && !player.playing;
 }
 
-/** A link to share, on the web; elsewhere just the path. Every share link in the app comes from here. */
+/**
+ * The full address of an in-app path, to share: this site's on the web, the website's
+ * (`WEB_URL`) in the apps. Every share link in the app comes from here.
+ */
 export function shareLink(
   path: string,
-  origin: string | undefined = (globalThis as { location?: { origin?: string } }).location?.origin,
+  origin: string = (globalThis as { location?: { origin?: string } }).location?.origin ?? WEB_URL,
 ): string {
-  return origin === undefined ? path : `${origin}${path}`;
+  return `${origin.replace(/\/+$/, '')}${path}`;
 }
 
 /** The page that opens a challenge by link. */

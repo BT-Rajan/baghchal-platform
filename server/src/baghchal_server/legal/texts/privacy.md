@@ -13,8 +13,6 @@ Grievance Officer: [[grievance_officer]], [[grievance_email]].
 **Your account**
 
 - Username, email address, and your password, which we store only as a strong one-way hash (Argon2id). We use these to create your account, sign you in, and send emails you need (confirming your address, resetting your password, notices about your account).
-- Your month and year of birth: we use them once, to check your age when you sign up. We keep only the date by which you will be 18, not your birth date.
-- For players aged 13 to 17: your parent's or guardian's email address and when they agreed (see *Children*).
 - Which versions of these terms and this policy you accepted, and when.
 - Your session: a random sign-in token, which we store only as a hash, with when it was created and last used.
 
@@ -25,7 +23,7 @@ Grievance Officer: [[grievance_officer]], [[grievance_email]].
 - Notifications we show you in the app (someone challenged you, asked to be friends, a tournament started).
 - Achievements are worked out from your games and puzzles whenever they are shown; nothing extra is stored.
 - Quick messages in games (such as "Good luck") are passed to your opponent and not stored.
-- Chat messages in games: players who are both adults (18 or over, with an account) can write to each other during a game and for a few minutes after it, unless either of them turned messages off. We keep what you write for 30 days, so that if someone reports a message a moderator can read it, and we hide words on our blocked list. Players under 18 never see or send chat.
+- Chat messages in games: players with an account (not guests) can write to each other during a game and for a few minutes after it, unless either of them turned messages off. We keep what you write for 30 days, so that if someone reports a message a moderator can read it, and we hide words on our blocked list.
 - Whether you are online right now (kept only in short-lived memory, not stored).
 
 **Fair play and safety**
@@ -74,7 +72,6 @@ Our servers are in [[hosting_location]]. Our email and hosting providers may pro
 - **When you delete your account**: your email address, password, sessions, links, blocks and chat messages are deleted at once. Your username is replaced with an anonymous one; games you played stay in your opponents' history under that anonymous name, without anything that identifies you.
 - **Sign-ups never confirmed**: deleted after 7 days.
 - **Guest accounts** (playing without signing up): deleted like an account when you sign out, or once their session expires, 30 days after you started playing.
-- **Accounts of 13-to-17-year-olds whose parent has not agreed**: deleted after 7 days.
 - **Sessions**: deleted when they expire, 30 days after you sign in.
 - **Email links** (confirmations, password resets): deleted 7 days after they expire or are used.
 - **Notifications**: your newest 100.
@@ -98,7 +95,7 @@ If you are in the EU, the EEA or the UK, you also have the rights to restrict or
 
 ## Children
 
-You must be at least 13 to use ClawPlay. If you are 13 to 17, we need your parent's or guardian's agreement before you can play other people: when you sign up we email them, and until they agree you can play only against the computer. If they do not agree within 7 days, the account and its data are deleted. A parent can withdraw their agreement at any time from the link in that email, which deletes the account.
+You must be at least 13 to use ClawPlay, and if you are under 18 you need your parent's or guardian's permission (see our terms). You confirm this when you press Accept; we do not ask for your age or keep any record of it. A parent or guardian can ask us to delete their child's account at any time by writing to us.
 
 We do not track, profile or target advertising at anyone, children included.
 

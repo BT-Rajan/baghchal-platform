@@ -2,7 +2,6 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 
 import type { Challenge, Side, TimeControl } from '@/api/endpoints';
-import { describeError } from '@/api/errors';
 import { useMe } from '@/auth/session';
 import { mark, t } from '@/i18n';
 import { TimeControlPicker } from './TimeControlPicker';
@@ -12,15 +11,14 @@ import { useAnswerChallenge, useCreateChallenge } from '@/lobby/hooks';
 import { Button } from './Button';
 import { Hint } from './Card';
 import { ChallengeCard } from './ChallengeCard';
-import { Notice } from './Notice';
-import { whyNotPeople } from './PeopleOnly';
+import { ErrorNotice } from './ErrorNotice';
 import { Screen } from './Screen';
 import { Segmented } from './Segmented';
 import { useServerNow } from './useNow';
 
 const MODES = [
-  { value: 'rated', label: mark('Rated') },
   { value: 'casual', label: mark('Casual') },
+  { value: 'rated', label: mark('Rated') },
 ] as const;
 const SIDES: readonly { value: Side; label: string }[] = [
   { value: 'random', label: mark('Random') },
@@ -38,10 +36,10 @@ function leave() {
  * it is sent to. A link is shown once made, to copy and send.
  */
 export function ChallengeForm({ opponent }: { opponent?: string }) {
-  const me = useMe();
   const byLink = opponent === undefined;
   const [timeControl, setTimeControl] = useState<TimeControl>('5+3');
-  const [mode, setMode] = useState<'rated' | 'casual'>(byLink ? 'casual' : 'rated');
+  // Casual by default, as everywhere (rated matches are limited to one a day per pair).
+  const [mode, setMode] = useState<'rated' | 'casual'>('casual');
   const [side, setSide] = useState<Side>('random');
   const [made, setMade] = useState<Challenge | null>(null);
   const create = useCreateChallenge();
@@ -51,25 +49,16 @@ export function ChallengeForm({ opponent }: { opponent?: string }) {
 
   if (made !== null) return <MadeLink title={title} challenge={made} />;
 
-  const send = () =>
+  const send = (rated: boolean) =>
     create.mutate(
       {
         ...(opponent !== undefined && { opponent }),
         time_control: timeControl,
-        rated: mode === 'rated',
-        ...(mode === 'casual' && { side }),
+        rated,
+        ...(!rated && { side }),
       },
       { onSuccess: (challenge) => (byLink ? setMade(challenge) : leave()) },
     );
-
-  const notYet = whyNotPeople(me);
-  if (notYet !== null) {
-    return (
-      <Screen title={title}>
-        <Notice tone="info">{notYet}</Notice>
-      </Screen>
-    );
-  }
 
   return (
     <Screen title={title}>
@@ -80,7 +69,13 @@ export function ChallengeForm({ opponent }: { opponent?: string }) {
           )}
         </Hint>
       )}
-      {create.error !== null && <Notice tone="error">{describeError(create.error)}</Notice>}
+      <ErrorNotice
+        error={create.error}
+        onCasual={() => {
+          setMode('casual');
+          send(false);
+        }}
+      />
       <TimeControlPicker value={timeControl} onChange={setTimeControl} />
       {!byLink && (
         <Segmented
@@ -102,7 +97,7 @@ export function ChallengeForm({ opponent }: { opponent?: string }) {
       )}
       <Button
         title={byLink ? t('Make a link') : t('Send challenge')}
-        onPress={send}
+        onPress={() => send(mode === 'rated')}
         busy={create.isPending}
       />
       <Button title={t('Cancel')} variant="secondary" onPress={leave} />
@@ -121,7 +116,7 @@ function MadeLink({ title, challenge }: { title: string; challenge: Challenge })
           'Send this link to a friend. The game starts when they open it while you are online; it is also under Your challenges in the lobby.',
         )}
       </Hint>
-      {answer.error !== null && <Notice tone="error">{describeError(answer.error)}</Notice>}
+      <ErrorNotice error={answer.error} />
       <ChallengeCard
         challenge={challenge}
         myId={me.id}

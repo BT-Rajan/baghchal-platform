@@ -3,9 +3,9 @@ from typing import Annotated, Final
 
 from fastapi import APIRouter, Path, status
 
-from baghchal_server.deps import DB, CurrentUser, PeoplePlayer, State, enforce_limit
-from baghchal_server.games.events import notify as notify_game
-from baghchal_server.games.schemas import GameOut
+from baghchal_server.deps import DB, CurrentUser, State, enforce_limit
+from baghchal_server.lobby.routes import announce_challenge
+from baghchal_server.lobby.schemas import ChallengeOut
 from baghchal_server.notifications import service as notifications
 from baghchal_server.notifications.schemas import NotificationKind
 from baghchal_server.ratelimit import Limit
@@ -22,7 +22,7 @@ Code = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{1,16}$")]
 
 @router.post("/tournaments", status_code=status.HTTP_201_CREATED)
 async def create_tournament(
-    data: TournamentIn, user: PeoplePlayer, state: State, db: DB
+    data: TournamentIn, user: CurrentUser, state: State, db: DB
 ) -> TournamentOut:
     """Host a Swiss tournament (Pro); share its code for players to join."""
     await enforce_limit(state, CREATES_PER_USER, str(user.id))
@@ -43,7 +43,7 @@ async def tournament(code: Code, user: CurrentUser, state: State, db: DB) -> Tou
 
 
 @router.post("/tournaments/{code}/join")
-async def join_tournament(code: Code, user: PeoplePlayer, state: State, db: DB) -> TournamentOut:
+async def join_tournament(code: Code, user: CurrentUser, state: State, db: DB) -> TournamentOut:
     await enforce_limit(state, ACTIONS_PER_USER, str(user.id))
     now = state.clock()
     return await service.describe(db, now, await service.join(db, now, user, code))
@@ -92,11 +92,12 @@ async def award_pairing(  # noqa: PLR0913, PLR0917 - FastAPI dependencies
     return await service.describe(db, state.clock(), tournament)
 
 
-@router.post("/tournaments/{code}/pairings/{pairing_id}/play")
+@router.post("/tournaments/{code}/pairings/{pairing_id}/play", status_code=status.HTTP_201_CREATED)
 async def play_pairing(
     code: Code, pairing_id: uuid.UUID, user: CurrentUser, state: State, db: DB
-) -> GameOut:
-    """Start one of my games; my opponent must be online (both get a ``game`` event)."""
+) -> ChallengeOut:
+    """ "Play now": challenge my opponent in this game, who must be online. Accepting it
+    (``/challenges/{id}/accept``, like any challenge) starts the game."""
     await enforce_limit(state, ACTIONS_PER_USER, str(user.id))
-    game = await service.play(db, state.presence, state.clock(), user, code, pairing_id)
-    return await notify_game(state, db, game)
+    challenge = await service.play(db, state.presence, state.clock(), user, code, pairing_id)
+    return await announce_challenge(state, db, challenge)

@@ -1,16 +1,13 @@
 """Chat in games: adults with accounts only, filtered, kept 30 days, reportable."""
 
-import uuid
 from contextlib import AsyncExitStack
-from datetime import timedelta
 from typing import Any
 
 import httpx
 from fastapi import FastAPI
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select
 
 from baghchal_server import housekeeping
-from baghchal_server.accounts.models import User
 from baghchal_server.chat.models import ChatMessage
 from baghchal_server.chat.service import clean
 from baghchal_server.config import Settings
@@ -69,25 +66,10 @@ def test_blocked_words_are_masked() -> None:
     assert clean(settings, "Oh DARN it, darnation") == "Oh **** it, ****ation"
 
 
-async def test_closed_for_minors_guests_and_the_computer(
+async def test_closed_for_guests_and_the_computer(
     app: FastAPI, players: PlayerFactory, app_client: httpx.AsyncClient
 ) -> None:
-    alice, bob = await players("alice"), await players("bob")
-    async with AsyncExitStack() as stack:
-        await _online(app, stack, alice, bob)
-        game = await _start(alice, bob)
-        async with _state(app).sessions() as db:  # bob turns out to be 17
-            await db.execute(
-                update(User)
-                .where(User.id == uuid.UUID(bob.id))
-                .values(adult_from=_state(app).clock() + timedelta(days=200))
-            )
-            await db.commit()
-        assert (await _read(alice, game))["closed_because"] == "under_18"
-        assert (await _read(alice, game))["messages"] == []
-        assert _code(await _say(alice, game, "hi")) == "chat_closed"
-        await alice.http.post(f"/api/v1/games/{game['id']}/abort")
-
+    alice = await players("alice")
     computer = (await alice.http.post("/api/v1/games/computer", json={"level": "easy"})).json()
     assert (await _read(alice, computer))["closed_because"] == "computer"
     await alice.http.post(f"/api/v1/games/{computer['id']}/resign")

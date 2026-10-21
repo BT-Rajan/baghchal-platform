@@ -11,7 +11,6 @@ const LIGHT_PAGES = [
   /^\/verify-email/,
   /^\/reset-password/,
   /^\/confirm-email/,
-  /^\/parent-consent/,
   /^\/challenge\//,
   /^\/report\//,
   /^\/invite/,

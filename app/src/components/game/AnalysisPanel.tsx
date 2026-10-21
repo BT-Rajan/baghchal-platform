@@ -13,14 +13,13 @@ import {
 } from '@/analysis/format';
 import { useAnalyse } from '@/analysis/hooks';
 import type { Analysis, Game } from '@/api/endpoints';
-import { describeError } from '@/api/errors';
 import { nameOf } from '@/game/describe';
 import { t } from '@/i18n';
 import { colors } from '@/theme';
 
 import { Button } from '../Button';
 import { Card, Hint, SectionTitle } from '../Card';
-import { Notice } from '../Notice';
+import { ErrorNotice } from '../ErrorNotice';
 import { ErrorState, Loading } from '../States';
 import { Upsell } from '../Upsell';
 
@@ -58,9 +57,11 @@ export function AnalysisPanel({
       ) : analysis.data === null ? (
         <Card>
           <Hint>{t('The engine reviews every move and shows where the game turned.')}</Hint>
-          {analyse.error !== null && <Notice tone="error">{describeError(analyse.error)}</Notice>}
+          <ErrorNotice error={analyse.error} />
+          {/* Secondary: the screen's main action after a game is what to play next. */}
           <Button
             title={t('Analyse this game')}
+            variant="secondary"
             busy={analyse.isPending}
             onPress={() => analyse.mutate()}
           />

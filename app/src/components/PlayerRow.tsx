@@ -20,9 +20,12 @@ export function PresenceDot({ online }: { online: boolean }) {
   );
 }
 
-/** A player in a list: name (to their profile), presence, and a Challenge button. */
+/**
+ * A player in a list: name (to their profile), presence, and a Challenge button (not for a
+ * guest, who cannot challenge anyone by name: a free account can).
+ */
 export function PlayerRow({ player, isMe }: { player: PlayerStatus; isMe: boolean }) {
-  const me = useMe();
+  const guest = useMe().role === 'guest';
   return (
     <View style={styles.row}>
       <View style={styles.who}>
@@ -35,13 +38,13 @@ export function PlayerRow({ player, isMe }: { player: PlayerStatus; isMe: boolea
           <Text style={styles.status}>{isMe ? t('You') : presenceText(player)}</Text>
         </View>
       </View>
-      {!isMe && (
+      {!isMe && !guest && (
         <Button
           title={t('Challenge {name}', { name: player.username })}
           label={t('Challenge')}
           variant="secondary"
           compact
-          disabled={!me.plays_people || !canChallenge(player)}
+          disabled={!canChallenge(player)}
           onPress={() => router.push(`/challenge/${player.username}`)}
         />
       )}

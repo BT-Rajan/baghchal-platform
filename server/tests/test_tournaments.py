@@ -1,6 +1,7 @@
 """Tournaments: a Pro host's Swiss tournament among friends."""
 
 import uuid
+from collections.abc import Mapping
 from contextlib import AsyncExitStack
 from typing import Any
 
@@ -9,6 +10,7 @@ from fastapi import FastAPI
 from sqlalchemy import select, update
 
 from baghchal_server.deps import AppState
+from baghchal_server.games import service as games
 from baghchal_server.tournaments.models import Pairing
 
 from .conftest import Player, PlayerFactory
@@ -42,14 +44,34 @@ async def _play_round(people: dict[str, Player], code: str) -> dict[str, Any]:
     t = await _get(next(iter(people.values())), code)
     for p in [p for p in t["pairings"] if p["round"] == t["round"]]:
         goat = people[p["goat"]["username"]]
-        game = (await _play(goat, code, p)).json()
+        game = await _start_pairing(people, code, p)
         r = await goat.http.post(f"/api/v1/games/{game['id']}/resign")
         assert r.status_code == 200, r.text
     return await _get(next(iter(people.values())), code)
 
 
 async def _play(player: Player, code: str, pairing: dict[str, Any]) -> Any:
+    """Press "Play now": a challenge to the opponent."""
     return await player.http.post(f"{URL}/{code}/pairings/{pairing['id']}/play")
+
+
+async def _start_pairing(
+    people: Mapping[str, Player],
+    code: str,
+    pairing: dict[str, Any],
+    by: Player | None = None,
+) -> dict[str, Any]:
+    """``by`` (the goat, unless given) presses "Play now" and the opponent accepts: the game,
+    as ``by`` sees it."""
+    goat, tiger = people[pairing["goat"]["username"]], people[pairing["tiger"]["username"]]
+    by = goat if by is None else by
+    opponent = tiger if by is goat else goat
+    r = await _play(by, code, pairing)
+    assert r.status_code == 201, r.text
+    r = await opponent.http.post(f"/api/v1/challenges/{r.json()['id']}/accept")
+    assert r.status_code == 200, r.text
+    game = await by.http.get(f"/api/v1/games/{r.json()['game_id']}")
+    return game.json()  # type: ignore[no-any-return]
 
 
 async def test_tournaments_are_for_pro(players: PlayerFactory) -> None:
@@ -151,7 +173,7 @@ async def test_a_swiss_tournament(app: FastAPI, players: PlayerFactory) -> None:
     assert (r.status_code, r.json()["error"]["code"]) == (409, "player_offline")
     async with AsyncExitStack() as stack:
         await _online(app, stack, alice, bob, carol, dave, eve)
-        game = (await _play(alice, code, first)).json()
+        game = await _start_pairing(people, code, first, by=alice)
         assert (game["rated"], game["time_control"]) == (False, "3+2")
         assert _mine(await _get(bob, code), "alice")["state"] == "playing"  # type: ignore[index]
         r = await _play(alice, code, first)
@@ -250,10 +272,15 @@ async def test_pairings_belong_to_their_tournament_and_one_start_wins(
     other_player = people[elsewhere["goat"]["username"]]
     async with AsyncExitStack() as stack:
         await _online(app, stack, alice, bob, carol)
-        other_game = (await _play(other_player, two["code"], elsewhere)).json()
+        other_game = await _start_pairing(people, two["code"], elsewhere)
         await other_player.http.post(f"/api/v1/games/{other_game['id']}/resign")
 
-        async def someone_else_first(ids: Any) -> set[Any]:
+        asked = (await _play(starter, one["code"], pairing)).json()
+        opponent = people[pairing["tiger"]["username"]]
+        real_cooldown = games.abort_cooldown
+
+        async def someone_else_first(*args: Any) -> Any:
+            """Between the accept's checks and its start, the pairing gets a game."""
             async with state.sessions() as db:
                 await db.execute(
                     update(Pairing)
@@ -261,11 +288,15 @@ async def test_pairings_belong_to_their_tournament_and_one_start_wins(
                     .values(game_id=uuid.UUID(other_game["id"]))
                 )
                 await db.commit()
-            return set(ids)
+            return await real_cooldown(*args)
 
-        monkeypatch.setattr(state.presence, "online", someone_else_first)
-        r = await _play(starter, one["code"], pairing)
+        monkeypatch.setattr(games, "abort_cooldown", someone_else_first)
+        r = await opponent.http.post(f"/api/v1/challenges/{asked['id']}/accept")
         assert (r.status_code, r.json()["error"]["message"]) == (
             409,
             "This game has just been started.",
         )
+    monkeypatch.undo()
+    # Nothing was started: the challenge is still open.
+    (still,) = (await opponent.http.get("/api/v1/challenges")).json()["incoming"]
+    assert (still["id"], still["status"]) == (asked["id"], "pending")

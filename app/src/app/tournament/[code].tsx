@@ -3,13 +3,13 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { Pairing, Tournament } from '@/api/endpoints';
-import { describeError } from '@/api/errors';
 import { useMe } from '@/auth/session';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Confirm } from '@/components/Confirm';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { Notice } from '@/components/Notice';
-import { PeopleOnly } from '@/components/PeopleOnly';
+import { ShareButton } from '@/components/ShareButton';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
 import { plural, t } from '@/i18n';
@@ -55,7 +55,14 @@ function Details({ tournament: tour }: { tournament: Tournament }) {
           status: tournamentStatusText(tour),
         })}
       </Text>
-      {error !== null && <Notice tone="error">{describeError(error)}</Notice>}
+      <ErrorNotice error={error} />
+      {play.isSuccess && (
+        <Notice tone="info">
+          {t('We asked {name} to play. The game opens when they accept.', {
+            name: play.data.opponent?.username ?? '',
+          })}
+        </Notice>
+      )}
 
       {tour.status === 'open' && (
         <Card>
@@ -64,14 +71,13 @@ function Details({ tournament: tour }: { tournament: Tournament }) {
           <Text style={styles.link} selectable>
             {shareLink(`/tournament/${tour.code}`)}
           </Text>
+          <ShareButton path={`/tournament/${tour.code}`} title={t('Share the tournament')} />
           {!playing && (
-            <PeopleOnly>
-              <Button
-                title={t('Join')}
-                busy={action.isPending}
-                onPress={() => action.mutate('join')}
-              />
-            </PeopleOnly>
+            <Button
+              title={t('Join')}
+              busy={action.isPending}
+              onPress={() => action.mutate('join')}
+            />
           )}
           {playing && !host && (
             <Button
@@ -194,7 +200,7 @@ function NoShows({ tournament: tour }: { tournament: Tournament }) {
           'If a player does not turn up, give the game to the other: a point for them, and the round can go on.',
         )}
       </Hint>
-      {award.error !== null && <Notice tone="error">{describeError(award.error)}</Notice>}
+      <ErrorNotice error={award.error} />
       {waiting.map((p) =>
         giving?.pairing.id === p.id ? (
           <Confirm

@@ -18,7 +18,6 @@ from baghchal_server.accounts.models import EmailToken, Session, User
 from baghchal_server.accounts.schemas import Agreement, ClaimIn, LoginIn, RegisterIn
 from baghchal_server.config import Settings
 from baghchal_server.errors import AppError
-from baghchal_server.legal import age
 from baghchal_server.legal import consents as legal
 from baghchal_server.mail import Mail
 from baghchal_server.security import PasswordHasher, hash_token, new_token
@@ -111,7 +110,6 @@ async def register(
     """
     ukey, ekey = username_key(data.username), email_key(data.email)
     legal.check_versions(data.terms_version, data.privacy_version)
-    adult = age.check(data.birth_month, data.parent_email, data.email, now)
     if not username_allowed(settings, data.username):
         raise AppError(409, "username_unavailable", "That username is not available.")
     if data.password.lower() == ukey:
@@ -141,7 +139,6 @@ async def register(
         existing.username, existing.username_key = data.username, ukey
         existing.password_hash, existing.updated_at = password_hash, now
         await db.execute(delete(Session).where(Session.user_id == existing.id))
-        age.apply(existing, adult, data.parent_email, now)
         await legal.record(db, existing.id, now)
         token = await issue_token(db, existing.id, VERIFY, now + settings.verify_email_ttl, now)
         await db.commit()
@@ -159,7 +156,6 @@ async def register(
         created_at=now,
         updated_at=now,
     )
-    age.apply(user, adult, data.parent_email, now)  # the parent is emailed once this is verified
     db.add(user)
     try:
         await db.flush()
@@ -177,17 +173,14 @@ async def register(
 
 async def verify_email(
     db: AsyncSession, settings: Settings, now: datetime, token: str
-) -> tuple[User, str, Mail | None]:
-    """Mark the address verified and sign the user in; returns (user, session token, and the
-    email asking a parent to agree, for players under 18)."""
+) -> tuple[User, str]:
+    """Mark the address verified and sign the user in; returns the user and a session token."""
     user = await _active_user(db, await _consume_token(db, token, VERIFY, now))
     user.email_verified_at = user.email_verified_at or now
     user.updated_at = now
     session_token = await create_session(db, user.id, now, settings.session_ttl)
-    ask = user.parent_consent == age.PENDING and user.parent_email is not None
-    mail = await ask_parent(db, settings, user, now) if ask else None
     await db.commit()
-    return user, session_token, mail
+    return user, session_token
 
 
 # ── Guests ────────────────────────────────────────────────────────────────
@@ -199,10 +192,9 @@ async def create_guest(
     """A guest account and its session, to play at once without signing up.
 
     Its password is random and never told, so nobody can sign in to it; its email is a
-    placeholder that no mail is sent to. A guest under 18 plays only the computer.
+    placeholder that no mail is sent to.
     """
     legal.check_versions(data.terms_version, data.privacy_version)
-    adult = age.check(data.birth_month, None, "", now, guest=True)
     password_hash = await hasher.hash(secrets.token_urlsafe(32))
     for _ in range(5):
         username = f"{GUEST_PREFIX}{secrets.token_hex(3)}"
@@ -219,7 +211,6 @@ async def create_guest(
             created_at=now,
             updated_at=now,
         )
-        age.apply(user, adult, None, now)
         db.add(user)
         try:
             await db.flush()
@@ -240,24 +231,13 @@ async def claim_guest(  # noqa: PLR0913, PLR0917 - who, and the account they wan
     now: datetime,
     user: User,
     data: ClaimIn,
-) -> list[Mail]:
+) -> Mail | None:
     """Turn a guest into an account, keeping its games: the username and password work at
     once; the email address once its confirmation link is opened (as for a change of email,
-    so nobody can take an address they cannot read). A player under 18 now needs a parent's
-    agreement, asked at once."""
+    so nobody can take an address they cannot read)."""
     if user.role != GUEST:
         raise AppError(409, "not_a_guest", "You already have an account.")
     legal.check_versions(data.terms_version, data.privacy_version)
-    if data.birth_month is not None:
-        adult = age.adult_from(data.birth_month, now)
-        given = user.adult_from if user.adult_from is not None and user.adult_from > now else None
-        if given is not None and (adult is None or adult < given):
-            adult = given  # the younger of the two answers counts: no answering past a parent
-    elif user.age_checked_at is not None:  # given when the guest started playing
-        adult = user.adult_from if user.adult_from is not None and user.adult_from > now else None
-    else:
-        raise AppError(422, "birth_month_required", "Please give your month and year of birth.")
-    age.check_parent(adult, data.parent_email, data.email)
     ukey = username_key(data.username)
     if not username_allowed(settings, data.username):
         raise AppError(409, "username_unavailable", "That username is not available.")
@@ -271,11 +251,8 @@ async def claim_guest(  # noqa: PLR0913, PLR0917 - who, and the account they wan
     except IntegrityError:
         await db.rollback()
         raise AppError(409, "username_taken", "That username is taken.") from None
-    ask = age.apply(user, adult, data.parent_email, now)
     await legal.record(db, user.id, now)
-    parent = await ask_parent(db, settings, user, now) if ask else None
-    confirm = await request_email_change(db, settings, now, user, data.email)
-    return [m for m in (parent, confirm) if m is not None]
+    return await request_email_change(db, settings, now, user, data.email)
 
 
 # ── Login and sessions ────────────────────────────────────────────────────
@@ -579,12 +556,6 @@ async def _active_user(db: AsyncSession, user_id: uuid.UUID) -> User:
         await db.rollback()
         raise invalid_token()
     return user
-
-
-async def ask_parent(db: AsyncSession, settings: Settings, user: User, now: datetime) -> Mail:
-    """Issue a parent's link and return the email carrying it (the caller commits)."""
-    token = await issue_token(db, user.id, legal.PARENT, now + legal.PARENT_DEADLINE, now)
-    return legal.parent_mail(settings, user, token)
 
 
 def invalid_token() -> AppError:

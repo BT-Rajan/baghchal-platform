@@ -4,7 +4,6 @@ import { Button } from '@/components/Button';
 import { Hint } from '@/components/Card';
 import { Disclosure } from '@/components/Disclosure';
 import { BoardAndPieces, LookNotices, useLookChoice } from '@/components/LookPicker';
-import { PeopleOnly } from '@/components/PeopleOnly';
 import { PlayerSearch } from '@/components/PlayerSearch';
 import { Screen } from '@/components/Screen';
 import { t } from '@/i18n';
@@ -35,21 +34,19 @@ export default function MakeItYours() {
         <Loading label={t('Loading the boards')} />
       )}
 
-      <PeopleOnly>
-        <Disclosure title={t('Find friends')}>
-          <Hint>
-            {t(
-              'Search for a friend by username and open their profile to add them, or send a friend a challenge by link if they are not on ClawPlay yet.',
-            )}
-          </Hint>
-          <Button
-            title={t('Challenge a friend by link')}
-            variant="secondary"
-            onPress={() => router.push('/invite')}
-          />
-          <PlayerSearch nobodyElse={<Hint>{t('Nobody else is online right now.')}</Hint>} />
-        </Disclosure>
-      </PeopleOnly>
+      <Disclosure title={t('Find friends')}>
+        <Hint>
+          {t(
+            'Search for a friend by username and open their profile to add them, or send a friend a challenge by link if they are not on ClawPlay yet.',
+          )}
+        </Hint>
+        <Button
+          title={t('Challenge a friend by link')}
+          variant="secondary"
+          onPress={() => router.push('/invite')}
+        />
+        <PlayerSearch nobodyElse={<Hint>{t('Nobody else is online right now.')}</Hint>} />
+      </Disclosure>
 
       <Button title={t('Start playing')} onPress={play} />
     </Screen>

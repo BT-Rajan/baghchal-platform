@@ -23,6 +23,8 @@ class Challenge(Base):
     ``pair_key`` is set only while the challenge is pending and is unique, so two players can
     have at most one open challenge between them, whoever sent it, even under concurrent
     requests. It is cleared when the challenge is resolved or found expired.
+
+    A challenge for a tournament pairing (``pairing_id``) is answered like any other.
     """
 
     __tablename__ = "challenges"
@@ -52,6 +54,11 @@ class Challenge(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
     expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
     responded_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    pairing_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("tournament_pairings.id", ondelete="CASCADE")
+    )
+    """A tournament game: "Play now" asks the opponent with a challenge, and accepting it
+    starts this pairing's game (casual, sides as paired)."""
 
 
 class Block(Base):

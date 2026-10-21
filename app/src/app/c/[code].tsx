@@ -1,22 +1,22 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { StyleSheet, Text } from 'react-native';
 
-import { describeError } from '@/api/errors';
 import { useMe } from '@/auth/session';
 import { Button } from '@/components/Button';
-import { Card, Hint } from '@/components/Card';
+import { Hint } from '@/components/Card';
 import { ChallengeCard } from '@/components/ChallengeCard';
-import { Notice } from '@/components/Notice';
-import { PeopleOnly } from '@/components/PeopleOnly';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
 import { useServerNow } from '@/components/useNow';
 import { t } from '@/i18n';
-import { challengeTerms, isOpen } from '@/lobby/format';
+import { isOpen } from '@/lobby/format';
 import { useAcceptLink, useAnswerChallenge, useLinkChallenge } from '@/lobby/hooks';
-import { colors } from '@/theme';
 
-/** A challenge by link, opened from the link: accept and play, or (my own) share or cancel it. */
+/**
+ * A challenge by link, opened from the link: accept and play, or (my own) share or cancel it.
+ * Someone signed out is sent to make an account or play as a guest first, and comes back here
+ * (see the route guards in _layout).
+ */
 export default function LinkChallenge() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const me = useMe();
@@ -41,34 +41,24 @@ export default function LinkChallenge() {
             ? t('The challenge was accepted.')
             : t('This challenge is closed. Ask your friend for a new link.')}
         </Hint>
-      ) : mine ? (
+      ) : (
         <>
-          {answer.error !== null && <Notice tone="error">{describeError(answer.error)}</Notice>}
+          <ErrorNotice error={mine ? answer.error : accept.error} />
+          {/* The lobby's card: accept a friend's link here, or share or cancel my own. */}
           <ChallengeCard
             challenge={c}
             myId={me.id}
             now={now}
-            pending={answer.isPending ? answer.variables.answer : null}
+            pending={
+              accept.isPending ? 'accept' : answer.isPending ? answer.variables.answer : null
+            }
             onAnswer={(a) =>
-              answer.mutate({ id: c.id, answer: a }, { onSuccess: () => void link.refetch() })
+              a === 'accept'
+                ? accept.mutate()
+                : answer.mutate({ id: c.id, answer: a }, { onSuccess: () => void link.refetch() })
             }
           />
         </>
-      ) : (
-        <Card>
-          <Text style={styles.title}>
-            {t('{name} challenges you', { name: c.challenger.username })}
-          </Text>
-          <Text style={styles.text}>{challengeTerms(c, me.id)}</Text>
-          {accept.error !== null && <Notice tone="error">{describeError(accept.error)}</Notice>}
-          <PeopleOnly>
-            <Button
-              title={t('Accept and play')}
-              busy={accept.isPending}
-              onPress={() => accept.mutate()}
-            />
-          </PeopleOnly>
-        </Card>
       )}
       {myGame !== null && (
         <Button
@@ -80,8 +70,3 @@ export default function LinkChallenge() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  title: { fontSize: 16, fontWeight: '600', color: colors.text },
-  text: { fontSize: 15, color: colors.text },
-});

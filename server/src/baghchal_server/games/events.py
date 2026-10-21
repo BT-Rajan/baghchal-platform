@@ -12,7 +12,8 @@ from baghchal_server.tournaments import progress as tournament_progress
 
 async def notify(state: AppState, db: AsyncSession, game: Game) -> GameOut:
     """Send the game's state to both players. When the first game of a match ends, the second
-    has just started too; announce it after."""
+    has just been made too (its first-move grace begins after the break); announce it after,
+    so a player who is not on game 1's screen is taken to it."""
     out = await service.describe(db, game, state.clock())
     message = GameEvent(game=out).model_dump_json()
     for user_id in (game.goat_id, game.tiger_id):

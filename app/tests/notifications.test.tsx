@@ -25,7 +25,7 @@ describe('notifications', () => {
     let list: NotificationList = {
       unread: 2,
       items: [
-        note({}),
+        note({ created_at: new Date().toISOString() }),
         note({
           id: 'n2',
           kind: 'tournament_started',
@@ -44,29 +44,34 @@ describe('notifications', () => {
           list = { unread: 0, items: list.items.map((n) => ({ ...n, read: true })) };
           return { status: 204 };
         },
-        'GET /api/v1/players/bob': {
-          status: 200,
-          body: {
-            ...BOB,
-            online: true,
-            playing: false,
-            blocked: false,
-            created_at: ME.created_at,
-            ratings: {},
-          },
-        },
       },
     });
     await fireEvent.press(await screen.findByRole('button', { name: 'Notifications, 2 unread' }));
     await waitFor(() => expect(app.getPathname()).toBe('/notifications'));
     expect(await screen.findByText('bob challenged you to a 5+3 rated game.')).toBeOnTheScreen();
     expect(screen.getByText('Friday cup has started: your games are ready.')).toBeOnTheScreen();
-    expect(screen.getAllByText('5 min ago')).toHaveLength(2);
+    expect(screen.getByText('just now')).toBeOnTheScreen();
+    expect(screen.getByText('5 min ago')).toBeOnTheScreen();
     await waitFor(() => expect(server.lastTo('POST /api/v1/notifications/read')).toBeDefined());
+    // A challenge still open leads to the lobby, where it is answered.
     await fireEvent.press(
       screen.getByRole('link', { name: 'bob challenged you to a 5+3 rated game.' }),
     );
-    await waitFor(() => expect(app.getPathname()).toBe('/player/bob'));
+    await waitFor(() => expect(app.getPathname()).toBe('/'));
+  });
+
+  test('an expired challenge leads nowhere', async () => {
+    await renderApp('/notifications', {
+      token: 'tok',
+      routes: {
+        ...SIGNED_IN,
+        'GET /api/v1/notifications': { status: 200, body: { unread: 0, items: [note({})] } },
+      },
+    });
+    expect(await screen.findByText('bob challenged you to a 5+3 rated game.')).toBeOnTheScreen();
+    expect(
+      screen.queryByRole('link', { name: 'bob challenged you to a 5+3 rated game.' }),
+    ).toBeNull();
   });
 
   test('a new one arrives live; an empty list says what will show', async () => {

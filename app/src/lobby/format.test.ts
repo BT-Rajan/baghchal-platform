@@ -146,7 +146,21 @@ test('waiting players and levels', () => {
 test('share links to challenges', () => {
   expect(linkPath('abc')).toBe('/c/abc');
   expect(shareLink('/c/abc', 'https://clawplay.in')).toBe('https://clawplay.in/c/abc');
-  expect(shareLink('/c/abc', undefined)).toBe('/c/abc');
+  expect(shareLink('/c/abc', 'https://clawplay.in/')).toBe('https://clawplay.in/c/abc');
+  // In the apps (no page address): the website's, from the build's settings.
+  expect(shareLink('/c/abc')).toBe('http://localhost:8000/c/abc');
+  // On the web: this site's own address.
+  const saved = Object.getOwnPropertyDescriptor(globalThis, 'location');
+  Object.defineProperty(globalThis, 'location', {
+    value: { origin: 'https://play.example' },
+    configurable: true,
+  });
+  try {
+    expect(shareLink('/c/abc')).toBe('https://play.example/c/abc');
+  } finally {
+    if (saved === undefined) delete (globalThis as { location?: unknown }).location;
+    else Object.defineProperty(globalThis, 'location', saved);
+  }
 });
 
 test('durationText', () => {

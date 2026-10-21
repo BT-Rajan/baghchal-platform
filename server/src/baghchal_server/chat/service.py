@@ -1,4 +1,4 @@
-"""Free chat in games: for two adults with accounts who both have messages on, during the game
+"""Free chat in games: for two players with accounts who both have messages on, during the game
 and a few minutes after it. Blocked words are masked; messages are kept 30 days so reports
 about them can be checked (legal/texts/privacy.md), then deleted (housekeeping)."""
 
@@ -36,15 +36,6 @@ _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 _SPACES = re.compile(r"\s+")
 
 
-def is_adult_member(user: User, now: datetime) -> bool:
-    """An account (not a guest) whose holder is surely 18 by now."""
-    return (
-        user.role != GUEST
-        and user.age_checked_at is not None
-        and (user.adult_from is None or user.adult_from <= now)
-    )
-
-
 def clean(settings: Settings, text: str) -> str:
     """One line of text, with control characters gone and blocked words masked."""
     text = _SPACES.sub(" ", _CONTROL.sub(" ", text)).strip()
@@ -68,7 +59,6 @@ async def _closed_because(
     )
     reasons: list[tuple[ChatClosed, bool]] = [
         ("guest", any(u.role == GUEST for u in users)),
-        ("under_18", not all(is_adult_member(u, now) for u in users)),
         ("messages_off", not all(messages_on)),
         ("blocked", blocked),
         ("game_over", game.finished_at is not None and now - game.finished_at > AFTER_GAME),
