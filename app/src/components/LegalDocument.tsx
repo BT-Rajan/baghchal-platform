@@ -5,7 +5,7 @@ import { useLegalDocument } from '@/legal/hooks';
 import { t } from '@/i18n';
 import { dayText } from '@/lobby/format';
 import { parse, sections, type Body, type Span } from '@/legal/markdown';
-import { colors, spacing, type } from '@/theme';
+import { colors, joinedLetters, spacing, type } from '@/theme';
 
 import { Disclosure } from './Disclosure';
 import { Screen } from './Screen';
@@ -62,7 +62,7 @@ function Blocks({ blocks }: { blocks: Body[] }) {
     switch (block.kind) {
       case 'title':
         return (
-          <Text key={i} role="heading" style={styles.title}>
+          <Text key={i} role="heading" style={[styles.title, joinedLetters()]}>
             {block.text}
           </Text>
         );

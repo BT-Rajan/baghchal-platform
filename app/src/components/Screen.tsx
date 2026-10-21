@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
-import { colors, spacing, type } from '@/theme';
+import { colors, joinedLetters, spacing, type } from '@/theme';
 
 import { AppBanners, BannersOnScreens } from './AppBanners';
 import { BrandHeader } from './brand/Logo';
@@ -120,7 +120,7 @@ function Page({
               {/* On the web the top bar carries the logo. */}
               {brand && Platform.OS !== 'web' && <BrandHeader />}
               {title !== undefined && !titleInBar && (
-                <Text role="heading" style={styles.title}>
+                <Text role="heading" style={[styles.title, joinedLetters()]}>
                   {title}
                 </Text>
               )}

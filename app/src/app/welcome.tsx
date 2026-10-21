@@ -14,7 +14,7 @@ import { Segmented } from '@/components/Segmented';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import type { Piece } from '@/game/bfen';
 import { mark, t } from '@/i18n';
-import { colors, radius, spacing, type } from '@/theme';
+import { colors, joinedLetters, radius, spacing, type } from '@/theme';
 
 /** Wide enough to put the board beside the words. */
 const WIDE = 880;
@@ -81,7 +81,7 @@ function StartScreen() {
           <BoardPreview theme="wood" pieces="classic" />
         </View>
         <View style={styles.startWords}>
-          <Text role="heading" style={styles.startHeadline}>
+          <Text role="heading" style={[styles.startHeadline, joinedLetters()]}>
             {t('Tigers hunt.\nGoats trap.')}
           </Text>
           <Text style={styles.lede}>{t('Bagh Chal, the strategy game of the Himalayas.')}</Text>
@@ -127,7 +127,7 @@ function LandingPage() {
         <View style={styles.hero}>
           <View style={[styles.inner, wide && styles.row]}>
             <View style={[styles.pitch, wide && styles.half]}>
-              <Text role="heading" style={styles.headline}>
+              <Text role="heading" style={[styles.headline, joinedLetters()]}>
                 {t('Tigers hunt.\nGoats trap.')}
               </Text>
               <Text style={styles.lede}>
