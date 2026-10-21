@@ -4,6 +4,7 @@ import { StyleSheet, Text } from 'react-native';
 import { describeError } from '@/api/errors';
 import { has } from '@/billing/format';
 import { useMyPlan } from '@/billing/hooks';
+import { t } from '@/i18n';
 import { answerText, dailyStreakText } from '@/pro/format';
 import { useAnswerPuzzle, useDailyPuzzle } from '@/pro/hooks';
 import { colors, type } from '@/theme';
@@ -41,33 +42,33 @@ export function DailyPuzzle() {
   );
   return (
     <>
-      <SectionTitle>Daily puzzle</SectionTitle>
+      <SectionTitle>{t('Daily puzzle')}</SectionTitle>
       {daily.error !== null ? (
         <ErrorState error={daily.error} onRetry={() => void daily.refetch()} />
       ) : daily.data === undefined ? (
-        <Loading label="Loading today's puzzle" />
+        <Loading label={t("Loading today's puzzle")} />
       ) : (
         <Card>
           {streak !== null && <Text style={styles.streak}>{streak}</Text>}
-          {result === null ? board : <Disclosure title="Today's position">{board}</Disclosure>}
+          {result === null ? board : <Disclosure title={t("Today's position")}>{board}</Disclosure>}
           {answer.error !== null && <Notice tone="error">{describeError(answer.error)}</Notice>}
           {result !== null && (
             <>
               <Notice tone={result.correct ? 'success' : 'info'}>{answerText(result)}</Notice>
-              <Hint>A new puzzle comes tomorrow.</Hint>
+              <Hint>{t('A new puzzle comes tomorrow.')}</Hint>
             </>
           )}
           {plan.data !== undefined &&
             (has(plan.data, 'trainer') ? (
               <Button
-                title="More puzzles in the trainer"
+                title={t('More puzzles in the trainer')}
                 icon="puzzle"
                 variant="secondary"
                 onPress={() => router.push('/trainer')}
               />
             ) : (
               <Upsell feature="trainer">
-                Train every day with opening and endgame puzzles from real games.
+                {t('Train every day with opening and endgame puzzles from real games.')}
               </Upsell>
             ))}
         </Card>

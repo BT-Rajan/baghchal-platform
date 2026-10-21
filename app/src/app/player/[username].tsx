@@ -6,6 +6,7 @@ import { Notice } from '@/components/Notice';
 import { ProfileView } from '@/components/ProfileView';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
+import { t } from '@/i18n';
 import { useProfile } from '@/lobby/hooks';
 
 export default function Player() {
@@ -16,13 +17,13 @@ export default function Player() {
     <Screen align="top" refreshable>
       <Stack.Screen options={{ title: profile.data?.username ?? username }} />
       {isApiError(profile.error, 'player_not_found') ? (
-        <Notice tone="error">No such player.</Notice>
+        <Notice tone="error">{t('No such player.')}</Notice>
       ) : profile.error !== null ? (
         <ErrorState error={profile.error} onRetry={() => void profile.refetch()} />
       ) : profile.data ? (
         <ProfileView profile={profile.data} isMe={profile.data.id === me.id} />
       ) : (
-        <Loading label="Loading the profile" />
+        <Loading label={t('Loading the profile')} />
       )}
     </Screen>
   );

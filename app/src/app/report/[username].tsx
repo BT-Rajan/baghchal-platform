@@ -11,6 +11,7 @@ import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
 import { TextField } from '@/components/TextField';
+import { t } from '@/i18n';
 import { REPORT_REASONS } from '@/lobby/moderation';
 
 function leave() {
@@ -35,36 +36,36 @@ export default function ReportForm() {
 
   if (send.isSuccess) {
     return (
-      <Screen title={`Report ${username}`}>
-        <Notice tone="success">Thank you. A moderator will look at your report.</Notice>
-        <Button title="Done" onPress={leave} />
+      <Screen title={t('Report {name}', { name: username })}>
+        <Notice tone="success">{t('Thank you. A moderator will look at your report.')}</Notice>
+        <Button title={t('Done')} onPress={leave} />
       </Screen>
     );
   }
   return (
-    <Screen title={`Report ${username}`}>
+    <Screen title={t('Report {name}', { name: username })}>
       {send.error !== null && <Notice tone="error">{describeError(send.error)}</Notice>}
       <Hint>
         {game !== undefined
-          ? 'The report includes this game, so moderators can replay it.'
-          : 'Reports go to the moderators. The player is not told who reported them.'}
+          ? t('The report includes this game, so moderators can replay it.')
+          : t('Reports go to the moderators. The player is not told who reported them.')}
       </Hint>
       <Segmented
-        label="What happened?"
-        options={REPORT_REASONS}
+        label={t('What happened?')}
+        options={REPORT_REASONS.map(({ value, label }) => ({ value, label: t(label) }))}
         value={reason}
         onChange={setReason}
       />
       <TextField
-        label="Details (optional)"
+        label={t('Details (optional)')}
         value={details}
         onChangeText={setDetails}
         maxLength={1000}
         multiline
         numberOfLines={4}
       />
-      <Button title="Send report" onPress={() => send.mutate()} busy={send.isPending} />
-      <Button title="Cancel" variant="secondary" onPress={leave} />
+      <Button title={t('Send report')} onPress={() => send.mutate()} busy={send.isPending} />
+      <Button title={t('Cancel')} variant="secondary" onPress={leave} />
     </Screen>
   );
 }

@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { ACHIEVEMENTS, achievementCount, earnedText } from '@/lobby/achievements';
 import { useAchievements } from '@/lobby/hooks';
+import { t } from '@/i18n';
 import { colors, radius, shadow, spacing, type } from '@/theme';
 
 import type { Achievement } from '@/api/endpoints';
@@ -22,11 +23,11 @@ export function Achievements({ username }: { username: string }) {
   const locked = list.filter((a) => a.earned_at === null);
   return (
     <>
-      <SectionTitle>Achievements</SectionTitle>
+      <SectionTitle>{t('Achievements')}</SectionTitle>
       <Text style={styles.count}>{achievementCount(list)}</Text>
       {earned.length > 0 && <Tiles list={earned} />}
       {locked.length > 0 && (
-        <Disclosure title={`Still to earn (${locked.length})`}>
+        <Disclosure title={t('Still to earn ({count})', { count: locked.length })}>
           <Tiles list={locked} />
         </Disclosure>
       )}
@@ -39,13 +40,18 @@ function Tiles({ list }: { list: Achievement[] }) {
     <View style={styles.grid}>
       {list.map((a) => {
         const earned = a.earned_at !== null;
-        const { name, text } = ACHIEVEMENTS[a.key];
+        const name = t(ACHIEVEMENTS[a.key].name);
+        const text = t(ACHIEVEMENTS[a.key].text);
         return (
           <View
             key={a.key}
             style={[styles.tile, !earned && styles.locked]}
             accessible
-            aria-label={`${name}: ${text} ${earned ? earnedText(a.earned_at!) : 'Not yet earned'}`}
+            aria-label={t('{name}: {text} {when}', {
+              name,
+              text,
+              when: earned ? earnedText(a.earned_at!) : t('Not yet earned'),
+            })}
           >
             <View style={[styles.medal, earned && styles.medalEarned]}>
               <Icon name="trophy" color={earned ? colors.accentText : colors.muted} size={20} />

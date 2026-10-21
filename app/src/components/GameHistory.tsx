@@ -8,6 +8,7 @@ import { queryKeys } from '@/api/queryKeys';
 import { useApi } from '@/auth/session';
 import { has } from '@/billing/format';
 import { useMyPlan } from '@/billing/hooks';
+import { t } from '@/i18n';
 import { historyText } from '@/lobby/format';
 import { colors, spacing } from '@/theme';
 
@@ -60,20 +61,20 @@ export function GameHistory({
   const limited = mine.data !== undefined && !has(mine.data, 'full_history');
   return (
     <>
-      <SectionTitle>Recent games</SectionTitle>
+      <SectionTitle>{t('Recent games')}</SectionTitle>
       {history.error !== null ? (
         <ErrorState error={history.error} onRetry={() => void history.refetch()} />
       ) : history.data === undefined ? (
-        <Loading label="Loading games" />
+        <Loading label={t('Loading games')} />
       ) : games.length === 0 ? (
-        <Hint>No finished games yet.</Hint>
+        <Hint>{t('No finished games yet.')}</Hint>
       ) : (
         <Card>
           {games.map((game, i) => (
             <Pressable
               key={game.id}
               role="link"
-              aria-label={`Replay: ${historyText(game)}`}
+              aria-label={t('Replay: {game}', { game: historyText(game) })}
               onPress={() => router.push(`/game/${game.id}`)}
               {...ripple()}
               style={(state) => [
@@ -93,7 +94,7 @@ export function GameHistory({
       )}
       {preview && all.length > 0 && (
         <Button
-          title="See all your games"
+          title={t('See all your games')}
           variant="secondary"
           compact
           onPress={() => router.navigate('/me')}
@@ -101,12 +102,12 @@ export function GameHistory({
       )}
       {!preview && limited && (
         <Upsell feature="full_history">
-          Your history shows games from the last 30 days. Keep every game.
+          {t('Your history shows games from the last 30 days. Keep every game.')}
         </Upsell>
       )}
       {!preview && (all.length > shown || history.hasNextPage) && (
         <Button
-          title="Show more games"
+          title={t('Show more games')}
           variant="secondary"
           busy={history.isFetchingNextPage}
           onPress={more}

@@ -19,9 +19,11 @@ import { ErrorState, Loading } from '@/components/States';
 import { TextField } from '@/components/TextField';
 import { TextLink } from '@/components/TextLink';
 import { useServerNow } from '@/components/useNow';
+import { mark, t } from '@/i18n';
 import {
   actionText,
   dateTimeText,
+  isSuspended,
   reasonLabel,
   reporterText,
   standingText,
@@ -35,6 +37,12 @@ type Action =
   | { kind: 'dismiss'; reportId: string };
 
 type Tab = 'reports' | 'act' | 'history' | 'fair' | 'plan';
+
+const REPORT_STATUSES: Record<ModPlayer['reports'][number]['status'], string> = {
+  open: mark('open'),
+  actioned: mark('actioned'),
+  dismissed: mark('dismissed'),
+};
 
 /**
  * One player's record, and what a moderator can do about them: their standing, then one tab
@@ -55,7 +63,7 @@ export default function ModeratePlayer() {
         {record.error !== null ? (
           <ErrorState error={record.error} onRetry={() => void record.refetch()} />
         ) : (
-          <Loading label="Loading the player's record" />
+          <Loading label={t("Loading the player's record")} />
         )}
       </Screen>
     );
@@ -63,11 +71,13 @@ export default function ModeratePlayer() {
   const player = record.data;
   const actable = !player.deleted && player.role === 'player';
   const tabs: { value: Tab; label: string }[] = [
-    { value: 'reports', label: `Reports (${player.reports.length})` },
-    ...(actable ? [{ value: 'act' as const, label: 'Act' }] : []),
-    { value: 'history', label: 'History' },
-    { value: 'fair', label: 'Fair play' },
-    ...(me.role === 'admin' && !player.deleted ? [{ value: 'plan' as const, label: 'Plan' }] : []),
+    { value: 'reports', label: t('Reports ({count})', { count: player.reports.length }) },
+    ...(actable ? [{ value: 'act' as const, label: t('Act') }] : []),
+    { value: 'history', label: t('History') },
+    { value: 'fair', label: t('Fair play') },
+    ...(me.role === 'admin' && !player.deleted
+      ? [{ value: 'plan' as const, label: t('Plan') }]
+      : []),
   ];
   return (
     <Screen title={username} align="top">
@@ -121,7 +131,7 @@ function Record({
   });
   const run = (action: Action) => {
     act.reset();
-    const missing = reason.trim() === '' ? 'Say why; the player is told.' : undefined;
+    const missing = reason.trim() === '' ? t('Say why; the player is told.') : undefined;
     setReasonError(missing);
     if (missing === undefined) act.mutate(action);
   };
@@ -131,26 +141,30 @@ function Record({
     if (problem === undefined) run({ kind: 'rename', username: newName });
   };
   const busy = act.isPending ? act.variables : null;
-  const suspended = standingText(player, now).startsWith('Suspended') || player.banned;
+  const suspended = (!player.deleted && isSuspended(player, now)) || player.banned;
 
   return (
     <>
       <Card>
         <Text style={styles.title}>{standingText(player, now)}</Text>
         {player.suspension_reason !== null && suspended && (
-          <Text style={styles.text}>{`Reason: ${player.suspension_reason}`}</Text>
+          <Text style={styles.text}>
+            {t('Reason: {reason}', { reason: player.suspension_reason })}
+          </Text>
         )}
-        <Text style={styles.muted}>{`Joined ${dateTimeText(player.created_at)}`}</Text>
-        {player.role === 'moderator' && <Text style={styles.muted}>Moderator</Text>}
-        {player.role === 'admin' && <Text style={styles.muted}>Admin</Text>}
+        <Text style={styles.muted}>
+          {t('Joined {date}', { date: dateTimeText(player.created_at) })}
+        </Text>
+        {player.role === 'moderator' && <Text style={styles.muted}>{t('Moderator')}</Text>}
+        {player.role === 'admin' && <Text style={styles.muted}>{t('Admin')}</Text>}
       </Card>
-      <Segmented label="Show" options={tabs} value={tab} onChange={onTab} />
+      <Segmented label={t('Show')} options={tabs} value={tab} onChange={onTab} />
       {act.error !== null && <Notice tone="error">{describeError(act.error)}</Notice>}
       {/* Every action asks why: acting, and dismissing a report. */}
       {(tab === 'act' ||
         (tab === 'reports' && player.reports.some((r) => r.status === 'open'))) && (
         <TextField
-          label="Reason (sent to the player for suspensions and renames)"
+          label={t('Reason (sent to the player for suspensions and renames)')}
           value={reason}
           onChangeText={setReason}
           error={reasonError}
@@ -161,19 +175,19 @@ function Record({
         <>
           {suspended ? (
             <Button
-              title="Lift the suspension"
+              title={t('Lift the suspension')}
               onPress={() => run({ kind: 'unsuspend' })}
               busy={busy?.kind === 'unsuspend'}
             />
           ) : (
             <View style={styles.actions}>
               {[
-                { title: 'Suspend for 1 day', days: 1 },
-                { title: 'Suspend for 7 days', days: 7 },
-                { title: 'Ban permanently', days: null },
+                { title: t('Suspend for 1 day'), days: 1 },
+                { title: t('Suspend for 7 days'), days: 7 },
+                { title: t('Ban permanently'), days: null },
               ].map(({ title, days }) => (
                 <Button
-                  key={title}
+                  key={String(days)}
                   title={title}
                   variant="secondary"
                   onPress={() => run({ kind: 'suspend', days })}
@@ -183,7 +197,7 @@ function Record({
             </View>
           )}
           <TextField
-            label="New username"
+            label={t('New username')}
             value={newName}
             onChangeText={setNewName}
             error={nameError}
@@ -191,29 +205,33 @@ function Record({
             autoCorrect={false}
           />
           <Button
-            title={`Rename ${player.username}`}
+            title={t('Rename {name}', { name: player.username })}
             variant="secondary"
             onPress={rename}
             busy={busy?.kind === 'rename'}
           />
         </>
       )}
-      {tab === 'reports' && player.reports.length === 0 && <Hint>No reports.</Hint>}
+      {tab === 'reports' && player.reports.length === 0 && <Hint>{t('No reports.')}</Hint>}
       {tab === 'reports' &&
         player.reports.map((report) => (
           <Card key={report.id}>
             <Text style={styles.text}>
-              {`${reasonLabel(report.reason)} · from ${reporterText(report)} · ${report.status}`}
+              {t('{reason} · from {reporter} · {status}', {
+                reason: reasonLabel(report.reason),
+                reporter: reporterText(report),
+                status: t(REPORT_STATUSES[report.status]),
+              })}
             </Text>
             <Text style={styles.muted}>{dateTimeText(report.created_at)}</Text>
             {report.details !== '' && <Text style={styles.text}>{report.details}</Text>}
             {report.game_id !== null && (
-              <TextLink href={`/game/${report.game_id}`}>Open the game</TextLink>
+              <TextLink href={`/game/${report.game_id}`}>{t('Open the game')}</TextLink>
             )}
             {report.status === 'open' && (
               <Button
-                title={`Dismiss the report from ${reporterText(report)}`}
-                label="Dismiss"
+                title={t('Dismiss the report from {reporter}', { reporter: reporterText(report) })}
+                label={t('Dismiss')}
                 variant="secondary"
                 compact
                 onPress={() => run({ kind: 'dismiss', reportId: report.id })}
@@ -223,7 +241,7 @@ function Record({
           </Card>
         ))}
       {tab === 'history' && player.actions.length === 0 && (
-        <Hint>No moderator has acted on this player.</Hint>
+        <Hint>{t('No moderator has acted on this player.')}</Hint>
       )}
       {tab === 'history' &&
         player.actions.map((action) => (

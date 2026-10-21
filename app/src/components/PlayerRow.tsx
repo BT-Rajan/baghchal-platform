@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { PlayerStatus } from '@/api/endpoints';
 import { useMe } from '@/auth/session';
+import { t } from '@/i18n';
 import { canChallenge, presenceText } from '@/lobby/format';
 import { colors, spacing } from '@/theme';
 
@@ -31,13 +32,13 @@ export function PlayerRow({ player, isMe }: { player: PlayerStatus; isMe: boolea
         </View>
         <View style={styles.presence}>
           <PresenceDot online={player.online} />
-          <Text style={styles.status}>{isMe ? 'You' : presenceText(player)}</Text>
+          <Text style={styles.status}>{isMe ? t('You') : presenceText(player)}</Text>
         </View>
       </View>
       {!isMe && (
         <Button
-          title={`Challenge ${player.username}`}
-          label="Challenge"
+          title={t('Challenge {name}', { name: player.username })}
+          label={t('Challenge')}
           variant="secondary"
           compact
           disabled={!me.plays_people || !canChallenge(player)}

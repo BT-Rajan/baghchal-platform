@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { Challenge, ChallengeAnswer } from '@/api/endpoints';
+import { t } from '@/i18n';
 import {
   challengeSecondsLeft,
   challengeTerms,
@@ -33,25 +34,29 @@ export function ChallengeCard({ challenge, myId, now, onAnswer, pending }: Chall
     <Card>
       <Text style={styles.title}>
         {incoming
-          ? `${other} challenges you`
+          ? t('{name} challenges you', { name: other! })
           : other === undefined
-            ? 'Your challenge by link'
-            : `Waiting for ${other}`}
+            ? t('Your challenge by link')
+            : t('Waiting for {name}', { name: other })}
       </Text>
       <Text style={styles.terms}>{challengeTerms(challenge, myId)}</Text>
       {opponent === null && typeof code === 'string' && (
-        <Text style={styles.link} selectable aria-label="Link to share">
+        <Text style={styles.link} selectable aria-label={t('Link to share')}>
           {shareLink(linkPath(code))}
         </Text>
       )}
-      <Text style={styles.expiry} aria-live="polite">{`Expires in ${durationText(seconds)}`}</Text>
+      <Text style={styles.expiry} aria-live="polite">
+        {t('Expires in {time}', {
+          time: durationText(seconds),
+        })}
+      </Text>
       <View style={styles.actions}>
         {incoming ? (
           <>
             <View style={styles.action}>
               <Button
-                title={`Accept ${other}'s challenge`}
-                label="Accept"
+                title={t("Accept {name}'s challenge", { name: other! })}
+                label={t('Accept')}
                 busy={pending === 'accept'}
                 disabled={busy}
                 onPress={() => onAnswer('accept')}
@@ -59,8 +64,8 @@ export function ChallengeCard({ challenge, myId, now, onAnswer, pending }: Chall
             </View>
             <View style={styles.action}>
               <Button
-                title={`Decline ${other}'s challenge`}
-                label="Decline"
+                title={t("Decline {name}'s challenge", { name: other! })}
+                label={t('Decline')}
                 variant="secondary"
                 busy={pending === 'decline'}
                 disabled={busy}
@@ -73,10 +78,10 @@ export function ChallengeCard({ challenge, myId, now, onAnswer, pending }: Chall
             <Button
               title={
                 other === undefined
-                  ? 'Cancel the challenge by link'
-                  : `Cancel the challenge to ${other}`
+                  ? t('Cancel the challenge by link')
+                  : t('Cancel the challenge to {name}', { name: other })
               }
-              label="Cancel"
+              label={t('Cancel')}
               variant="secondary"
               busy={pending === 'cancel'}
               disabled={busy}

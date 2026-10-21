@@ -3,6 +3,7 @@ import { StyleSheet, Text } from 'react-native';
 
 import { queryKeys } from '@/api/queryKeys';
 import { useApi } from '@/auth/session';
+import { plural, t } from '@/i18n';
 import { dateTimeText, figuresText, thinkText } from '@/lobby/moderation';
 import { colors } from '@/theme';
 
@@ -22,36 +23,57 @@ export function FairPlaySection({ username }: { username: string }) {
       {found.error !== null ? (
         <ErrorState error={found.error} onRetry={() => void found.refetch()} />
       ) : found.data === undefined ? (
-        <Loading label="Loading fair-play figures" />
+        <Loading label={t('Loading fair-play figures')} />
       ) : found.data.games.length === 0 ? (
-        <Hint>No rated games checked yet.</Hint>
+        <Hint>{t('No rated games checked yet.')}</Hint>
       ) : (
         <>
           <Card>
             <Text style={styles.text}>
-              {`Last ${found.data.games.length} rated games, quick review: ${figuresText(found.data.screen)}`}
+              {plural(
+                found.data.games.length,
+                'Last {count} rated game, quick review: {figures}',
+                'Last {count} rated games, quick review: {figures}',
+                { figures: figuresText(found.data.screen) },
+              )}
             </Text>
             {found.data.confirm !== null && (
-              <Text style={styles.text}>{`Deep review: ${figuresText(found.data.confirm)}`}</Text>
+              <Text style={styles.text}>
+                {t('Deep review: {figures}', { figures: figuresText(found.data.confirm) })}
+              </Text>
             )}
             <Text style={styles.muted}>
               {found.data.screen_passed
-                ? 'Clean enough for an engine: a deep review was asked for.'
-                : 'Nothing unusual in the quick review.'}
+                ? t('Clean enough for an engine: a deep review was asked for.')
+                : t('Nothing unusual in the quick review.')}
             </Text>
-            <Text style={styles.muted}>A reason to look at the games, never proof on its own.</Text>
+            <Text style={styles.muted}>
+              {t('A reason to look at the games, never proof on its own.')}
+            </Text>
           </Card>
           {found.data.games.map((game) => (
             <Card key={game.game_id}>
               <Text style={styles.text}>
-                {`${game.side === 'goat' ? 'Goats' : 'Tigers'} against ${game.opponent.username} · ${dateTimeText(game.checked_at)}`}
+                {game.side === 'goat'
+                  ? t('Goats against {name} · {date}', {
+                      name: game.opponent.username,
+                      date: dateTimeText(game.checked_at),
+                    })
+                  : t('Tigers against {name} · {date}', {
+                      name: game.opponent.username,
+                      date: dateTimeText(game.checked_at),
+                    })}
               </Text>
-              <Text style={styles.muted}>{`Quick: ${figuresText(game.screen)}`}</Text>
+              <Text style={styles.muted}>
+                {t('Quick: {figures}', { figures: figuresText(game.screen) })}
+              </Text>
               {game.confirm !== null && (
-                <Text style={styles.muted}>{`Deep: ${figuresText(game.confirm)}`}</Text>
+                <Text style={styles.muted}>
+                  {t('Deep: {figures}', { figures: figuresText(game.confirm) })}
+                </Text>
               )}
               <Text style={styles.muted}>{thinkText(game.think_median_ms, game.fast_moves)}</Text>
-              <TextLink href={`/game/${game.game_id}`}>Open the game</TextLink>
+              <TextLink href={`/game/${game.game_id}`}>{t('Open the game')}</TextLink>
             </Card>
           ))}
         </>
