@@ -11,24 +11,17 @@ uploaded as is. `en-IN` is the main listing; other languages are listed under
 | Short description | 80 characters | 75 |
 | Full description | 4,000 characters | about 2,840 |
 
-## Before publishing: two things Google Play will refuse
+## Before publishing: two Google Play rules (both met)
 
 1. **The app must not send players to the website to pay.** Google Play's Payments policy
    does not let an app link to, or encourage, buying its digital features outside Google
-   Play's billing, and Plus and Pro are digital features. The apps currently show
-   "Plans are bought on the ClawPlay website" with a **Buy on the website** button
-   (`app/src/app/plans.tsx`). Before the first upload, choose one:
-   - **Simplest:** in the Android app, show what Plus and Pro include, with no prices,
-     buttons or mention of where to buy. Players who already have a plan keep it, because
-     plans live on the server.
-   - **Later:** sell Plus and Pro inside the app with Google Play Billing (Google takes a
-     fee), or with Google's alternative billing programme for India if the account qualifies.
-   The listing text already avoids prices and any mention of buying elsewhere.
-2. **Account deletion needs a web address as well.** Players can already delete their account
-   in the app (Settings → Delete account). Play also asks for a web page where people can ask
-   for deletion without the app. A short page on the website saying "sign in, open Settings,
-   choose Delete account, or write to the contact address" is enough. Its address goes in
-   Play Console → App content → Data safety.
+   Play's billing. The apps' plans screen shows what Plus and Pro include, with no prices,
+   buttons or mention of where to buy; players who already have a plan keep it (plans live
+   on the server). Selling inside the app later would mean Google Play Billing, or Google's
+   alternative billing programme for India if the account qualifies.
+2. **Account deletion needs a web address as well as the in-app way.** It is
+   `https://<the website>/delete-account`, for anyone, signed in or not; put it in Play
+   Console → App content → Data safety.
 
 ## Keywords
 
@@ -101,7 +94,8 @@ listing say so; until then, the listing does not claim it.
     connection details for security.
   - Not sold, and no advertising.
   - Encrypted in transit.
-  - Deletion: in the app, and at the web address from step 2 above.
+  - Deletion: in the app (Me → Settings → Delete account), and at `/delete-account` on the
+    website.
   - Payments: none taken in the Android app.
 - **Ads:** the app contains no ads.
 - **App access:** reviewers can start as a guest. Give them a test account too, so they can
