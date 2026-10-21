@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 /**
  * The visual system. Colours have one job each: `accent` is the main action on a screen (and
  * only that), `ink` marks what is selected or current, `link` is for links, and success,
@@ -70,6 +72,14 @@ export const colors = {
   currentOnDark: 'rgba(255, 243, 223, 0.14)',
 } as const;
 
+/**
+ * Tighter letters for big headings, where the font is drawn for it (iOS, the web); Android's
+ * Roboto already sits tight, and pulling it closer runs the letters together.
+ */
+export function tight(letterSpacing: number): number {
+  return Platform.OS === 'android' ? 0 : letterSpacing;
+}
+
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
 
 export const radius = { sm: 6, md: 10, lg: 16, pill: 999 } as const;
@@ -79,8 +89,8 @@ export const radius = { sm: 6, md: 10, lg: 16, pill: 999 } as const;
  * glance (title, section, body, label, caption).
  */
 export const type = {
-  display: { fontSize: 32, lineHeight: 38, fontWeight: '800', letterSpacing: -0.5 },
-  title: { fontSize: 26, lineHeight: 32, fontWeight: '800', letterSpacing: -0.3 },
+  display: { fontSize: 32, lineHeight: 38, fontWeight: '800', letterSpacing: tight(-0.5) },
+  title: { fontSize: 26, lineHeight: 32, fontWeight: '800', letterSpacing: tight(-0.3) },
   heading: { fontSize: 18, lineHeight: 24, fontWeight: '700' },
   body: { fontSize: 16, lineHeight: 23, fontWeight: '400' },
   label: { fontSize: 14, lineHeight: 19, fontWeight: '600' },

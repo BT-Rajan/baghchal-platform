@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing, type } from '@/theme';
 
@@ -38,6 +38,7 @@ export function Segmented<T extends string>({
               {...ripple(selected)}
               style={(state) => [
                 styles.option,
+                Platform.OS === 'android' && styles.androidTouch,
                 vertical && styles.optionVertical,
                 selected && styles.selected,
                 pressedLook(state.pressed && !selected, styles.pressed),
@@ -54,6 +55,8 @@ export function Segmented<T extends string>({
 }
 
 const styles = StyleSheet.create({
+  // Android's guidelines ask for 48.
+  androidTouch: { minWidth: 48, minHeight: 48 },
   field: { gap: spacing.xs },
   label: { ...type.label, color: colors.muted },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

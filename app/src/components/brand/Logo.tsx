@@ -8,7 +8,7 @@ import { useId } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
-import { colors, spacing } from '@/theme';
+import { colors, spacing, tight, type } from '@/theme';
 
 export const BRAND = 'ClawPlay';
 export const TAGLINE = 'Bagh Chal · tigers and goats, played live';
@@ -63,7 +63,10 @@ export function ClawMark({ size = 48 }: { size?: number }) {
 /** "ClawPlay", with "Play" in amber. Read as one word by screen readers. */
 export function Wordmark({ size = 28, onDark = false }: { size?: number; onDark?: boolean }) {
   return (
-    <Text aria-label={BRAND} style={[styles.word, { fontSize: size, letterSpacing: -size / 40 }]}>
+    <Text
+      aria-label={BRAND}
+      style={[styles.word, { fontSize: size, letterSpacing: tight(-size / 40) }]}
+    >
       <Text style={{ color: onDark ? colors.brandCream : colors.brandInk }}>Claw</Text>
       <Text style={{ color: onDark ? colors.brandLight : colors.brandDeep }}>Play</Text>
     </Text>
@@ -83,7 +86,9 @@ export function Brand({
   return (
     <View style={styles.row}>
       <ClawMark size={size} />
-      <View>
+      {/* The name and tagline take the room left beside the mark, and wrap in it: unshrunk,
+          a long tagline widened the row past the screen and pushed the mark off its edge. */}
+      <View style={styles.words}>
         <Wordmark size={size * 0.62} onDark={onDark} />
         {tagline && <Text style={styles.tagline}>{TAGLINE}</Text>}
       </View>
@@ -100,12 +105,27 @@ export function BrandHeader() {
   );
 }
 
-/** A slim bar across the top of the main tabs. */
-/** The ClawPlay bar above the tabs; `children` sit at its right end (the notifications bell). */
-export function BrandBar({ children }: { children?: ReactNode }) {
+/**
+ * The bar above the tabs: the ClawPlay logo on the first tab, the tab's own title on the
+ * others (as Android and iOS apps name the place you are in); `children` sit at its right end
+ * (the notifications bell).
+ */
+export function BrandBar({
+  title = null,
+  children,
+}: {
+  title?: string | null;
+  children?: ReactNode;
+}) {
   return (
     <View role="banner" style={styles.bar}>
-      <Brand size={30} onDark />
+      {title === null ? (
+        <Brand size={30} onDark />
+      ) : (
+        <Text role="heading" numberOfLines={1} style={styles.barTitle}>
+          {title}
+        </Text>
+      )}
       {children !== undefined && <View style={styles.end}>{children}</View>}
     </View>
   );
@@ -113,10 +133,19 @@ export function BrandBar({ children }: { children?: ReactNode }) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  words: { flexShrink: 1 },
   word: { fontWeight: '800' },
   tagline: { fontSize: 14, color: colors.muted, marginTop: 2 },
   header: { alignItems: 'center', marginBottom: spacing.md },
   end: { marginLeft: 'auto' },
+  // As tall as the logo, so the bar keeps its height from tab to tab.
+  barTitle: {
+    ...type.heading,
+    fontSize: 20,
+    lineHeight: 30,
+    color: colors.brandCream,
+    flexShrink: 1,
+  },
   bar: {
     backgroundColor: colors.brandInk,
     paddingHorizontal: spacing.md,

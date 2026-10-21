@@ -36,6 +36,9 @@ const config: ExpoConfig = {
   orientation: 'default',
   // Light only until the theme has a dark palette.
   userInterfaceStyle: 'light',
+  // The window behind the pages: the page colour, so the system's navigation bar area (and a
+  // screen still drawing) match the app instead of showing white or black.
+  backgroundColor: '#f6f1e7',
   ios: { supportsTablet: true, bundleIdentifier: 'com.clawplay.app' },
   android: {
     package: 'com.clawplay.app',
@@ -52,6 +55,9 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
+    // No grey band behind Android's three navigation buttons: the page colour runs to the
+    // bottom (the app keeps its content clear of them), with dark buttons on the light pages.
+    ['expo-navigation-bar', { enforceContrast: false, style: 'dark' }],
     'expo-secure-store',
     // The icon on the brand colour while the app starts (hidden once it knows who is signed in).
     [
