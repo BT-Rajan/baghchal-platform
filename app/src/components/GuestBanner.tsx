@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useMe } from '@/auth/session';
+import { t } from '@/i18n';
 import { colors, radius, spacing } from '@/theme';
 
 import { Button } from './Button';
@@ -18,8 +19,9 @@ export function GuestBanner() {
     return (
       <View style={styles.box}>
         <Text style={styles.text}>
-          We emailed your parent or guardian. Until they agree you can play the computer and
-          puzzles, but not other people. Ask them to open the link in the email.
+          {t(
+            'We emailed your parent or guardian. Until they agree you can play the computer and puzzles, but not other people. Ask them to open the link in the email.',
+          )}
         </Text>
       </View>
     );
@@ -28,10 +30,13 @@ export function GuestBanner() {
   return (
     <View style={styles.box}>
       <Text style={styles.text}>
-        {`You are playing as ${me.username}. Make a free account to keep your games, play rated games and challenge friends.`}
+        {t(
+          'You are playing as {name}. Make a free account to keep your games, play rated games and challenge friends.',
+          { name: me.username },
+        )}
       </Text>
       <Button
-        title="Make a free account"
+        title={t('Make a free account')}
         variant="bright"
         compact
         onPress={() => router.push('/claim')}

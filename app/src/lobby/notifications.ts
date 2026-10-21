@@ -1,29 +1,39 @@
 /** Words and links for notifications. */
 import type { Notification } from '@/api/endpoints';
+import { plural, t } from '@/i18n';
 
 import { timeControlName } from './format';
 
 /** "alice challenged you to a 5+3 rated game." */
 export function notificationText(n: Notification): string {
-  const who = n.actor?.username ?? 'A player';
+  const name = n.actor?.username ?? t('A player');
   switch (n.kind) {
     case 'challenge':
-      return `${who} challenged you to a ${timeControlName(n.detail ?? '')} game.`.replace(
-        '  ',
-        ' ',
-      );
+      return t('{name} challenged you to a {control} game.', {
+        name,
+        control: timeControlName(n.detail ?? ''),
+      }).replace('  ', ' ');
     case 'friend_request':
-      return `${who} wants to be friends.`;
+      return t('{name} wants to be friends.', { name });
     case 'friend_accepted':
-      return `${who} accepted your friend request.`;
+      return t('{name} accepted your friend request.', { name });
     case 'tournament_started':
-      return `${n.tournament?.name ?? 'A tournament'} has started: your games are ready.`;
+      return t('{tournament} has started: your games are ready.', {
+        tournament: n.tournament?.name ?? t('A tournament'),
+      });
     case 'tournament_round':
       return n.actor === null
-        ? `New round in ${n.tournament?.name ?? 'your tournament'}: you have the bye (a point).`
-        : `New round in ${n.tournament?.name ?? 'your tournament'}: you play ${n.actor.username}.`;
+        ? t('New round in {tournament}: you have the bye (a point).', {
+            tournament: n.tournament?.name ?? t('your tournament'),
+          })
+        : t('New round in {tournament}: you play {name}.', {
+            tournament: n.tournament?.name ?? t('your tournament'),
+            name: n.actor.username,
+          });
     case 'tournament_finished':
-      return `${n.tournament?.name ?? 'A tournament'} has ended: see the final standings.`;
+      return t('{tournament} has ended: see the final standings.', {
+        tournament: n.tournament?.name ?? t('A tournament'),
+      });
   }
 }
 
@@ -36,10 +46,10 @@ export function notificationLink(n: Notification): string | null {
 /** "just now", "5 min ago", "3 h ago", "2 days ago". */
 export function agoText(iso: string, nowMs: number): string {
   const minutes = Math.floor((nowMs - Date.parse(iso)) / 60_000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 1) return t('just now');
+  if (minutes < 60) return plural(minutes, '{count} min ago', '{count} min ago');
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} h ago`;
+  if (hours < 24) return plural(hours, '{count} h ago', '{count} h ago');
   const days = Math.floor(hours / 24);
-  return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+  return plural(days, '{count} day ago', '{count} days ago');
 }

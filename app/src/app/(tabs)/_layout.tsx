@@ -6,6 +6,7 @@ import { BrandBar } from '@/components/brand/Logo';
 import { Icon, type IconName } from '@/components/Icon';
 import { NotificationBell } from '@/components/NotificationBell';
 import { LOGO_TAB } from '@/components/tabs';
+import { t } from '@/i18n';
 import { colors } from '@/theme';
 
 /** From this width the tabs are a sidebar, not a bar stretched along the bottom. */
@@ -75,17 +76,20 @@ export default function TabsLayout() {
       {/* The labels are fixed: a screen may put a longer title in the bar (Me: the username). */}
       <Tabs.Screen
         name="index"
-        options={{ title: 'Play', tabBarLabel: 'Play', tabBarIcon: icon('play') }}
+        options={{ title: t('Play'), tabBarLabel: t('Play'), tabBarIcon: icon('play') }}
       />
       <Tabs.Screen
         name="leaderboard"
         options={{
-          title: 'Leaderboard',
-          tabBarLabel: 'Leaderboard',
+          title: t('Leaderboard'),
+          tabBarLabel: t('Leaderboard'),
           tabBarIcon: icon('leaderboard'),
         }}
       />
-      <Tabs.Screen name="me" options={{ title: 'Me', tabBarLabel: 'Me', tabBarIcon: icon('me') }} />
+      <Tabs.Screen
+        name="me"
+        options={{ title: t('Me'), tabBarLabel: t('Me'), tabBarIcon: icon('me') }}
+      />
     </Tabs>
   );
 }

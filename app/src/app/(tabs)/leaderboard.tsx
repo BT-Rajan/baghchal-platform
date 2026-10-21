@@ -12,6 +12,7 @@ import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
 import { Segmented } from '@/components/Segmented';
 import { TextLink } from '@/components/TextLink';
+import { t, plural } from '@/i18n';
 import { CATEGORIES } from '@/lobby/format';
 import { useLeaderboard, useProfile } from '@/lobby/hooks';
 import { colors, radius, shadow, spacing, type } from '@/theme';
@@ -23,12 +24,13 @@ export default function Leaderboard() {
   const me = useMe();
   const [category, setCategory] = useState<Category>('blitz');
   const board = useLeaderboard(category);
-  const label = CATEGORIES.find((c) => c.value === category)?.label ?? '';
+  const found = CATEGORIES.find((c) => c.value === category);
+  const label = found === undefined ? '' : t(found.label);
   return (
-    <Screen title="Leaderboard" align="top" refreshable>
+    <Screen title={t('Leaderboard')} align="top" refreshable>
       <Segmented
-        label="Time control"
-        options={CATEGORIES}
+        label={t('Time control')}
+        options={CATEGORIES.map((c) => ({ ...c, label: t(c.label) }))}
         value={category}
         onChange={setCategory}
       />
@@ -36,15 +38,16 @@ export default function Leaderboard() {
       {board.error !== null ? (
         <ErrorState error={board.error} onRetry={() => void board.refetch()} />
       ) : board.data === undefined ? (
-        <Loading label="Loading the leaderboard" />
+        <Loading label={t('Loading the leaderboard')} />
       ) : board.data.length === 0 ? (
         <Card>
           <Hint>
-            Nobody is listed yet. Players appear once their rating has settled and they have played
-            a rated game in the last 30 days.
+            {t(
+              'Nobody is listed yet. Players appear once their rating has settled and they have played a rated game in the last 30 days.',
+            )}
           </Hint>
           <Button
-            title="Play a rated game"
+            title={t('Play a rated game')}
             variant="secondary"
             onPress={() => router.push('/play')}
           />
@@ -82,10 +85,15 @@ function MyStanding({ category, label }: { category: Category; label: string }) 
   if (profile.data === undefined) return null;
   const text =
     rating === undefined
-      ? `You have no ${label.toLowerCase()} rating yet: play a rated game to get one.`
+      ? t('You have no {category} rating yet: play a rated game to get one.', {
+          category: label.toLowerCase(),
+        })
       : rating.rank !== null
-        ? `You are #${rating.rank}, rated ${rating.rating}.`
-        : `You are rated ${rating.rating}. You will be listed once your rating settles and you have played a rated game in the last 30 days.`;
+        ? t('You are #{rank}, rated {rating}.', { rank: rating.rank, rating: rating.rating })
+        : t(
+            'You are rated {rating}. You will be listed once your rating settles and you have played a rated game in the last 30 days.',
+            { rating: rating.rating },
+          );
   return (
     <View style={styles.mine}>
       <Icon name="me" color={colors.accent} size={20} />
@@ -98,7 +106,7 @@ function Name({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
   return (
     <View style={styles.name}>
       <TextLink href={`/player/${entry.player.username}`}>
-        {isMe ? `${entry.player.username} (you)` : entry.player.username}
+        {isMe ? t('{name} (you)', { name: entry.player.username }) : entry.player.username}
       </TextLink>
       <BadgePill badge={entry.player.badge} />
     </View>
@@ -113,7 +121,7 @@ function Podium({ entry, medal, isMe }: { entry: LeaderboardEntry; medal: string
       </View>
       <Name entry={entry} isMe={isMe} />
       <Text style={styles.bigRating}>{String(entry.rating)}</Text>
-      <Text style={styles.games}>{`${entry.games} ${entry.games === 1 ? 'game' : 'games'}`}</Text>
+      <Text style={styles.games}>{plural(entry.games, '{count} game', '{count} games')}</Text>
     </View>
   );
 }
@@ -124,7 +132,7 @@ function Row({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
       <Text style={styles.rank}>{`#${entry.rank}`}</Text>
       <Name entry={entry} isMe={isMe} />
       <Text style={styles.rating}>{String(entry.rating)}</Text>
-      <Text style={styles.games}>{`${entry.games} ${entry.games === 1 ? 'game' : 'games'}`}</Text>
+      <Text style={styles.games}>{plural(entry.games, '{count} game', '{count} games')}</Text>
     </View>
   );
 }

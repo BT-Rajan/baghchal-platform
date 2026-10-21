@@ -2,6 +2,7 @@ import { Link, usePathname, type Href } from 'expo-router';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { useSession } from '@/auth/session';
+import { mark, t } from '@/i18n';
 import { colors, radius, spacing, type } from '@/theme';
 
 import { Brand } from '../brand/Logo';
@@ -12,9 +13,13 @@ const NARROW = 640;
 
 /** The main places, for someone signed in: the same three as the apps' tabs. */
 const PLACES: readonly { href: Href; label: string; match: (path: string) => boolean }[] = [
-  { href: '/', label: 'Play', match: (p) => p === '/' || p.startsWith('/game') || p === '/play' },
-  { href: '/leaderboard', label: 'Leaderboard', match: (p) => p === '/leaderboard' },
-  { href: '/me', label: 'Me', match: (p) => p === '/me' || p === '/settings' },
+  {
+    href: '/',
+    label: mark('Play'),
+    match: (p) => p === '/' || p.startsWith('/game') || p === '/play',
+  },
+  { href: '/leaderboard', label: mark('Leaderboard'), match: (p) => p === '/leaderboard' },
+  { href: '/me', label: mark('Me'), match: (p) => p === '/me' || p === '/settings' },
 ];
 
 /**
@@ -38,7 +43,7 @@ export function WebTopBar({ playing }: { playing: boolean }) {
             aria-current={current ? 'page' : undefined}
             style={[styles.place, current && styles.current]}
           >
-            {place.label}
+            {t(place.label)}
           </Link>
         );
       })}
@@ -47,7 +52,7 @@ export function WebTopBar({ playing }: { playing: boolean }) {
   return (
     <View role="banner" style={styles.bar}>
       <View style={styles.inner}>
-        <Link href="/" aria-label="ClawPlay home" style={styles.home}>
+        <Link href="/" aria-label={t('ClawPlay home')} style={styles.home}>
           <Brand size={30} onDark />
         </Link>
         {!narrow && places}
@@ -56,10 +61,10 @@ export function WebTopBar({ playing }: { playing: boolean }) {
           {signedOut && (
             <>
               <Link href="/sign-in" style={styles.place}>
-                Sign in
+                {t('Sign in')}
               </Link>
               <Link href="/sign-up" style={[styles.place, styles.cta]}>
-                <Text style={styles.ctaText}>Create account</Text>
+                <Text style={styles.ctaText}>{t('Create account')}</Text>
               </Link>
             </>
           )}

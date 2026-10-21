@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { t } from '@/i18n';
 import { useNotifications } from '@/lobby/hooks';
 import { colors, radius } from '@/theme';
 
@@ -15,7 +16,9 @@ export function NotificationBell() {
   return (
     <Pressable
       role="button"
-      aria-label={unread === 0 ? 'Notifications' : `Notifications, ${unread} unread`}
+      aria-label={
+        unread === 0 ? t('Notifications') : t('Notifications, {count} unread', { count: unread })
+      }
       onPress={() => router.push('/notifications')}
       {...ripple(true)}
       style={(state) => [styles.bell, pressedLook(state.pressed, styles.pressed), focusRing(state)]}

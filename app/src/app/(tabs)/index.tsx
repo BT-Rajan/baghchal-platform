@@ -17,6 +17,7 @@ import { PlayerSearch } from '@/components/PlayerSearch';
 import { Screen } from '@/components/Screen';
 import { ErrorState } from '@/components/States';
 import { useServerNow } from '@/components/useNow';
+import { t } from '@/i18n';
 import { isOpen } from '@/lobby/format';
 import { useActiveGames, useAnswerChallenge, useChallenges } from '@/lobby/hooks';
 import { colors, spacing, type } from '@/theme';
@@ -55,7 +56,7 @@ export default function Play() {
       {challenges.error !== null && (
         <ErrorState error={challenges.error} onRetry={() => void challenges.refetch()} />
       )}
-      {incoming.length > 0 && <SectionTitle>Challenges for you</SectionTitle>}
+      {incoming.length > 0 && <SectionTitle>{t('Challenges for you')}</SectionTitle>}
       {incoming.map((c) => (
         <ChallengeCard
           key={c.id}
@@ -66,7 +67,7 @@ export default function Play() {
           onAnswer={(a) => answer.mutate({ id: c.id, answer: a })}
         />
       ))}
-      {outgoing.length > 0 && <SectionTitle>Your challenges</SectionTitle>}
+      {outgoing.length > 0 && <SectionTitle>{t('Your challenges')}</SectionTitle>}
       {outgoing.map((c) => (
         <ChallengeCard
           key={c.id}
@@ -80,9 +81,11 @@ export default function Play() {
       <FriendRequests />
       {games.data?.length === 0 && (
         <Card>
-          <Text style={styles.cardTitle}>Ready for a game?</Text>
-          <Hint>Quick or standard, rated or casual, with whoever is waiting or the computer.</Hint>
-          <Button title="Play now" onPress={() => router.push('/play')} />
+          <Text style={styles.cardTitle}>{t('Ready for a game?')}</Text>
+          <Hint>
+            {t('Quick or standard, rated or casual, with whoever is waiting or the computer.')}
+          </Hint>
+          <Button title={t('Play now')} onPress={() => router.push('/play')} />
         </Card>
       )}
       <MoreWaysToPlay guest={me.role === 'guest'} />
@@ -99,7 +102,7 @@ export default function Play() {
   );
 
   return (
-    <Screen title="Play" align="top" wide={wide} refreshable>
+    <Screen title={t('Play')} align="top" wide={wide} refreshable>
       <GuestBanner />
       {wide ? (
         <View style={styles.row}>
@@ -121,8 +124,10 @@ function NobodyOnline({ guest }: { guest: boolean }) {
   return (
     <Hint>
       {guest
-        ? 'Nobody else is online right now. Play now finds you a game, with the computer if need be.'
-        : 'Nobody else is online right now. Send a friend a challenge by link, or Play now.'}
+        ? t(
+            'Nobody else is online right now. Play now finds you a game, with the computer if need be.',
+          )
+        : t('Nobody else is online right now. Send a friend a challenge by link, or Play now.')}
     </Hint>
   );
 }
@@ -131,26 +136,26 @@ function NobodyOnline({ guest }: { guest: boolean }) {
 function MoreWaysToPlay({ guest }: { guest: boolean }) {
   return (
     <>
-      <SectionTitle>More ways to play</SectionTitle>
+      <SectionTitle>{t('More ways to play')}</SectionTitle>
       {/* Challenges need an account. */}
       {!guest && (
         <FeatureLink
           icon="link"
-          title="Challenge a friend by link"
-          text="Send a link; the game starts when your friend opens it."
+          title={t('Challenge a friend by link')}
+          text={t('Send a link; the game starts when your friend opens it.')}
           onPress={() => router.push('/invite')}
         />
       )}
       <FeatureLink
         icon="trophy"
-        title="Tournaments"
-        text="Swiss tournaments with friends: join one by link, or host your own."
+        title={t('Tournaments')}
+        text={t('Swiss tournaments with friends: join one by link, or host your own.')}
         onPress={() => router.push('/tournaments')}
       />
       <FeatureLink
         icon="puzzle"
-        title="Trainer"
-        text="Opening and endgame puzzles from real games, one best move each."
+        title={t('Trainer')}
+        text={t('Opening and endgame puzzles from real games, one best move each.')}
         feature="trainer"
         onPress={() => router.push('/trainer')}
       />
@@ -162,9 +167,11 @@ function LiveGame({ game, myId }: { game: Game; myId: string }) {
   const opponent = game.goat.id === myId ? game.tiger : game.goat;
   return (
     <Card tone="accent">
-      <Text style={styles.cardTitle}>Continue your game</Text>
-      <Text style={styles.live}>{`Your game against ${opponent.username} is on.`}</Text>
-      <Button title="Resume game" onPress={() => router.push(`/game/${game.id}`)} />
+      <Text style={styles.cardTitle}>{t('Continue your game')}</Text>
+      <Text style={styles.live}>
+        {t('Your game against {name} is on.', { name: opponent.username })}
+      </Text>
+      <Button title={t('Resume game')} onPress={() => router.push(`/game/${game.id}`)} />
     </Card>
   );
 }

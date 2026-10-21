@@ -10,6 +10,7 @@ import { Icon, type IconName } from '@/components/Icon';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
 import { useNow } from '@/components/useNow';
+import { t } from '@/i18n';
 import { useNotifications, useReadNotifications } from '@/lobby/hooks';
 import { agoText, notificationLink, notificationText } from '@/lobby/notifications';
 import { colors, radius, spacing } from '@/theme';
@@ -39,9 +40,9 @@ export default function Notifications() {
       {notifications.error !== null ? (
         <ErrorState error={notifications.error} onRetry={() => void notifications.refetch()} />
       ) : notifications.data === undefined ? (
-        <Loading label="Loading your notifications" />
+        <Loading label={t('Loading your notifications')} />
       ) : notifications.data.items.length === 0 ? (
-        <Hint>Nothing yet. Challenges, friend requests and tournaments will show here.</Hint>
+        <Hint>{t('Nothing yet. Challenges, friend requests and tournaments will show here.')}</Hint>
       ) : (
         <Card>
           {notifications.data.items.map((n, i) => {

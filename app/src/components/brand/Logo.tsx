@@ -8,10 +8,11 @@ import { useId } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
+import { mark, t } from '@/i18n';
 import { colors, spacing, tight, type } from '@/theme';
 
 export const BRAND = 'ClawPlay';
-export const TAGLINE = 'Bagh Chal · tigers and goats, played live';
+export const TAGLINE = mark('Bagh Chal · tigers and goats, played live');
 
 const SLASHES = [-14, 3, 20];
 
@@ -90,7 +91,7 @@ export function Brand({
           a long tagline widened the row past the screen and pushed the mark off its edge. */}
       <View style={styles.words}>
         <Wordmark size={size * 0.62} onDark={onDark} />
-        {tagline && <Text style={styles.tagline}>{TAGLINE}</Text>}
+        {tagline && <Text style={styles.tagline}>{t(TAGLINE)}</Text>}
       </View>
     </View>
   );
