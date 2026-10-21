@@ -19,7 +19,7 @@ import Svg, { Circle, G, Path } from 'react-native-svg';
 import type { PieceSet } from '@/api/endpoints';
 import type { Ending } from '@/game/ending';
 import { t } from '@/i18n';
-import { colors, confetti, radius, spacing, type } from '@/theme';
+import { colors, confetti, joinedLetters, radius, spacing, type } from '@/theme';
 
 import { Coin } from './Coin';
 
@@ -181,7 +181,7 @@ export function Victory({
           </Svg>
         </Animated.View>
         <View style={styles.words} aria-live="assertive">
-          <Text style={[styles.headline, ending.won === false && styles.lost]}>
+          <Text style={[styles.headline, ending.won === false && styles.lost, joinedLetters()]}>
             {ending.headline}
           </Text>
           <Text style={styles.detail}>{ending.detail}</Text>

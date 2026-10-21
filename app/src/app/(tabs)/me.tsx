@@ -9,7 +9,7 @@ import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
 import { t } from '@/i18n';
 import { useProfile } from '@/lobby/hooks';
-import { colors, spacing, type } from '@/theme';
+import { colors, joinedLetters, spacing, type } from '@/theme';
 
 /** My profile, as others see it, with my name and the way to my settings at the top. */
 export default function MeScreen() {
@@ -18,7 +18,7 @@ export default function MeScreen() {
   return (
     <Screen align="top" refreshable>
       <View style={styles.titleRow}>
-        <Text role="heading" style={styles.title} numberOfLines={1}>
+        <Text role="heading" style={[styles.title, joinedLetters()]} numberOfLines={1}>
           {me.username}
         </Text>
         <IconButton

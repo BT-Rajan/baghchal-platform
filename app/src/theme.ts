@@ -99,6 +99,14 @@ export function spaced(letterSpacing: number): number {
   return isRTL() ? 0 : letterSpacing;
 }
 
+/**
+ * For a heading whose style was made when the app loaded (`type.display`, `type.title`), before
+ * the language was known: added where it is drawn, it takes the spacing out in Arabic.
+ */
+export function joinedLetters(): { letterSpacing: number } | null {
+  return isRTL() ? { letterSpacing: 0 } : null;
+}
+
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
 
 /** `board`: the board's corners (and what is laid over it); `dialog`: the apps' own dialogs. */
