@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
@@ -15,7 +16,7 @@ import { ErrorState, Loading } from '@/components/States';
 import { mark, t } from '@/i18n';
 import { answerText, progressText } from '@/pro/format';
 import { useAnswerPuzzle, useTrainer } from '@/pro/hooks';
-import { colors } from '@/theme';
+import { colors, type } from '@/theme';
 import { ErrorNotice } from '@/components/ErrorNotice';
 
 const KINDS: readonly { value: TrainerKind; label: string }[] = [
@@ -46,7 +47,11 @@ export default function TrainerScreen() {
             value={kind}
             onChange={setKind}
           />
-          <Puzzles key={kind} kind={kind} />
+          <Puzzles
+            key={kind}
+            kind={kind}
+            onOther={() => setKind(kind === 'opening' ? 'endgame' : 'opening')}
+          />
         </>
       ) : (
         <Upsell feature="trainer">
@@ -59,7 +64,8 @@ export default function TrainerScreen() {
   );
 }
 
-function Puzzles({ kind }: { kind: TrainerKind }) {
+/** One set's puzzles; `onOther` switches to the other set (offered once this one is done). */
+function Puzzles({ kind, onOther }: { kind: TrainerKind; onOther: () => void }) {
   const trainer = useTrainer(kind);
   const answer = useAnswerPuzzle();
   if (trainer.error !== null) {
@@ -71,7 +77,14 @@ function Puzzles({ kind }: { kind: TrainerKind }) {
     <>
       <Text style={styles.progress}>{progressText(answer.data ?? trainer.data)}</Text>
       {puzzle === null ? (
-        <Notice tone="success">{t('You have solved every puzzle here. Well played!')}</Notice>
+        <>
+          <Notice tone="success">{t('You have solved every puzzle here. Well played!')}</Notice>
+          <Button
+            title={kind === 'opening' ? t('Try the endgames') : t('Try the openings')}
+            onPress={onOther}
+          />
+          <Button title={t('Play now')} variant="secondary" onPress={() => router.push('/play')} />
+        </>
       ) : (
         <PuzzleBoard
           key={puzzle.id}
@@ -80,6 +93,7 @@ function Puzzles({ kind }: { kind: TrainerKind }) {
           best={answer.data?.best}
           busy={answer.isPending}
           onMove={(move) => answer.mutate({ id: puzzle.id, move })}
+          onRetry={() => void trainer.refetch()}
         />
       )}
       <ErrorNotice error={answer.error} />
@@ -100,5 +114,5 @@ function Puzzles({ kind }: { kind: TrainerKind }) {
 }
 
 const styles = StyleSheet.create({
-  progress: { fontSize: 14, color: colors.muted },
+  progress: { ...type.small, color: colors.muted },
 });

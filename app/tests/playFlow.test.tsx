@@ -192,7 +192,7 @@ describe('errors with a way forward', () => {
   test.each([
     ['player_busy', 'Go to my game', '/game/g5'],
     ['abort_cooldown', 'Play the computer meanwhile', '/play'],
-    ['account_required', 'Make my free account', '/claim'],
+    ['account_required', 'Make a free account', '/claim'],
     ['too_many_challenges', 'See my challenges', '/'],
   ])('%s', async (code, button, path) => {
     const { app } = await open('/challenge/bob', {

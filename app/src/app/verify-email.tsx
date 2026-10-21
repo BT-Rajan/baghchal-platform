@@ -1,17 +1,16 @@
 import { useMutation } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { ActivityIndicator } from 'react-native';
 
 import { peekReturn } from '@/auth/returnTo';
 import { useSession } from '@/auth/session';
 import { isLinkToken } from '@/auth/validation';
+import { Button } from '@/components/Button';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
-import { TextLink } from '@/components/TextLink';
+import { Loading } from '@/components/States';
 import { t } from '@/i18n';
-import { colors } from '@/theme';
 
 /** Opened from the link in the sign-up email: `/verify-email?token=…`. */
 export default function VerifyEmail() {
@@ -49,14 +48,14 @@ export default function VerifyEmail() {
         ) : (
           <Notice tone="error">{t('This link is invalid or has expired.')}</Notice>
         )}
-        <TextLink href="/sign-up">{t('Sign up again')}</TextLink>
-        <TextLink href="/sign-in">{t('Sign in')}</TextLink>
+        {/* Signing in to an unconfirmed account offers to send the link again. */}
+        <Button title={t('Sign in to get a new link')} onPress={() => router.replace('/sign-in')} />
       </Screen>
     );
   }
   return (
-    <Screen title={t('Confirming your email…')} brand>
-      <ActivityIndicator color={colors.accent} size="large" />
+    <Screen title={t('Confirm your email')} brand>
+      <Loading label={t('Confirming your email')} />
     </Screen>
   );
 }

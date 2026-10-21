@@ -39,7 +39,7 @@ function NextStep({ error, onCasual }: { error: unknown; onCasual: (() => void) 
     case 'abort_cooldown':
       return <Step title={t('Play the computer meanwhile')} onPress={() => router.push('/play')} />;
     case 'account_required':
-      return <Step title={t('Make my free account')} onPress={() => router.push('/claim')} />;
+      return <Step title={t('Make a free account')} onPress={() => router.push('/claim')} />;
     case 'rated_match_limit':
     case 'guest_plays_casual':
       return onCasual ? <Step title={t('Play casual instead')} onPress={onCasual} /> : null;

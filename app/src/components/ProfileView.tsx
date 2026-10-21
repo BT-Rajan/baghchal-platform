@@ -7,7 +7,7 @@ import { plural, t } from '@/i18n';
 import { CATEGORIES, canChallenge, joinedText, presenceText } from '@/lobby/format';
 import { useBlock } from '@/lobby/hooks';
 import { useMe } from '@/auth/session';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, type } from '@/theme';
 
 import { Achievements } from './Achievements';
 import { BadgePill } from './BadgePill';
@@ -27,7 +27,7 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
       <View style={styles.presence}>
         <BadgePill badge={profile.badge} />
         <PresenceDot online={profile.online} />
-        <Text style={styles.muted}>
+        <Text style={styles.presenceText}>
           {t('{presence} · {joined}', {
             presence: presenceText(profile),
             joined: joinedText(profile.created_at),
@@ -85,21 +85,37 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
       )}
       {/* Guests cannot challenge anyone by name (a free account can). */}
       {!isMe && !profile.blocked && !guestViewer && (
-        <Button
-          title={t('Challenge {name}', { name: profile.username })}
-          disabled={!canChallenge(profile)}
-          onPress={() => router.push(`/challenge/${profile.username}`)}
-        />
+        <>
+          <Button
+            title={t('Challenge {name}', { name: profile.username })}
+            disabled={!canChallenge(profile)}
+            onPress={() => router.push(`/challenge/${profile.username}`)}
+          />
+          {!canChallenge(profile) && (
+            <Hint>
+              {profile.playing
+                ? t('{name} is in a game. You can challenge them when it ends.', {
+                    name: profile.username,
+                  })
+                : t('{name} is offline. You can challenge them when they are online.', {
+                    name: profile.username,
+                  })}
+            </Hint>
+          )}
+        </>
       )}
-      {!isMe && <BlockControl username={profile.username} blocked={profile.blocked} />}
       <Achievements username={profile.username} />
-      <GameHistory username={profile.username} />
+      <GameHistory username={profile.username} isMe={isMe} />
+      {/* The rarely needed, at the bottom. */}
       {!isMe && (
-        <Button
-          title={t('Report {name}', { name: profile.username })}
-          variant="secondary"
-          onPress={() => router.push(`/report/${profile.username}`)}
-        />
+        <View style={styles.bottom}>
+          <BlockControl username={profile.username} blocked={profile.blocked} />
+          <Button
+            title={t('Report {name}', { name: profile.username })}
+            variant="secondary"
+            onPress={() => router.push(`/report/${profile.username}`)}
+          />
+        </View>
       )}
     </>
   );
@@ -152,9 +168,12 @@ function BlockControl({ username, blocked }: { username: string; blocked: boolea
 
 const styles = StyleSheet.create({
   presence: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  muted: { fontSize: 14, color: colors.muted },
-  ratings: { flexDirection: 'row', gap: spacing.md },
-  rating: { flex: 1 },
-  big: { fontSize: 28, fontWeight: '700', color: colors.text },
-  block: { gap: spacing.sm, marginTop: spacing.md },
+  presenceText: { ...type.caption, color: colors.muted, flexShrink: 1 },
+  muted: { ...type.caption, color: colors.muted },
+  // The cards share a row while each has room, and wrap onto the next line on a narrow screen.
+  ratings: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  rating: { flexGrow: 1, flexBasis: 100 },
+  big: { ...type.title, color: colors.text },
+  block: { gap: spacing.sm },
+  bottom: { gap: spacing.sm, marginTop: spacing.md },
 });

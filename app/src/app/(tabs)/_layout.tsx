@@ -1,5 +1,13 @@
 import { Tabs } from 'expo-router';
-import { Platform, StyleSheet, useWindowDimensions, View, type ColorValue } from 'react-native';
+import {
+  Platform,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+  type ColorValue,
+  type TextStyle,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BrandBar } from '@/components/brand/Logo';
@@ -7,7 +15,7 @@ import { Icon, type IconName } from '@/components/Icon';
 import { NotificationBell } from '@/components/NotificationBell';
 import { LOGO_TAB } from '@/components/tabs';
 import { t } from '@/i18n';
-import { colors } from '@/theme';
+import { colors, spaced, spacing, type } from '@/theme';
 
 /** From this width the tabs are a sidebar, not a bar stretched along the bottom. */
 const SIDEBAR_WIDTH = 900;
@@ -25,6 +33,33 @@ function icon(name: IconName) {
   };
 }
 
+/** How many tabs there are (Play, Leaderboard, Me). */
+const TAB_COUNT = 3;
+
+/**
+ * The tab's name. No fixed line height, so it grows with the player's text size, but only so
+ * far (the bar has to keep its icons); never spaced in Arabic, whose letters join. iOS also
+ * hears where the tab is, as it does for its own tab bars.
+ */
+function label(text: string, position: number, style: TextStyle) {
+  return {
+    tabBarLabel: function TabBarLabel({ color }: { color: ColorValue }) {
+      return (
+        <Text style={[style, { color }]} maxFontSizeMultiplier={1.4} numberOfLines={1}>
+          {text}
+        </Text>
+      );
+    },
+    ...(Platform.OS === 'ios' && {
+      tabBarAccessibilityLabel: t('{label}, tab, {position} of {count}', {
+        label: text,
+        position,
+        count: TAB_COUNT,
+      }),
+    }),
+  };
+}
+
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -32,6 +67,14 @@ export default function TabsLayout() {
   // On the web the top bar has the logo, the same places and the bell (WebTopBar).
   const web = Platform.OS === 'web';
   const android = Platform.OS === 'android';
+  const labelStyle: TextStyle = android
+    ? { fontSize: type.nav.fontSize, fontWeight: type.nav.fontWeight, letterSpacing: spaced(0.5) }
+    : {
+        fontSize: (sidebar ? type.small : type.caption).fontSize,
+        fontWeight: type.label.fontWeight,
+        letterSpacing: 0,
+        ...(sidebar && { marginStart: spacing.sm + spacing.xs }),
+      };
   return (
     <Tabs
       {...(web && { tabBar: () => null })}
@@ -43,9 +86,6 @@ export default function TabsLayout() {
         ),
         tabBarActiveTintColor: android ? colors.text : colors.accent,
         tabBarInactiveTintColor: colors.muted,
-        tabBarLabelStyle: android
-          ? { fontSize: 12, lineHeight: 16, fontWeight: '500', letterSpacing: 0.5 }
-          : { fontSize: sidebar ? 15 : 13, lineHeight: 18, fontWeight: '600' },
         ...(sidebar
           ? {
               tabBarPosition: 'left',
@@ -65,8 +105,9 @@ export default function TabsLayout() {
                 backgroundColor: colors.surface,
                 borderTopColor: colors.border,
                 // Room for the icon and a whole label, above the home indicator (Android's
-                // navigation bar is 80 tall).
-                height: (android ? 80 : 66) + insets.bottom,
+                // navigation bar is 80 tall); at least that, so a bigger text size fits.
+                minHeight: (android ? 80 : 66) + insets.bottom,
+                height: 'auto',
                 paddingBottom: insets.bottom,
                 ...(android && { paddingTop: 12, elevation: 0 }),
               },
@@ -76,19 +117,19 @@ export default function TabsLayout() {
       {/* The labels are fixed: a screen may put a longer title in the bar (Me: the username). */}
       <Tabs.Screen
         name="index"
-        options={{ title: t('Play'), tabBarLabel: t('Play'), tabBarIcon: icon('play') }}
+        options={{ title: t('Play'), ...label(t('Play'), 1, labelStyle), tabBarIcon: icon('play') }}
       />
       <Tabs.Screen
         name="leaderboard"
         options={{
           title: t('Leaderboard'),
-          tabBarLabel: t('Leaderboard'),
+          ...label(t('Leaderboard'), 2, labelStyle),
           tabBarIcon: icon('leaderboard'),
         }}
       />
       <Tabs.Screen
         name="me"
-        options={{ title: t('Me'), tabBarLabel: t('Me'), tabBarIcon: icon('me') }}
+        options={{ title: t('Me'), ...label(t('Me'), 3, labelStyle), tabBarIcon: icon('me') }}
       />
     </Tabs>
   );

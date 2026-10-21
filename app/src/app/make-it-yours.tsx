@@ -20,12 +20,14 @@ export default function MakeItYours() {
     <Screen align="top" wide>
       <Hint>
         {t(
-          'Your account is ready. Two quick choices, both optional: you can change them any time.',
+          'Your account is ready. A few quick choices, all optional: you can change them any time.',
         )}
       </Hint>
+      <Button title={t('Skip, start playing')} variant="secondary" onPress={play} />
       {ready !== null ? (
         <>
-          <LookNotices choice={ready} />
+          {/* No sales pitch on a new account's first stop: the locked choices say their plan. */}
+          <LookNotices choice={ready} upsell={false} />
           <BoardAndPieces choice={ready} />
         </>
       ) : error !== null ? (

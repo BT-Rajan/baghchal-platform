@@ -79,7 +79,11 @@ describe('reporting a player', () => {
     await press('Report bob');
     expect(await screen.findByRole('heading', { name: 'Report bob' })).toBeOnTheScreen();
     expect(screen.getByText(/The player is not told who reported them/)).toBeOnTheScreen();
+    // No reason is suggested; it is sent once one is picked.
+    expect(screen.getByRole('radio', { name: 'Cheating' })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Send report' })).toBeDisabled();
     await fireEvent.press(screen.getByRole('radio', { name: 'Abuse' }));
+    expect(screen.getByRole('button', { name: 'Send report' })).toBeEnabled();
     await fireEvent.changeText(screen.getByLabelText('Details (optional)'), '  Rude in chat.  ');
     await press('Send report');
     expect(
@@ -106,7 +110,9 @@ describe('reporting a player', () => {
     await screen.findByRole('button', { name: 'Report bob' });
     await press('Report bob');
     expect(await screen.findByText(/The report includes this game/)).toBeOnTheScreen();
+    expect(screen.getByText(/The player is not told who reported them/)).toBeOnTheScreen();
     expect(app.getPathname()).toBe('/report/bob');
+    await fireEvent.press(screen.getByRole('radio', { name: 'Cheating' }));
     await press('Send report');
     await screen.findByText('Thank you. A moderator will look at your report.');
     expect(server.lastTo('POST /api/v1/players/bob/report').body).toEqual({
@@ -121,6 +127,7 @@ describe('reporting a player', () => {
       'POST /api/v1/players/bob/report': error(429, 'rate_limited', 'Too many reports today.'),
     });
     await screen.findByRole('button', { name: 'Send report' });
+    await fireEvent.press(screen.getByRole('radio', { name: 'Cheating' }));
     await press('Send report');
     expect(await screen.findByText('Too many reports today.')).toBeOnTheScreen();
     await press('Cancel');
@@ -209,8 +216,12 @@ describe('the report queue', () => {
       'GET /api/v1/mod/players/bob': { status: 200, body: record({ reports: [] }) },
     });
     await screen.findByText('No open reports.');
-    await press("Open the player's record"); // nothing typed: stays
+    await press("Open the player's record"); // nothing typed: stays, and says so
     expect(app.getPathname()).toBe('/moderation');
+    expect(screen.getByText("Enter the player's username.")).toBeOnTheScreen();
+    await fireEvent.changeText(screen.getByLabelText('Look up a player'), 'bob smith');
+    await press("Open the player's record");
+    expect(screen.getByText(/^Usernames have only letters/)).toBeOnTheScreen();
     await fireEvent.changeText(screen.getByLabelText('Look up a player'), ' bob ');
     await press("Open the player's record");
     expect(await screen.findByText('No reports.')).toBeOnTheScreen();
@@ -368,7 +379,11 @@ describe("a player's record", () => {
       ' Insults. ',
     );
     await press('Suspend for 7 days');
+    // Hard to undo: asked first.
+    expect(screen.getByText('Suspend bob for 7 days? They are told why.')).toBeOnTheScreen();
+    await press('Suspend');
     expect(await screen.findByText('Suspended until 8 January 2099, 12:00 UTC')).toBeOnTheScreen();
+    expect(screen.getByText('bob is suspended for 7 days.')).toBeOnTheScreen();
     expect(screen.getByText('Reason: Insults.')).toBeOnTheScreen();
     await tab('History');
     expect(screen.getByText('Suspended · alice · 8 January 2026, 10:00 UTC')).toBeOnTheScreen();
@@ -384,6 +399,7 @@ describe("a player's record", () => {
     );
     await press('Lift the suspension');
     expect(await screen.findByText('In good standing')).toBeOnTheScreen();
+    expect(screen.getByText("bob's suspension is lifted.")).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/mod/players/bob/unsuspend').body).toEqual({
       reason: 'Appeal accepted.',
     });
@@ -405,11 +421,18 @@ describe("a player's record", () => {
       'Cheating.',
     );
     await press('Ban permanently');
+    expect(screen.getByText('Ban bob permanently? They are told why.')).toBeOnTheScreen();
+    await press('Ban');
+    // The refusal shows in the question, which stays until cancelled.
     expect(await screen.findByText('Moderators cannot act on moderators.')).toBeOnTheScreen();
+    expect(screen.getByText('Ban bob permanently? They are told why.')).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/mod/players/bob/suspend').body).toEqual({
       days: null,
       reason: 'Cheating.',
     });
+    await press('Cancel');
+    expect(screen.queryByText('Moderators cannot act on moderators.')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Ban permanently' })).toBeOnTheScreen();
   });
 
   test('renaming checks the name, then opens the renamed record', async () => {
@@ -430,7 +453,10 @@ describe("a player's record", () => {
     expect(screen.getByText(/^3–20 letters/)).toBeOnTheScreen();
     await fireEvent.changeText(screen.getByLabelText('New username'), 'player-1');
     await press('Rename bob');
+    expect(screen.getByText('Rename bob to player-1? They are told why.')).toBeOnTheScreen();
+    await press('Rename');
     await waitFor(() => expect(app.getPathname()).toBe('/moderation/player-1'));
+    expect(await screen.findByText('bob is now player-1.')).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/mod/players/bob/rename').body).toEqual({
       username: 'player-1',
       reason: 'Offensive name.',
@@ -450,15 +476,36 @@ describe("a player's record", () => {
       },
     });
     await screen.findByText('Abuse · from carol · open');
-    await fireEvent.changeText(
-      screen.getByLabelText('Reason (sent to the player for suspensions and renames)'),
-      'Not abuse.',
-    );
+    // The player is not told why a report is dismissed.
+    await press('Dismiss the report from carol');
+    expect(screen.getByText('Say why.')).toBeOnTheScreen();
+    await fireEvent.changeText(screen.getByLabelText('Why dismiss it?'), 'Not abuse.');
     await press('Dismiss the report from carol');
     expect(await screen.findByText('Abuse · from carol · dismissed')).toBeOnTheScreen();
+    expect(screen.getByText('Report dismissed.')).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/mod/reports/r1/dismiss').body).toEqual({
       reason: 'Not abuse.',
     });
+  });
+
+  test('the reason goes in the card being dismissed, with its error', async () => {
+    const DAVE = { id: '00000000-0000-4000-8000-000000000004', username: 'dave' };
+    await asModerator('/moderation/bob', {
+      'GET /api/v1/mod/players/bob': {
+        status: 200,
+        body: record({ reports: [report(), report({ id: 'r2', reporter: DAVE })] }),
+      },
+      'POST /api/v1/mod/reports/r2/dismiss': error(409, 'closed', 'Already dismissed.'),
+    });
+    await screen.findByText('Abuse · from dave · open');
+    expect(screen.getAllByLabelText('Why dismiss it?')).toHaveLength(1);
+    await fireEvent.changeText(screen.getByLabelText('Why dismiss it?'), 'Not abuse.');
+    // Another card: the field moves there, empty, and nothing is dismissed yet.
+    await press('Dismiss the report from dave');
+    expect(screen.getByLabelText('Why dismiss it?')).toHaveDisplayValue('');
+    await fireEvent.changeText(screen.getByLabelText('Why dismiss it?'), 'Duplicate.');
+    await press('Dismiss the report from dave');
+    expect(await screen.findByText('Already dismissed.')).toBeOnTheScreen();
   });
 
   test('banned, deleted and moderator accounts', async () => {

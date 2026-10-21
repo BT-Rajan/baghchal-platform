@@ -1,6 +1,6 @@
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing, type } from '@/theme';
+import { colors, radius, spaced, spacing, type } from '@/theme';
 
 import { focusRing } from './focus';
 import { pressedLook, ripple } from './press';
@@ -20,9 +20,10 @@ export interface ButtonProps {
   disabled?: boolean;
   /**
    * `primary` is the screen's main action (one per screen, as a rule); `secondary` is any other
-   * action. `bright` and `light` are for dark backgrounds (the landing page).
+   * action. `danger` is the answer to a question about something hard to undo (Confirm).
+   * `bright` and `light` are for dark backgrounds (the landing page).
    */
-  variant?: 'primary' | 'secondary' | 'bright' | 'light';
+  variant?: 'primary' | 'secondary' | 'danger' | 'bright' | 'light';
 }
 
 export function Button({
@@ -67,7 +68,7 @@ export function Button({
             style={[
               styles.text,
               compact && styles.compactText,
-              android && styles.androidText,
+              android && [styles.androidText, { letterSpacing: spaced(0.1) }],
               { color: TEXT[variant] },
             ]}
           >
@@ -82,6 +83,7 @@ export function Button({
 const TEXT = {
   primary: colors.accentText,
   secondary: colors.text,
+  danger: colors.accentText,
   bright: colors.brandInk,
   light: colors.brandCream,
 } as const;
@@ -101,14 +103,15 @@ const styles = StyleSheet.create({
   content: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   primary: { backgroundColor: colors.accent },
   secondary: { borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  danger: { backgroundColor: colors.danger },
   bright: { backgroundColor: colors.brandLight },
   light: { borderWidth: 1, borderColor: colors.brandCream, backgroundColor: 'transparent' },
   pressed: { transform: [{ scale: 0.98 }], opacity: 0.85 },
   dim: { opacity: 0.55 },
   text: { ...type.body, fontWeight: '700' },
-  compactText: { fontSize: 15 },
+  compactText: { fontSize: type.small.fontSize },
   // Android: a full pill, 40 tall, medium-weight text, as its own buttons are.
   android: { minHeight: 40, borderRadius: radius.pill, paddingHorizontal: spacing.lg },
   androidCompact: { paddingHorizontal: spacing.md },
-  androidText: { fontSize: 14, lineHeight: 20, fontWeight: '500', letterSpacing: 0.1 },
+  androidText: { ...type.action },
 });

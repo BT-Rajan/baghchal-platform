@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import type { TextInputInstance } from 'react-native';
 
 import { useSession } from '@/auth/session';
 import { isApiError } from '@/api/errors';
@@ -19,6 +20,7 @@ export default function SignIn() {
   const { session } = useSession();
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
+  const passwordField = useRef<TextInputInstance>(null);
   // Signing in swaps this screen for the signed-in ones (see the route guards in _layout).
   const signIn = useMutation({ mutationFn: () => session.signIn(login, password) });
   const { fieldError, formMessage, accept } = useFormErrors(FIELDS, signIn.error);
@@ -51,8 +53,11 @@ export default function SignIn() {
         autoComplete="username"
         textContentType="username"
         returnKeyType="next"
+        submitBehavior="submit"
+        onSubmitEditing={() => passwordField.current?.focus()}
       />
       <TextField
+        ref={passwordField}
         label={t('Password')}
         value={password}
         onChangeText={setPassword}
@@ -65,7 +70,8 @@ export default function SignIn() {
       />
       <Button title={t('Sign in')} onPress={submit} busy={signIn.isPending} />
       <TextLink href="/forgot-password">{t('Forgot your password?')}</TextLink>
-      <TextLink href="/sign-up">{t('New here? Create an account')}</TextLink>
+      <TextLink href="/sign-up">{t('New here? Make a free account')}</TextLink>
+      <TextLink href="/start">{t('Play now, no sign-up')}</TextLink>
     </Screen>
   );
 }

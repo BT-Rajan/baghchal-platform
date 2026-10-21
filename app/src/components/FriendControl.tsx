@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { FriendRelation } from '@/api/endpoints';
 import { t } from '@/i18n';
 import { useFriendship } from '@/lobby/hooks';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, type } from '@/theme';
 
 import { Button } from './Button';
 import { Confirm } from './Confirm';
@@ -101,7 +101,8 @@ export function FriendControl({
 
 const styles = StyleSheet.create({
   box: { gap: spacing.sm },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  cell: { flex: 1 },
-  text: { flex: 1, fontSize: 15, color: colors.text },
+  // The button moves under the words when the row is too narrow for both.
+  row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
+  cell: { flexGrow: 1, flexBasis: 140 },
+  text: { ...type.small, color: colors.text, flexGrow: 1, flexShrink: 1, flexBasis: 160 },
 });

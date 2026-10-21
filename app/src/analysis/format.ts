@@ -22,8 +22,6 @@ export const MARKS: Record<Verdict, string> = {
   blunder: '??',
 };
 
-export const LEGEND = mark('?! inaccuracy · ? mistake · ?? blunder');
-
 /** How many moves had each verdict: "1 blunder", "2 blunders". */
 const COUNTS: Record<Verdict, (n: number) => string> = {
   best: (n) => plural(n, '{count} best', '{count} best'),
@@ -70,14 +68,13 @@ export function reviewText(review: MoveReview): string {
   });
 }
 
-/** The position before a move, with best play: "Tigers ahead (+1.2)", "About even". */
+/** The position before a move, with best play, in words: "Tigers ahead", "About even". */
 export function scoreText(score: number): string {
   const tigers = score > 0;
   const size = Math.abs(score);
   if (size < 100) return t('About even');
   if (size >= 5000) return tigers ? t('Tigers winning') : t('Goats winning');
-  const values = { score: (size / 1000).toFixed(1) };
-  return tigers ? t('Tigers ahead (+{score})', values) : t('Goats ahead (+{score})', values);
+  return tigers ? t('Tigers ahead') : t('Goats ahead');
 }
 
 /** "3 best · 1 good · 2 blunders" for one side's moves; verdicts with no moves are left out. */

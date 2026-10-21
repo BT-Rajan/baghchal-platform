@@ -8,7 +8,8 @@ import { pressedLook, ripple } from './press';
 export interface SegmentedProps<T extends string> {
   label: string;
   options: readonly { value: T; label: string }[];
-  value: T;
+  /** The chosen option; null while none is (for a choice that must be made, not defaulted). */
+  value: T | null;
   onChange: (value: T) => void;
   /** One choice per line, for long labels. */
   vertical?: boolean;
@@ -77,6 +78,6 @@ const styles = StyleSheet.create({
   },
   selected: { backgroundColor: colors.ink },
   pressed: { backgroundColor: colors.border },
-  text: { fontSize: 15, color: colors.text, fontWeight: '500' },
+  text: { ...type.small, color: colors.text, fontWeight: '500' },
   selectedText: { color: colors.inkText, fontWeight: '700' },
 });

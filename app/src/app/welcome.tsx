@@ -14,7 +14,7 @@ import { Segmented } from '@/components/Segmented';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import type { Piece } from '@/game/bfen';
 import { mark, t } from '@/i18n';
-import { colors, radius, spacing, tight } from '@/theme';
+import { colors, radius, spacing, type } from '@/theme';
 
 /** Wide enough to put the board beside the words. */
 const WIDE = 880;
@@ -49,7 +49,7 @@ const FEATURES: readonly { title: string; text: string }[] = [
   },
   {
     title: mark('Get better'),
-    text: mark('The engine reviews your games; puzzles sharpen your openings.'),
+    text: mark('The computer reviews your games; puzzles sharpen your openings.'),
   },
 ];
 
@@ -68,11 +68,14 @@ export default function Welcome() {
   return Platform.OS === 'web' ? <LandingPage /> : <StartScreen />;
 }
 
-/** The apps' first screen: the board, and the ways in. Nothing to scroll. */
+/**
+ * The apps' first screen: the board, and the ways in. It fits a phone, and scrolls where it
+ * does not (a small screen, large text), so the buttons are never cut off.
+ */
 function StartScreen() {
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.start}>
+      <ScrollView contentContainerStyle={styles.start}>
         <Brand size={36} onDark />
         <View style={styles.startBoard} aria-hidden>
           <BoardPreview theme="wood" pieces="classic" />
@@ -92,12 +95,12 @@ function StartScreen() {
           />
           <Button title={t('Sign in')} variant="light" onPress={() => router.push('/sign-in')} />
           <Button
-            title={t('Create a free account')}
+            title={t('Make a free account')}
             variant="light"
             onPress={() => router.push('/sign-up')}
           />
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -124,7 +127,7 @@ function LandingPage() {
         <View style={styles.hero}>
           <View style={[styles.inner, wide && styles.row]}>
             <View style={[styles.pitch, wide && styles.half]}>
-              <Text role="heading" style={[styles.headline, wide && styles.headlineWide]}>
+              <Text role="heading" style={styles.headline}>
                 {t('Tigers hunt.\nGoats trap.')}
               </Text>
               <Text style={styles.lede}>
@@ -138,7 +141,7 @@ function LandingPage() {
                 <Button title={t('Play now, no sign-up')} variant="bright" onPress={play} />
               </View>
               <Text style={styles.small}>
-                {t('No account needed: make one later to keep your rating.')}
+                {t('No account needed: make one later to keep your games and play rated games.')}
               </Text>
             </View>
             <View style={[styles.boardBox, wide && styles.half]} aria-hidden>
@@ -193,7 +196,7 @@ function LandingPage() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.brandInk },
   start: {
-    flex: 1,
+    flexGrow: 1,
     padding: spacing.lg,
     gap: spacing.lg,
     justifyContent: 'space-between',
@@ -203,13 +206,7 @@ const styles = StyleSheet.create({
   },
   startBoard: { width: '100%', maxWidth: 360, aspectRatio: 1, alignSelf: 'center', flexShrink: 1 },
   startWords: { gap: spacing.sm },
-  startHeadline: {
-    fontSize: 36,
-    lineHeight: 42,
-    fontWeight: '800',
-    color: colors.brandCream,
-    letterSpacing: tight(-0.5),
-  },
+  startHeadline: { ...type.display, color: colors.brandCream },
   page: { flexGrow: 1, backgroundColor: colors.background },
   inner: { width: '100%', maxWidth: 1100, alignSelf: 'center', gap: spacing.lg },
   row: { flexDirection: 'row', alignItems: 'center' },
@@ -221,19 +218,12 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   pitch: { gap: spacing.md },
-  headline: {
-    fontSize: 44,
-    lineHeight: 50,
-    fontWeight: '800',
-    color: colors.brandCream,
-    letterSpacing: tight(-1),
-    marginTop: spacing.md,
-  },
-  headlineWide: { fontSize: 64, lineHeight: 70 },
-  lede: { fontSize: 18, lineHeight: 27, color: colors.brandCream, opacity: 0.85, maxWidth: 520 },
+  // The page's headline: the largest step of the type scale.
+  headline: { ...type.display, color: colors.brandCream, marginTop: spacing.md },
+  lede: { ...type.body, color: colors.brandCream, opacity: 0.85, maxWidth: 520 },
   actions: { gap: spacing.sm },
   actionsWide: { flexDirection: 'row', flexWrap: 'wrap' },
-  small: { fontSize: 14, color: colors.brandCream, opacity: 0.75 },
+  small: { ...type.caption, color: colors.brandCream, opacity: 0.75 },
   boardBox: { alignItems: 'center' },
   board: { width: '100%', maxWidth: 440, aspectRatio: 1 },
   boardNarrow: { maxWidth: 280 },
@@ -254,6 +244,6 @@ const styles = StyleSheet.create({
   feature: { flexGrow: 1, flexBasis: 240 },
   cardWords: { flex: 1, gap: spacing.xs },
   coin: { width: 44, height: 44 },
-  cardTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
-  cardText: { fontSize: 15, lineHeight: 22, color: colors.muted },
+  cardTitle: { ...type.heading, color: colors.text },
+  cardText: { ...type.small, color: colors.muted },
 });

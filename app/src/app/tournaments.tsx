@@ -5,6 +5,7 @@ import { StyleSheet, Text } from 'react-native';
 import type { TimeControl } from '@/api/endpoints';
 import { has } from '@/billing/format';
 import { useMyPlan } from '@/billing/hooks';
+import { useMe } from '@/auth/session';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Upsell } from '@/components/Upsell';
@@ -15,36 +16,37 @@ import { TextField } from '@/components/TextField';
 import { TimeControlPicker } from '@/components/TimeControlPicker';
 import { plural, t } from '@/i18n';
 
+import { timeControlName } from '@/lobby/format';
 import { tournamentStatusText } from '@/pro/format';
 import { useCreateTournament, useTournaments } from '@/pro/hooks';
-import { colors } from '@/theme';
+import { colors, type } from '@/theme';
 import { ErrorNotice } from '@/components/ErrorNotice';
 
 const SIZES = ['4', '8', '16', '32'];
 
-/** Small tournaments: hosting one (Pro), and the ones I am in. */
+/** Small tournaments: the ones I am in, and hosting one (Pro). */
 export default function Tournaments() {
   const plan = useMyPlan();
   return (
     <Screen align="top" refreshable>
       <Hint>
-        {t(
-          'A Swiss tournament for 3 to 32 friends: each round you meet a player on your score, never the same one twice if it can be helped, with sides taking turns. Games are casual; anyone can join with the link.',
-        )}
+        {t('Casual Swiss tournaments for 3 to 32 friends; anyone with the link can join.')}
       </Hint>
+      {/* The ones I am in first; then hosting a new one. */}
+      <MyTournaments />
       {plan.data !== undefined &&
         (has(plan.data, 'tournaments') ? (
           <NewTournament />
         ) : (
           <Upsell feature="tournaments">{t('Host small tournaments for your friends.')}</Upsell>
         ))}
-      <MyTournaments />
     </Screen>
   );
 }
 
 function NewTournament() {
-  const [name, setName] = useState('');
+  const me = useMe();
+  const [name, setName] = useState(() => t("{name}'s tournament", { name: me.username }));
   const [timeControl, setTimeControl] = useState<TimeControl>('5+3');
   const [size, setSize] = useState('8');
   const create = useCreateTournament();
@@ -95,7 +97,7 @@ function MyTournaments() {
             <Text style={styles.name}>{tour.name}</Text>
             <Text style={styles.muted}>
               {t('{time} · hosted by {name} · {status}', {
-                time: tour.time_control,
+                time: timeControlName(tour.time_control),
                 name: tour.host.username,
                 status: tournamentStatusText(tour),
               })}
@@ -115,6 +117,6 @@ function MyTournaments() {
 }
 
 const styles = StyleSheet.create({
-  name: { fontSize: 16, fontWeight: '700', color: colors.text },
-  muted: { fontSize: 14, color: colors.muted },
+  name: { ...type.body, fontWeight: '700', color: colors.text },
+  muted: { ...type.small, color: colors.muted },
 });

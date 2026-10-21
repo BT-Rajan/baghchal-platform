@@ -42,5 +42,14 @@ const styles = StyleSheet.create({
   },
   text: { ...type.caption, color: colors.muted },
   links: { flexDirection: 'row', gap: spacing.lg },
-  link: { ...type.caption, color: colors.link, fontWeight: '600' },
+  // 44 points: the smallest comfortable touch target, the words in its middle.
+  link: {
+    ...type.caption,
+    color: colors.link,
+    fontWeight: '600',
+    paddingVertical: spacing.sm,
+    minHeight: 44,
+    display: 'flex',
+    alignItems: 'center',
+  },
 });

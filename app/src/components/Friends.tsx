@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { t } from '@/i18n';
 import { useFriends, useFriendship } from '@/lobby/hooks';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, type } from '@/theme';
 
 import { Button } from './Button';
 import { Card, SectionTitle } from './Card';
@@ -69,6 +69,7 @@ export function FriendList({ myId }: { myId: string }) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  text: { flex: 1, fontSize: 15, color: colors.text },
+  // The buttons move under the words when the row is too narrow for both.
+  row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
+  text: { ...type.small, color: colors.text, flexGrow: 1, flexShrink: 1, flexBasis: 160 },
 });

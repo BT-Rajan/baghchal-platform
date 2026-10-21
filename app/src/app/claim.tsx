@@ -40,7 +40,7 @@ export default function Claim() {
   }
 
   return (
-    <Screen title={t('Make your free account')}>
+    <Screen title={t('Make a free account')}>
       <Hint>
         {t(
           'Keep your games, play rated games and climb the leaderboard, challenge friends, and sign in on any device.',

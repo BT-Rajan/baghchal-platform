@@ -69,6 +69,7 @@ test('the page opens with a code sent by email', async () => {
 
 test('setting the keys, and turning payments off', async () => {
   let page = OFF;
+  let failOff = false;
   const { server } = await open({
     'GET /api/v1/admin/payment-keys': () => ({ status: 200, body: page }),
     'PUT /api/v1/admin/payment-keys': () => {
@@ -76,6 +77,7 @@ test('setting the keys, and turning payments off', async () => {
       return { status: 200, body: ON };
     },
     'DELETE /api/v1/admin/payment-keys': () => {
+      if (failOff) return error(409, 'busy', 'Payments are busy.');
       page = OFF;
       return { status: 200, body: OFF };
     },
@@ -103,16 +105,24 @@ test('setting the keys, and turning payments off', async () => {
     webhook_secret: 'hook-secret-1',
   });
   expect(screen.getByLabelText('Key secret')).toHaveDisplayValue('');
+  expect(screen.getByText('Saved.')).toBeOnTheScreen();
 
   await fireEvent.press(screen.getByRole('button', { name: 'Turn payments off' }));
   await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
   await fireEvent.press(screen.getByRole('button', { name: 'Turn payments off' }));
   expect(screen.getByText(/^Turn payments off\? Players cannot buy/)).toBeOnTheScreen();
-  const buttons = screen.getAllByRole('button', { name: 'Turn payments off' });
-  await fireEvent.press(buttons[0]!);
+  expect(screen.queryByText('Saved.')).toBeNull();
+  // A failure stays in the question, which stays open; trying again turns them off.
+  failOff = true;
+  await fireEvent.press(screen.getByRole('button', { name: 'Turn payments off' }));
+  expect(await screen.findByText('Payments are busy.')).toBeOnTheScreen();
+  expect(screen.getByText(/^Turn payments off\? Players cannot buy/)).toBeOnTheScreen();
+  failOff = false;
+  await fireEvent.press(screen.getByRole('button', { name: 'Turn payments off' }));
   expect(
     await screen.findByText('Payments are off: the plans page says paying online is coming soon.'),
   ).toBeOnTheScreen();
+  expect(screen.queryByText(/^Turn payments off\? Players cannot buy/)).toBeNull();
 });
 
 test('without the secrets key, or with keys it cannot read', async () => {

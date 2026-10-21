@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { t } from '@/i18n';
 import { useNotifications } from '@/lobby/hooks';
-import { colors, radius } from '@/theme';
+import { colors, radius, type } from '@/theme';
 
 import { focusRing } from './focus';
 import { pressedLook, ripple } from './press';
@@ -26,7 +26,9 @@ export function NotificationBell() {
       <Icon name="bell" color={colors.brandCream} />
       {unread > 0 && (
         <View style={styles.badge}>
-          <Text style={styles.count}>{unread > 9 ? '9+' : String(unread)}</Text>
+          <Text style={styles.count} maxFontSizeMultiplier={1.4}>
+            {unread > 9 ? '9+' : String(unread)}
+          </Text>
         </View>
       )}
     </Pressable>
@@ -40,14 +42,14 @@ const styles = StyleSheet.create({
   badge: {
     position: 'absolute',
     top: 4,
-    right: 2,
+    end: 2,
     minWidth: 18,
-    height: 18,
+    minHeight: 18,
     paddingHorizontal: 4,
     borderRadius: radius.pill,
     backgroundColor: colors.danger,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  count: { fontSize: 11, fontWeight: '800', color: colors.surface },
+  count: { ...type.badge, color: colors.surface },
 });

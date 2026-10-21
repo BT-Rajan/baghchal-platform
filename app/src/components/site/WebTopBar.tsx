@@ -64,7 +64,7 @@ export function WebTopBar({ playing }: { playing: boolean }) {
                 {t('Sign in')}
               </Link>
               <Link href="/sign-up" style={[styles.place, styles.cta]}>
-                <Text style={styles.ctaText}>{t('Create account')}</Text>
+                <Text style={styles.ctaText}>{t('Make a free account')}</Text>
               </Link>
             </>
           )}
@@ -95,9 +95,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.sm,
+    // 44 points: the smallest comfortable touch target, the words in its middle.
+    minHeight: 44,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   current: { backgroundColor: colors.currentOnDark, color: colors.brandLight },
-  end: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  end: { marginStart: 'auto', flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   cta: { backgroundColor: colors.brandLight },
   ctaText: { ...type.label, color: colors.brandInk },
 });

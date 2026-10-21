@@ -1,17 +1,15 @@
 import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { saveExport } from '@/auth/exportFile';
 import { useApi, useMe, useSession } from '@/auth/session';
 import { checkEmailChange, checkPasswordChange, checkPasswordGiven } from '@/auth/validation';
 import { Button } from '@/components/Button';
-import { Confirm } from '@/components/Confirm';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Disclosure } from '@/components/Disclosure';
 import { FeatureLink } from '@/components/FeatureLink';
-import { GuestBanner } from '@/components/GuestBanner';
 import { LanguagePicker } from '@/components/LanguagePicker';
 import { PlanCard } from '@/components/PlanCard';
 import { ErrorState, Loading } from '@/components/States';
@@ -20,27 +18,23 @@ import { useBlock, useBlocks } from '@/lobby/hooks';
 import { useFormErrors } from '@/components/form';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
+import { SignOutButton } from '@/components/SignOutButton';
 import { TextField } from '@/components/TextField';
 import { colors, spacing } from '@/theme';
 import { ErrorNotice } from '@/components/ErrorNotice';
 
 /**
- * Settings, all in one place: the plan, the board and sounds, moderation and payments (for
- * staff); the account (blocked players, and for members the email address, password, their
+ * Settings, all in one place: the board, sounds and language, the plan, moderation and payments
+ * (for staff); the account (blocked players, and for members the email address, password, their
  * data and deleting the account), each folded shut until opened; signing out.
  */
 export default function SettingsScreen() {
   const me = useMe();
-  const { session } = useSession();
-  const signOut = useMutation({ mutationFn: () => session.signOut() });
-  const [leaving, setLeaving] = useState(false);
   const guest = me.role === 'guest';
   const staff = me.role === 'moderator' || me.role === 'admin';
   return (
     <Screen align="top">
-      <GuestBanner />
-      <PlanCard />
-      <SectionTitle>{t('Look, sound and language')}</SectionTitle>
+      <SectionTitle>{t('Board, pieces, sounds and language')}</SectionTitle>
       <FeatureLink
         icon="palette"
         title={t('Board, pieces and sounds')}
@@ -48,6 +42,7 @@ export default function SettingsScreen() {
         onPress={() => router.push('/appearance')}
       />
       <LanguagePicker />
+      <PlanCard />
       {staff && <SectionTitle>{t('Admin')}</SectionTitle>}
       {staff && (
         <FeatureLink
@@ -90,25 +85,7 @@ export default function SettingsScreen() {
         text={t('What we keep about you, why, and for how long.')}
         onPress={() => router.push('/privacy')}
       />
-      <SectionTitle>{t('Sign out')}</SectionTitle>
-      {leaving ? (
-        <Confirm
-          question={t(
-            'Sign out and lose this guest account? Its games and rating cannot be got back. Make an account first to keep them.',
-          )}
-          confirmTitle={t('Sign out')}
-          busy={signOut.isPending}
-          onConfirm={() => signOut.mutate()}
-          onCancel={() => setLeaving(false)}
-        />
-      ) : (
-        <Button
-          title={guest ? t('Sign out (this guest account will be lost)') : t('Sign out')}
-          variant="secondary"
-          onPress={() => (guest ? setLeaving(true) : signOut.mutate())}
-          busy={signOut.isPending}
-        />
-      )}
+      <SignOutButton />
     </Screen>
   );
 }
@@ -186,6 +163,7 @@ function EmailSection() {
               onChangeText={setEmail}
               error={fieldError('email')}
               autoCapitalize="none"
+              autoCorrect={false}
               autoComplete="email"
               keyboardType="email-address"
               textContentType="emailAddress"
@@ -297,6 +275,10 @@ function DataSection() {
           )}
         </Hint>
         <ErrorNotice error={download.error} />
+        {/* In the apps the share sheet itself shows where the file went. */}
+        {download.isSuccess && Platform.OS === 'web' && (
+          <Notice tone="success">{t('Your data has been downloaded.')}</Notice>
+        )}
         <Button
           title={t('Download my data')}
           variant="secondary"

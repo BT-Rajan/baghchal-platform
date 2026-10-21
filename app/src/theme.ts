@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import { isRTL } from '@/i18n';
+
 /**
  * The visual system. Colours have one job each: `accent` is the main action on a screen (and
  * only that), `ink` marks what is selected or current, `link` is for links, and success,
@@ -72,6 +74,8 @@ export const colors = {
   overlayHeadline: '#ffe2a8',
   overlayHeadlineQuiet: '#f1e9d8',
   overlayShadow: 'rgba(0, 0, 0, 0.6)',
+  /** Behind a dialog, dimming the screen under it. */
+  scrim: 'rgba(31, 26, 20, 0.45)',
   /** Keyboard focus ring (web). */
   focus: '#1f5fbf',
   /** Android's touch ripple, on light surfaces and on dark or coloured ones. */
@@ -83,16 +87,22 @@ export const colors = {
 
 /**
  * Tighter letters for big headings, where the font is drawn for it (iOS, the web); Android's
- * Roboto already sits tight, and pulling it closer runs the letters together.
+ * Roboto already sits tight, and pulling it closer runs the letters together. Arabic's letters
+ * join, so they are never spaced (`spaced`).
  */
 export function tight(letterSpacing: number): number {
-  return Platform.OS === 'android' ? 0 : letterSpacing;
+  return Platform.OS === 'android' ? 0 : spaced(letterSpacing);
+}
+
+/** A letter spacing, or none in a joined script (Arabic), where spacing breaks the letters apart. */
+export function spaced(letterSpacing: number): number {
+  return isRTL() ? 0 : letterSpacing;
 }
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
 
-/** `board`: the board's corners (and what is laid over it). */
-export const radius = { sm: 6, md: 10, lg: 16, board: 12, pill: 999 } as const;
+/** `board`: the board's corners (and what is laid over it); `dialog`: the apps' own dialogs. */
+export const radius = { sm: 6, md: 10, lg: 16, board: 12, dialog: 28, pill: 999 } as const;
 
 /**
  * The type scale: each step is clearly bigger or bolder than the next, so a screen reads at a
@@ -103,8 +113,18 @@ export const type = {
   title: { fontSize: 26, lineHeight: 32, fontWeight: '800', letterSpacing: tight(-0.3) },
   heading: { fontSize: 18, lineHeight: 24, fontWeight: '700' },
   body: { fontSize: 16, lineHeight: 23, fontWeight: '400' },
+  /** Text beside the main text: notices, hints, list rows. */
+  small: { fontSize: 15, lineHeight: 22, fontWeight: '400' },
   label: { fontSize: 14, lineHeight: 19, fontWeight: '600' },
+  /** Android's button, dialog-answer and navigation text: medium weight, as its own are. */
+  action: { fontSize: 14, lineHeight: 20, fontWeight: '500' },
   caption: { fontSize: 13, lineHeight: 18, fontWeight: '400' },
+  /** Android's navigation bar labels. */
+  nav: { fontSize: 12, lineHeight: 16, fontWeight: '500' },
+  /** A count on a badge. */
+  badge: { fontSize: 11, lineHeight: 14, fontWeight: '800' },
+  /** A game clock: big, steady digits. */
+  clock: { fontSize: 22, lineHeight: 28, fontWeight: '700' },
 } as const;
 
 /** The confetti when I win a game: festive, in the pieces' and the brand's colours. */

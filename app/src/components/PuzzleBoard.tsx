@@ -3,16 +3,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { TrainerPuzzle } from '@/api/endpoints';
 import { useAppearance } from '@/appearance/hooks';
 import { parseBfen } from '@/game/bfen';
-import { t } from '@/i18n';
 import { puzzlePrompt } from '@/pro/format';
 import { colors, spacing, type } from '@/theme';
 
-import { Board } from './game/Board';
-import { Notice } from './Notice';
+import { Board, BoardUnavailable } from './game/Board';
 
 /**
  * A puzzle on the player's own board: whose move it is, and the board to play it on. Once
- * answered, the board shows the best move. Used by the trainer and the daily puzzle.
+ * answered, the board shows the best move, from where to where. Used by the trainer and the daily puzzle.
  */
 export function PuzzleBoard({
   puzzle,
@@ -20,6 +18,7 @@ export function PuzzleBoard({
   best,
   busy,
   onMove,
+  onRetry,
   maxWidth = 480,
 }: {
   puzzle: TrainerPuzzle;
@@ -27,6 +26,8 @@ export function PuzzleBoard({
   best: string | undefined;
   busy: boolean;
   onMove: (move: string) => void;
+  /** Loads the puzzle again, when its position could not be shown. */
+  onRetry: () => void;
   maxWidth?: number;
 }) {
   const look = useAppearance();
@@ -36,12 +37,12 @@ export function PuzzleBoard({
       <Text style={styles.prompt}>{puzzlePrompt(puzzle)}</Text>
       <View style={[styles.board, { maxWidth }]}>
         {position === null ? (
-          <Notice tone="error">{t('This position could not be shown.')}</Notice>
+          <BoardUnavailable onRetry={onRetry} />
         ) : (
           <Board
             position={position}
             legalMoves={answered || busy ? [] : puzzle.legal_moves}
-            lastMove={answered ? best : undefined}
+            best={answered ? best : undefined}
             onMove={onMove}
             theme={look.board}
             pieces={look.pieces}

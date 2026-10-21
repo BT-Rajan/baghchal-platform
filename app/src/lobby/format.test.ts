@@ -2,6 +2,7 @@ import { ME } from '../../tests/support/fakeServer';
 import { BOB, challenge } from '../../tests/support/games';
 
 import {
+  defaultCategory,
   LEVELS,
   historyText,
   waitingText,
@@ -37,6 +38,15 @@ test('time controls and categories', () => {
   expect(categoryOf('5+3')).toBe('rapid');
   expect(categoryOf('sand')).toBe('sand');
   expect(categoryOf('1+0')).toBeUndefined();
+});
+
+test('the leaderboard first shown: where I have played most', () => {
+  expect(defaultCategory(undefined)).toBe('blitz');
+  expect(defaultCategory({})).toBe('blitz');
+  expect(defaultCategory({ sand: { games: 3 } })).toBe('sand');
+  expect(defaultCategory({ blitz: { games: 2 }, rapid: { games: 5 }, sand: { games: 5 } })).toBe(
+    'rapid',
+  );
 });
 
 test('presence', () => {

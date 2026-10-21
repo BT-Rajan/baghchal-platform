@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { t } from '@/i18n';
 import { useRealtimeStatus } from '@/realtime/RealtimeProvider';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, type } from '@/theme';
 
 /** Says so while live updates are interrupted (the connection is waiting to retry). */
 export function ConnectionBanner() {
@@ -22,5 +22,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
   },
-  text: { color: colors.surface, fontSize: 14, textAlign: 'center' },
+  text: { ...type.label, color: colors.surface, textAlign: 'center' },
 });

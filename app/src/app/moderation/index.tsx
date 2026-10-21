@@ -16,7 +16,7 @@ import { TextLink } from '@/components/TextLink';
 import { mark, plural, t } from '@/i18n';
 import { searchPrefix } from '@/lobby/format';
 import { dateTimeText, reasonLabel, reportTitle } from '@/lobby/moderation';
-import { colors } from '@/theme';
+import { colors, type } from '@/theme';
 
 const STATUSES: readonly { value: ReportStatus; label: string }[] = [
   { value: 'open', label: mark('Open') },
@@ -29,12 +29,20 @@ export default function ModerationScreen() {
   const api = useApi();
   const [status, setStatus] = useState<ReportStatus>('open');
   const [name, setName] = useState('');
+  const [nameError, setNameError] = useState<string>();
   const reports = useQuery({
     queryKey: queryKeys.modReports(status),
     queryFn: ({ signal }) => api.modReports(status, signal),
   });
   const open = () => {
     const player = searchPrefix(name);
+    setNameError(
+      player !== null
+        ? undefined
+        : name.trim() === ''
+          ? t("Enter the player's username.")
+          : t('Usernames have only letters, digits, _ and -, up to 20.'),
+    );
     if (player !== null) router.push(`/moderation/${player}`);
   };
   return (
@@ -43,6 +51,7 @@ export default function ModerationScreen() {
         label={t('Look up a player')}
         value={name}
         onChangeText={setName}
+        error={nameError}
         autoCapitalize="none"
         autoCorrect={false}
         onSubmitEditing={open}
@@ -95,6 +104,7 @@ function ReportCard({ report }: { report: Report }) {
       )}
       <Button
         title={t('Review {name}', { name: target })}
+        variant="secondary"
         compact
         onPress={() => router.push(`/moderation/${target}`)}
       />
@@ -103,7 +113,7 @@ function ReportCard({ report }: { report: Report }) {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 16, fontWeight: '600', color: colors.text },
-  text: { fontSize: 15, color: colors.text },
-  muted: { fontSize: 14, color: colors.muted },
+  title: { ...type.heading, color: colors.text },
+  text: { ...type.small, color: colors.text },
+  muted: { ...type.caption, color: colors.muted },
 });

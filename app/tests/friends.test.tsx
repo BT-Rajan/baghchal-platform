@@ -28,6 +28,30 @@ async function press(name: string | RegExp) {
   await fireEvent.press(await screen.findByRole('button', { name }));
 }
 
+describe('a profile', () => {
+  test('says why a player cannot be challenged now', async () => {
+    await open('/player/bob', {
+      'GET /api/v1/players/bob': {
+        status: 200,
+        body: { ...profile('none'), playing: true },
+      },
+    });
+    expect(await screen.findByRole('button', { name: 'Challenge bob' })).toBeDisabled();
+    expect(
+      screen.getByText('bob is in a game. You can challenge them when it ends.'),
+    ).toBeOnTheScreen();
+  });
+
+  test('an unknown player leads to the player search', async () => {
+    const { app } = await open('/player/nobody', {
+      'GET /api/v1/players/nobody': error(404, 'player_not_found', 'No such player.'),
+    });
+    expect(await screen.findByText('No such player.')).toBeOnTheScreen();
+    await press('Find a player');
+    await waitFor(() => expect(app.getPathname()).toBe('/'));
+  });
+});
+
 describe('friends', () => {
   test('ask from a profile, then cancel', async () => {
     let relation: FriendRelation = 'none';

@@ -6,6 +6,7 @@ import { AgreementLine, useAgreement } from '@/components/AgreementLine';
 import { Button } from '@/components/Button';
 import { Hint } from '@/components/Card';
 import { Screen } from '@/components/Screen';
+import { SignOutButton } from '@/components/SignOutButton';
 import { t } from '@/i18n';
 import { ErrorNotice } from '@/components/ErrorNotice';
 
@@ -32,7 +33,7 @@ export default function Agree() {
 
   return (
     <Screen title={t('Before you play on')} brand>
-      <Hint>{t('We have updated our terms or privacy policy. Please read what changed.')}</Hint>
+      <Hint>{t('Our terms or privacy policy have changed.')}</Hint>
       <ErrorNotice error={send.error} />
       <AgreementLine agreement={agreement} />
       <Button
@@ -40,7 +41,7 @@ export default function Agree() {
         onPress={submit}
         busy={send.isPending || agreement.versions.isPending}
       />
-      <Button title={t('Sign out')} variant="secondary" onPress={() => void session.signOut()} />
+      <SignOutButton />
     </Screen>
   );
 }

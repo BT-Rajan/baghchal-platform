@@ -44,10 +44,10 @@ test('failed lists can be tried again', async () => {
 test('a quiet lobby says what to do', async () => {
   const { app } = await renderApp('/', { token: 'tok', routes: SIGNED_IN });
   expect(await screen.findByText('Ready for a game?')).toBeOnTheScreen();
-  // Nobody online: the next step is a friend, by link.
+  // Nobody online: Play now, or a friend by link (under More ways to play).
   expect(
-    screen.getByText(
-      'Nobody else is online right now. Send a friend a challenge by link, or Play now.',
+    await screen.findByText(
+      'Nobody else is online right now. Play now finds you a game, with the computer if need be.',
     ),
   ).toBeOnTheScreen();
   await fireEvent.press(await screen.findByRole('link', { name: 'Challenge a friend by link' }));
@@ -84,7 +84,7 @@ test('on wide screens the lobby has two columns', async () => {
 test('an unknown address shows a page-not-found screen', async () => {
   await renderApp('/no/such/page', { token: 'tok', routes: SIGNED_IN });
   expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeOnTheScreen();
-  expect(screen.getByText('Go to the lobby')).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Go to Play' })).toBeOnTheScreen();
 });
 
 test('a crashed screen offers to try again', async () => {
@@ -94,6 +94,7 @@ test('a crashed screen offers to try again', async () => {
   expect(screen.getByRole('heading', { name: 'Something went wrong' })).toBeOnTheScreen();
   await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
   expect(retry).toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: 'Go to Play' })).toBeOnTheScreen();
   jest.restoreAllMocks();
 });
 

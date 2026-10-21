@@ -28,7 +28,7 @@ describe('plans', () => {
       'GET /api/v1/blocks': { status: 200, body: [] },
     });
     expect(await screen.findByText('You are on the Free plan.')).toBeOnTheScreen();
-    await press('See Plus and Pro');
+    await press('See plans');
     await waitFor(() => expect(app.getPathname()).toBe('/plans'));
     expect(await screen.findByRole('heading', { name: 'Plus' })).toBeOnTheScreen();
     // In the apps, what each plan includes, not what it costs (the website sells them).
@@ -71,7 +71,7 @@ describe('plans', () => {
     await waitFor(() => expect(app.getPathname()).toBe('/plans'));
   });
 
-  test("a profile's history says how far back it goes on Free", async () => {
+  test("my own history says how far back it goes on Free; another player's does not", async () => {
     await open('/player/bob', {
       'GET /api/v1/players/bob': {
         status: 200,
@@ -83,6 +83,14 @@ describe('plans', () => {
           created_at: ME.created_at,
           ratings: {},
         },
+      },
+    });
+    expect(await screen.findByText('No finished games yet.')).toBeOnTheScreen();
+    expect(screen.queryByText(/^Your history shows games from the last 30 days/)).toBeNull();
+    await open('/me', {
+      'GET /api/v1/players/alice': {
+        status: 200,
+        body: { ...ME, online: true, playing: false, blocked: false, ratings: {} },
       },
     });
     expect(

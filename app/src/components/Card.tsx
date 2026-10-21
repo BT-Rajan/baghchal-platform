@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     ...shadow,
   },
-  accent: { borderLeftWidth: 4, borderLeftColor: colors.accent },
+  accent: { borderStartWidth: 4, borderStartColor: colors.accent },
   section: { ...type.heading, color: colors.text, marginTop: spacing.sm },
-  hint: { fontSize: 15, lineHeight: 22, color: colors.muted },
+  hint: { ...type.small, color: colors.muted },
 });

@@ -54,7 +54,11 @@ test.each([
   [new ApiError(0, NETWORK_ERROR, ''), /reach the server/],
   [new ApiError(0, TIMEOUT, ''), /too long/],
   [new ApiError(200, BAD_RESPONSE, ''), /did not understand/],
-  [new ApiError(422, 'invalid_request', ''), /highlighted fields/],
+  [new ApiError(422, 'invalid_request', ''), /^Please check what you entered\.$/],
+  [
+    new ApiError(422, 'invalid_request', '', [{ field: 'username', problem: 'bad' }]),
+    /highlighted fields/,
+  ],
   [new ApiError(409, 'username_taken', 'That username is taken.'), /^That username is taken\.$/],
   [new Error('boom'), /Something went wrong/],
   ['not even an error', /Something went wrong/],
@@ -85,8 +89,20 @@ describe('formErrors', () => {
     const error = new ApiError(422, 'invalid_request', 'Invalid request.', [
       { field: 'transport', problem: 'bad' },
     ]);
+    // Nothing on the form is highlighted, so the message does not point at highlights.
     expect(formErrors(error, FIELDS)).toEqual({
       fields: {},
+      message: 'Please check what you entered.',
+    });
+  });
+
+  test('points at the highlighted fields when some are, and others are not on the form', () => {
+    const error = new ApiError(422, 'invalid_request', 'Invalid request.', [
+      { field: 'username', problem: 'bad' },
+      { field: 'transport', problem: 'bad' },
+    ]);
+    expect(formErrors(error, FIELDS)).toEqual({
+      fields: { username: 'bad' },
       message: 'Please check the highlighted fields.',
     });
   });

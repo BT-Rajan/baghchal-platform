@@ -136,7 +136,7 @@ describe('challenges by link', () => {
   test('my own link can be shared or cancelled from its page', async () => {
     let cancelled = false;
     const mine = link({ challenger: ALICE });
-    await open('/c/abc123', {
+    const { app } = await open('/c/abc123', {
       [`GET ${URL}`]: () => ({
         status: 200,
         body: cancelled ? { ...mine, status: 'cancelled' } : mine,
@@ -147,10 +147,14 @@ describe('challenges by link', () => {
       },
     });
     expect(await screen.findByText('Your challenge by link')).toBeOnTheScreen();
+    expect(screen.getByText('If you cancel, the link stops working.')).toBeOnTheScreen();
     await press('Cancel the challenge by link');
     expect(
       await screen.findByText('This challenge is closed. Ask your friend for a new link.'),
     ).toBeOnTheScreen();
+    // Nothing more to do here: back to Play.
+    await press('Go to Play');
+    await waitFor(() => expect(app.getPathname()).toBe('/'));
   });
 
   test('once accepted, both players can go to the game', async () => {
@@ -167,7 +171,7 @@ describe('challenges by link', () => {
   });
 
   test('an unknown link', async () => {
-    await open('/c/nope', {
+    const { app } = await open('/c/nope', {
       'GET /api/v1/challenges/link/nope': error(
         404,
         'challenge_not_found',
@@ -175,8 +179,10 @@ describe('challenges by link', () => {
       ),
     });
     expect(
-      await screen.findByText('No such challenge. Ask your friend for a new link.'),
+      await screen.findByText("This link doesn't work. Ask your friend for a new one."),
     ).toBeOnTheScreen();
+    await press('Go to Play');
+    await waitFor(() => expect(app.getPathname()).toBe('/'));
   });
 });
 
@@ -208,6 +214,8 @@ describe('a signed-out friend opens a challenge link', () => {
     });
     await press('Play now, no sign-up');
     await screen.findByRole('button', { name: 'Accept and play', busy: false });
+    // Not the first game against the computer: that line is not shown.
+    expect(screen.queryByText(/^You'll play the goats/)).toBeNull();
     await press('Accept and play');
     await waitFor(() => expect(app.getPathname()).toBe('/c/abc123'));
     expect(await screen.findByText('bob challenges you')).toBeOnTheScreen();

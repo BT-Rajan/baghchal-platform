@@ -1,14 +1,17 @@
 import { useMutation } from '@tanstack/react-query';
 
-import { describeError } from '@/api/errors';
 import { useApi } from '@/auth/session';
 import { t } from '@/i18n';
 
 import { Button } from './Button';
+import { ErrorNotice } from './ErrorNotice';
 import { Notice } from './Notice';
 
-/** For a sign-up whose confirmation email went missing: send the link again. */
-export function ResendConfirmation({ email }: { email: string }) {
+/**
+ * For a sign-up whose confirmation email went missing: send the link again. `main` where it is
+ * the screen's next step (after signing up), secondary beside signing in.
+ */
+export function ResendConfirmation({ email, main = false }: { email: string; main?: boolean }) {
   const api = useApi();
   const resend = useMutation({ mutationFn: () => api.resendVerification(email.trim()) });
   if (resend.isSuccess) {
@@ -23,10 +26,10 @@ export function ResendConfirmation({ email }: { email: string }) {
   }
   return (
     <>
-      {resend.isError && <Notice tone="error">{describeError(resend.error)}</Notice>}
+      <ErrorNotice error={resend.error} />
       <Button
         title={t('Send the link again')}
-        variant="secondary"
+        variant={main ? 'primary' : 'secondary'}
         busy={resend.isPending}
         onPress={() => resend.mutate()}
       />

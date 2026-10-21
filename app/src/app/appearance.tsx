@@ -8,19 +8,21 @@ import { playSound, soundSupported } from '@/components/game/sound';
 import {
   BoardAndPieces,
   LookNotices,
+  lockedName,
   useLookChoice,
   type LookChoice,
 } from '@/components/LookPicker';
 import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
 import { ErrorState, Loading } from '@/components/States';
+import { Upsell } from '@/components/Upsell';
 import { t } from '@/i18n';
 
 type Tab = 'look' | 'sounds' | 'badge';
 
 /**
- * Choose a board, pieces and sounds (Plus and Pro), and whether others see my badge: one tab
- * at a time.
+ * Choose a board, pieces and sounds (the paid plans' extras), and whether others see my badge:
+ * one tab at a time.
  */
 export default function AppearanceScreen() {
   const { error, retry, ready } = useLookChoice();
@@ -48,8 +50,9 @@ export default function AppearanceScreen() {
 
   return (
     <Screen align="top" wide>
-      <LookNotices choice={ready} />
-      <Segmented label={t('Show')} options={tabs} value={tab} onChange={setTab} />
+      {/* The sounds tab has its Upsell beside the sound packs it is about. */}
+      <LookNotices choice={ready} upsell={tab !== 'sounds'} />
+      <Segmented label={t('What to change')} options={tabs} value={tab} onChange={setTab} />
       {tab === 'look' && <BoardAndPieces choice={ready} />}
       {tab === 'sounds' && <Sounds choice={ready} />}
       {tab === 'badge' && (
@@ -68,7 +71,10 @@ export default function AppearanceScreen() {
 }
 
 function Sounds({ choice }: { choice: LookChoice }) {
-  const { current, pick, locked } = choice;
+  const { current, pick, locked, lockedPlan, themes } = choice;
+  // A sound pack my plan lacks, pressed: the Upsell below names it, instead of nothing happening.
+  const [wanted, setWanted] = useState<SoundPack | null>(null);
+  const isLocked = (sounds: SoundPack) => locked(sounds === FREE_APPEARANCE.sounds);
   return (
     <>
       <Segmented
@@ -84,20 +90,34 @@ function Sounds({ choice }: { choice: LookChoice }) {
         label={t('Sound pack')}
         vertical
         value={current.sounds}
-        onChange={(sounds) => pick({ sounds })}
+        onChange={(sounds) => {
+          if (isLocked(sounds)) {
+            setWanted(sounds);
+          } else {
+            setWanted(null);
+            pick({ sounds });
+          }
+        }}
         options={(Object.keys(SOUNDS) as SoundPack[]).map((sounds) => ({
           value: sounds,
-          label: locked(sounds === FREE_APPEARANCE.sounds)
-            ? t('{name} (Plus): {description}', {
-                name: t(SOUNDS[sounds].name),
-                description: t(SOUNDS[sounds].description),
-              })
-            : t('{name}: {description}', {
-                name: t(SOUNDS[sounds].name),
-                description: t(SOUNDS[sounds].description),
-              }),
+          label: t('{name}: {description}', {
+            name: lockedName(t(SOUNDS[sounds].name), isLocked(sounds), lockedPlan),
+            description: t(SOUNDS[sounds].description),
+          }),
         }))}
       />
+      {!themes && (
+        <Upsell feature="themes">
+          {wanted !== null
+            ? t(
+                'Use {name} and the other sound packs, with more boards and pieces and a badge by your name.',
+                {
+                  name: t(SOUNDS[wanted].name),
+                },
+              )
+            : t('More boards, pieces and sound packs, and a badge by your name.')}
+        </Upsell>
+      )}
       {soundSupported() && (
         <Button
           title={t('Hear {name}', { name: t(SOUNDS[current.sounds].name) })}

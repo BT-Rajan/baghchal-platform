@@ -1,8 +1,9 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import type { LegalDocumentName } from '@/api/endpoints';
 import { useLegalDocument } from '@/legal/hooks';
 import { t } from '@/i18n';
+import { dayText } from '@/lobby/format';
 import { parse, sections, type Body, type Span } from '@/legal/markdown';
 import { colors, spacing, type } from '@/theme';
 
@@ -16,7 +17,9 @@ export function LegalDocument({ document }: { document: LegalDocumentName }) {
   if (query.isPending) {
     return (
       <Screen align="top">
-        <Loading />
+        <Loading
+          label={document === 'terms' ? t('Loading the terms') : t('Loading the privacy policy')}
+        />
       </Screen>
     );
   }
@@ -28,9 +31,11 @@ export function LegalDocument({ document }: { document: LegalDocumentName }) {
     );
   }
   const { intro, sections: parts } = sections(parse(query.data.text));
+  // In the apps the header bar already names the document: its own title is not repeated.
+  const shown = Platform.OS === 'web' ? intro : intro.filter((block) => block.kind !== 'title');
   return (
     <Screen align="top">
-      <Blocks blocks={intro} />
+      <Blocks blocks={shown} />
       {/* Each section shut until asked for: the headings are the contents. */}
       <View>
         {parts.map((part) => (
@@ -40,10 +45,16 @@ export function LegalDocument({ document }: { document: LegalDocumentName }) {
         ))}
       </View>
       <Text style={styles.version}>
-        {t('Version of {version}', { version: query.data.version })}
+        {t('Updated {date}', { date: versionDate(query.data.version) })}
       </Text>
     </Screen>
   );
+}
+
+/** A version is the date it took effect ("2026-10-21"), shown as a date ("21 Oct 2026"). */
+function versionDate(version: string): string {
+  // Midday, so the day is the same in every time zone.
+  return /^\d{4}-\d{2}-\d{2}$/.test(version) ? dayText(`${version}T12:00:00`) : version;
 }
 
 function Blocks({ blocks }: { blocks: Body[] }) {

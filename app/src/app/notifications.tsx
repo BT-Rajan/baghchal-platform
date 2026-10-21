@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Notification } from '@/api/endpoints';
@@ -13,7 +13,7 @@ import { useNow } from '@/components/useNow';
 import { t } from '@/i18n';
 import { useNotifications, useReadNotifications } from '@/lobby/hooks';
 import { agoText, notificationLink, notificationText } from '@/lobby/notifications';
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius, spacing, type } from '@/theme';
 
 const ICONS: Record<Notification['kind'], IconName> = {
   challenge: 'play',
@@ -31,6 +31,12 @@ export default function Notifications() {
   const now = useNow(60_000);
   const unread = notifications.data?.unread ?? 0;
   const { mutate } = read;
+  // What was unread when the list opened stays marked new for this visit, though opening the
+  // list reads it at once.
+  const [fresh, setFresh] = useState<ReadonlySet<Notification['id']> | null>(null);
+  if (fresh === null && notifications.data !== undefined) {
+    setFresh(new Set(notifications.data.items.filter((n) => !n.read).map((n) => n.id)));
+  }
   // Opening the list is reading it.
   useEffect(() => {
     if (unread > 0) mutate();
@@ -47,22 +53,24 @@ export default function Notifications() {
         <Card>
           {notifications.data.items.map((n, i) => {
             const link = notificationLink(n);
+            const isNew = !n.read || fresh?.has(n.id) === true;
+            const when = agoText(n.created_at, now);
             return (
               <Pressable
                 key={n.id}
                 role={link === null ? undefined : 'link'}
-                aria-label={notificationText(n)}
+                aria-label={t('{text} ({when})', { text: notificationText(n), when })}
                 disabled={link === null}
                 onPress={() => link !== null && router.push(link)}
                 {...ripple()}
                 style={(state) => [styles.row, i > 0 && styles.divided, focusRing(state)]}
               >
-                <View style={[styles.icon, !n.read && styles.unread]}>
+                <View style={[styles.icon, isNew && styles.unread]}>
                   <Icon name={ICONS[n.kind]} color={colors.accent} size={20} />
                 </View>
                 <View style={styles.words}>
-                  <Text style={[styles.text, !n.read && styles.bold]}>{notificationText(n)}</Text>
-                  <Text style={styles.when}>{agoText(n.created_at, now)}</Text>
+                  <Text style={[styles.text, isNew && styles.bold]}>{notificationText(n)}</Text>
+                  <Text style={styles.when}>{when}</Text>
                 </View>
               </Pressable>
             );
@@ -86,7 +94,7 @@ const styles = StyleSheet.create({
   },
   unread: { backgroundColor: colors.accentSurface },
   words: { flex: 1, gap: 2 },
-  text: { fontSize: 15, lineHeight: 21, color: colors.text },
+  text: { ...type.small, color: colors.text },
   bold: { fontWeight: '700' },
-  when: { fontSize: 13, color: colors.muted },
+  when: { ...type.caption, color: colors.muted },
 });

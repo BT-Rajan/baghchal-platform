@@ -81,6 +81,8 @@ function CodeStep() {
 
 function KeysForm({ page }: { page: PaymentKeys }) {
   const change = useChangePaymentKeys();
+  // Turning payments off is its own request: its failure shows in its question, not the form.
+  const turnOff = useChangePaymentKeys();
   const [keyId, setKeyId] = useState('');
   const [keySecret, setKeySecret] = useState('');
   const [webhookSecret, setWebhookSecret] = useState('');
@@ -111,6 +113,7 @@ function KeysForm({ page }: { page: PaymentKeys }) {
       )}
       {problem !== null && <Notice tone="error">{problem}</Notice>}
       <ErrorNotice error={change.error} />
+      {change.isSuccess && <Notice tone="success">{t('Saved.')}</Notice>}
       <SectionTitle>{page.on ? t('Change the keys') : t('Enter the keys')}</SectionTitle>
       <Hint>
         {t(
@@ -161,15 +164,22 @@ function KeysForm({ page }: { page: PaymentKeys }) {
               'Turn payments off? Players cannot buy plans until keys are entered again.',
             )}
             confirmTitle={t('Turn payments off')}
-            busy={change.isPending}
-            onConfirm={() => change.mutate(null, { onSettled: () => setConfirming(false) })}
-            onCancel={() => setConfirming(false)}
+            busy={turnOff.isPending}
+            error={turnOff.error}
+            onConfirm={() => turnOff.mutate(null, { onSuccess: () => setConfirming(false) })}
+            onCancel={() => {
+              turnOff.reset();
+              setConfirming(false);
+            }}
           />
         ) : (
           <Button
             title={t('Turn payments off')}
             variant="secondary"
-            onPress={() => setConfirming(true)}
+            onPress={() => {
+              change.reset();
+              setConfirming(true);
+            }}
           />
         ))}
     </>

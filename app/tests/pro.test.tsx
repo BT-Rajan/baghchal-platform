@@ -100,6 +100,9 @@ describe('tournaments', () => {
         'You are not in any tournament yet. Join one with a link from a friend.',
       ),
     ).toBeOnTheScreen();
+    // A name to start from, mine; a name is needed.
+    expect(screen.getByLabelText('Name')).toHaveDisplayValue("alice's tournament");
+    await fireEvent.changeText(screen.getByLabelText('Name'), ' ');
     expect(screen.getByRole('button', { name: 'Create the tournament' })).toBeDisabled();
     await fireEvent.changeText(screen.getByLabelText('Name'), '  Friday cup ');
     await fireEvent.press(screen.getByRole('radio', { name: '4 players' }));
@@ -304,21 +307,31 @@ describe('the trainer', () => {
         };
       },
     });
-    await fireEvent.press(await screen.findByRole('link', { name: 'Trainer' }));
+    await fireEvent.press(
+      await screen.findByRole('button', { name: 'More puzzles in the trainer' }),
+    );
     expect(await screen.findByText('Goats to play: find the best move.')).toBeOnTheScreen();
-    expect(screen.getByText('Solved 0 of 60 · Streak 0')).toBeOnTheScreen();
+    expect(screen.getByText('Solved 0 of 60 · In a row: 0')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'a2, empty, move here' }));
-    expect(await screen.findByText('Not quite. The best move was c3.')).toBeOnTheScreen();
+    expect(
+      await screen.findByText('Not quite. The best move was c3, shown on the board.'),
+    ).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/trainer/o001/answer').body).toEqual({ move: 'a2' });
     await press('Next puzzle');
     await fireEvent.press(await screen.findByRole('button', { name: 'c3, empty, move here' }));
-    expect(await screen.findByText('Correct! That is the best move.')).toBeOnTheScreen();
-    expect(screen.getByText('Solved 1 of 60 · Streak 2')).toBeOnTheScreen();
+    expect(
+      await screen.findByText('Correct! That is the best move, shown on the board.'),
+    ).toBeOnTheScreen();
+    expect(screen.getByText('Solved 1 of 60 · In a row: 2')).toBeOnTheScreen();
 
     await fireEvent.press(screen.getByRole('radio', { name: 'Endgames' }));
     expect(
       await screen.findByText('You have solved every puzzle here. Well played!'),
     ).toBeOnTheScreen();
+    // Done with a set: the other set, or a game.
+    expect(screen.getByRole('button', { name: 'Play now' })).toBeOnTheScreen();
+    await press('Try the openings');
+    expect(await screen.findByRole('radio', { name: 'Openings' })).toBeChecked();
   });
 
   test('a refused answer and a failed load', async () => {

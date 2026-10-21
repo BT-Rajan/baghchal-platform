@@ -5,7 +5,7 @@ import type { Piece } from '@/game/bfen';
 import { formatClock, remainingMs } from '@/game/clock';
 import { SIDE_PLURAL, isComputer, nameOf, playerOf, ratingChangeText } from '@/game/describe';
 import { t } from '@/i18n';
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius, spaced, spacing, type } from '@/theme';
 
 import { BadgePill } from '../BadgePill';
 import { useServerNow } from '../useNow';
@@ -44,7 +44,8 @@ export function PlayerBar({
           </View>
         )}
         {toMove && (
-          <Text style={styles.toMoveTag} aria-hidden>
+          // Letters spaced apart, except in a joined script (Arabic).
+          <Text style={[styles.toMoveTag, { letterSpacing: spaced(0.8) }]} aria-hidden>
             {t('TO MOVE')}
           </Text>
         )}
@@ -97,7 +98,7 @@ const styles = StyleSheet.create({
   toMove: { borderColor: colors.accent, backgroundColor: colors.accentSurface },
   emote: {
     alignSelf: 'flex-start',
-    fontSize: 14,
+    ...type.label,
     fontWeight: '700',
     color: colors.inkText,
     backgroundColor: colors.ink,
@@ -108,9 +109,8 @@ const styles = StyleSheet.create({
   },
   toMoveTag: {
     alignSelf: 'flex-start',
-    fontSize: 11,
+    ...type.caption,
     fontWeight: '800',
-    letterSpacing: 0.8,
     color: colors.accentText,
     backgroundColor: colors.accent,
     borderRadius: radius.pill,
@@ -120,8 +120,8 @@ const styles = StyleSheet.create({
   },
   who: { flex: 1, gap: 2 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  name: { fontSize: 15, fontWeight: '600', color: colors.text, paddingVertical: 10 },
-  meta: { fontSize: 13, color: colors.muted },
+  name: { ...type.small, fontWeight: '600', color: colors.text, paddingVertical: 10 },
+  meta: { ...type.caption, color: colors.muted },
   clock: {
     // Digits read left to right in every language.
     direction: 'ltr',
@@ -136,6 +136,6 @@ const styles = StyleSheet.create({
   },
   running: { backgroundColor: colors.ink, borderColor: colors.ink },
   low: { backgroundColor: colors.danger, borderColor: colors.danger },
-  time: { fontSize: 22, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
+  time: { ...type.clock, color: colors.text, fontVariant: ['tabular-nums'] },
   runningText: { color: colors.inkText },
 });

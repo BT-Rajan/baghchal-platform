@@ -33,6 +33,25 @@ export function categoryOf(timeControl: string): Category | undefined {
   return TIME_CONTROLS.find((tc) => tc.label === timeControl)?.category;
 }
 
+/**
+ * The leaderboard to show first: the time control I have played most rated games in, or Quick
+ * (also while my ratings load).
+ */
+export function defaultCategory(
+  ratings: Readonly<Record<string, { games: number }>> | undefined,
+): Category {
+  let best: Category = 'blitz';
+  let most = 0;
+  for (const { value } of CATEGORIES) {
+    const games = ratings?.[value]?.games ?? 0;
+    if (games > most) {
+      best = value;
+      most = games;
+    }
+  }
+  return best;
+}
+
 export function presenceText(player: { online: boolean; playing: boolean }): string {
   if (player.playing) return t('Playing');
   return player.online ? t('Online') : t('Offline');

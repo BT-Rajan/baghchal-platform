@@ -1,12 +1,14 @@
 import type { UseMutationResult } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import type { TextInputInstance } from 'react-native';
 
 import type { Agreement } from '@/api/endpoints';
-import { checkSignUp } from '@/auth/validation';
-import { t } from '@/i18n';
+import { checkSignUp, PASSWORD_MIN } from '@/auth/validation';
+import { plural, t } from '@/i18n';
 
 import { AgreementLine, useAgreement } from './AgreementLine';
 import { Button } from './Button';
+import { Hint } from './Card';
 import { useFormErrors } from './form';
 import { Notice } from './Notice';
 import { TextField } from './TextField';
@@ -41,6 +43,8 @@ export function AccountForm({
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const emailField = useRef<TextInputInstance>(null);
+  const passwordField = useRef<TextInputInstance>(null);
   const agreement = useAgreement();
   const { fieldError, formMessage, accept } = useFormErrors(FIELDS, action.error, CODE_FIELDS);
 
@@ -65,8 +69,16 @@ export function AccountForm({
         autoComplete="username"
         textContentType="username"
         maxLength={20}
+        returnKeyType="next"
+        submitBehavior="submit"
+        onSubmitEditing={() => emailField.current?.focus()}
       />
+      {/* The rules, before a mistake; the same words are the error when one is made. */}
+      {fieldError('username') === undefined && (
+        <Hint>{t('3–20 letters, digits, _ or -, starting with a letter or digit.')}</Hint>
+      )}
       <TextField
+        ref={emailField}
         label={t('Email')}
         value={email}
         onChangeText={setEmail}
@@ -76,8 +88,12 @@ export function AccountForm({
         autoComplete="email"
         keyboardType="email-address"
         textContentType="emailAddress"
+        returnKeyType="next"
+        submitBehavior="submit"
+        onSubmitEditing={() => passwordField.current?.focus()}
       />
       <TextField
+        ref={passwordField}
         label={t('Password')}
         value={password}
         onChangeText={setPassword}
@@ -85,7 +101,18 @@ export function AccountForm({
         secureTextEntry
         autoComplete="new-password"
         textContentType="newPassword"
+        returnKeyType="go"
+        onSubmitEditing={submit}
       />
+      {fieldError('password') === undefined && (
+        <Hint>
+          {plural(
+            PASSWORD_MIN,
+            'Use at least {count} character.',
+            'Use at least {count} characters.',
+          )}
+        </Hint>
+      )}
       <AgreementLine agreement={agreement} />
       <Button
         title={submitTitle}

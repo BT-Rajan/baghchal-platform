@@ -20,7 +20,7 @@ import { useServerNow } from '@/components/useNow';
 import { TimeControlPicker } from '@/components/TimeControlPicker';
 import { LEVELS, secondsLeft, timeControlName, waitingText } from '@/lobby/format';
 import { PRESENCE_REFRESH_MS, useOpenStartedGame, usePlayComputer } from '@/lobby/hooks';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, type } from '@/theme';
 
 const MODES = [
   { value: 'casual', label: mark('Casual') },
@@ -80,14 +80,16 @@ function FindOpponent({ timeControl }: { timeControl: TimeControl }) {
       }
     },
   });
-  const look = (rated: boolean) => {
-    seek.reset();
-    seek.mutate(rated);
-  };
   const stop = useMutation({
     mutationFn: () => api.stopSeeking(),
-    onSettled: () => setWaitingUntil(null),
+    // Still looking unless the server says the search stopped.
+    onSuccess: () => setWaitingUntil(null),
   });
+  const look = (rated: boolean) => {
+    seek.reset();
+    stop.reset();
+    seek.mutate(rated);
+  };
 
   // Leaving the screen stops the search; a pairing opens the game, which also leaves it, and
   // coming back shows no search for a seek the server has already used.
@@ -120,9 +122,11 @@ function FindOpponent({ timeControl }: { timeControl: TimeControl }) {
   const left = waitingUntil === null ? 0 : secondsLeft(waitingUntil, now);
   const waiting = left > 0;
   const lapsed = waitingUntil !== null && !waiting;
+  // Who is waiting, once known: nothing is said when the counts could not be fetched.
   const others =
     counts.data?.find((c) => c.time_control === timeControl && c.rated === (mode === 'rated'))
       ?.players ?? 0;
+  const known = !counts.isError && counts.data !== undefined;
 
   return (
     <>
@@ -148,17 +152,14 @@ function FindOpponent({ timeControl }: { timeControl: TimeControl }) {
         />
         {waiting ? (
           <>
+            {/* Announced once; the countdown beside it is not read out every second. */}
             <Notice tone="info">
               {sought.rated
-                ? t('Looking for an opponent for {time} rated… {seconds} s', {
-                    time: sought.time,
-                    seconds: left,
-                  })
-                : t('Looking for an opponent for {time} casual… {seconds} s', {
-                    time: sought.time,
-                    seconds: left,
-                  })}
+                ? t('Looking for an opponent for {time} rated…', { time: sought.time })
+                : t('Looking for an opponent for {time} casual…', { time: sought.time })}
             </Notice>
+            <Text style={styles.muted}>{t('{seconds} s left', { seconds: left })}</Text>
+            <ErrorNotice error={stop.error} />
             <Button
               title={t('Stop looking')}
               variant="secondary"
@@ -173,7 +174,7 @@ function FindOpponent({ timeControl }: { timeControl: TimeControl }) {
                 {t('Nobody came along yet. Try again, or play the computer.')}
               </Notice>
             )}
-            <Text style={styles.muted}>{waitingText(others)}</Text>
+            {known && <Text style={styles.muted}>{waitingText(others)}</Text>}
             <Button
               title={lapsed ? t('Keep looking') : t('Find an opponent')}
               onPress={() => look(mode === 'rated')}
@@ -236,6 +237,6 @@ function PlayComputer({ timeControl }: { timeControl: TimeControl }) {
 }
 
 const styles = StyleSheet.create({
-  muted: { fontSize: 14, color: colors.muted },
+  muted: { ...type.small, color: colors.muted },
   fields: { gap: spacing.sm },
 });

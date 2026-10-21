@@ -16,7 +16,7 @@ import { plural, t } from '@/i18n';
 import { shareLink, timeControlName } from '@/lobby/format';
 import { isMine, pairingText, roundsOf, tournamentStatusText } from '@/pro/format';
 import { useAwardPairing, usePlayPairing, useTournament, useTournamentAction } from '@/pro/hooks';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, type } from '@/theme';
 
 /** A tournament: who is in, the standings, and my games to play. */
 export default function TournamentScreen() {
@@ -46,6 +46,12 @@ function Details({ tournament: tour }: { tournament: Tournament }) {
   // My game this round (the earlier ones are under the rounds below).
   const mine = tour.pairings.filter((p) => p.round === tour.round && isMine(p, me.id));
   const sitting = tour.byes.some((b) => b.round === tour.round && b.player.id === me.id);
+  // The game I asked to start, while my opponent has yet to accept it.
+  const asked =
+    play.isSuccess && tour.pairings.some((p) => p.id === play.variables && p.state === 'waiting')
+      ? play.data.opponent?.username
+      : undefined;
+  const left = action.isSuccess && action.variables === 'leave' && !playing;
   return (
     <>
       <Text style={styles.muted}>
@@ -56,17 +62,17 @@ function Details({ tournament: tour }: { tournament: Tournament }) {
         })}
       </Text>
       <ErrorNotice error={error} />
-      {play.isSuccess && (
-        <Notice tone="info">
-          {t('We asked {name} to play. The game opens when they accept.', {
-            name: play.data.opponent?.username ?? '',
-          })}
-        </Notice>
-      )}
+      {left && <Notice tone="success">{t('You left the tournament.')}</Notice>}
 
       {tour.status === 'open' && (
         <Card>
-          <Text style={styles.text}>{tour.players.map((p) => p.username).join(', ')}</Text>
+          <Text style={styles.text}>
+            {t('{count} of {max} players: {names}', {
+              count: tour.players.length,
+              max: tour.max_players,
+              names: tour.players.map((p) => p.username).join(', '),
+            })}
+          </Text>
           <Hint>{t('Invite players with this link:')}</Hint>
           <Text style={styles.link} selectable>
             {shareLink(`/tournament/${tour.code}`)}
@@ -101,25 +107,6 @@ function Details({ tournament: tour }: { tournament: Tournament }) {
         </Card>
       )}
 
-      {tour.standings.length > 0 && (
-        <>
-          <SectionTitle>{t('Standings')}</SectionTitle>
-          <Card>
-            {tour.standings.map((s, i) => (
-              <View key={s.player.id} style={styles.row}>
-                <Text style={styles.rank}>{`${i + 1}.`}</Text>
-                <Text style={[styles.text, styles.grow]}>{s.player.username}</Text>
-                <Text style={styles.text}>
-                  {plural(s.points, '{count} point', '{count} points')}
-                </Text>
-                <Text style={styles.muted}>{t('Tie-break {score}', { score: s.buchholz })}</Text>
-                <Text style={styles.muted}>{t('{count} played', { count: s.played })}</Text>
-              </View>
-            ))}
-          </Card>
-        </>
-      )}
-
       {tour.status === 'running' && sitting && (
         <Notice tone="info">{t('You have the bye this round: a point, and a rest.')}</Notice>
       )}
@@ -127,6 +114,11 @@ function Details({ tournament: tour }: { tournament: Tournament }) {
         <>
           <SectionTitle>{t('Your game, round {round}', { round: tour.round })}</SectionTitle>
           <Hint>{t('Start a game when your opponent is online; it opens for both of you.')}</Hint>
+          {asked !== undefined && (
+            <Notice tone="info">
+              {t('We asked {name} to play. The game opens when they accept.', { name: asked })}
+            </Notice>
+          )}
           {mine.map((p) => (
             <PairingRow
               key={p.id}
@@ -135,6 +127,33 @@ function Details({ tournament: tour }: { tournament: Tournament }) {
               onPlay={() => play.mutate(p.id)}
             />
           ))}
+        </>
+      )}
+
+      {tour.standings.length > 0 && (
+        <>
+          <SectionTitle>{t('Standings')}</SectionTitle>
+          <Card>
+            {tour.standings.map((s, i) => (
+              <View key={s.player.id} style={styles.standing}>
+                <View style={styles.row}>
+                  <Text style={styles.rank}>{`${i + 1}.`}</Text>
+                  <Text style={[styles.text, styles.grow]}>{s.player.username}</Text>
+                  <Text style={styles.text}>
+                    {plural(s.points, '{count} point', '{count} points')}
+                  </Text>
+                </View>
+                <Text style={[styles.muted, styles.under]}>
+                  {plural(
+                    s.played,
+                    "{count} game played · opponents' points {score}",
+                    "{count} games played · opponents' points {score}",
+                    { score: s.buchholz },
+                  )}
+                </Text>
+              </View>
+            ))}
+          </Card>
         </>
       )}
 
@@ -156,7 +175,7 @@ function Details({ tournament: tour }: { tournament: Tournament }) {
       {tour.status !== 'open' && (
         <Hint>
           {t(
-            'Standings: a point for each win or bye; ties go to whoever met the stronger opponents (the tie-break adds up their points).',
+            "Standings: a point for each win or bye; ties go to whoever met the stronger opponents (their opponents' points added up).",
           )}
         </Hint>
       )}
@@ -279,11 +298,14 @@ function PairingRow({
 }
 
 const styles = StyleSheet.create({
-  text: { fontSize: 15, color: colors.text },
-  muted: { fontSize: 14, color: colors.muted },
-  link: { fontSize: 15, fontWeight: '600', color: colors.accent },
+  text: { ...type.small, color: colors.text },
+  muted: { ...type.caption, color: colors.muted },
+  link: { ...type.small, fontWeight: '600', color: colors.link },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  rank: { width: 24, fontSize: 15, fontWeight: '700', color: colors.text },
+  standing: { gap: 2 },
+  // Under the name, past the rank.
+  under: { marginStart: 24 + spacing.md },
+  rank: { ...type.small, width: 24, fontWeight: '700', color: colors.text },
   grow: { flex: 1 },
   round: { gap: spacing.sm },
 });

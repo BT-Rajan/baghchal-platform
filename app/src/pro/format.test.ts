@@ -101,7 +101,9 @@ test('the trainer', () => {
   expect(puzzlePrompt(puzzle)).toBe('Goats to play: find the best move.');
   expect(puzzlePrompt({ ...puzzle, side: 'tiger' })).toBe('Tigers to play: find the best move.');
   const result = { correct: true, best: 'c3', solved: 1, total: 60, streak: 1 };
-  expect(answerText(result)).toBe('Correct! That is the best move.');
-  expect(answerText({ ...result, correct: false })).toBe('Not quite. The best move was c3.');
-  expect(progressText(result)).toBe('Solved 1 of 60 · Streak 1');
+  expect(answerText(result)).toBe('Correct! That is the best move, shown on the board.');
+  expect(answerText({ ...result, correct: false })).toBe(
+    'Not quite. The best move was c3, shown on the board.',
+  );
+  expect(progressText(result)).toBe('Solved 1 of 60 · In a row: 1');
 });

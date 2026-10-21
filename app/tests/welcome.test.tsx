@@ -7,7 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Welcome from '@/app/welcome';
 
 import { renderApp, savedToken } from './support/app';
-import { AGREED, ME, error, type Route } from './support/fakeServer';
+import { AGREED, LEGAL, ME, error, type Route } from './support/fakeServer';
 import { game } from './support/games';
 
 const GUEST = {
@@ -42,7 +42,9 @@ describe('the apps’ start screen', () => {
     // An app's start screen, not the web's landing page.
     expect(screen.queryByRole('radio', { name: 'Play your way' })).toBeNull();
     await press('Play now, no sign-up');
-    await screen.findByRole('heading', { name: 'Your first game' });
+    await screen.findByRole('heading', { name: 'Play as a guest' });
+    // What the first game is, said before it starts.
+    expect(screen.getByText(/^You'll play the goats against the Easy computer/)).toBeOnTheScreen();
     // Nothing to type: only the agreement, accepted by the one button.
     expect(screen.getByText(/confirm you are 13 or older/)).toBeOnTheScreen();
     await screen.findByRole('button', { name: 'Accept and play', busy: false });
@@ -72,12 +74,21 @@ describe('the apps’ start screen', () => {
   });
 
   test('waits for the versions, and says when they cannot be had', async () => {
+    let fail = true;
     const { server } = await renderApp('/start', {
-      routes: { 'GET /api/v1/legal': error(429, 'rate_limited', 'Try again soon.') },
+      routes: {
+        'GET /api/v1/legal': () =>
+          fail ? error(429, 'rate_limited', 'Try again soon.') : { status: 200, body: LEGAL },
+      },
     });
     expect(await screen.findByText('Try again soon.')).toBeOnTheScreen();
     await press('Accept and play');
     expect(server.requests.filter((r) => r.path === '/api/v1/auth/guest')).toHaveLength(0);
+    // They can be asked for again.
+    fail = false;
+    await press('Try again');
+    await waitFor(() => expect(screen.queryByText('Try again soon.')).toBeNull());
+    expect(screen.getByRole('button', { name: 'Accept and play', busy: false })).toBeEnabled();
   });
 
   test('leads to sign in and sign up', async () => {
@@ -85,7 +96,7 @@ describe('the apps’ start screen', () => {
     await fireEvent.press(await screen.findByRole('button', { name: 'Sign in' }));
     await waitFor(() => expect(app.getPathname()).toBe('/sign-in'));
     await renderApp('/welcome').then(async ({ app: again }) => {
-      await fireEvent.press(await screen.findByRole('button', { name: 'Create a free account' }));
+      await fireEvent.press(await screen.findByRole('button', { name: 'Make a free account' }));
       await waitFor(() => expect(again.getPathname()).toBe('/sign-up'));
     });
   });
@@ -119,7 +130,7 @@ describe('a guest', () => {
     });
     // Under the app bar the screen's title is in the bar (drawn natively), not in the page.
     expect(await screen.findByLabelText('Username')).toBeOnTheScreen();
-    expect(screen.queryByRole('heading', { name: 'Make your free account' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Make a free account' })).toBeNull();
     await fireEvent.changeText(screen.getByLabelText('Username'), 'Sita');
     await fireEvent.changeText(screen.getByLabelText('Email'), ' sita@example.com ');
     await fireEvent.changeText(screen.getByLabelText('Password'), 'correct horse');
@@ -162,21 +173,19 @@ describe('a guest', () => {
       'GET /api/v1/players/guest-3fa9c1/games': { status: 200, body: [] },
       'GET /api/v1/blocks': { status: 200, body: [] },
     });
-    expect(
-      await screen.findByRole('button', { name: 'Sign out (this guest account will be lost)' }),
-    ).toBeOnTheScreen();
+    expect(await screen.findByRole('button', { name: 'Sign out' })).toBeOnTheScreen();
+    // The way to keep the account is on the home screen and the profile, not here too.
+    expect(screen.queryByText(/^You are playing as/)).toBeNull();
     expect(screen.queryByText(/guest-3fa9c1@guest\.invalid/)).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Email address' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Moderation' })).toBeNull();
     // Signing out loses the account: asked first.
-    await fireEvent.press(
-      screen.getByRole('button', { name: 'Sign out (this guest account will be lost)' }),
-    );
-    expect(screen.getByText(/^Sign out and lose this guest account\?/)).toBeOnTheScreen();
-    await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
     expect(
-      screen.getByRole('button', { name: 'Sign out (this guest account will be lost)' }),
+      screen.getByText(/^Sign out and lose this guest account\? Its games cannot be got back\./),
     ).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeOnTheScreen();
   });
 });
 

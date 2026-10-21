@@ -9,10 +9,10 @@ import {
   linkPath,
   shareLink,
 } from '@/lobby/format';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, type } from '@/theme';
 
 import { Button } from './Button';
-import { Card } from './Card';
+import { Card, Hint } from './Card';
 import { ShareButton } from './ShareButton';
 
 export interface ChallengeCardProps {
@@ -22,6 +22,8 @@ export interface ChallengeCardProps {
   onAnswer: (answer: ChallengeAnswer) => void;
   /** The answer being sent, if any. */
   pending: ChallengeAnswer | null;
+  /** The screen's main thing (a link just made): sharing it is the primary action. */
+  main?: boolean;
 }
 
 /**
@@ -29,7 +31,14 @@ export interface ChallengeCardProps {
  * (`opponent` is null until it is accepted): the one place to accept, decline, share or cancel
  * one.
  */
-export function ChallengeCard({ challenge, myId, now, onAnswer, pending }: ChallengeCardProps) {
+export function ChallengeCard({
+  challenge,
+  myId,
+  now,
+  onAnswer,
+  pending,
+  main = false,
+}: ChallengeCardProps) {
   const { challenger, opponent, code } = challenge;
   const mine = challenger.id === myId;
   // A link has nobody to decline it: whoever does not want it just leaves it.
@@ -62,7 +71,7 @@ export function ChallengeCard({ challenge, myId, now, onAnswer, pending }: Chall
           {shareLink(myLink)}
         </Text>
       )}
-      <Text style={styles.expiry} aria-live="polite">
+      <Text style={styles.expiry}>
         {t('Expires in {time}', {
           time: durationText(seconds),
         })}
@@ -96,7 +105,7 @@ export function ChallengeCard({ challenge, myId, now, onAnswer, pending }: Chall
           <>
             {myLink !== null && (
               <View style={styles.action}>
-                <ShareButton path={myLink} />
+                <ShareButton path={myLink} variant={main ? 'primary' : 'secondary'} />
               </View>
             )}
             <View style={styles.action}>
@@ -116,15 +125,16 @@ export function ChallengeCard({ challenge, myId, now, onAnswer, pending }: Chall
           </>
         )}
       </View>
+      {myLink !== null && <Hint>{t('If you cancel, the link stops working.')}</Hint>}
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 16, fontWeight: '600', color: colors.text },
-  terms: { fontSize: 15, color: colors.text },
-  link: { fontSize: 15, fontWeight: '600', color: colors.accent },
-  expiry: { fontSize: 13, color: colors.muted },
+  title: { ...type.body, fontWeight: '600', color: colors.text },
+  terms: { ...type.small, color: colors.text },
+  link: { ...type.small, fontWeight: '600', color: colors.link },
+  expiry: { ...type.caption, color: colors.muted },
   actions: { flexDirection: 'row', gap: spacing.sm },
   action: { flex: 1 },
 });

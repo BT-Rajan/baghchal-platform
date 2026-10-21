@@ -1,6 +1,8 @@
 import type { ColorValue } from 'react-native';
 import Svg, { Circle, Line, Path, Polyline, Rect } from 'react-native-svg';
 
+import { isRTL } from '@/i18n';
+
 export type IconName =
   | 'play'
   | 'leaderboard'
@@ -106,7 +108,10 @@ export function Icon({
           <Path d="M15.5 4.6a3.5 3.5 0 0 1 0 6.8M18 15.3c1.7.7 2.9 2.2 3.5 4.7" {...stroke} />
         </>
       )}
-      {name === 'chevron' && <Polyline points="9 5 16 12 9 19" {...stroke} />}
+      {/* "Onward": to the end of the line, the left in a right-to-left language. */}
+      {name === 'chevron' && (
+        <Polyline points={isRTL() ? '15 5 8 12 15 19' : '9 5 16 12 9 19'} {...stroke} />
+      )}
       {name === 'document' && (
         <>
           <Path d="M14 3H6v18h12V7z" {...stroke} />

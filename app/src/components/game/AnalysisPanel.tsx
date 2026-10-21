@@ -2,7 +2,6 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { StyleSheet, Text } from 'react-native';
 
 import {
-  LEGEND,
   leftText,
   nextMistake,
   reviewText,
@@ -15,7 +14,7 @@ import { useAnalyse } from '@/analysis/hooks';
 import type { Analysis, Game } from '@/api/endpoints';
 import { nameOf } from '@/game/describe';
 import { t } from '@/i18n';
-import { colors } from '@/theme';
+import { colors, type } from '@/theme';
 
 import { Button } from '../Button';
 import { Card, Hint, SectionTitle } from '../Card';
@@ -118,7 +117,6 @@ function Review({
           })}
         </Text>
       ))}
-      <Text style={styles.muted}>{t(LEGEND)}</Text>
       {left !== null && <Text style={styles.muted}>{left}</Text>}
     </Card>
   );
@@ -133,7 +131,7 @@ const VERDICT_COLORS = {
 } as const;
 
 const styles = StyleSheet.create({
-  verdict: { fontSize: 18, fontWeight: '700' },
-  text: { fontSize: 15, color: colors.text },
-  muted: { fontSize: 14, color: colors.muted },
+  verdict: { ...type.heading },
+  text: { ...type.small, color: colors.text },
+  muted: { ...type.caption, color: colors.muted },
 });

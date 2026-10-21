@@ -56,7 +56,7 @@ describe('the challenge banner', () => {
         body: { ...first, status: 'declined' },
       },
     });
-    expect(await screen.findByText('And 1 more in the lobby.')).toBeOnTheScreen();
+    expect(await screen.findByText('And 1 more challenge on Play.')).toBeOnTheScreen();
     await press("Decline bob's challenge");
     expect(await screen.findByText(/^carol challenges you/)).toBeOnTheScreen();
   });
