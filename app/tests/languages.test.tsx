@@ -46,7 +46,7 @@ test('the language is chosen in Settings and kept with the appearance', async ()
   expect(await screen.findByRole('radio', { name: 'As this device (English)' })).toBeChecked();
   await fireEvent.press(screen.getByRole('radio', { name: 'தமிழ்' }));
   await waitFor(() => expect(server.lastTo(`PATCH ${URL}`).body).toEqual({ language: 'ta' }));
-  expect(await screen.findByRole('radio', { name: 'தமிழ்' })).toBeChecked();
+  await waitFor(() => expect(screen.getByRole('radio', { name: 'தமிழ்' })).toBeChecked());
   expect(screen.getByText(inLanguage('ta', 'Language'))).toBeOnTheScreen();
   // From now on the server answers in Tamil too.
   await waitFor(() => expect(server.requests.at(-1)?.headers['Accept-Language']).toBe('ta'));
