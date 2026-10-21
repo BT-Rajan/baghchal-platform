@@ -1,6 +1,15 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  AccessibilityInfo,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg from 'react-native-svg';
 
@@ -9,12 +18,16 @@ import { Brand } from '@/components/brand/Logo';
 import { Button } from '@/components/Button';
 import { BoardPreview } from '@/components/game/BoardPreview';
 import { Coin } from '@/components/game/Coin';
+import { AgreementLine } from '@/components/AgreementLine';
+import { ErrorNotice } from '@/components/ErrorNotice';
+import { focusRing } from '@/components/focus';
 import { Notice } from '@/components/Notice';
-import { Segmented } from '@/components/Segmented';
+import { pressedLook, ripple } from '@/components/press';
 import { SiteFooter } from '@/components/site/SiteFooter';
+import { useStartAsGuest } from '@/components/useStartAsGuest';
 import type { Piece } from '@/game/bfen';
 import { mark, t } from '@/i18n';
-import { colors, joinedLetters, radius, spacing, type } from '@/theme';
+import { colors, joinedLetters, radius, shadow, spacing, type } from '@/theme';
 
 /** Wide enough to put the board beside the words. */
 const WIDE = 880;
@@ -52,13 +65,6 @@ const FEATURES: readonly { title: string; text: string }[] = [
     text: mark('The computer reviews your games; puzzles sharpen your openings.'),
   },
 ];
-
-const TABS = [
-  { value: 'rules', label: mark("How it's played") },
-  { value: 'ways', label: mark('Play your way') },
-] as const;
-
-type Tab = (typeof TABS)[number]['value'];
 
 /**
  * The front door: what ClawPlay is, and a first game without signing up (`/start`). The web
@@ -115,11 +121,138 @@ function GoingOn() {
   );
 }
 
+/**
+ * A short game the landing page's board plays by itself, again and again: the goats come in,
+ * the tigers move, one tiger jumps a goat. Pieces by point (a1 bottom left); a caption each.
+ */
+const TIGERS = { a1: 'tiger', a5: 'tiger', e1: 'tiger', e5: 'tiger' } as const;
+const DEMO: readonly { placed: Readonly<Record<string, Piece>>; caption: string }[] = [
+  { placed: TIGERS, caption: mark('Four tigers wait in the corners.') },
+  { placed: { ...TIGERS, c3: 'goat' }, caption: mark('The goats come in, one at a time.') },
+  {
+    placed: { a5: 'tiger', e1: 'tiger', e5: 'tiger', b2: 'tiger', c3: 'goat' },
+    caption: mark('A tiger creeps closer.'),
+  },
+  {
+    placed: { a5: 'tiger', e1: 'tiger', e5: 'tiger', b2: 'tiger', c3: 'goat', d2: 'goat' },
+    caption: mark('The goats close ranks.'),
+  },
+  {
+    placed: { a5: 'tiger', e1: 'tiger', d4: 'tiger', b2: 'tiger', c3: 'goat', d2: 'goat' },
+    caption: mark('Another tiger prowls in.'),
+  },
+  {
+    placed: {
+      a5: 'tiger',
+      e1: 'tiger',
+      d4: 'tiger',
+      b2: 'tiger',
+      c3: 'goat',
+      d2: 'goat',
+      c4: 'goat',
+    },
+    caption: mark('A goat steps too close…'),
+  },
+  {
+    placed: { a5: 'tiger', e1: 'tiger', b4: 'tiger', b2: 'tiger', c3: 'goat', d2: 'goat' },
+    caption: mark('…and the tiger jumps it. Captured!'),
+  },
+  {
+    placed: {
+      a5: 'tiger',
+      e1: 'tiger',
+      b4: 'tiger',
+      b2: 'tiger',
+      c3: 'goat',
+      d2: 'goat',
+      d4: 'goat',
+      c4: 'goat',
+    },
+    caption: mark('Four more captures and the tigers win. Can the goats trap them first?'),
+  },
+];
+const DEMO_STEP_MS = 1800;
+
+/** The landing page's board, playing the short game on its own (still, if motion is reduced). */
+function DemoBoard() {
+  const [step, setStep] = useState(0);
+  const [still, setStill] = useState(false);
+  useEffect(() => {
+    void AccessibilityInfo.isReduceMotionEnabled()
+      .then(setStill)
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (still) return;
+    const timer = setInterval(() => setStep((s) => (s + 1) % DEMO.length), DEMO_STEP_MS);
+    return () => clearInterval(timer);
+  }, [still]);
+  const frame = DEMO[still ? DEMO.length - 1 : step] ?? DEMO[0]!;
+  return (
+    <View style={styles.demo}>
+      <View style={styles.board} aria-hidden>
+        <BoardPreview theme="wood" pieces="classic" placed={frame.placed} />
+      </View>
+      <Text style={styles.caption}>{t(frame.caption)}</Text>
+    </View>
+  );
+}
+
+/** Pick a side and play: one tap starts a first game against the Easy computer. */
+function SideChoice({
+  piece,
+  title,
+  text,
+  main,
+  busy,
+  onPress,
+}: {
+  piece: Piece;
+  title: string;
+  text: string;
+  main: boolean;
+  busy: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      role="button"
+      aria-label={title}
+      aria-busy={busy}
+      disabled={busy}
+      onPress={onPress}
+      {...ripple(main)}
+      style={(state) => [
+        styles.side,
+        main && styles.sideMain,
+        pressedLook(state.pressed, styles.sidePressed),
+        busy && styles.sideBusy,
+        focusRing(state),
+      ]}
+    >
+      <View style={styles.sideCoin} aria-hidden>
+        <Svg width="100%" height="100%" viewBox="0 0 100 100">
+          <Coin piece={piece} />
+        </Svg>
+      </View>
+      <View style={styles.cardWords}>
+        <Text style={[styles.sideTitle, main && styles.sideTitleMain]}>{title}</Text>
+        <Text style={[styles.sideText, main && styles.sideTextMain]}>{text}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+/**
+ * The web's front page: the game playing itself, a side to pick and play at once (accepting
+ * the terms by playing, as the line under the choice says), the rules in three steps, what
+ * there is to do, and one more way in at the bottom.
+ */
 function LandingPage() {
   const { width } = useWindowDimensions();
   const wide = width >= WIDE;
-  const [tab, setTab] = useState<Tab>('rules');
-  const play = () => router.push('/start');
+  const { agreement, play, start, waiting } = useStartAsGuest();
+  const choosing = play.isPending ? play.variables : null;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -135,56 +268,94 @@ function LandingPage() {
                   'Bagh Chal, the strategy game of the Himalayas, played live. Four tigers against twenty goats: which side will you take?',
                 )}
               </Text>
-              {/* Signing in and up are in the top bar; the terms and privacy in the footer. */}
               <GoingOn />
-              <View style={[styles.actions, wide && styles.actionsWide]}>
-                <Button title={t('Play now, no sign-up')} variant="bright" onPress={play} />
+              <View style={styles.choice}>
+                <Text style={styles.choiceTitle}>{t('Pick your side and play')}</Text>
+                <View style={[styles.sides, wide && styles.sidesWide]}>
+                  <SideChoice
+                    piece="goat"
+                    title={t('Play the goats')}
+                    text={t('Trap all four tigers. Goats move first: a good place to start.')}
+                    main
+                    busy={choosing === 'goat' || (waiting && choosing === null)}
+                    onPress={() => start('goat')}
+                  />
+                  <SideChoice
+                    piece="tiger"
+                    title={t('Play the tigers')}
+                    text={t('Hunt the goats: capture five to win.')}
+                    main={false}
+                    busy={choosing === 'tiger' || (waiting && choosing === null)}
+                    onPress={() => start('tiger')}
+                  />
+                </View>
+                <ErrorNotice error={play.error} />
+                <AgreementLine agreement={agreement} playing />
               </View>
               <Text style={styles.small}>
-                {t('No account needed: make one later to keep your games and play rated games.')}
+                {t(
+                  'No sign-up: you play the computer, which gives tips as you go. Make a free account later to keep your games and play rated games.',
+                )}
               </Text>
             </View>
-            <View style={[styles.boardBox, wide && styles.half]} aria-hidden>
-              <View style={[styles.board, !wide && styles.boardNarrow]}>
-                <BoardPreview theme="wood" pieces="classic" />
-              </View>
+            <View style={[styles.boardBox, wide && styles.half]}>
+              <DemoBoard />
             </View>
           </View>
         </View>
 
         <View style={styles.section}>
           <View style={styles.inner}>
-            {/* One section, two tabs: the page stays about a screen long. */}
-            <Segmented
-              label={t('Find out more')}
-              options={TABS.map((o) => ({ value: o.value, label: t(o.label) }))}
-              value={tab}
-              onChange={setTab}
-            />
+            <Text role="heading" style={styles.sectionTitle}>
+              {t('Learn it in 30 seconds')}
+            </Text>
             <View style={[styles.cards, styles.wrap]}>
-              {tab === 'rules'
-                ? STEPS.map((step) => (
-                    <View key={step.title} style={[styles.card, styles.step]}>
-                      <View style={styles.coin} aria-hidden>
-                        <Svg width="100%" height="100%" viewBox="0 0 100 100">
-                          <Coin piece={step.piece} />
-                        </Svg>
-                      </View>
-                      <View style={styles.cardWords}>
-                        <Text style={styles.cardTitle}>{t(step.title)}</Text>
-                        <Text style={styles.cardText}>{t(step.text)}</Text>
-                      </View>
-                    </View>
-                  ))
-                : FEATURES.map((f) => (
-                    <View key={f.title} style={[styles.card, styles.feature]}>
-                      <View style={styles.cardWords}>
-                        <Text style={styles.cardTitle}>{t(f.title)}</Text>
-                        <Text style={styles.cardText}>{t(f.text)}</Text>
-                      </View>
-                    </View>
-                  ))}
+              {STEPS.map((step) => (
+                <View key={step.title} style={[styles.card, styles.step]}>
+                  <View style={styles.coin} aria-hidden>
+                    <Svg width="100%" height="100%" viewBox="0 0 100 100">
+                      <Coin piece={step.piece} />
+                    </Svg>
+                  </View>
+                  <View style={styles.cardWords}>
+                    <Text style={styles.cardTitle}>{t(step.title)}</Text>
+                    <Text style={styles.cardText}>{t(step.text)}</Text>
+                  </View>
+                </View>
+              ))}
             </View>
+          </View>
+        </View>
+
+        <View style={[styles.section, styles.sectionTinted]}>
+          <View style={styles.inner}>
+            <Text role="heading" style={styles.sectionTitle}>
+              {t('Play your way')}
+            </Text>
+            <View style={[styles.cards, styles.wrap]}>
+              {FEATURES.map((f) => (
+                <View key={f.title} style={[styles.card, styles.feature]}>
+                  <View style={styles.cardWords}>
+                    <Text style={styles.cardTitle}>{t(f.title)}</Text>
+                    <Text style={styles.cardText}>{t(f.text)}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.hero}>
+          <View style={[styles.inner, styles.closing]}>
+            <Text role="heading" style={[styles.closingTitle, joinedLetters()]}>
+              {t('The tigers are waiting.')}
+            </Text>
+            <Button
+              title={t('Play now')}
+              variant="bright"
+              busy={choosing === 'goat'}
+              onPress={() => start('goat')}
+            />
           </View>
         </View>
         <SiteFooter />
@@ -226,7 +397,42 @@ const styles = StyleSheet.create({
   small: { ...type.caption, color: colors.brandCream, opacity: 0.75 },
   boardBox: { alignItems: 'center' },
   board: { width: '100%', maxWidth: 440, aspectRatio: 1 },
-  boardNarrow: { maxWidth: 280 },
+  demo: { width: '100%', maxWidth: 440, alignItems: 'center', gap: spacing.sm },
+  caption: { ...type.small, color: colors.brandCream, textAlign: 'center', minHeight: 44 },
+  choice: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    gap: spacing.md,
+    ...shadow,
+  },
+  choiceTitle: { ...type.heading, color: colors.text },
+  sides: { gap: spacing.sm },
+  sidesWide: { flexDirection: 'row' },
+  side: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    minHeight: 88,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.subtle,
+  },
+  sideMain: { backgroundColor: colors.accent, borderColor: colors.accent },
+  sidePressed: { opacity: 0.85 },
+  sideBusy: { opacity: 0.6 },
+  sideCoin: { width: 52, height: 52 },
+  sideTitle: { ...type.heading, color: colors.text },
+  sideTitleMain: { color: colors.accentText },
+  sideText: { ...type.caption, color: colors.muted },
+  sideTextMain: { color: colors.accentText },
+  sectionTitle: { ...type.title, color: colors.text },
+  sectionTinted: { backgroundColor: colors.subtle },
+  closing: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.lg },
+  closingTitle: { ...type.title, color: colors.brandCream, textAlign: 'center' },
   section: { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg },
   cards: { gap: spacing.sm },
   wrap: { flexDirection: 'row', flexWrap: 'wrap' },

@@ -1,10 +1,5 @@
-import { router } from 'expo-router';
-import { render } from '@testing-library/react-native';
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
-import { Platform } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-
-import Welcome from '@/app/welcome';
+import { AccessibilityInfo, Platform } from 'react-native';
 
 import { renderApp, savedToken } from './support/app';
 import { AGREED, LEGAL, ME, error, type Route } from './support/fakeServer';
@@ -189,37 +184,85 @@ describe('a guest', () => {
   });
 });
 
-const METRICS = {
-  frame: { x: 0, y: 0, width: 1280, height: 800 },
-  insets: { top: 0, left: 0, right: 0, bottom: 0 },
-};
-
 jest.mock('@/components/site/SiteFooter', () => {
   const { Text: MockText } = jest.requireActual('react-native');
   return { SiteFooter: () => <MockText>site footer</MockText> };
 });
 
+const SIGNED_OUT = error(401, 'not_authenticated', 'Please sign in.');
+
 describe('the web’s landing page', () => {
-  test('says what ClawPlay is, with a way to play, and ends with the site footer', async () => {
+  const first = (side: 'goat' | 'tiger') =>
+    game({
+      goat:
+        side === 'goat'
+          ? { id: GUEST.id, username: GUEST.username }
+          : { id: 'cpu', username: 'computer-easy' },
+      tiger:
+        side === 'tiger'
+          ? { id: GUEST.id, username: GUEST.username }
+          : { id: 'cpu', username: 'computer-easy' },
+      computer: 'easy',
+      server_time: new Date().toISOString(),
+    });
+
+  test('the game plays itself, and one tap on a side starts a game: playing accepts the terms', async () => {
     jest.replaceProperty(Platform, 'OS', 'web');
-    const push = jest.spyOn(router, 'push').mockImplementation(() => {});
-    await render(
-      <SafeAreaProvider initialMetrics={METRICS}>
-        <Welcome />
-      </SafeAreaProvider>,
-    );
-    // The rules and the ways to play are two tabs of one section.
+    let guest = false; // the web's session is a cookie: signed in once the guest is made
+    const { server, app } = await renderApp('/', {
+      routes: {
+        'POST /api/v1/auth/guest': () => {
+          guest = true;
+          return { status: 200, body: { user: GUEST } };
+        },
+        'GET /api/v1/me': () =>
+          guest ? { status: 200, body: GUEST } : error(401, 'not_authenticated', 'Please sign in.'),
+        'POST /api/v1/games/computer': { status: 201, body: first('tiger') },
+        'GET /api/v1/games/g1': { status: 200, body: first('tiger') },
+      },
+    });
+    expect(await screen.findByText(/^Tigers hunt\./)).toBeOnTheScreen();
+    // The board plays a short game by itself.
+    expect(screen.getByText('Four tigers wait in the corners.')).toBeOnTheScreen();
+    expect(
+      await screen.findByText('The goats come in, one at a time.', {}, { timeout: 4000 }),
+    ).toBeOnTheScreen();
+    // The rules, and what there is to do, both on the page; the site footer at the end.
     expect(screen.getByText('Goats trap')).toBeOnTheScreen();
-    expect(screen.queryByText('The computer')).toBeNull();
-    await fireEvent.press(screen.getByRole('radio', { name: 'Play your way' }));
     expect(screen.getByText('The computer')).toBeOnTheScreen();
-    expect(screen.queryByText('Goats trap')).toBeNull();
-    // Signing in and up are in the top bar, the terms and privacy in the footer (webChrome).
     expect(screen.getByText('site footer')).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull();
-    // One way to play: the hero's button, not a second one at the foot.
-    expect(screen.queryByRole('button', { name: 'Start playing' })).toBeNull();
-    await fireEvent.press(screen.getByRole('button', { name: 'Play now, no sign-up' }));
-    expect(push.mock.calls).toEqual([['/start']]);
+    // No separate page to accept the terms: the line under the choice says playing accepts.
+    expect(screen.getByText(/^By playing you agree to our/)).toBeOnTheScreen();
+    await press('Play the tigers');
+    await waitFor(() => expect(app.getPathname()).toBe('/game/g1'));
+    expect(server.lastTo('POST /api/v1/auth/guest').body).toEqual({
+      ...AGREED,
+      transport: 'cookie',
+    });
+    expect(server.lastTo('POST /api/v1/games/computer').body).toEqual({
+      level: 'easy',
+      side: 'tiger',
+      time_control: '5+3',
+    });
+  });
+
+  test('with reduced motion the board stays still', async () => {
+    jest.replaceProperty(Platform, 'OS', 'web');
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+    await renderApp('/', { routes: { 'GET /api/v1/me': SIGNED_OUT } });
+    expect(await screen.findByText(/^Four more captures and the tigers win/)).toBeOnTheScreen();
+  });
+
+  test('a refusal is shown beside the choice', async () => {
+    jest.replaceProperty(Platform, 'OS', 'web');
+    await renderApp('/', {
+      routes: {
+        'GET /api/v1/me': SIGNED_OUT,
+        'POST /api/v1/auth/guest': error(429, 'rate_limited', 'Try again soon.'),
+      },
+    });
+    await screen.findByRole('button', { name: 'Play the goats', busy: false });
+    await press('Play the goats');
+    expect(await screen.findByText('Try again soon.')).toBeOnTheScreen();
   });
 });

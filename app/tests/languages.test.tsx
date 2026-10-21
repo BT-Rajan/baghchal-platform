@@ -42,12 +42,14 @@ afterEach(() => {
 });
 
 test('the language is chosen in Settings and kept with the appearance', async () => {
-  const { server } = await open('/settings');
+  const { server, app } = await open('/settings');
   expect(await screen.findByRole('radio', { name: 'As this device (English)' })).toBeChecked();
   await fireEvent.press(screen.getByRole('radio', { name: 'தமிழ்' }));
   await waitFor(() => expect(server.lastTo(`PATCH ${URL}`).body).toEqual({ language: 'ta' }));
   await waitFor(() => expect(screen.getByRole('radio', { name: 'தமிழ்' })).toBeChecked());
   expect(screen.getByText(inLanguage('ta', 'Language'))).toBeOnTheScreen();
+  // Only the screen is drawn again, in its place: the app does not start over.
+  expect(app.getPathname()).toBe('/settings');
   // From now on the server answers in Tamil too.
   await waitFor(() => expect(server.requests.at(-1)?.headers['Accept-Language']).toBe('ta'));
 });

@@ -12,7 +12,7 @@ import type { Game } from '@/api/endpoints';
 import { describeError } from '@/api/errors';
 import { followAppFocus } from '@/api/focus';
 import { t } from '@/i18n';
-import { LanguageRoot } from '@/i18n/LanguageRoot';
+import { InLanguage, LanguageRoot, useLanguage } from '@/i18n/LanguageRoot';
 import { shouldRetry } from '@/api/retry';
 import { rememberReturn, takeReturn } from '@/auth/returnTo';
 import { SessionProvider, useSession } from '@/auth/session';
@@ -22,6 +22,7 @@ import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { SnackbarHost } from '@/components/Snackbar';
 import { Loading } from '@/components/States';
+import { BrandSplash } from '@/components/brand/BrandSplash';
 import { navigationBarStyle } from '@/components/navigationBar';
 import { statusBarStyle } from '@/components/statusBar';
 import { WebTopBar } from '@/components/site/WebTopBar';
@@ -34,6 +35,9 @@ import { colors } from '@/theme';
 // The splash screen (the icon on the brand colour) stays until we know whether someone is signed
 // in, so the app opens straight onto the right screen.
 void SplashScreen.preventAutoHideAsync().catch(() => {});
+
+/** How long the apps' brand splash shows at least (none in tests, which start at once). */
+const SPLASH_MS = process.env.NODE_ENV === 'test' ? 0 : 1200;
 
 /** In the apps, every screen's bar is the brand's dark bar, as Android and iOS apps have. */
 const APP_BAR =
@@ -65,7 +69,8 @@ function ScreenBars({
     <>
       <StatusBar style={statusBarStyle(route.name, options.headerShown === true)} />
       {Platform.OS === 'android' && <NavigationBar style={navigationBarStyle(route.name)} />}
-      {children}
+      {/* The tabs redraw each of their own screens (their layout does the same). */}
+      {route.name === '(tabs)' ? children : <InLanguage>{children}</InLanguage>}
     </>
   );
 }
@@ -107,12 +112,23 @@ function openGame(game: Game) {
 }
 
 function Routes() {
+  useLanguage(); // the bars' titles below, in a new language
   const { state, session } = useSession();
   const pathname = usePathname();
   const loading = state.status === 'loading';
+  // The apps open on the brand splash (the claw mark and the name) for a moment, then the
+  // first screen; the web goes straight to its page.
+  const app = Platform.OS !== 'web';
+  const [splashTimeUp, setSplashTimeUp] = useState(!app || SPLASH_MS === 0);
   useEffect(() => {
-    if (!loading) void SplashScreen.hideAsync().catch(() => {});
-  }, [loading]);
+    if (splashTimeUp) return;
+    const timer = setTimeout(() => setSplashTimeUp(true), SPLASH_MS);
+    return () => clearTimeout(timer);
+  }, [splashTimeUp]);
+  const splash = app && (loading || !splashTimeUp);
+  useEffect(() => {
+    if (!app && !loading) void SplashScreen.hideAsync().catch(() => {});
+  }, [app, loading]);
   const signedIn = state.status === 'signedIn';
   // An account with changed terms to agree to sees only that until done.
   const agreeing = signedIn && state.user.consents_needed.length > 0;
@@ -148,6 +164,10 @@ function Routes() {
     });
     return () => subscription.remove();
   }, [unreachable, session]);
+  if (splash) {
+    // The system splash (the icon only) gives way to this one once it is drawn.
+    return <BrandSplash onShown={() => void SplashScreen.hideAsync().catch(() => {})} />;
+  }
   if (loading) {
     return (
       <View style={styles.center}>

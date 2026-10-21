@@ -25,18 +25,31 @@ export function useAgreement() {
  * parent's or guardian's permission under 18). The one agreement every sign-up gives: the
  * account form, a guest's first game, and an account asked again after the texts change.
  */
-export function AgreementLine({ agreement }: { agreement: ReturnType<typeof useAgreement> }) {
+export function AgreementLine({
+  agreement,
+  playing = false,
+}: {
+  agreement: ReturnType<typeof useAgreement>;
+  /** Accepted by pressing a play button (the landing page), not an Accept button. */
+  playing?: boolean;
+}) {
   const { versions } = agreement;
+  const texts = { terms: t('Terms of service'), privacy: t('Privacy policy') };
   return (
     <>
       {versions.isError && (
         <ErrorState error={versions.error} onRetry={() => void versions.refetch()} />
       )}
       <Text style={styles.small}>
-        {t(
-          'By pressing Accept you agree to our {terms} and {privacy}, and confirm you are 13 or older (with a parent’s or guardian’s permission if you are under 18).',
-          { terms: t('Terms of service'), privacy: t('Privacy policy') },
-        )}
+        {playing
+          ? t(
+              'By playing you agree to our {terms} and {privacy}, and confirm you are 13 or older (with a parent’s or guardian’s permission if you are under 18).',
+              texts,
+            )
+          : t(
+              'By pressing Accept you agree to our {terms} and {privacy}, and confirm you are 13 or older (with a parent’s or guardian’s permission if you are under 18).',
+              texts,
+            )}
       </Text>
       {/* The two texts, each a finger-sized link of its own under the sentence. */}
       <View style={styles.links}>
