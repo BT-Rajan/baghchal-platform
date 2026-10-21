@@ -1,5 +1,5 @@
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
-import { Linking, Platform } from 'react-native';
+import { Platform } from 'react-native';
 
 import { renderApp } from './support/app';
 import { ME, error, type Route } from './support/fakeServer';
@@ -226,13 +226,14 @@ test('under 18: buying is refused, the parent is told, and the buttons turn off'
   });
 });
 
-test('the apps send buyers to the website, and make no order', async () => {
+test('the apps show what plans include, with no prices and nowhere to buy', async () => {
   jest.replaceProperty(Platform, 'OS', 'android');
-  const open_ = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
   const { server } = await open();
-  expect(await screen.findByText('Plans are bought on the ClawPlay website.')).toBeOnTheScreen();
-  expect(screen.queryByRole('button', { name: /^Buy ClawPlay/ })).toBeNull();
-  await fireEvent.press(screen.getByRole('button', { name: 'Buy on the website' }));
-  expect(open_).toHaveBeenCalledWith('http://localhost:8000/plans');
+  expect(await screen.findByRole('heading', { name: 'Plus' })).toBeOnTheScreen();
+  expect(screen.queryByText(/₹/)).toBeNull();
+  expect(screen.queryByText(/website/i)).toBeNull();
+  expect(screen.queryByText(/Razorpay/)).toBeNull();
+  expect(screen.queryByRole('button', { name: /^Buy/ })).toBeNull();
+  expect(screen.getByText(/^Plus lasts 45 finished games or a month/)).toBeOnTheScreen();
   expect(server.requests.some((r) => r.path === '/api/v1/payments/checkout')).toBe(false);
 });

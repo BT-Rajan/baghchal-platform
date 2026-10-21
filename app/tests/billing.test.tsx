@@ -31,13 +31,14 @@ describe('plans', () => {
     await press('See Plus and Pro');
     await waitFor(() => expect(app.getPathname()).toBe('/plans'));
     expect(await screen.findByRole('heading', { name: 'Plus' })).toBeOnTheScreen();
-    expect(screen.getByText('₹149 for 45 games or a month')).toBeOnTheScreen();
+    // In the apps, what each plan includes, not what it costs (the website sells them).
+    expect(screen.queryByText('₹149 for 45 games or a month')).toBeNull();
     // The table of what each includes is shut until asked for.
     expect(screen.queryByText('Opening and endgame trainer')).toBeNull();
     await press('Compare the plans');
     expect(screen.getByText('Opening and endgame trainer')).toBeOnTheScreen();
     expect(screen.getAllByLabelText('Pro: included').length).toBeGreaterThan(3);
-    expect(screen.getAllByText('2 months free when you pay for a year')).toHaveLength(1);
+    expect(screen.queryByText('2 months free when you pay for a year')).toBeNull();
     expect(screen.getByLabelText('Plus: 5 a day')).toBeOnTheScreen();
     expect(screen.getByLabelText('Free, your plan')).toBeOnTheScreen();
   });

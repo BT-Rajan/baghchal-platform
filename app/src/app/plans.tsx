@@ -1,4 +1,4 @@
-import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import type { MyPlan, Period, PlanInfo } from '@/api/endpoints';
 import { comparisonRows, myPlanText, PLAN_NAMES, priceText, yearlySaving } from '@/billing/format';
@@ -18,7 +18,6 @@ import {
   thanksText,
 } from '@/payments/format';
 import { useBuy, usePayments } from '@/payments/hooks';
-import { WEB_URL } from '@/config';
 import { colors, radius, spacing, type } from '@/theme';
 
 /**
@@ -34,7 +33,8 @@ export default function Plans() {
   const buyError = buy.error === null ? null : buyErrorText(buy.error);
   // Under 18: the server told their parent; buying stays off.
   const minor = refusedAsMinor(buy.error);
-  // The apps do not sell plans (Razorpay Checkout runs on the website only): they send there.
+  // The apps do not sell plans, nor point to where they are sold (app stores forbid it): they
+  // show what each plan includes. Buying is on the website, which says so itself.
   const inApp = Platform.OS !== 'web';
   return (
     <Screen align="top" wide>
@@ -77,25 +77,18 @@ export default function Plans() {
                       : null
                   }
                   buying={buy.isPending || minor}
+                  priced={!inApp}
                 />
               );
             })}
           </View>
-          {inApp && payments.data.enabled && (
-            <>
-              <Notice tone="info">Plans are bought on the ClawPlay website.</Notice>
-              <Button
-                title="Buy on the website"
-                variant="secondary"
-                onPress={() => void Linking.openURL(`${WEB_URL}/plans`)}
-              />
-            </>
-          )}
           <Comparison plans={plans.data} mine={mine.data} />
           <Hint>
-            {payments.data.enabled
-              ? 'Payments are taken by Razorpay: cards, UPI, net banking and wallets. Plus lasts 45 finished games or a month, whichever comes first; Pro has no limits. Plans are paid in advance and never renew by themselves; buying again adds on. Pro starts at once, and Plus you had left follows it; Plus bought while you have Pro starts when Pro ends. Players under 18 cannot buy plans: their parent or guardian is told instead.'
-              : 'Paying online is coming soon. Until then, ClawPlay can add a plan to your account.'}
+            {inApp
+              ? 'Plus lasts 45 finished games or a month, whichever comes first; Pro has no limits.'
+              : payments.data.enabled
+                ? 'Payments are taken by Razorpay: cards, UPI, net banking and wallets. Plus lasts 45 finished games or a month, whichever comes first; Pro has no limits. Plans are paid in advance and never renew by themselves; buying again adds on. Pro starts at once, and Plus you had left follows it; Plus bought while you have Pro starts when Pro ends. Players under 18 cannot buy plans: their parent or guardian is told instead.'
+                : 'Paying online is coming soon. Until then, ClawPlay can add a plan to your account.'}
           </Hint>
           {payments.data.payments.length > 0 && (
             <>
@@ -121,6 +114,7 @@ function PlanColumn({
   cheaper,
   onBuy,
   buying,
+  priced,
 }: {
   plan: PlanInfo;
   mine: MyPlan;
@@ -129,6 +123,8 @@ function PlanColumn({
   /** Null where this plan cannot be bought (Free, or payments off). */
   onBuy: ((period: Period) => void) | null;
   buying: boolean;
+  /** Prices shown (on the website; the apps show what a plan includes, not what it costs). */
+  priced: boolean;
 }) {
   const current = plan.plan === mine.plan;
   const saving = yearlySaving(plan);
@@ -142,8 +138,8 @@ function PlanColumn({
           {PLAN_NAMES[plan.plan]}
         </Text>
         {current && <Text style={styles.badge}>Your plan</Text>}
-        <Text style={styles.price}>{priceText(plan)}</Text>
-        {saving !== null && <Text style={styles.saving}>{saving}</Text>}
+        {priced && <Text style={styles.price}>{priceText(plan)}</Text>}
+        {priced && saving !== null && <Text style={styles.saving}>{saving}</Text>}
         {onBuy !== null && cheaper && (
           <Hint>{`Starts when your ${PLAN_NAMES[mine.plan]} ends, so none of it is spent underneath it.`}</Hint>
         )}

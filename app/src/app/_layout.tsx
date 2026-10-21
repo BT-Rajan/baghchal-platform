@@ -168,6 +168,11 @@ function Routes() {
             name="privacy"
             options={{ headerShown: Platform.OS !== 'web', title: 'Privacy policy' }}
           />
+          {/* How to delete an account, for anyone (app stores ask for such a page). */}
+          <Stack.Screen
+            name="delete-account"
+            options={{ headerShown: Platform.OS !== 'web', title: 'Delete your account' }}
+          />
         </Stack>
       </BannersOnScreens.Provider>
     </View>

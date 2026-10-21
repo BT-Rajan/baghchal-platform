@@ -45,7 +45,7 @@ As far as the law allows, we are not liable for indirect or consequential losses
 
 ## Ending
 
-You can delete your account at any time (*Me → Account*). We may close accounts that break these terms. Sections that by their nature should survive (such as liability and disputes) survive.
+You can delete your account at any time (*Me → Settings → Delete account*). We may close accounts that break these terms. Sections that by their nature should survive (such as liability and disputes) survive.
 
 ## Changes
 

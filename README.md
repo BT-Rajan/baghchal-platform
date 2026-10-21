@@ -314,7 +314,7 @@ To take payments:
    keys are set, the plans page says paying online is coming soon.
 5. Try a payment with Razorpay's test cards, then enter the live keys.
 
-The apps for Android and iOS do not sell plans: they send players to the website to buy.
+The apps for Android and iOS do not sell plans or say where they are sold (app store rules): they show what each plan includes. Plans are bought on the website. How to delete an account is at `/delete-account`, for anyone (app stores ask for it).
 
 **Challenges by link** (`lobby/`, free): a challenge with no opponent named, sent as a link to
 a friend who may not be on ClawPlay yet. It is casual, with the challenger's time control and

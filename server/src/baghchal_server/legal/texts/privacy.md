@@ -88,9 +88,9 @@ Our servers are in [[hosting_location]]. Our email and hosting providers may pro
 
 Wherever you live, you can:
 
-- **see your data**: download everything about your account from *Me → Account → Download my data*;
+- **see your data**: download everything about your account from *Me → Settings → Download my data*;
 - **correct it**: change your email address and password in the app; for anything else, write to us;
-- **delete it**: delete your account from *Me → Account*, or ask us;
+- **delete it**: delete your account from *Me → Settings → Delete account*, or ask us;
 - **nominate someone** to exercise these rights for you if you die or become unable to (India): write to us;
 - **complain to us**: write to our Grievance Officer; we acknowledge within 24 hours and answer within 15 days.
 
