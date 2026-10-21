@@ -4,6 +4,7 @@
  * details; it gets back a payment id signed by Razorpay, which the server checks.
  */
 import type { Checkout } from '@/api/endpoints';
+import { t } from '@/i18n';
 import { colors } from '@/theme';
 
 export const SCRIPT = 'https://checkout.razorpay.com/v1/checkout.js';
@@ -53,7 +54,7 @@ interface Page {
 /** The window closed without a payment; `failure` says why the last attempt failed, if one did. */
 export class CheckoutClosed extends Error {
   constructor(readonly failure: string | null) {
-    super(failure ?? 'Payment cancelled.');
+    super(failure ?? t('Payment cancelled.'));
     this.name = 'CheckoutClosed';
   }
 }
@@ -65,7 +66,7 @@ export function loadRazorpay(page: Page = globalThis as Page): Promise<RazorpayC
   if (page.Razorpay !== undefined) return Promise.resolve(page.Razorpay);
   const doc = page.document;
   if (doc === undefined) {
-    return Promise.reject(new Error('Paying works on the ClawPlay website for now.'));
+    return Promise.reject(new Error(t('Paying works on the ClawPlay website for now.')));
   }
   loading ??= new Promise<RazorpayClass>((resolve, reject) => {
     const script = doc.createElement('script');
@@ -74,10 +75,10 @@ export function loadRazorpay(page: Page = globalThis as Page): Promise<RazorpayC
     script.onload = () =>
       page.Razorpay !== undefined
         ? resolve(page.Razorpay)
-        : reject(new Error('Razorpay could not be loaded.'));
+        : reject(new Error(t('Razorpay could not be loaded.')));
     script.onerror = () => {
       loading = null; // try again next time
-      reject(new Error('Razorpay could not be loaded. Check your connection and try again.'));
+      reject(new Error(t('Razorpay could not be loaded. Check your connection and try again.')));
     };
     doc.head.appendChild(script);
   });

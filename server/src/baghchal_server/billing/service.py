@@ -161,7 +161,13 @@ async def require(
     found = await entitlements(db, user_id, now)
     if not found.has(feature):
         plan = Plan.PLUS if feature in FEATURES[Plan.PLUS] else Plan.PRO
-        raise AppError(403, "upgrade_required", f"{what} comes with ClawPlay {NAMES[plan]}.")
+        raise AppError(
+            403,
+            "upgrade_required",
+            "{what} comes with ClawPlay {plan}.",
+            what=what,
+            plan=NAMES[plan],
+        )
     return found
 
 

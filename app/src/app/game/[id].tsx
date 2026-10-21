@@ -49,6 +49,7 @@ import { useGame, useGameAction, useMove, useSendEmote, useShownEmote } from '@/
 import { candidateMoves, premoveDecision } from '@/game/premove';
 import { boardSize, gameLayout } from '@/game/layout';
 import { TIME_CONTROLS } from '@/lobby/format';
+import { t } from '@/i18n';
 import { useCreateChallenge, useOpenStartedGame } from '@/lobby/hooks';
 import { colors, spacing, type } from '@/theme';
 
@@ -112,11 +113,11 @@ export default function GameScreen() {
   if (game === undefined) {
     return (
       <Screen>
-        <Stack.Screen options={{ title: 'Game' }} />
+        <Stack.Screen options={{ title: t('Game') }} />
         {query.error !== null ? (
           <ErrorState error={query.error} onRetry={() => void query.refetch()} />
         ) : (
-          <Loading label="Loading the game" />
+          <Loading label={t('Loading the game')} />
         )}
       </Screen>
     );
@@ -146,7 +147,7 @@ export default function GameScreen() {
 
   const board =
     position === null ? (
-      <Notice tone="error">This position could not be shown.</Notice>
+      <Notice tone="error">{t('This position could not be shown.')}</Notice>
     ) : (
       <Board
         key={`${game.ply}-${ply}`}
@@ -194,23 +195,27 @@ export default function GameScreen() {
               <PlayAgain game={game} mine={mine} />
             ))}
           <Button
-            title="Back to the lobby"
+            title={t('Back to the lobby')}
             variant="secondary"
             onPress={() => router.navigate('/')}
           />
         </View>
       )}
       {droppedPremove !== null && (
-        <Notice tone="info">{`Your premove ${droppedPremove} is no longer possible: make your move.`}</Notice>
+        <Notice tone="info">
+          {t('Your premove {move} is no longer possible: make your move.', {
+            move: droppedPremove,
+          })}
+        </Notice>
       )}
       {waitingPremove !== null && (
         <View style={styles.premove}>
           <Text style={styles.premoveText}>
-            {`Premove: ${waitingPremove}, played when it is your turn`}
+            {t('Premove: {move}, played when it is your turn', { move: waitingPremove })}
           </Text>
           <Button
-            title="Cancel the premove"
-            label="Cancel"
+            title={t('Cancel the premove')}
+            label={t('Cancel')}
             variant="secondary"
             compact
             onPress={() => setPremove(null)}
@@ -232,7 +237,7 @@ export default function GameScreen() {
           {soundSupported() && game.status === 'active' && (
             <IconButton
               icon={soundOn ? 'sound' : 'mute'}
-              title={soundOn ? 'Turn sounds off' : 'Turn sounds on'}
+              title={soundOn ? t('Turn sounds off') : t('Turn sounds on')}
               selected={soundOn}
               onPress={() => chooseLook.mutate({ sounds_on: !soundOn })}
             />
@@ -265,14 +270,14 @@ export default function GameScreen() {
           onAction={(a) => action.mutate(a)}
         />
       )}
-      <SectionTitle>Moves</SectionTitle>
+      <SectionTitle>{t('Moves')}</SectionTitle>
       <MoveList
         moves={annotate(game.moves, analysis.data?.moves ?? [])}
         {...(replaying && { current: ply, onShow: setShown })}
       />
       {game.status === 'finished' && mine !== null && !isComputer(game, other(mine)) && (
         <Button
-          title={`Report ${playerOf(game, other(mine)).username}`}
+          title={t('Report {name}', { name: playerOf(game, other(mine)).username })}
           variant="secondary"
           compact
           onPress={() =>
@@ -285,12 +290,19 @@ export default function GameScreen() {
 
   return (
     <Screen align="top" wide={wide}>
-      <Stack.Screen options={{ title: `${nameOf(game, 'goat')} vs ${nameOf(game, 'tiger')}` }} />
+      <Stack.Screen
+        options={{
+          title: t('{goat} vs {tiger}', {
+            goat: nameOf(game, 'goat'),
+            tiger: nameOf(game, 'tiger'),
+          }),
+        }}
+      />
       {leaving !== null && !mayLeave && (
         <Confirm
-          question="Leave the game? It goes on without you, and your clock keeps running."
-          confirmTitle="Leave the game"
-          cancelTitle="Keep playing"
+          question={t('Leave the game? It goes on without you, and your clock keeps running.')}
+          confirmTitle={t('Leave the game')}
+          cancelTitle={t('Keep playing')}
           onConfirm={() => setMayLeave(true)}
           onCancel={() => setLeaving(null)}
         />
@@ -325,8 +337,8 @@ function Rematch({ game, mine }: { game: Game; mine: Piece }) {
     <>
       {create.error !== null && <Notice tone="error">{describeError(create.error)}</Notice>}
       <Button
-        title={`Rematch ${opponent}`}
-        label="Rematch (casual, sides swapped)"
+        title={t('Rematch {name}', { name: opponent })}
+        label={t('Rematch (casual, sides swapped)')}
         busy={create.isPending}
         onPress={() =>
           create.mutate(
@@ -361,8 +373,8 @@ function QuickMessages({
         {EMOTES.map((e) => (
           <Button
             key={e.value}
-            title={`Say “${e.label}”`}
-            label={e.label}
+            title={t('Say “{message}”', { message: t(e.label) })}
+            label={t(e.label)}
             variant="secondary"
             compact
             disabled={send.isPending}
@@ -371,7 +383,7 @@ function QuickMessages({
         ))}
         <IconButton
           icon="chat"
-          title={shown ? "Hide your opponent's messages" : "Show your opponent's messages"}
+          title={shown ? t("Hide your opponent's messages") : t("Show your opponent's messages")}
           selected={shown}
           onPress={onToggle}
         />
@@ -394,11 +406,11 @@ function Replay({
   return (
     <View style={styles.replay}>
       <Text style={styles.counts}>
-        {ply === 0 ? 'Start position' : `After move ${ply} of ${total}`}
+        {ply === 0 ? t('Start position') : t('After move {ply} of {total}', { ply, total })}
       </Text>
       <View style={styles.replayButtons}>
         <Button
-          title="Start position"
+          title={t('Start position')}
           label="⏮"
           compact
           variant="secondary"
@@ -406,7 +418,7 @@ function Replay({
           onPress={() => onShow(0)}
         />
         <Button
-          title="Previous move"
+          title={t('Previous move')}
           label="◀"
           compact
           variant="secondary"
@@ -414,7 +426,7 @@ function Replay({
           onPress={() => onShow(ply - 1)}
         />
         <Button
-          title="Next move"
+          title={t('Next move')}
           label="▶"
           compact
           variant="secondary"
@@ -422,7 +434,7 @@ function Replay({
           onPress={() => onShow(ply + 1)}
         />
         <Button
-          title="Final position"
+          title={t('Final position')}
           label="⏭"
           compact
           variant="secondary"
@@ -452,8 +464,8 @@ function PlayAgain({ game, mine }: { game: Game; mine: Piece }) {
     <>
       {start.error !== null && <Notice tone="error">{describeError(start.error)}</Notice>}
       <Button
-        title="Play the computer again"
-        label="Play again (sides swapped)"
+        title={t('Play the computer again')}
+        label={t('Play again (sides swapped)')}
         busy={start.isPending}
         onPress={() => start.mutate()}
       />
@@ -482,8 +494,12 @@ function Status({ game, mine }: { game: Game; mine: Piece | null }) {
         >
           {firstMove === null
             ? turn
-            : `${turn} · ${firstMove} s to make a first move` +
-              (game.match?.game === 2 ? ', or it counts as a loss' : '')}
+            : game.match?.game === 2
+              ? t('{turn} · {seconds} s to make a first move, or it counts as a loss', {
+                  turn,
+                  seconds: firstMove,
+                })
+              : t('{turn} · {seconds} s to make a first move', { turn, seconds: firstMove })}
         </Text>
       )}
       {match !== null && (
@@ -492,7 +508,7 @@ function Status({ game, mine }: { game: Game; mine: Piece | null }) {
           {match.score !== '' && <Text style={styles.matchScore}>{match.score}</Text>}
           {match.otherGameId !== null && (
             <Button
-              title={game.match?.game === 1 ? 'Go to game 2' : 'Back to game 1'}
+              title={game.match?.game === 1 ? t('Go to game 2') : t('Back to game 1')}
               variant="secondary"
               onPress={() => router.replace(`/game/${match.otherGameId}`)}
             />

@@ -1,6 +1,7 @@
 import { Link } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { t } from '@/i18n';
 import { colors, spacing, type } from '@/theme';
 
 /**
@@ -10,13 +11,13 @@ import { colors, spacing, type } from '@/theme';
 export function SiteFooter({ year = new Date().getFullYear() }: { year?: number }) {
   return (
     <View role="contentinfo" style={styles.footer}>
-      <Text style={styles.text}>{`© ${year} ClawPlay. All rights reserved.`}</Text>
+      <Text style={styles.text}>{t('© {year} ClawPlay. All rights reserved.', { year })}</Text>
       <View style={styles.links}>
         <Link href="/terms" style={styles.link}>
-          Terms of service
+          {t('Terms of service')}
         </Link>
         <Link href="/privacy" style={styles.link}>
-          Privacy policy
+          {t('Privacy policy')}
         </Link>
       </View>
     </View>

@@ -255,20 +255,24 @@ async def create_challenge(
         raise AppError(
             409,
             "guest_plays_casual",
-            f"{opponent.username} is a guest and plays casual games only.",
+            "{name} is a guest and plays casual games only.",
+            name=opponent.username,
         )
     # Before anything that would tell a blocked player whether the other is online.
     if await has_blocked(db, challenger.id, opponent.id):
         raise AppError(
             403,
             "player_blocked",
-            f"You have blocked {opponent.username}. Unblock them to challenge them.",
+            "You have blocked {name}. Unblock them to challenge them.",
+            name=opponent.username,
         )
     if await has_blocked(db, opponent.id, challenger.id) or not plays_people(opponent, now):
-        raise AppError(403, "challenge_refused", f"You cannot challenge {opponent.username}.")
+        raise AppError(
+            403, "challenge_refused", "You cannot challenge {name}.", name=opponent.username
+        )
     await check_abort_cooldown(db, challenger.id, now)
     if not await presence.online([opponent.id]):
-        raise AppError(409, "player_offline", f"{opponent.username} is not online.")
+        raise AppError(409, "player_offline", "{name} is not online.", name=opponent.username)
     if await games.busy(db, [challenger.id, opponent.id]):
         raise busy_error()
     if data.rated:
@@ -314,14 +318,23 @@ async def create_challenge(
             raise AppError(
                 409,
                 "challenge_incoming",
-                f"{opponent_name} has already challenged you. Accept their challenge instead.",
+                "{name} has already challenged you. Accept their challenge instead.",
+                name=opponent_name,
             ) from None
         raise AppError(
             409,
             "challenge_exists",
-            f"You have already challenged {opponent_name}. Wait for their answer.",
+            "You have already challenged {name}. Wait for their answer.",
+            name=opponent_name,
         ) from None
     return challenge
+
+
+NOT_ALLOWED: Final = {
+    "accept": "You cannot accept this challenge.",
+    "decline": "You cannot decline this challenge.",
+    "cancel": "You cannot cancel this challenge.",
+}
 
 
 async def respond(
@@ -366,7 +379,7 @@ async def respond(
     if challenge is None or user_id not in (challenge.challenger_id, challenge.opponent_id):
         raise AppError(404, "challenge_not_found", "No such challenge.")
     if (response == "cancel") != (user_id == challenge.challenger_id):
-        raise AppError(403, "not_allowed", f"You cannot {response} this challenge.")
+        raise AppError(403, "not_allowed", NOT_ALLOWED[response])
     raise AppError(409, "challenge_closed", "This challenge is no longer open.")
 
 
@@ -399,7 +412,10 @@ async def accept_link(
         raise AppError(403, "challenge_refused", "You cannot accept this challenge.")
     if not await presence.online([challenger.id]):
         raise AppError(
-            409, "player_offline", f"{challenger.username} is not online. Try again when they are."
+            409,
+            "player_offline",
+            "{name} is not online. Try again when they are.",
+            name=challenger.username,
         )
     await check_abort_cooldown(db, user.id, now)
     claimed = await db.execute(
@@ -432,22 +448,34 @@ async def check_abort_cooldown(db: AsyncSession, user_id: uuid.UUID, now: dateti
         raise AppError(
             429,
             "abort_cooldown",
-            f"You have aborted {games.ABORT_LIMIT} games in the last 24 hours (not making a "
-            f"first move counts too). You can start new games again in {minutes} "
-            f"{'minute' if minutes == 1 else 'minutes'}.",
+            (
+                "You have aborted {limit} games in the last 24 hours (not making a first move "
+                "counts too). You can start new games again in 1 minute."
+                if minutes == 1
+                else "You have aborted {limit} games in the last 24 hours (not making a first "
+                "move counts too). You can start new games again in {minutes} minutes."
+            ),
             headers={"Retry-After": str(math.ceil(wait.total_seconds()))},
+            limit=games.ABORT_LIMIT,
+            minutes=minutes,
         )
 
 
 def _rated_limit(opponent: str, wait: timedelta) -> AppError:
     hours = math.ceil(wait.total_seconds() / 3600)
-    when = "in under an hour" if hours <= 1 else f"in {hours} hours"
     return AppError(
         429,
         "rated_match_limit",
-        f"You have already played a rated match against {opponent} in the last 24 hours. "
-        f"You can play another {when}; casual games are always open.",
+        (
+            "You have already played a rated match against {opponent} in the last 24 hours. "
+            "You can play another in under an hour; casual games are always open."
+            if hours <= 1
+            else "You have already played a rated match against {opponent} in the last 24 "
+            "hours. You can play another in {hours} hours; casual games are always open."
+        ),
         headers={"Retry-After": str(math.ceil(wait.total_seconds()))},
+        opponent=opponent,
+        hours=hours,
     )
 
 

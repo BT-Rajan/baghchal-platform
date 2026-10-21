@@ -30,6 +30,7 @@ test('what the engine thought of a move', () => {
 test('scores in words', () => {
   expect(scoreText(99)).toBe('About even');
   expect(scoreText(-2500)).toBe('Goats ahead (+2.5)');
+  expect(scoreText(1200)).toBe('Tigers ahead (+1.2)');
   expect(scoreText(5000)).toBe('Tigers winning');
   expect(scoreText(-5000)).toBe('Goats winning');
 });
@@ -46,6 +47,7 @@ test("each side's tally", () => {
   ];
   expect(summary(reviews, 'goat')).toBe('2 good · 2 inaccuracies · 2 mistakes · 1 blunder');
   expect(summary(reviews, 'tiger')).toBe('No moves');
+  expect(summary([review({ side: 'tiger' })], 'tiger')).toBe('1 best');
 });
 
 test('the next mistake', () => {

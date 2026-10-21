@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 
 import { useMe } from '@/auth/session';
+import { t } from '@/i18n';
 import { searchPrefix } from '@/lobby/format';
 import { useOnlinePlayers, usePlayerSearch } from '@/lobby/hooks';
 
@@ -25,13 +26,13 @@ export function PlayerSearch({ nobodyElse }: { nobodyElse: ReactNode }) {
   return (
     <>
       <SectionTitle>
-        {prefix === null ? 'Online now' : `Players starting with “${prefix}”`}
+        {prefix === null ? t('Online now') : t('Players starting with “{prefix}”', { prefix })}
       </SectionTitle>
       <TextField
-        label="Find a player"
+        label={t('Find a player')}
         value={search}
         onChangeText={setSearch}
-        placeholder="Username"
+        placeholder={t('Username')}
         autoCapitalize="none"
         autoCorrect={false}
         maxLength={20}
@@ -39,12 +40,12 @@ export function PlayerSearch({ nobodyElse }: { nobodyElse: ReactNode }) {
       {players.error !== null ? (
         <ErrorState error={players.error} onRetry={() => void players.refetch()} />
       ) : players.data === undefined ? (
-        <Loading label="Loading players" />
+        <Loading label={t('Loading players')} />
       ) : players.data.length === 0 ? (
         prefix === null ? (
           nobodyElse
         ) : (
-          <Hint>No players found.</Hint>
+          <Hint>{t('No players found.')}</Hint>
         )
       ) : (
         <>

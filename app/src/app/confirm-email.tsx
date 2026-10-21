@@ -9,6 +9,7 @@ import { isLinkToken } from '@/auth/validation';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { TextLink } from '@/components/TextLink';
+import { t } from '@/i18n';
 import { colors } from '@/theme';
 
 /** Opened from the link sent to a new email address: `/confirm-email?token=…`. */
@@ -35,12 +36,12 @@ export default function ConfirmEmail() {
   }, [valid, token, confirm]);
 
   const home = state.status === 'signedIn' ? '/me' : '/sign-in';
-  const next = state.status === 'signedIn' ? 'Back to your account' : 'Sign in';
+  const next = state.status === 'signedIn' ? t('Back to your account') : t('Sign in');
   if (!valid || confirm.isError) {
     return (
-      <Screen title="Confirm your new email" brand>
+      <Screen title={t('Confirm your new email')} brand>
         <Notice tone="error">
-          {valid ? describeError(confirm.error) : 'This link is invalid or has expired.'}
+          {valid ? describeError(confirm.error) : t('This link is invalid or has expired.')}
         </Notice>
         <TextLink href={home}>{next}</TextLink>
       </Screen>
@@ -48,14 +49,16 @@ export default function ConfirmEmail() {
   }
   if (confirm.isSuccess) {
     return (
-      <Screen title="Email address changed" brand>
-        <Notice tone="success">{`Your account now uses ${confirm.data.email}.`}</Notice>
+      <Screen title={t('Email address changed')} brand>
+        <Notice tone="success">
+          {t('Your account now uses {email}.', { email: confirm.data.email })}
+        </Notice>
         <TextLink href={home}>{next}</TextLink>
       </Screen>
     );
   }
   return (
-    <Screen title="Confirming your new email…" brand>
+    <Screen title={t('Confirming your new email…')} brand>
       <ActivityIndicator color={colors.accent} size="large" />
     </Screen>
   );

@@ -2,6 +2,8 @@
  * The one HTTP client. It sets the base URL, JSON, credentials (a cookie on web, a bearer
  * token in apps) and a timeout, and turns every failure into an `ApiError`.
  */
+import { language } from '@/i18n';
+
 import { ApiError, BAD_RESPONSE, NETWORK_ERROR, TIMEOUT, errorFromBody } from './errors';
 
 export type Transport = 'cookie' | 'bearer';
@@ -63,7 +65,11 @@ export function createClient(options: ClientOptions): Client {
 
   async function request<T>(method: string, path: string, opts: RequestOptions): Promise<T> {
     const { token, epoch } = options.auth();
-    const headers: Record<string, string> = { Accept: 'application/json' };
+    // Error messages come back in the app's language.
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'Accept-Language': language(),
+    };
     if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
     if (options.transport === 'bearer' && token !== null) headers.Authorization = `Bearer ${token}`;
 

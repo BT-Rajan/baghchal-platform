@@ -59,7 +59,10 @@ async def create(db: AsyncSession, now: datetime, host: User, data: TournamentIn
     )
     if len(hosting.all()) >= HOSTING:
         raise AppError(
-            409, "too_many_tournaments", f"You are hosting {HOSTING} tournaments; finish one first."
+            409,
+            "too_many_tournaments",
+            "You are hosting {limit} tournaments; finish one first.",
+            limit=HOSTING,
         )
     tournament = Tournament(
         id=uuid.uuid4(),
@@ -218,7 +221,10 @@ async def start(db: AsyncSession, now: datetime, user_id: uuid.UUID, code: str) 
     players = await _players(db, tournament)
     if len(players) < MIN_PLAYERS:
         raise AppError(
-            409, "not_enough_players", f"A tournament needs at least {MIN_PLAYERS} players."
+            409,
+            "not_enough_players",
+            "A tournament needs at least {count} players.",
+            count=MIN_PLAYERS,
         )
     ratings = await _ratings(db, tournament, players)
     claimed = await db.execute(  # pressed twice (two devices): round 1 is drawn up once

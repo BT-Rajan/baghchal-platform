@@ -10,6 +10,7 @@ import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
 import { TextField } from '@/components/TextField';
+import { t } from '@/i18n';
 import { keysProblem, keysText } from '@/payments/format';
 import { useAdminCode, useChangePaymentKeys, usePaymentKeys } from '@/payments/hooks';
 import { colors, type } from '@/theme';
@@ -24,7 +25,7 @@ export default function PaymentsAdmin() {
       ) : keys.error !== null ? (
         <ErrorState error={keys.error} onRetry={() => void keys.refetch()} />
       ) : keys.data === undefined ? (
-        <Loading label="Loading the payment keys" />
+        <Loading label={t('Loading the payment keys')} />
       ) : (
         <KeysForm page={keys.data} />
       )}
@@ -39,14 +40,15 @@ function CodeStep() {
   return (
     <>
       <Hint>
-        The payment keys need a second step: we email you a 6-digit code. It opens this page on this
-        device for 15 minutes.
+        {t(
+          'The payment keys need a second step: we email you a 6-digit code. It opens this page on this device for 15 minutes.',
+        )}
       </Hint>
-      {send.isSuccess && <Notice tone="success">We have emailed you a code.</Notice>}
+      {send.isSuccess && <Notice tone="success">{t('We have emailed you a code.')}</Notice>}
       {error !== null && <Notice tone="error">{describeError(error)}</Notice>}
       {send.isSuccess && (
         <TextField
-          label="Code"
+          label={t('Code')}
           value={code}
           onChangeText={(text) => setCode(text.replace(/\D/g, '').slice(0, 6))}
           keyboardType="number-pad"
@@ -57,20 +59,20 @@ function CodeStep() {
       {send.isSuccess ? (
         <>
           <Button
-            title="Open the payment keys"
+            title={t('Open the payment keys')}
             busy={check.isPending}
             disabled={code.length !== 6}
             onPress={() => check.mutate(code)}
           />
           <Button
-            title="Send another code"
+            title={t('Send another code')}
             variant="secondary"
             busy={send.isPending}
             onPress={() => send.mutate()}
           />
         </>
       ) : (
-        <Button title="Email me a code" busy={send.isPending} onPress={() => send.mutate()} />
+        <Button title={t('Email me a code')} busy={send.isPending} onPress={() => send.mutate()} />
       )}
     </>
   );
@@ -103,44 +105,50 @@ function KeysForm({ page }: { page: PaymentKeys }) {
       <Notice tone={page.on ? 'success' : 'info'}>{keysText(page)}</Notice>
       {!page.can_store && (
         <Notice tone="error">
-          Set BAGHCHAL_SECRETS_KEY on the server and restart it first: it encrypts the keys.
+          {t('Set BAGHCHAL_SECRETS_KEY on the server and restart it first: it encrypts the keys.')}
         </Notice>
       )}
       {problem !== null && <Notice tone="error">{problem}</Notice>}
       {change.error !== null && <Notice tone="error">{describeError(change.error)}</Notice>}
-      <SectionTitle>{page.on ? 'Change the keys' : 'Enter the keys'}</SectionTitle>
+      <SectionTitle>{page.on ? t('Change the keys') : t('Enter the keys')}</SectionTitle>
       <Hint>
-        From the Razorpay Dashboard: Account & Settings → API Keys. Use the test keys (rzp_test_…)
-        first. Every admin is emailed when the keys change.
+        {t(
+          'From the Razorpay Dashboard: Account & Settings → API Keys. Use the test keys (rzp_test_…) first. Every admin is emailed when the keys change.',
+        )}
       </Hint>
       <TextField
-        label="Key id"
+        label={t('Key id')}
         value={keyId}
         onChangeText={setKeyId}
         autoCapitalize="none"
         autoCorrect={false}
         placeholder="rzp_live_…"
       />
-      <TextField label="Key secret" value={keySecret} onChangeText={setKeySecret} secureTextEntry />
       <TextField
-        label="Webhook secret"
+        label={t('Key secret')}
+        value={keySecret}
+        onChangeText={setKeySecret}
+        secureTextEntry
+      />
+      <TextField
+        label={t('Webhook secret')}
         value={webhookSecret}
         onChangeText={setWebhookSecret}
         secureTextEntry
       />
       <Card>
-        <Text style={styles.label}>The webhook</Text>
+        <Text style={styles.label}>{t('The webhook')}</Text>
         <Text style={styles.text} selectable>
           {page.webhook_url}
         </Text>
         <Hint>
-          In Account & Settings → Webhooks, send the events payment.captured, order.paid,
-          payment.authorized, payment.failed, refund.processed and payment.dispute.lost to this
-          address, with the webhook secret above.
+          {t(
+            'In Account & Settings → Webhooks, send the events payment.captured, order.paid, payment.authorized, payment.failed, refund.processed and payment.dispute.lost to this address, with the webhook secret above.',
+          )}
         </Hint>
       </Card>
       <Button
-        title="Save the keys"
+        title={t('Save the keys')}
         busy={change.isPending}
         disabled={!page.can_store}
         onPress={save}
@@ -148,15 +156,17 @@ function KeysForm({ page }: { page: PaymentKeys }) {
       {page.on &&
         (confirming ? (
           <Confirm
-            question="Turn payments off? Players cannot buy plans until keys are entered again."
-            confirmTitle="Turn payments off"
+            question={t(
+              'Turn payments off? Players cannot buy plans until keys are entered again.',
+            )}
+            confirmTitle={t('Turn payments off')}
             busy={change.isPending}
             onConfirm={() => change.mutate(null, { onSettled: () => setConfirming(false) })}
             onCancel={() => setConfirming(false)}
           />
         ) : (
           <Button
-            title="Turn payments off"
+            title={t('Turn payments off')}
             variant="secondary"
             onPress={() => setConfirming(true)}
           />

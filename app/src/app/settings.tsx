@@ -13,8 +13,10 @@ import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Disclosure } from '@/components/Disclosure';
 import { FeatureLink } from '@/components/FeatureLink';
 import { GuestBanner } from '@/components/GuestBanner';
+import { LanguagePicker } from '@/components/LanguagePicker';
 import { PlanCard } from '@/components/PlanCard';
 import { ErrorState, Loading } from '@/components/States';
+import { t } from '@/i18n';
 import { useBlock, useBlocks } from '@/lobby/hooks';
 import { useFormErrors } from '@/components/form';
 import { Notice } from '@/components/Notice';
@@ -38,31 +40,32 @@ export default function SettingsScreen() {
     <Screen align="top">
       <GuestBanner />
       <PlanCard />
-      <SectionTitle>Look and sound</SectionTitle>
+      <SectionTitle>{t('Look, sound and language')}</SectionTitle>
       <FeatureLink
         icon="palette"
-        title="Board, pieces and sounds"
-        text="How games look and sound, on every device you use."
+        title={t('Board, pieces and sounds')}
+        text={t('How games look and sound, on every device you use.')}
         onPress={() => router.push('/appearance')}
       />
-      {staff && <SectionTitle>Admin</SectionTitle>}
+      <LanguagePicker />
+      {staff && <SectionTitle>{t('Admin')}</SectionTitle>}
       {staff && (
         <FeatureLink
           icon="shield"
-          title="Moderation"
-          text="Reports, and the players' records."
+          title={t('Moderation')}
+          text={t("Reports, and the players' records.")}
           onPress={() => router.push('/moderation')}
         />
       )}
       {me.role === 'admin' && (
         <FeatureLink
           icon="shield"
-          title="Payments"
-          text="The Razorpay keys plans are paid with. Needs a code we email you."
+          title={t('Payments')}
+          text={t('The Razorpay keys plans are paid with. Needs a code we email you.')}
           onPress={() => router.push('/admin/payments')}
         />
       )}
-      <SectionTitle>Account</SectionTitle>
+      <SectionTitle>{t('Account')}</SectionTitle>
       <View>
         <BlockedPlayers />
         {!guest && (
@@ -74,31 +77,33 @@ export default function SettingsScreen() {
           </>
         )}
       </View>
-      <SectionTitle>Terms and privacy</SectionTitle>
+      <SectionTitle>{t('Terms and privacy')}</SectionTitle>
       <FeatureLink
         icon="document"
-        title="Terms of service"
-        text="The rules of using ClawPlay."
+        title={t('Terms of service')}
+        text={t('The rules of using ClawPlay.')}
         onPress={() => router.push('/terms')}
       />
       <FeatureLink
         icon="document"
-        title="Privacy policy"
-        text="What we keep about you, why, and for how long."
+        title={t('Privacy policy')}
+        text={t('What we keep about you, why, and for how long.')}
         onPress={() => router.push('/privacy')}
       />
-      <SectionTitle>Sign out</SectionTitle>
+      <SectionTitle>{t('Sign out')}</SectionTitle>
       {leaving ? (
         <Confirm
-          question="Sign out and lose this guest account? Its games and rating cannot be got back. Make an account first to keep them."
-          confirmTitle="Sign out"
+          question={t(
+            'Sign out and lose this guest account? Its games and rating cannot be got back. Make an account first to keep them.',
+          )}
+          confirmTitle={t('Sign out')}
           busy={signOut.isPending}
           onConfirm={() => signOut.mutate()}
           onCancel={() => setLeaving(false)}
         />
       ) : (
         <Button
-          title={guest ? 'Sign out (this guest account will be lost)' : 'Sign out'}
+          title={guest ? t('Sign out (this guest account will be lost)') : t('Sign out')}
           variant="secondary"
           onPress={() => (guest ? setLeaving(true) : signOut.mutate())}
           busy={signOut.isPending}
@@ -112,22 +117,22 @@ function BlockedPlayers() {
   const blocks = useBlocks();
   const change = useBlock();
   return (
-    <Disclosure title="Blocked players">
+    <Disclosure title={t('Blocked players')}>
       {change.error !== null && <Notice tone="error">{describeError(change.error)}</Notice>}
       {blocks.error !== null ? (
         <ErrorState error={blocks.error} onRetry={() => void blocks.refetch()} />
       ) : blocks.data === undefined ? (
-        <Loading label="Loading blocked players" />
+        <Loading label={t('Loading blocked players')} />
       ) : blocks.data.length === 0 ? (
-        <Hint>You have not blocked anyone.</Hint>
+        <Hint>{t('You have not blocked anyone.')}</Hint>
       ) : (
         <Card>
           {blocks.data.map((player) => (
             <View key={player.id} style={styles.row}>
               <Text style={styles.name}>{player.username}</Text>
               <Button
-                title={`Unblock ${player.username}`}
-                label="Unblock"
+                title={t('Unblock {name}', { name: player.username })}
+                label={t('Unblock')}
                 variant="secondary"
                 compact
                 busy={change.isPending && change.variables.username === player.username}
@@ -163,18 +168,20 @@ function EmailSection() {
     if (accept(checkEmailChange({ email, password }, me.email))) change.mutate(email.trim());
   };
   return (
-    <Disclosure title="Email address">
+    <Disclosure title={t('Email address')}>
       <Card>
-        <Text style={styles.text}>{`Your email address is ${me.email}.`}</Text>
+        <Text style={styles.text}>{t('Your email address is {email}.', { email: me.email })}</Text>
         {change.isSuccess ? (
           <Notice tone="success">
-            {`We sent a link to ${change.variables}. Your address changes when you open it.`}
+            {t('We sent a link to {email}. Your address changes when you open it.', {
+              email: change.variables,
+            })}
           </Notice>
         ) : (
           <>
             {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
             <TextField
-              label="New email address"
+              label={t('New email address')}
               value={email}
               onChangeText={setEmail}
               error={fieldError('email')}
@@ -184,7 +191,7 @@ function EmailSection() {
               textContentType="emailAddress"
             />
             <TextField
-              label="Your password (to change the email address)"
+              label={t('Your password (to change the email address)')}
               value={password}
               onChangeText={setPassword}
               error={fieldError('password')}
@@ -193,7 +200,11 @@ function EmailSection() {
               textContentType="password"
               onSubmitEditing={submit}
             />
-            <Button title="Send a confirmation link" onPress={submit} busy={change.isPending} />
+            <Button
+              title={t('Send a confirmation link')}
+              onPress={submit}
+              busy={change.isPending}
+            />
           </>
         )}
       </Card>
@@ -230,16 +241,16 @@ function PasswordSection() {
     }
   };
   return (
-    <Disclosure title="Password">
+    <Disclosure title={t('Password')}>
       <Card>
         {change.isSuccess && (
           <Notice tone="success">
-            Your password has been changed. Your other devices have been signed out.
+            {t('Your password has been changed. Your other devices have been signed out.')}
           </Notice>
         )}
         {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
         <TextField
-          label="Current password"
+          label={t('Current password')}
           value={current}
           onChangeText={setCurrent}
           error={fieldError('current')}
@@ -248,7 +259,7 @@ function PasswordSection() {
           textContentType="password"
         />
         <TextField
-          label="New password"
+          label={t('New password')}
           value={password}
           onChangeText={setPassword}
           error={fieldError('password')}
@@ -257,7 +268,7 @@ function PasswordSection() {
           textContentType="newPassword"
         />
         <TextField
-          label="Repeat the new password"
+          label={t('Repeat the new password')}
           value={confirm}
           onChangeText={setConfirm}
           error={fieldError('confirm')}
@@ -266,7 +277,7 @@ function PasswordSection() {
           textContentType="newPassword"
           onSubmitEditing={submit}
         />
-        <Button title="Change password" onPress={submit} busy={change.isPending} />
+        <Button title={t('Change password')} onPress={submit} busy={change.isPending} />
       </Card>
     </Disclosure>
   );
@@ -278,15 +289,16 @@ function DataSection() {
     mutationFn: async () => saveExport(await api.exportData()),
   });
   return (
-    <Disclosure title="Your data">
+    <Disclosure title={t('Your data')}>
       <Card>
         <Hint>
-          A copy of everything we keep about you: your account, ratings, games with their moves,
-          challenges and blocked players.
+          {t(
+            'A copy of everything we keep about you: your account, ratings, games with their moves, challenges and blocked players.',
+          )}
         </Hint>
         {download.error !== null && <Notice tone="error">{describeError(download.error)}</Notice>}
         <Button
-          title="Download my data"
+          title={t('Download my data')}
           variant="secondary"
           onPress={() => download.mutate()}
           busy={download.isPending}
@@ -321,18 +333,18 @@ function DeleteSection() {
     if (accept(checkPasswordGiven({ password }))) remove.mutate();
   };
   return (
-    <Disclosure title="Delete account">
+    <Disclosure title={t('Delete account')}>
       <Card>
         <Hint>
-          Deleting your account removes your email address and password, takes you off the
-          leaderboards and signs you out everywhere. Games you played stay in your opponents&apos;
-          history under an anonymous name. This cannot be undone.
+          {t(
+            "Deleting your account removes your email address and password, takes you off the leaderboards and signs you out everywhere. Games you played stay in your opponents' history under an anonymous name. This cannot be undone.",
+          )}
         </Hint>
         {confirming ? (
           <View style={styles.confirm}>
             {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
             <TextField
-              label="Your password (to delete your account)"
+              label={t('Your password (to delete your account)')}
               value={password}
               onChangeText={setPassword}
               error={fieldError('password')}
@@ -341,9 +353,13 @@ function DeleteSection() {
               textContentType="password"
               onSubmitEditing={submit}
             />
-            <Button title="Delete my account for good" onPress={submit} busy={remove.isPending} />
             <Button
-              title="Keep my account"
+              title={t('Delete my account for good')}
+              onPress={submit}
+              busy={remove.isPending}
+            />
+            <Button
+              title={t('Keep my account')}
               variant="secondary"
               onPress={() => {
                 setConfirming(false);
@@ -354,7 +370,7 @@ function DeleteSection() {
           </View>
         ) : (
           <Button
-            title="Delete my account…"
+            title={t('Delete my account…')}
             variant="secondary"
             onPress={() => setConfirming(true)}
           />

@@ -5,11 +5,11 @@ The listing text lives beside this file in the layout Google Play's upload tools
 uploaded as is. `en-IN` is the main listing; other languages are listed under
 [Languages](#languages).
 
-| Field | Limit | Now |
-|---|---|---|
-| App name (`title.txt`) | 30 characters | 26: "ClawPlay: Bagh Chal Online" |
-| Short description | 80 characters | 75 |
-| Full description | 4,000 characters | about 2,840 |
+| Field                  | Limit            | Now                              |
+| ---------------------- | ---------------- | -------------------------------- |
+| App name (`title.txt`) | 30 characters    | 26: "ClawPlay: Bagh Chal Online" |
+| Short description      | 80 characters    | 75                               |
+| Full description       | 4,000 characters | about 2,840                      |
 
 ## Before publishing: two Google Play rules (both met)
 
@@ -106,9 +106,15 @@ listing say so; until then, the listing does not claim it.
 Write each language's listing with a native speaker rather than a machine translation; a
 stilted listing loses more installs than it wins.
 
+The app itself speaks English, Tamil, Hindi and Arabic (Settings → Language, or the phone's
+language), so the listing should too, and should say so.
+
 1. **en-IN** (done) and **en-US**: the same text works for both; copy the folder.
 2. **hi-IN** (Hindi): India is where most players will come from.
-3. **ne-NP** (Nepali): Bagh Chal is Nepal's game, and Nepali searches are there to win.
+3. **ta-IN** (Tamil).
+4. **ar** (Arabic): screenshots taken in Arabic show the right-to-left layout.
+5. **ne-NP** (Nepali): Bagh Chal is Nepal's game, and Nepali searches are there to win. The
+   app does not speak Nepali yet, so its listing must not claim it.
 
 ## After launch
 

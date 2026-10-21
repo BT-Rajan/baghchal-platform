@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { Game, GameAction } from '@/api/endpoints';
 import type { Piece } from '@/game/bfen';
 import { isComputer, other, playerOf } from '@/game/describe';
+import { t } from '@/i18n';
 import { AWAY_REFRESH_MS, PRESENCE_REFRESH_MS, useProfile } from '@/lobby/hooks';
 import { colors, spacing } from '@/theme';
 
@@ -57,7 +58,7 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
   if (opening && game.match?.game !== 2) {
     return (
       <Button
-        title="Abort game"
+        title={t('Abort game')}
         variant="secondary"
         busy={pending === 'abort'}
         onPress={() => onAction('abort')}
@@ -67,9 +68,9 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
   if (confirming) {
     return (
       <Confirm
-        question="Resign this game?"
-        confirmTitle="Yes, resign"
-        cancelTitle="Keep playing"
+        question={t('Resign this game?')}
+        confirmTitle={t('Yes, resign')}
+        cancelTitle={t('Keep playing')}
         busy={pending === 'resign'}
         onConfirm={() => {
           setConfirming(false);
@@ -88,9 +89,9 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
     <View style={styles.confirm}>
       {offeredToMe && (
         <Confirm
-          question={`${opponent.username} offers a draw.`}
-          confirmTitle="Accept the draw"
-          cancelTitle="Decline"
+          question={t('{name} offers a draw.', { name: opponent.username })}
+          confirmTitle={t('Accept the draw')}
+          cancelTitle={t('Decline')}
           busy={pending === 'draw'}
           onConfirm={() => onAction('draw')}
           onCancel={() => onAction('draw/decline')}
@@ -98,14 +99,16 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
       )}
       {claimIn !== null && claimIn > 0 && (
         <Text style={styles.away} aria-live="polite">
-          {`${opponent.username} seems to have left. If they are not back in ` +
-            `${Math.ceil(claimIn / 1000)} s, you can claim the win.`}
+          {t(
+            '{name} seems to have left. If they are not back in {seconds} s, you can claim the win.',
+            { name: opponent.username, seconds: Math.ceil(claimIn / 1000) },
+          )}
         </Text>
       )}
       <View style={styles.row}>
         <View style={styles.cell}>
           <Button
-            title="Resign"
+            title={t('Resign')}
             variant="secondary"
             busy={pending === 'resign'}
             onPress={() => setConfirming(true)}
@@ -114,7 +117,7 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
         {drawable && !offeredToMe && (
           <View style={styles.cell}>
             <Button
-              title={iOffered ? 'Draw offered' : 'Offer a draw'}
+              title={iOffered ? t('Draw offered') : t('Offer a draw')}
               variant="secondary"
               busy={pending === 'draw'}
               disabled={iOffered}
@@ -125,7 +128,7 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
         {claimIn === 0 && (
           <View style={styles.cell}>
             <Button
-              title="Claim the win"
+              title={t('Claim the win')}
               busy={pending === 'claim-abandonment'}
               onPress={() => onAction('claim-abandonment')}
             />

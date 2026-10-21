@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { describeError } from '@/api/errors';
 import { checkSignUp } from '@/auth/validation';
+import { t } from '@/i18n';
 import { AGREEMENT_CODE_FIELDS, AGREEMENT_FIELDS, type KnownAge } from '@/legal/agreement';
 
 import { AgreementFields, useAgreement, type AgreementBody } from './AgreementFields';
@@ -62,7 +63,7 @@ export function AccountForm({
         <Notice tone="error">{describeError(agreement.versions.error)}</Notice>
       )}
       <TextField
-        label="Username"
+        label={t('Username')}
         value={username}
         onChangeText={setUsername}
         error={fieldError('username')}
@@ -73,7 +74,7 @@ export function AccountForm({
         maxLength={20}
       />
       <TextField
-        label="Email"
+        label={t('Email')}
         value={email}
         onChangeText={setEmail}
         error={fieldError('email')}
@@ -84,7 +85,7 @@ export function AccountForm({
         textContentType="emailAddress"
       />
       <TextField
-        label="Password"
+        label={t('Password')}
         value={password}
         onChangeText={setPassword}
         error={fieldError('password')}

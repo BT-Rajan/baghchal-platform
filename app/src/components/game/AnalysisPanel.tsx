@@ -15,6 +15,7 @@ import { useAnalyse } from '@/analysis/hooks';
 import type { Analysis, Game } from '@/api/endpoints';
 import { describeError } from '@/api/errors';
 import { nameOf } from '@/game/describe';
+import { t } from '@/i18n';
 import { colors } from '@/theme';
 
 import { Button } from '../Button';
@@ -45,21 +46,21 @@ export function AnalysisPanel({
   if (allowed === undefined) return null;
   return (
     <>
-      <SectionTitle>Analysis</SectionTitle>
+      <SectionTitle>{t('Analysis')}</SectionTitle>
       {!allowed ? (
         <Upsell feature="analysis">
-          See the engine’s review of every move, and where the game turned.
+          {t('See the engine’s review of every move, and where the game turned.')}
         </Upsell>
       ) : analysis.error !== null ? (
         <ErrorState error={analysis.error} onRetry={() => void analysis.refetch()} />
       ) : analysis.data === undefined ? (
-        <Loading label="Loading the analysis" />
+        <Loading label={t('Loading the analysis')} />
       ) : analysis.data === null ? (
         <Card>
-          <Hint>The engine reviews every move and shows where the game turned.</Hint>
+          <Hint>{t('The engine reviews every move and shows where the game turned.')}</Hint>
           {analyse.error !== null && <Notice tone="error">{describeError(analyse.error)}</Notice>}
           <Button
-            title="Analyse this game"
+            title={t('Analyse this game')}
             busy={analyse.isPending}
             onPress={() => analyse.mutate()}
           />
@@ -88,18 +89,20 @@ function Review({
   return (
     <Card>
       {review === undefined ? (
-        <Hint>Step through the moves to see what the engine thought of each.</Hint>
+        <Hint>{t('Step through the moves to see what the engine thought of each.')}</Hint>
       ) : (
         <>
           <Text style={[styles.verdict, { color: VERDICT_COLORS[review.verdict] }]}>
-            {VERDICT_NAMES[review.verdict]}
+            {t(VERDICT_NAMES[review.verdict])}
           </Text>
           <Text style={styles.text}>{reviewText(review)}</Text>
-          <Text style={styles.muted}>{`Before the move: ${scoreText(review.score)}`}</Text>
+          <Text style={styles.muted}>
+            {t('Before the move: {score}', { score: scoreText(review.score) })}
+          </Text>
         </>
       )}
       <Button
-        title="Next mistake"
+        title={t('Next mistake')}
         variant="secondary"
         compact
         disabled={next === null}
@@ -107,10 +110,14 @@ function Review({
       />
       {(['goat', 'tiger'] as const).map((side) => (
         <Text key={side} style={styles.text}>
-          {`${sideName(side)} (${nameOf(game, side)}): ${summary(analysis.moves, side)}`}
+          {t('{side} ({name}): {summary}', {
+            side: sideName(side),
+            name: nameOf(game, side),
+            summary: summary(analysis.moves, side),
+          })}
         </Text>
       ))}
-      <Text style={styles.muted}>{LEGEND}</Text>
+      <Text style={styles.muted}>{t(LEGEND)}</Text>
       {left !== null && <Text style={styles.muted}>{left}</Text>}
     </Card>
   );

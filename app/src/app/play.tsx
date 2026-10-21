@@ -9,6 +9,7 @@ import { has } from '@/billing/format';
 import { useMyPlan } from '@/billing/hooks';
 import { queryKeys } from '@/api/queryKeys';
 import { useApi } from '@/auth/session';
+import { mark, t } from '@/i18n';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Notice } from '@/components/Notice';
@@ -23,14 +24,19 @@ import { PRESENCE_REFRESH_MS, useOpenStartedGame } from '@/lobby/hooks';
 import { colors, spacing } from '@/theme';
 
 const MODES = [
-  { value: 'casual', label: 'Casual' },
-  { value: 'rated', label: 'Rated' },
+  { value: 'casual', label: mark('Casual') },
+  { value: 'rated', label: mark('Rated') },
 ] as const;
 const SIDES: readonly { value: Side; label: string }[] = [
-  { value: 'random', label: 'Random' },
-  { value: 'goat', label: 'Goats' },
-  { value: 'tiger', label: 'Tigers' },
+  { value: 'random', label: mark('Random') },
+  { value: 'goat', label: mark('Goats') },
+  { value: 'tiger', label: mark('Tigers') },
 ];
+
+/** Choices with their labels in the current language. */
+function translated<T extends string>(options: readonly { value: T; label: string }[]) {
+  return options.map(({ value, label }) => ({ value, label: t(label) }));
+}
 
 /**
  * Start a game now: with whoever wants the same game, or against the computer. (The other ways
@@ -56,7 +62,7 @@ function FindOpponent({ timeControl }: { timeControl: TimeControl }) {
   const [mode, setMode] = useState<'casual' | 'rated'>('casual');
   const [waitingUntil, setWaitingUntil] = useState<string | null>(null);
   // What the search is for: the pickers may change while it runs.
-  const [sought, setSought] = useState('');
+  const [sought, setSought] = useState({ time: '', rated: false });
   const counts = useQuery({
     queryKey: queryKeys.seekCounts,
     queryFn: ({ signal }) => api.seekCounts(signal),
@@ -67,7 +73,7 @@ function FindOpponent({ timeControl }: { timeControl: TimeControl }) {
     onSuccess: (result) => {
       if (result.game) openStarted(result.game);
       else {
-        setSought(`${timeControlName(timeControl)} ${mode}`);
+        setSought({ time: timeControlName(timeControl), rated: mode === 'rated' });
         setWaitingUntil(result.expires_at);
       }
     },
@@ -103,18 +109,28 @@ function FindOpponent({ timeControl }: { timeControl: TimeControl }) {
 
   return (
     <>
-      <SectionTitle>Play someone</SectionTitle>
+      <SectionTitle>{t('Play someone')}</SectionTitle>
       <Card>
-        <Segmented label="Game" options={MODES} value={mode} onChange={setMode} />
+        <Segmented label={t('Game')} options={translated(MODES)} value={mode} onChange={setMode} />
         {mode === 'rated' && (
-          <Hint>A rated match is two games: you each play goats once and tigers once.</Hint>
+          <Hint>{t('A rated match is two games: you each play goats once and tigers once.')}</Hint>
         )}
         {seek.error !== null && <Notice tone="error">{describeError(seek.error)}</Notice>}
         {waiting ? (
           <>
-            <Notice tone="info">{`Looking for an opponent for ${sought}… ${left} s`}</Notice>
+            <Notice tone="info">
+              {sought.rated
+                ? t('Looking for an opponent for {time} rated… {seconds} s', {
+                    time: sought.time,
+                    seconds: left,
+                  })
+                : t('Looking for an opponent for {time} casual… {seconds} s', {
+                    time: sought.time,
+                    seconds: left,
+                  })}
+            </Notice>
             <Button
-              title="Stop looking"
+              title={t('Stop looking')}
               variant="secondary"
               onPress={() => stop.mutate()}
               busy={stop.isPending}
@@ -123,11 +139,13 @@ function FindOpponent({ timeControl }: { timeControl: TimeControl }) {
         ) : (
           <>
             {lapsed && (
-              <Notice tone="info">Nobody came along yet. Try again, or play the computer.</Notice>
+              <Notice tone="info">
+                {t('Nobody came along yet. Try again, or play the computer.')}
+              </Notice>
             )}
             <Text style={styles.muted}>{waitingText(others)}</Text>
             <Button
-              title="Find an opponent"
+              title={t('Find an opponent')}
               onPress={() => {
                 seek.reset();
                 seek.mutate();
@@ -154,22 +172,35 @@ function PlayComputer({ timeControl }: { timeControl: TimeControl }) {
   });
   return (
     <>
-      <SectionTitle>Play the computer</SectionTitle>
+      <SectionTitle>{t('Play the computer')}</SectionTitle>
       <Card>
         <View style={styles.fields}>
-          <Segmented label="Strength" options={LEVELS} value={level} onChange={setLevel} />
-          <Segmented label="You play" options={SIDES} value={side} onChange={setSide} />
+          <Segmented
+            label={t('Strength')}
+            options={translated(LEVELS)}
+            value={level}
+            onChange={setLevel}
+          />
+          <Segmented
+            label={t('You play')}
+            options={translated(SIDES)}
+            value={side}
+            onChange={setSide}
+          />
         </View>
         <Hint>
-          Casual: games against the computer never change your rating. Easy gives you tips as you
-          play.
+          {t(
+            'Casual: games against the computer never change your rating. Easy gives you tips as you play.',
+          )}
         </Hint>
         {start.error !== null && <Notice tone="error">{describeError(start.error)}</Notice>}
         {locked && (
-          <Upsell feature="computer_hard">Play the Hard computer, the strongest opponent.</Upsell>
+          <Upsell feature="computer_hard">
+            {t('Play the Hard computer, the strongest opponent.')}
+          </Upsell>
         )}
         <Button
-          title="Play the computer"
+          title={t('Play the computer')}
           onPress={() => start.mutate()}
           busy={start.isPending}
           disabled={locked}

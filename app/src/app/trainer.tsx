@@ -13,13 +13,14 @@ import { Upsell } from '@/components/Upsell';
 import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
 import { ErrorState, Loading } from '@/components/States';
+import { mark, t } from '@/i18n';
 import { answerText, progressText } from '@/pro/format';
 import { useAnswerPuzzle, useTrainer } from '@/pro/hooks';
 import { colors } from '@/theme';
 
 const KINDS: readonly { value: TrainerKind; label: string }[] = [
-  { value: 'opening', label: 'Openings' },
-  { value: 'endgame', label: 'Endgames' },
+  { value: 'opening', label: mark('Openings') },
+  { value: 'endgame', label: mark('Endgames') },
 ];
 
 /** Opening and endgame puzzles: find the one best move (Pro). */
@@ -31,19 +32,27 @@ export default function TrainerScreen() {
       {plan.error !== null ? (
         <ErrorState error={plan.error} onRetry={() => void plan.refetch()} />
       ) : plan.data === undefined ? (
-        <Loading label="Loading your plan" />
+        <Loading label={t('Loading your plan')} />
       ) : has(plan.data, 'trainer') ? (
         <>
           <Hint>
-            Each position has one move clearly better than the rest. Openings come while goats are
-            still being placed; endgames once all are on the board.
+            {t(
+              'Each position has one move clearly better than the rest. Openings come while goats are still being placed; endgames once all are on the board.',
+            )}
           </Hint>
-          <Segmented label="Puzzles" options={KINDS} value={kind} onChange={setKind} />
+          <Segmented
+            label={t('Puzzles')}
+            options={KINDS.map((k) => ({ ...k, label: t(k.label) }))}
+            value={kind}
+            onChange={setKind}
+          />
           <Puzzles key={kind} kind={kind} />
         </>
       ) : (
         <Upsell feature="trainer">
-          Train with opening and endgame puzzles from real games, each with one best move to find.
+          {t(
+            'Train with opening and endgame puzzles from real games, each with one best move to find.',
+          )}
         </Upsell>
       )}
     </Screen>
@@ -56,13 +65,13 @@ function Puzzles({ kind }: { kind: TrainerKind }) {
   if (trainer.error !== null) {
     return <ErrorState error={trainer.error} onRetry={() => void trainer.refetch()} />;
   }
-  if (trainer.data === undefined) return <Loading label="Loading a puzzle" />;
+  if (trainer.data === undefined) return <Loading label={t('Loading a puzzle')} />;
   const puzzle = trainer.data.puzzle;
   return (
     <>
       <Text style={styles.progress}>{progressText(answer.data ?? trainer.data)}</Text>
       {puzzle === null ? (
-        <Notice tone="success">You have solved every puzzle here. Well played!</Notice>
+        <Notice tone="success">{t('You have solved every puzzle here. Well played!')}</Notice>
       ) : (
         <PuzzleBoard
           key={puzzle.id}
@@ -78,7 +87,7 @@ function Puzzles({ kind }: { kind: TrainerKind }) {
         <>
           <Notice tone={answer.data.correct ? 'success' : 'info'}>{answerText(answer.data)}</Notice>
           <Button
-            title="Next puzzle"
+            title={t('Next puzzle')}
             onPress={() => {
               answer.reset();
               void trainer.refetch();

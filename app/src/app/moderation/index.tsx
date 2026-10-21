@@ -13,14 +13,15 @@ import { Segmented } from '@/components/Segmented';
 import { ErrorState, Loading } from '@/components/States';
 import { TextField } from '@/components/TextField';
 import { TextLink } from '@/components/TextLink';
+import { mark, plural, t } from '@/i18n';
 import { searchPrefix } from '@/lobby/format';
 import { dateTimeText, reasonLabel, reportTitle } from '@/lobby/moderation';
 import { colors } from '@/theme';
 
 const STATUSES: readonly { value: ReportStatus; label: string }[] = [
-  { value: 'open', label: 'Open' },
-  { value: 'actioned', label: 'Acted on' },
-  { value: 'dismissed', label: 'Dismissed' },
+  { value: 'open', label: mark('Open') },
+  { value: 'actioned', label: mark('Acted on') },
+  { value: 'dismissed', label: mark('Dismissed') },
 ];
 
 /** The report queue, for moderators. */
@@ -39,22 +40,27 @@ export default function ModerationScreen() {
   return (
     <Screen align="top">
       <TextField
-        label="Look up a player"
+        label={t('Look up a player')}
         value={name}
         onChangeText={setName}
         autoCapitalize="none"
         autoCorrect={false}
         onSubmitEditing={open}
       />
-      <Button title="Open the player's record" variant="secondary" onPress={open} />
-      <SectionTitle>Reports</SectionTitle>
-      <Segmented label="Show" options={STATUSES} value={status} onChange={setStatus} />
+      <Button title={t("Open the player's record")} variant="secondary" onPress={open} />
+      <SectionTitle>{t('Reports')}</SectionTitle>
+      <Segmented
+        label={t('Show')}
+        options={STATUSES.map(({ value, label }) => ({ value, label: t(label) }))}
+        value={status}
+        onChange={setStatus}
+      />
       {reports.error !== null ? (
         <ErrorState error={reports.error} onRetry={() => void reports.refetch()} />
       ) : reports.data === undefined ? (
-        <Loading label="Loading reports" />
+        <Loading label={t('Loading reports')} />
       ) : reports.data.length === 0 ? (
-        <Hint>{status === 'open' ? 'No open reports.' : 'Nothing here yet.'}</Hint>
+        <Hint>{status === 'open' ? t('No open reports.') : t('Nothing here yet.')}</Hint>
       ) : (
         reports.data.map((report) => <ReportCard key={report.id} report={report} />)
       )}
@@ -68,19 +74,27 @@ function ReportCard({ report }: { report: Report }) {
     <Card>
       <Text style={styles.title}>{reportTitle(report)}</Text>
       <Text style={styles.muted}>
-        {`${reasonLabel(report.reason)} · ${dateTimeText(report.created_at)}`}
+        {t('{reason} · {date}', {
+          reason: reasonLabel(report.reason),
+          date: dateTimeText(report.created_at),
+        })}
       </Text>
       {report.details !== '' && <Text style={styles.text}>{report.details}</Text>}
       {report.open_reports_against_target > 1 && (
         <Text style={styles.text}>
-          {`${report.open_reports_against_target} open reports about ${target}`}
+          {plural(
+            report.open_reports_against_target,
+            '{count} open report about {name}',
+            '{count} open reports about {name}',
+            { name: target },
+          )}
         </Text>
       )}
       {report.game_id !== null && (
-        <TextLink href={`/game/${report.game_id}`}>Open the game</TextLink>
+        <TextLink href={`/game/${report.game_id}`}>{t('Open the game')}</TextLink>
       )}
       <Button
-        title={`Review ${target}`}
+        title={t('Review {name}', { name: target })}
         compact
         onPress={() => router.push(`/moderation/${target}`)}
       />

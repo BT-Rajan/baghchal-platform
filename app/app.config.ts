@@ -59,6 +59,8 @@ const config: ExpoConfig = {
     // bottom (the app keeps its content clear of them), with dark buttons on the light pages.
     ['expo-navigation-bar', { enforceContrast: false, style: 'dark' }],
     'expo-secure-store',
+    // The device's language, and right-to-left layouts for Arabic (src/i18n/LanguageRoot.tsx).
+    ['expo-localization', { supportsRTL: true }],
     // The icon on the brand colour while the app starts (hidden once it knows who is signed in).
     [
       'expo-splash-screen',

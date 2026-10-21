@@ -28,4 +28,5 @@ class Appearance(Base):
     emotes_on: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
     """Whether the opponent's quick messages reach me."""
     show_badge: Mapped[bool] = mapped_column(Boolean)
+    language: Mapped[str] = mapped_column(String(8), default="auto", server_default="auto")
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime)

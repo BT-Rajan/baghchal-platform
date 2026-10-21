@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { Profile } from '@/api/endpoints';
 import { describeError } from '@/api/errors';
+import { plural, t } from '@/i18n';
 import { CATEGORIES, canChallenge, joinedText, presenceText } from '@/lobby/format';
 import { useBlock } from '@/lobby/hooks';
 import { useMe } from '@/auth/session';
@@ -28,7 +29,10 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
         <BadgePill badge={profile.badge} />
         <PresenceDot online={profile.online} />
         <Text style={styles.muted}>
-          {`${presenceText(profile)} · ${joinedText(profile.created_at)}`}
+          {t('{presence} · {joined}', {
+            presence: presenceText(profile),
+            joined: joinedText(profile.created_at),
+          })}
         </Text>
       </View>
       <View style={styles.ratings}>
@@ -37,26 +41,34 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
           return (
             <View key={value} style={styles.rating}>
               <Card>
-                <Text style={styles.muted}>{label}</Text>
+                <Text style={styles.muted}>{t(label)}</Text>
                 <Text
                   style={styles.big}
-                  aria-label={`${label} rating ${rating ? rating.rating : 'none'}`}
+                  aria-label={
+                    rating
+                      ? t('{category} rating {rating}', {
+                          category: t(label),
+                          rating: rating.rating,
+                        })
+                      : t('{category} rating none', { category: t(label) })
+                  }
                 >
                   {rating ? String(rating.rating) : '–'}
                 </Text>
                 <Text style={styles.muted}>
                   {rating === undefined
-                    ? 'No games yet'
-                    : [
-                        `${rating.games} ${rating.games === 1 ? 'game' : 'games'}`,
-                        rating.rank !== null
-                          ? `#${rating.rank}`
-                          : rating.provisional
-                            ? 'provisional'
-                            : null,
-                      ]
-                        .filter((part) => part !== null)
-                        .join(' · ')}
+                    ? t('No games yet')
+                    : rating.rank !== null
+                      ? plural(rating.games, '{count} game · #{rank}', '{count} games · #{rank}', {
+                          rank: rating.rank,
+                        })
+                      : rating.provisional
+                        ? plural(
+                            rating.games,
+                            '{count} game · provisional',
+                            '{count} games · provisional',
+                          )
+                        : plural(rating.games, '{count} game', '{count} games')}
                 </Text>
               </Card>
             </View>
@@ -64,7 +76,9 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
         })}
       </View>
       {Object.values(profile.ratings).some((r) => r?.provisional) && (
-        <Hint>A provisional rating is still settling: it moves faster over the first games.</Hint>
+        <Hint>
+          {t('A provisional rating is still settling: it moves faster over the first games.')}
+        </Hint>
       )}
       {/* Guests have no friends; their names start with "guest-". */}
       {!isMe &&
@@ -76,7 +90,7 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
         )}
       {!isMe && !profile.blocked && (
         <Button
-          title={`Challenge ${profile.username}`}
+          title={t('Challenge {name}', { name: profile.username })}
           disabled={!me.plays_people || !canChallenge(profile)}
           onPress={() => router.push(`/challenge/${profile.username}`)}
         />
@@ -86,7 +100,7 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
       <GameHistory username={profile.username} />
       {!isMe && (
         <Button
-          title={`Report ${profile.username}`}
+          title={t('Report {name}', { name: profile.username })}
           variant="secondary"
           onPress={() => router.push(`/report/${profile.username}`)}
         />
@@ -107,10 +121,12 @@ function BlockControl({ username, blocked }: { username: string; blocked: boolea
       {blocked ? (
         <>
           <Text style={styles.muted}>
-            {`You have blocked ${username}. Neither of you can challenge the other.`}
+            {t('You have blocked {name}. Neither of you can challenge the other.', {
+              name: username,
+            })}
           </Text>
           <Button
-            title={`Unblock ${username}`}
+            title={t('Unblock {name}', { name: username })}
             variant="secondary"
             busy={change.isPending}
             onPress={() => run(false)}
@@ -118,18 +134,18 @@ function BlockControl({ username, blocked }: { username: string; blocked: boolea
         </>
       ) : confirming ? (
         <Confirm
-          question={
-            `Block ${username}? Neither of you will be able to challenge the other, and you ` +
-            `will not see each other in the lobby.`
-          }
-          confirmTitle={`Yes, block ${username}`}
+          question={t(
+            'Block {name}? Neither of you will be able to challenge the other, and you will not see each other in the lobby.',
+            { name: username },
+          )}
+          confirmTitle={t('Yes, block {name}', { name: username })}
           busy={change.isPending}
           onConfirm={() => run(true)}
           onCancel={() => setConfirming(false)}
         />
       ) : (
         <Button
-          title={`Block ${username}`}
+          title={t('Block {name}', { name: username })}
           variant="secondary"
           onPress={() => setConfirming(true)}
         />

@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { describeError } from '@/api/errors';
 import { useMe } from '@/auth/session';
+import { t } from '@/i18n';
 import { challengeSecondsLeft, challengeTerms, isOpen } from '@/lobby/format';
 import { useActiveGames, useAnswerChallenge, useChallenges } from '@/lobby/hooks';
 import { colors, spacing } from '@/theme';
@@ -27,27 +28,35 @@ export function ChallengeBanner() {
   const first = incoming[0];
   if (first === undefined) return null;
   const from = first.challenger.username;
-  const more = incoming.length > 1 ? ` (and ${incoming.length - 1} more in the lobby)` : '';
+  const values = {
+    name: from,
+    terms: challengeTerms(first, me.id),
+    seconds: challengeSecondsLeft(first, now),
+  };
   const busy = answer.isPending && answer.variables.id === first.id;
   return (
     <View style={styles.banner}>
       <Text role="status" aria-live="polite" style={styles.text}>
-        {`${from} challenges you: ${challengeTerms(first, me.id)} · ` +
-          `${challengeSecondsLeft(first, now)} s${more}`}
+        {incoming.length > 1
+          ? t('{name} challenges you: {terms} · {seconds} s (and {count} more in the lobby)', {
+              ...values,
+              count: incoming.length - 1,
+            })
+          : t('{name} challenges you: {terms} · {seconds} s', values)}
       </Text>
       {answer.error !== null && <Text style={styles.error}>{describeError(answer.error)}</Text>}
       <View style={styles.actions}>
         <Button
-          title={`Accept ${from}'s challenge`}
-          label="Accept"
+          title={t("Accept {name}'s challenge", { name: from })}
+          label={t('Accept')}
           compact
           busy={busy && answer.variables.answer === 'accept'}
           disabled={busy}
           onPress={() => answer.mutate({ id: first.id, answer: 'accept' })}
         />
         <Button
-          title={`Decline ${from}'s challenge`}
-          label="Decline"
+          title={t("Decline {name}'s challenge", { name: from })}
+          label={t('Decline')}
           variant="secondary"
           compact
           busy={busy && answer.variables.answer === 'decline'}

@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { describeError } from '@/api/errors';
+import { t } from '@/i18n';
 import { useFriends, useFriendship } from '@/lobby/hooks';
 import { colors, spacing } from '@/theme';
 
@@ -17,25 +18,27 @@ export function FriendRequests() {
   if (incoming.length === 0) return null;
   return (
     <>
-      <SectionTitle>Friend requests</SectionTitle>
+      <SectionTitle>{t('Friend requests')}</SectionTitle>
       {change.error !== null && <Notice tone="error">{describeError(change.error)}</Notice>}
       <Card>
         {incoming.map((player) => {
           const busy = change.isPending && change.variables.username === player.username;
           return (
             <View key={player.id} style={styles.row}>
-              <Text style={styles.text}>{`${player.username} wants to be friends.`}</Text>
+              <Text style={styles.text}>
+                {t('{name} wants to be friends.', { name: player.username })}
+              </Text>
               <Button
-                title={`Accept ${player.username}'s friend request`}
-                label="Accept"
+                title={t("Accept {name}'s friend request", { name: player.username })}
+                label={t('Accept')}
                 variant="secondary"
                 compact
                 busy={busy && change.variables.add}
                 onPress={() => change.mutate({ username: player.username, add: true })}
               />
               <Button
-                title={`Decline ${player.username}'s friend request`}
-                label="Decline"
+                title={t("Decline {name}'s friend request", { name: player.username })}
+                label={t('Decline')}
                 variant="secondary"
                 compact
                 busy={busy && !change.variables.add}
@@ -56,7 +59,7 @@ export function FriendList({ myId }: { myId: string }) {
   if (list.length === 0) return null;
   return (
     <>
-      <SectionTitle>Friends</SectionTitle>
+      <SectionTitle>{t('Friends')}</SectionTitle>
       <Card>
         {list.map((player) => (
           <PlayerRow key={player.id} player={player} isMe={player.id === myId} />

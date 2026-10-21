@@ -1,5 +1,6 @@
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { t } from '@/i18n';
 import { colors, radius, shadow, spacing, type } from '@/theme';
 
 import { Button } from './Button';
@@ -27,7 +28,7 @@ export function Confirm(props: ConfirmProps) {
 function InPlace({
   question,
   confirmTitle,
-  cancelTitle = 'Cancel',
+  cancelTitle = t('Cancel'),
   busy = false,
   onConfirm,
   onCancel,
@@ -50,7 +51,7 @@ function InPlace({
 function Dialog({
   question,
   confirmTitle,
-  cancelTitle = 'Cancel',
+  cancelTitle = t('Cancel'),
   busy = false,
   onConfirm,
   onCancel,

@@ -4,6 +4,7 @@ import type { Game } from '@/api/endpoints';
 import type { Piece } from '@/game/bfen';
 import { formatClock, remainingMs } from '@/game/clock';
 import { SIDE_PLURAL, isComputer, nameOf, playerOf, ratingChangeText } from '@/game/describe';
+import { t } from '@/i18n';
 import { colors, radius, spacing } from '@/theme';
 
 import { BadgePill } from '../BadgePill';
@@ -37,14 +38,14 @@ export function PlayerBar({
         ) : (
           <View style={styles.nameRow}>
             <TextLink href={`/player/${player.username}`}>
-              {isMe ? `${player.username} (you)` : player.username}
+              {isMe ? t('{name} (you)', { name: player.username }) : player.username}
             </TextLink>
             <BadgePill badge={player.badge} />
           </View>
         )}
         {toMove && (
           <Text style={styles.toMoveTag} aria-hidden>
-            TO MOVE
+            {t('TO MOVE')}
           </Text>
         )}
         {emote !== null && (
@@ -53,7 +54,9 @@ export function PlayerBar({
           </Text>
         )}
         <Text style={styles.meta}>
-          {[SIDE_PLURAL[side], String(rating.rating), change].filter((x) => x !== null).join(' · ')}
+          {[t(SIDE_PLURAL[side]), String(rating.rating), change]
+            .filter((x) => x !== null)
+            .join(' · ')}
         </Text>
       </View>
       <Clock game={game} side={side} />
@@ -69,7 +72,11 @@ function Clock({ game, side }: { game: Game; side: Piece }) {
   return (
     <View
       role="timer"
-      aria-label={`${SIDE_PLURAL[side]} clock ${text}`}
+      aria-label={
+        side === 'goat'
+          ? t('Goats clock {time}', { time: text })
+          : t('Tigers clock {time}', { time: text })
+      }
       style={[styles.clock, running && styles.running, running && ms < LOW_TIME_MS && styles.low]}
     >
       <Text style={[styles.time, running && styles.runningText]}>{text}</Text>
@@ -116,6 +123,8 @@ const styles = StyleSheet.create({
   name: { fontSize: 15, fontWeight: '600', color: colors.text, paddingVertical: 10 },
   meta: { fontSize: 13, color: colors.muted },
   clock: {
+    // Digits read left to right in every language.
+    direction: 'ltr',
     minWidth: 92,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,

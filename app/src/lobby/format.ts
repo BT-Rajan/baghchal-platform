@@ -1,6 +1,7 @@
 /** Words and numbers for the lobby, profiles and leaderboards. */
 import type { GameSummary, Level, Category, Challenge, Side, TimeControl } from '@/api/endpoints';
 import { ratingChangeText } from '@/game/describe';
+import { locale, mark, plural, t } from '@/i18n';
 
 /** The time controls on offer: minutes+increment, and the sand clock. */
 export const TIME_CONTROLS: readonly { label: TimeControl; category: Category }[] = [
@@ -11,19 +12,20 @@ export const TIME_CONTROLS: readonly { label: TimeControl; category: Category }[
 ];
 
 /** How the sand clock works, where a player picks it. */
-export const SAND_CLOCK_TEXT =
-  'Sand clock: one minute each. The time you take is added to your opponent’s clock, and theirs to yours.';
+export const SAND_CLOCK_TEXT = mark(
+  'Sand clock: one minute each. The time you take is added to your opponent’s clock, and theirs to yours.',
+);
 
 /** "5+3", or "Sand clock" (the API calls it "sand"). Retired ones (10+5) read as they are. */
 export function timeControlName(label: string): string {
-  return label === 'sand' ? 'Sand clock' : label;
+  return label === 'sand' ? t('Sand clock') : label;
 }
 
-/** Players see Quick, Standard and Sand clock; the API keeps its names. */
+/** Players see Quick, Standard and Sand clock (shown with `t()`); the API keeps its names. */
 export const CATEGORIES: readonly { value: Category; label: string }[] = [
-  { value: 'blitz', label: 'Quick' },
-  { value: 'rapid', label: 'Standard' },
-  { value: 'sand', label: 'Sand clock' },
+  { value: 'blitz', label: mark('Quick') },
+  { value: 'rapid', label: mark('Standard') },
+  { value: 'sand', label: mark('Sand clock') },
 ];
 
 export function categoryOf(timeControl: string): Category | undefined {
@@ -31,8 +33,8 @@ export function categoryOf(timeControl: string): Category | undefined {
 }
 
 export function presenceText(player: { online: boolean; playing: boolean }): string {
-  if (player.playing) return 'Playing';
-  return player.online ? 'Online' : 'Offline';
+  if (player.playing) return t('Playing');
+  return player.online ? t('Online') : t('Offline');
 }
 
 /** Whether a player can be challenged right now (the server checks again). */
@@ -55,11 +57,14 @@ export function linkPath(code: string): string {
 
 /** "45 s", "12 min" or "23 h 5 min": how long is left, as precisely as it matters. */
 export function durationText(seconds: number): string {
-  if (seconds < 120) return `${seconds} s`;
+  if (seconds < 120) return t('{seconds} s', { seconds });
   const minutes = Math.ceil(seconds / 60);
-  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 60) return t('{minutes} min', { minutes });
   const rest = minutes % 60;
-  return `${Math.floor(minutes / 60)} h${rest === 0 ? '' : ` ${rest} min`}`;
+  const hours = Math.floor(minutes / 60);
+  return rest === 0
+    ? t('{hours} h', { hours })
+    : t('{hours} h {minutes} min', { hours, minutes: rest });
 }
 
 /** Whole seconds until `expiresAt`, never negative. */
@@ -81,7 +86,6 @@ export function isOpen(challenge: Challenge, nowMs: number): boolean {
   return challenge.status === 'pending' && challengeSecondsLeft(challenge, nowMs) > 0;
 }
 
-const SIDE_NAMES: Record<Exclude<Side, 'random'>, string> = { goat: 'goats', tiger: 'tigers' };
 const OTHER: Record<Exclude<Side, 'random'>, Exclude<Side, 'random'>> = {
   goat: 'tiger',
   tiger: 'goat',
@@ -89,24 +93,19 @@ const OTHER: Record<Exclude<Side, 'random'>, Exclude<Side, 'random'>> = {
 
 /** "5+3 · rated match" or "Sand clock · casual · you play goats", from my point of view. */
 export function challengeTerms(challenge: Challenge, myId: string): string {
-  const parts = [timeControlName(challenge.time_control)];
-  if (challenge.rated) {
-    parts.push('rated match (2 games)');
-  } else {
-    parts.push('casual');
-    const side = challenge.side ?? 'random';
-    if (side === 'random') parts.push('random sides');
-    else {
-      const mine = challenge.challenger.id === myId ? side : OTHER[side];
-      parts.push(`you play ${SIDE_NAMES[mine]}`);
-    }
-  }
-  return parts.join(' · ');
+  const time = timeControlName(challenge.time_control);
+  if (challenge.rated) return t('{time} · rated match (2 games)', { time });
+  const side = challenge.side ?? 'random';
+  if (side === 'random') return t('{time} · casual · random sides', { time });
+  const mine = challenge.challenger.id === myId ? side : OTHER[side];
+  return mine === 'goat'
+    ? t('{time} · casual · you play goats', { time })
+    : t('{time} · casual · you play tigers', { time });
 }
 
 /** "18 Jan 2027", on the player's own calendar (their device's time zone). */
 export function dayText(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', {
+  return new Date(iso).toLocaleDateString(locale(), {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -116,7 +115,9 @@ export function dayText(iso: string): string {
 /** "Joined March 2026". */
 export function joinedText(createdAt: string): string {
   const date = new Date(createdAt);
-  return `Joined ${date.toLocaleDateString('en', { month: 'long', year: 'numeric' })}`;
+  return t('Joined {date}', {
+    date: date.toLocaleDateString(locale(), { month: 'long', year: 'numeric' }),
+  });
 }
 
 /** Usernames contain only these characters, so anything else cannot match a prefix search. */
@@ -126,31 +127,49 @@ export function searchPrefix(text: string): string | null {
 }
 
 export const LEVELS: readonly { value: Level; label: string }[] = [
-  { value: 'easy', label: 'Easy' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'hard', label: 'Hard' },
+  { value: 'easy', label: mark('Easy') },
+  { value: 'medium', label: mark('Medium') },
+  { value: 'hard', label: mark('Hard') },
 ];
 
 const OUTCOMES: Record<GameSummary['outcome'], string> = {
-  won: 'Won',
-  lost: 'Lost',
-  drawn: 'Drawn',
-  aborted: 'Aborted',
+  won: mark('Won'),
+  lost: mark('Lost'),
+  drawn: mark('Drawn'),
+  aborted: mark('Aborted'),
 };
 
 /** "Won · vs bob · 5+3 rated (+12) · 3 Oct 2026" for a player's game history. */
 export function historyText(game: GameSummary): string {
   const opponent =
-    game.computer === null ? game.opponent.username : `the computer (${game.computer})`;
-  const kind = game.rated ? 'rated' : 'casual';
+    game.computer === null
+      ? game.opponent.username
+      : t('the computer ({level})', { level: game.computer });
   const delta = ratingChangeText(game.rating_change);
-  const change = delta === null ? '' : ` (${delta})`;
-  const day = dayText(game.finished_at);
-  return `${OUTCOMES[game.outcome]} · vs ${opponent} · ${timeControlName(game.time_control)} ${kind}${change} · ${day}`;
+  const values = {
+    outcome: t(OUTCOMES[game.outcome]),
+    opponent,
+    time: timeControlName(game.time_control),
+    date: dayText(game.finished_at),
+  };
+  if (delta === null) {
+    return game.rated
+      ? t('{outcome} · vs {opponent} · {time} rated · {date}', values)
+      : t('{outcome} · vs {opponent} · {time} casual · {date}', values);
+  }
+  return game.rated
+    ? t('{outcome} · vs {opponent} · {time} rated ({change}) · {date}', {
+        ...values,
+        change: delta,
+      })
+    : t('{outcome} · vs {opponent} · {time} casual ({change}) · {date}', {
+        ...values,
+        change: delta,
+      });
 }
 
 /** "Looking for 1 more player"-style wording for the number already waiting. */
 export function waitingText(count: number): string {
-  if (count === 0) return 'Nobody is waiting for this game right now.';
-  return count === 1 ? '1 player is waiting.' : `${count} players are waiting.`;
+  if (count === 0) return t('Nobody is waiting for this game right now.');
+  return plural(count, '{count} player is waiting.', '{count} players are waiting.');
 }

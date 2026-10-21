@@ -77,14 +77,21 @@ def in_good_standing(now: datetime) -> ColumnElement[bool]:
 
 
 def suspension_error(user: User) -> AppError:
-    until = user.suspended_until
-    when = (
-        "This account has been banned."
-        if until is None or until >= PERMANENT
-        else f"This account is suspended until {until:%d %B %Y, %H:%M} UTC."
+    until, reason = user.suspended_until, user.suspension_reason
+    banned = until is None or until >= PERMANENT
+    message = {
+        (True, False): "This account has been banned.",
+        (True, True): "This account has been banned. Reason: {reason}",
+        (False, False): "This account is suspended until {until} UTC.",
+        (False, True): "This account is suspended until {until} UTC. Reason: {reason}",
+    }[banned, bool(reason)]
+    return AppError(
+        403,
+        "account_suspended",
+        message,
+        until=f"{until:%d %B %Y, %H:%M}" if until is not None else "",
+        reason=reason or "",
     )
-    reason = f" Reason: {user.suspension_reason}" if user.suspension_reason else ""
-    return AppError(403, "account_suspended", when + reason)
 
 
 def email_key(email: str) -> str:

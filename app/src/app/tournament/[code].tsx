@@ -12,6 +12,7 @@ import { Notice } from '@/components/Notice';
 import { PeopleOnly } from '@/components/PeopleOnly';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
+import { plural, t } from '@/i18n';
 import { shareLink, timeControlName } from '@/lobby/format';
 import { isMine, pairingText, roundsOf, tournamentStatusText } from '@/pro/format';
 import { useAwardPairing, usePlayPairing, useTournament, useTournamentAction } from '@/pro/hooks';
@@ -22,11 +23,11 @@ export default function TournamentScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const tournament = useTournament(code);
   return (
-    <Screen title={tournament.data?.name ?? 'Tournament'} align="top">
+    <Screen title={tournament.data?.name ?? t('Tournament')} align="top">
       {tournament.error !== null ? (
         <ErrorState error={tournament.error} onRetry={() => void tournament.refetch()} />
       ) : tournament.data === undefined ? (
-        <Loading label="Loading the tournament" />
+        <Loading label={t('Loading the tournament')} />
       ) : (
         <Details tournament={tournament.data} />
       )}
@@ -34,39 +35,47 @@ export default function TournamentScreen() {
   );
 }
 
-function Details({ tournament: t }: { tournament: Tournament }) {
+function Details({ tournament: tour }: { tournament: Tournament }) {
   const me = useMe();
-  const action = useTournamentAction(t.code);
+  const action = useTournamentAction(tour.code);
   const [ending, setEnding] = useState(false);
-  const play = usePlayPairing(t.code);
-  const host = t.host.id === me.id;
-  const playing = t.players.some((p) => p.id === me.id);
+  const play = usePlayPairing(tour.code);
+  const host = tour.host.id === me.id;
+  const playing = tour.players.some((p) => p.id === me.id);
   const error = action.error ?? play.error;
   // My game this round (the earlier ones are under the rounds below).
-  const mine = t.pairings.filter((p) => p.round === t.round && isMine(p, me.id));
-  const sitting = t.byes.some((b) => b.round === t.round && b.player.id === me.id);
+  const mine = tour.pairings.filter((p) => p.round === tour.round && isMine(p, me.id));
+  const sitting = tour.byes.some((b) => b.round === tour.round && b.player.id === me.id);
   return (
     <>
       <Text style={styles.muted}>
-        {`${timeControlName(t.time_control)} · hosted by ${t.host.username} · ${tournamentStatusText(t)}`}
+        {t('{time} · hosted by {name} · {status}', {
+          time: timeControlName(tour.time_control),
+          name: tour.host.username,
+          status: tournamentStatusText(tour),
+        })}
       </Text>
       {error !== null && <Notice tone="error">{describeError(error)}</Notice>}
 
-      {t.status === 'open' && (
+      {tour.status === 'open' && (
         <Card>
-          <Text style={styles.text}>{t.players.map((p) => p.username).join(', ')}</Text>
-          <Hint>Invite players with this link:</Hint>
+          <Text style={styles.text}>{tour.players.map((p) => p.username).join(', ')}</Text>
+          <Hint>{t('Invite players with this link:')}</Hint>
           <Text style={styles.link} selectable>
-            {shareLink(`/tournament/${t.code}`)}
+            {shareLink(`/tournament/${tour.code}`)}
           </Text>
           {!playing && (
             <PeopleOnly>
-              <Button title="Join" busy={action.isPending} onPress={() => action.mutate('join')} />
+              <Button
+                title={t('Join')}
+                busy={action.isPending}
+                onPress={() => action.mutate('join')}
+              />
             </PeopleOnly>
           )}
           {playing && !host && (
             <Button
-              title="Leave"
+              title={t('Leave')}
               variant="secondary"
               busy={action.isPending}
               onPress={() => action.mutate('leave')}
@@ -74,42 +83,44 @@ function Details({ tournament: t }: { tournament: Tournament }) {
           )}
           {host && (
             <Button
-              title="Start the tournament"
+              title={t('Start the tournament')}
               busy={action.isPending}
-              disabled={t.players.length < 3}
+              disabled={tour.players.length < 3}
               onPress={() => action.mutate('start')}
             />
           )}
-          {host && t.players.length < 3 && <Hint>At least 3 players are needed to start.</Hint>}
+          {host && tour.players.length < 3 && (
+            <Hint>{t('At least 3 players are needed to start.')}</Hint>
+          )}
         </Card>
       )}
 
-      {t.standings.length > 0 && (
+      {tour.standings.length > 0 && (
         <>
-          <SectionTitle>Standings</SectionTitle>
+          <SectionTitle>{t('Standings')}</SectionTitle>
           <Card>
-            {t.standings.map((s, i) => (
+            {tour.standings.map((s, i) => (
               <View key={s.player.id} style={styles.row}>
                 <Text style={styles.rank}>{`${i + 1}.`}</Text>
                 <Text style={[styles.text, styles.grow]}>{s.player.username}</Text>
-                <Text
-                  style={styles.text}
-                >{`${s.points} ${s.points === 1 ? 'point' : 'points'}`}</Text>
-                <Text style={styles.muted}>{`Tie-break ${s.buchholz}`}</Text>
-                <Text style={styles.muted}>{`${s.played} played`}</Text>
+                <Text style={styles.text}>
+                  {plural(s.points, '{count} point', '{count} points')}
+                </Text>
+                <Text style={styles.muted}>{t('Tie-break {score}', { score: s.buchholz })}</Text>
+                <Text style={styles.muted}>{t('{count} played', { count: s.played })}</Text>
               </View>
             ))}
           </Card>
         </>
       )}
 
-      {t.status === 'running' && sitting && (
-        <Notice tone="info">You have the bye this round: a point, and a rest.</Notice>
+      {tour.status === 'running' && sitting && (
+        <Notice tone="info">{t('You have the bye this round: a point, and a rest.')}</Notice>
       )}
-      {t.status === 'running' && mine.length > 0 && (
+      {tour.status === 'running' && mine.length > 0 && (
         <>
-          <SectionTitle>{`Your game, round ${t.round}`}</SectionTitle>
-          <Hint>Start a game when your opponent is online; it opens for both of you.</Hint>
+          <SectionTitle>{t('Your game, round {round}', { round: tour.round })}</SectionTitle>
+          <Hint>{t('Start a game when your opponent is online; it opens for both of you.')}</Hint>
           {mine.map((p) => (
             <PairingRow
               key={p.id}
@@ -121,65 +132,81 @@ function Details({ tournament: t }: { tournament: Tournament }) {
         </>
       )}
 
-      {roundsOf(t).map(({ round, games, bye }) => (
+      {roundsOf(tour).map(({ round, games, bye }) => (
         <View key={round} style={styles.round}>
-          <SectionTitle>{`Round ${round}`}</SectionTitle>
+          <SectionTitle>{t('Round {round}', { round })}</SectionTitle>
           <Card>
             {games.map((p) => (
               <Text key={p.id} style={styles.muted}>
                 {pairingText(p)}
               </Text>
             ))}
-            {bye !== null && <Text style={styles.muted}>{`${bye} has the bye (a point)`}</Text>}
+            {bye !== null && (
+              <Text style={styles.muted}>{t('{name} has the bye (a point)', { name: bye })}</Text>
+            )}
           </Card>
         </View>
       ))}
-      {t.status !== 'open' && (
+      {tour.status !== 'open' && (
         <Hint>
-          Standings: a point for each win or bye; ties go to whoever met the stronger opponents (the
-          tie-break adds up their points).
+          {t(
+            'Standings: a point for each win or bye; ties go to whoever met the stronger opponents (the tie-break adds up their points).',
+          )}
         </Hint>
       )}
 
-      {host && t.status === 'running' && <NoShows tournament={t} />}
+      {host && tour.status === 'running' && <NoShows tournament={tour} />}
 
       {host &&
-        t.status === 'running' &&
+        tour.status === 'running' &&
         (ending ? (
           <Confirm
-            question="End the tournament now? Games not yet played are not played, and the standings stay as they are."
-            confirmTitle="End the tournament"
+            question={t(
+              'End the tournament now? Games not yet played are not played, and the standings stay as they are.',
+            )}
+            confirmTitle={t('End the tournament')}
             busy={action.isPending}
             onConfirm={() => action.mutate('finish', { onSettled: () => setEnding(false) })}
             onCancel={() => setEnding(false)}
           />
         ) : (
-          <Button title="End the tournament" variant="secondary" onPress={() => setEnding(true)} />
+          <Button
+            title={t('End the tournament')}
+            variant="secondary"
+            onPress={() => setEnding(true)}
+          />
         ))}
     </>
   );
 }
 
 /** For the host: this round's games nobody has started, to give to whoever turned up. */
-function NoShows({ tournament: t }: { tournament: Tournament }) {
-  const award = useAwardPairing(t.code);
+function NoShows({ tournament: tour }: { tournament: Tournament }) {
+  const award = useAwardPairing(tour.code);
   const [giving, setGiving] = useState<{ pairing: Pairing; winner: 'goat' | 'tiger' } | null>(null);
-  const waiting = t.pairings.filter((p) => p.round === t.round && p.state === 'waiting');
+  const waiting = tour.pairings.filter((p) => p.round === tour.round && p.state === 'waiting');
   if (waiting.length === 0) return null;
   return (
     <>
-      <SectionTitle>Games not played yet</SectionTitle>
+      <SectionTitle>{t('Games not played yet')}</SectionTitle>
       <Hint>
-        If a player does not turn up, give the game to the other: a point for them, and the round
-        can go on.
+        {t(
+          'If a player does not turn up, give the game to the other: a point for them, and the round can go on.',
+        )}
       </Hint>
       {award.error !== null && <Notice tone="error">{describeError(award.error)}</Notice>}
       {waiting.map((p) =>
         giving?.pairing.id === p.id ? (
           <Confirm
             key={p.id}
-            question={`Give this game to ${(giving.winner === 'goat' ? p.goat : p.tiger).username}? ${(giving.winner === 'goat' ? p.tiger : p.goat).username} gets no point, and it is not played.`}
-            confirmTitle="Give the game"
+            question={t(
+              'Give this game to {winner}? {loser} gets no point, and it is not played.',
+              {
+                winner: (giving.winner === 'goat' ? p.goat : p.tiger).username,
+                loser: (giving.winner === 'goat' ? p.tiger : p.goat).username,
+              },
+            )}
+            confirmTitle={t('Give the game')}
             busy={award.isPending}
             onConfirm={() =>
               award.mutate(
@@ -196,8 +223,8 @@ function NoShows({ tournament: t }: { tournament: Tournament }) {
               {(['goat', 'tiger'] as const).map((side) => (
                 <Button
                   key={side}
-                  title={`Give the game to ${p[side].username}`}
-                  label={`Give to ${p[side].username}`}
+                  title={t('Give the game to {name}', { name: p[side].username })}
+                  label={t('Give to {name}', { name: p[side].username })}
                   variant="secondary"
                   compact
                   onPress={() => setGiving({ pairing: p, winner: side })}
@@ -225,8 +252,8 @@ function PairingRow({
       <Text style={styles.text}>{pairingText(p)}</Text>
       {p.state === 'waiting' && (
         <Button
-          title={`Play ${p.goat.username} v ${p.tiger.username}`}
-          label="Play now"
+          title={t('Play {goat} v {tiger}', { goat: p.goat.username, tiger: p.tiger.username })}
+          label={t('Play now')}
           compact
           busy={starting}
           onPress={onPlay}
@@ -234,8 +261,8 @@ function PairingRow({
       )}
       {p.game_id !== null && (
         <Button
-          title={`Open ${p.goat.username} v ${p.tiger.username}`}
-          label="Open the game"
+          title={t('Open {goat} v {tiger}', { goat: p.goat.username, tiger: p.tiger.username })}
+          label={t('Open the game')}
           variant="secondary"
           compact
           onPress={() => router.push(`/game/${p.game_id}`)}

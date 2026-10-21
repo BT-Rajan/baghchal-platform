@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { t } from '@/i18n';
 import { useRealtimeStatus } from '@/realtime/RealtimeProvider';
 import { colors, spacing } from '@/theme';
 
@@ -9,7 +10,7 @@ export function ConnectionBanner() {
   return (
     <View style={styles.banner}>
       <Text role="status" aria-live="polite" style={styles.text}>
-        Reconnecting… Live updates are paused.
+        {t('Reconnecting… Live updates are paused.')}
       </Text>
     </View>
   );

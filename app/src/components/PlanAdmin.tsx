@@ -5,6 +5,7 @@ import { StyleSheet, Text } from 'react-native';
 import { describeError } from '@/api/errors';
 import { DURATIONS, GRANTABLE, grantBody, grantText, myPlanText } from '@/billing/format';
 import { useChangeGrant, usePlayerPlan } from '@/billing/hooks';
+import { mark, t } from '@/i18n';
 import { colors } from '@/theme';
 
 import { Button } from './Button';
@@ -17,7 +18,7 @@ import { TextField } from './TextField';
 const KINDS = [
   { value: 'plus', label: 'Plus' },
   { value: 'pro', label: 'Pro' },
-  { value: 'feature', label: 'One feature' },
+  { value: 'feature', label: mark('One feature') },
 ] as const;
 const FEATURES = GRANTABLE.filter((g) => g.value.startsWith('feature:'));
 
@@ -33,7 +34,7 @@ export function PlanAdmin({ username }: { username: string }) {
   const withReason = (act: (why: string) => void) => {
     change.reset();
     const why = reason.trim();
-    setReasonError(why === '' ? 'Say why; the player is told.' : undefined);
+    setReasonError(why === '' ? t('Say why; the player is told.') : undefined);
     if (why !== '') act(why);
   };
   const grant = () =>
@@ -53,7 +54,7 @@ export function PlanAdmin({ username }: { username: string }) {
   if (record.error !== null) {
     return <ErrorState error={record.error} onRetry={() => void record.refetch()} />;
   }
-  if (record.data === undefined) return <Loading label="Loading the player's plan" />;
+  if (record.data === undefined) return <Loading label={t("Loading the player's plan")} />;
   const plan = record.data;
   return (
     <>
@@ -61,40 +62,50 @@ export function PlanAdmin({ username }: { username: string }) {
         <Text style={styles.title}>{myPlanText(plan, username)}</Text>
       </Card>
       {change.error !== null && <Notice tone="error">{describeError(change.error)}</Notice>}
-      <Segmented label="Give" options={KINDS} value={kind} onChange={setKind} />
+      <Segmented
+        label={t('Give')}
+        options={KINDS.map((k) => (k.value === 'feature' ? { ...k, label: t(k.label) } : k))}
+        value={kind}
+        onChange={setKind}
+      />
       {kind === 'feature' && (
         <Segmented
-          label="Feature"
-          options={FEATURES}
+          label={t('Feature')}
+          options={FEATURES.map((f) => ({ ...f, label: t(f.label) }))}
           value={feature}
           onChange={setFeature}
           vertical
         />
       )}
-      <Segmented label="For" options={DURATIONS} value={duration} onChange={setDuration} />
+      <Segmented
+        label={t('For')}
+        options={DURATIONS.map((d) => ({ ...d, label: t(d.label) }))}
+        value={duration}
+        onChange={setDuration}
+      />
       <TextField
-        label="Reason (sent to the player)"
+        label={t('Reason (sent to the player)')}
         value={reason}
         onChangeText={setReason}
         error={reasonError}
         maxLength={500}
       />
       <Button
-        title="Grant"
+        title={t('Grant')}
         onPress={grant}
         busy={change.isPending && 'grant' in change.variables}
       />
-      <SectionTitle>Grants</SectionTitle>
+      <SectionTitle>{t('Grants')}</SectionTitle>
       {plan.history.length === 0 ? (
-        <Hint>Nothing granted yet.</Hint>
+        <Hint>{t('Nothing granted yet.')}</Hint>
       ) : (
         plan.history.map((g) => (
           <Card key={g.id}>
             <Text style={g.active ? styles.text : styles.muted}>{grantText(g)}</Text>
             {g.active && (
               <Button
-                title={`Revoke: ${grantText(g)}`}
-                label="Revoke"
+                title={t('Revoke: {grant}', { grant: grantText(g) })}
+                label={t('Revoke')}
                 variant="secondary"
                 compact
                 busy={

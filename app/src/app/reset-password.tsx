@@ -10,6 +10,7 @@ import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { TextLink } from '@/components/TextLink';
+import { t } from '@/i18n';
 
 const FIELDS = ['password', 'confirm'] as const;
 const CODE_FIELDS = { weak_password: 'password' } as const;
@@ -31,20 +32,20 @@ export default function ResetPassword() {
 
   if (!isLinkToken(token)) {
     return (
-      <Screen title="Choose a new password" brand>
-        <Notice tone="error">This link is invalid or has expired.</Notice>
-        <TextLink href="/forgot-password">Request a new link</TextLink>
+      <Screen title={t('Choose a new password')} brand>
+        <Notice tone="error">{t('This link is invalid or has expired.')}</Notice>
+        <TextLink href="/forgot-password">{t('Request a new link')}</TextLink>
       </Screen>
     );
   }
 
   if (reset.isSuccess) {
     return (
-      <Screen title="Password changed" brand>
+      <Screen title={t('Password changed')} brand>
         <Notice tone="success">
-          Your password has been changed and you have been signed out everywhere.
+          {t('Your password has been changed and you have been signed out everywhere.')}
         </Notice>
-        <TextLink href="/sign-in">Sign in</TextLink>
+        <TextLink href="/sign-in">{t('Sign in')}</TextLink>
       </Screen>
     );
   }
@@ -55,10 +56,10 @@ export default function ResetPassword() {
   };
 
   return (
-    <Screen title="Choose a new password" brand>
+    <Screen title={t('Choose a new password')} brand>
       {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
       <TextField
-        label="New password"
+        label={t('New password')}
         value={password}
         onChangeText={setPassword}
         error={fieldError('password')}
@@ -67,7 +68,7 @@ export default function ResetPassword() {
         textContentType="newPassword"
       />
       <TextField
-        label="Repeat the new password"
+        label={t('Repeat the new password')}
         value={confirm}
         onChangeText={setConfirm}
         error={fieldError('confirm')}
@@ -76,8 +77,10 @@ export default function ResetPassword() {
         textContentType="newPassword"
         onSubmitEditing={submit}
       />
-      <Button title="Change password" onPress={submit} busy={reset.isPending} />
-      {reset.error !== null && <TextLink href="/forgot-password">Request a new link</TextLink>}
+      <Button title={t('Change password')} onPress={submit} busy={reset.isPending} />
+      {reset.error !== null && (
+        <TextLink href="/forgot-password">{t('Request a new link')}</TextLink>
+      )}
     </Screen>
   );
 }

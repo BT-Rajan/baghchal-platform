@@ -18,6 +18,7 @@ import Svg, { Circle, G, Path } from 'react-native-svg';
 
 import type { PieceSet } from '@/api/endpoints';
 import type { Ending } from '@/game/ending';
+import { t } from '@/i18n';
 import { colors } from '@/theme';
 
 import { Coin } from './Coin';
@@ -111,7 +112,10 @@ export function Victory({
   return (
     <Pressable
       role="button"
-      aria-label={`${ending.headline} ${ending.detail}. Tap to close.`}
+      aria-label={t('{headline} {detail}. Tap to close.', {
+        headline: ending.headline,
+        detail: ending.detail,
+      })}
       onPress={onClose}
       style={StyleSheet.absoluteFill}
     >
@@ -182,7 +186,7 @@ export function Victory({
             {ending.headline}
           </Text>
           <Text style={styles.detail}>{ending.detail}</Text>
-          <Text style={styles.hint}>Tap to close</Text>
+          <Text style={styles.hint}>{t('Tap to close')}</Text>
         </View>
       </Animated.View>
     </Pressable>

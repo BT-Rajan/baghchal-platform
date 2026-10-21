@@ -8,6 +8,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { describeError } from '@/api/errors';
 import { followAppFocus } from '@/api/focus';
+import { t } from '@/i18n';
+import { LanguageRoot } from '@/i18n/LanguageRoot';
 import { shouldRetry } from '@/api/retry';
 import { SessionProvider, useSession } from '@/auth/session';
 import { Button } from '@/components/Button';
@@ -47,7 +49,9 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <SessionProvider baseUrl={API_URL} queryClient={queryClient}>
           <RealtimeProvider url={socketUrl(API_URL)} onGameStarted={openGame}>
-            <Routes />
+            <LanguageRoot>
+              <Routes />
+            </LanguageRoot>
           </RealtimeProvider>
         </SessionProvider>
       </QueryClientProvider>
@@ -80,7 +84,7 @@ function Routes() {
         {Platform.OS === 'web' && <WebTopBar playing={false} />}
         <Screen title="ClawPlay">
           <Notice tone="error">{describeError(state.error)}</Notice>
-          <Button title="Try again" onPress={() => void session.retry()} />
+          <Button title={t('Try again')} onPress={() => void session.retry()} />
         </Screen>
       </View>
     );
@@ -101,46 +105,46 @@ function Routes() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="player/[username]" options={{ headerShown: true, title: '' }} />
             <Stack.Screen name="challenge/[username]" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="game/[id]" options={{ headerShown: true, title: 'Game' }} />
-            <Stack.Screen name="settings" options={{ headerShown: true, title: 'Settings' }} />
+            <Stack.Screen name="game/[id]" options={{ headerShown: true, title: t('Game') }} />
+            <Stack.Screen name="settings" options={{ headerShown: true, title: t('Settings') }} />
             <Stack.Screen
               name="notifications"
-              options={{ headerShown: true, title: 'Notifications' }}
+              options={{ headerShown: true, title: t('Notifications') }}
             />
             <Stack.Screen name="report/[username]" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="play" options={{ headerShown: true, title: 'Play now' }} />
-            <Stack.Screen name="plans" options={{ headerShown: true, title: 'Plans' }} />
+            <Stack.Screen name="play" options={{ headerShown: true, title: t('Play now') }} />
+            <Stack.Screen name="plans" options={{ headerShown: true, title: t('Plans') }} />
             <Stack.Screen
               name="appearance"
-              options={{ headerShown: true, title: 'Look and sound' }}
+              options={{ headerShown: true, title: t('Look and sound') }}
             />
             <Stack.Screen name="invite" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="c/[code]" options={{ headerShown: true, title: 'Challenge' }} />
+            <Stack.Screen name="c/[code]" options={{ headerShown: true, title: t('Challenge') }} />
             <Stack.Screen
               name="tournaments"
-              options={{ headerShown: true, title: 'Tournaments' }}
+              options={{ headerShown: true, title: t('Tournaments') }}
             />
             <Stack.Screen
               name="tournament/[code]"
-              options={{ headerShown: true, title: 'Tournament' }}
+              options={{ headerShown: true, title: t('Tournament') }}
             />
-            <Stack.Screen name="trainer" options={{ headerShown: true, title: 'Trainer' }} />
-            <Stack.Screen name="claim" options={{ headerShown: true, title: 'Your account' }} />
+            <Stack.Screen name="trainer" options={{ headerShown: true, title: t('Trainer') }} />
+            <Stack.Screen name="claim" options={{ headerShown: true, title: t('Your account') }} />
             <Stack.Screen
               name="make-it-yours"
-              options={{ headerShown: true, title: 'Make it yours' }}
+              options={{ headerShown: true, title: t('Make it yours') }}
             />
             <Stack.Screen
               name="moderation/index"
-              options={{ headerShown: true, title: 'Moderation' }}
+              options={{ headerShown: true, title: t('Moderation') }}
             />
             <Stack.Screen
               name="moderation/[username]"
-              options={{ headerShown: true, title: 'Moderation' }}
+              options={{ headerShown: true, title: t('Moderation') }}
             />
             <Stack.Screen
               name="admin/payments"
-              options={{ headerShown: true, title: 'Payments' }}
+              options={{ headerShown: true, title: t('Payments') }}
             />
           </Stack.Protected>
           <Stack.Protected guard={agreeing} redirectTo="/welcome">
@@ -162,16 +166,16 @@ function Routes() {
           {/* The web's top bar is enough there: the document's own heading names the page. */}
           <Stack.Screen
             name="terms"
-            options={{ headerShown: Platform.OS !== 'web', title: 'Terms of service' }}
+            options={{ headerShown: Platform.OS !== 'web', title: t('Terms of service') }}
           />
           <Stack.Screen
             name="privacy"
-            options={{ headerShown: Platform.OS !== 'web', title: 'Privacy policy' }}
+            options={{ headerShown: Platform.OS !== 'web', title: t('Privacy policy') }}
           />
           {/* How to delete an account, for anyone (app stores ask for such a page). */}
           <Stack.Screen
             name="delete-account"
-            options={{ headerShown: Platform.OS !== 'web', title: 'Delete your account' }}
+            options={{ headerShown: Platform.OS !== 'web', title: t('Delete your account') }}
           />
         </Stack>
       </BannersOnScreens.Provider>
@@ -183,9 +187,11 @@ function Routes() {
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   console.error('Screen crashed', error);
   return (
-    <Screen title="Something went wrong">
-      <Notice tone="error">This screen ran into a problem. Trying again usually helps.</Notice>
-      <Button title="Try again" onPress={() => void retry()} />
+    <Screen title={t('Something went wrong')}>
+      <Notice tone="error">
+        {t('This screen ran into a problem. Trying again usually helps.')}
+      </Notice>
+      <Button title={t('Try again')} onPress={() => void retry()} />
     </Screen>
   );
 }

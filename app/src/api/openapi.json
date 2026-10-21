@@ -3731,6 +3731,16 @@
               }
             ],
             "title": "Show Badge"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Language"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -3760,6 +3770,9 @@
           "show_badge": {
             "type": "boolean",
             "title": "Show Badge"
+          },
+          "language": {
+            "$ref": "#/components/schemas/Language"
           }
         },
         "type": "object",
@@ -3769,7 +3782,8 @@
           "sounds",
           "sounds_on",
           "emotes_on",
-          "show_badge"
+          "show_badge",
+          "language"
         ],
         "title": "AppearanceOut",
         "description": "What the app uses now: without the themes feature, the free board, pieces and sounds."
@@ -5719,6 +5733,18 @@
           "endgame"
         ],
         "title": "Kind"
+      },
+      "Language": {
+        "type": "string",
+        "enum": [
+          "auto",
+          "en",
+          "ta",
+          "hi",
+          "ar"
+        ],
+        "title": "Language",
+        "description": "The app's language: the device's (``auto``), or one chosen."
       },
       "LeaderboardEntry": {
         "properties": {

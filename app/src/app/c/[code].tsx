@@ -11,6 +11,7 @@ import { PeopleOnly } from '@/components/PeopleOnly';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
 import { useServerNow } from '@/components/useNow';
+import { t } from '@/i18n';
 import { challengeTerms, isOpen } from '@/lobby/format';
 import { useAcceptLink, useAnswerChallenge, useLinkChallenge } from '@/lobby/hooks';
 import { colors } from '@/theme';
@@ -33,12 +34,12 @@ export default function LinkChallenge() {
       {link.error !== null ? (
         <ErrorState error={link.error} onRetry={() => void link.refetch()} />
       ) : c === undefined ? (
-        <Loading label="Loading the challenge" />
+        <Loading label={t('Loading the challenge')} />
       ) : !isOpen(c, now) ? (
         <Hint>
           {myGame !== null
-            ? 'The challenge was accepted.'
-            : 'This challenge is closed. Ask your friend for a new link.'}
+            ? t('The challenge was accepted.')
+            : t('This challenge is closed. Ask your friend for a new link.')}
         </Hint>
       ) : mine ? (
         <>
@@ -55,12 +56,14 @@ export default function LinkChallenge() {
         </>
       ) : (
         <Card>
-          <Text style={styles.title}>{`${c.challenger.username} challenges you`}</Text>
+          <Text style={styles.title}>
+            {t('{name} challenges you', { name: c.challenger.username })}
+          </Text>
           <Text style={styles.text}>{challengeTerms(c, me.id)}</Text>
           {accept.error !== null && <Notice tone="error">{describeError(accept.error)}</Notice>}
           <PeopleOnly>
             <Button
-              title="Accept and play"
+              title={t('Accept and play')}
               busy={accept.isPending}
               onPress={() => accept.mutate()}
             />
@@ -69,7 +72,7 @@ export default function LinkChallenge() {
       )}
       {myGame !== null && (
         <Button
-          title="Go to the game"
+          title={t('Go to the game')}
           variant="secondary"
           onPress={() => router.push(`/game/${myGame}`)}
         />

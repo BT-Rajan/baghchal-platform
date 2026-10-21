@@ -14,6 +14,7 @@ import {
   type KnownAge,
 } from '@/legal/agreement';
 import { useLegalVersions } from '@/legal/hooks';
+import { t } from '@/i18n';
 import { colors, spacing, type } from '@/theme';
 
 import { Hint } from './Card';
@@ -53,12 +54,10 @@ export function useAgreement({ guest, known }: { guest: boolean; known?: KnownAg
 export function AgreementFields({
   agreement,
   fieldError,
-  intro = 'By continuing you agree to our',
   askAge = true,
 }: {
   agreement: ReturnType<typeof useAgreement>;
   fieldError: (field: AgreementField) => string | undefined;
-  intro?: string;
   /** False for an account whose age is known, asked only to agree to changed texts. */
   askAge?: boolean;
 }) {
@@ -66,15 +65,22 @@ export function AgreementFields({
     <>
       {askAge && <AgeFields agreement={agreement} fieldError={fieldError} />}
       <Text style={styles.small}>
-        {intro}{' '}
-        <Text role="link" style={styles.link} onPress={() => router.push('/terms')}>
-          Terms of service
-        </Text>{' '}
-        and{' '}
-        <Text role="link" style={styles.link} onPress={() => router.push('/privacy')}>
-          Privacy policy
-        </Text>
-        .
+        {/* One sentence to translate, its two links in the places it gives them. */}
+        {t('By continuing you agree to our {terms} and {privacy}.')
+          .split(/(\{terms\}|\{privacy\})/)
+          .map((part, i) =>
+            part === '{terms}' ? (
+              <Text key={i} role="link" style={styles.link} onPress={() => router.push('/terms')}>
+                {t('Terms of service')}
+              </Text>
+            ) : part === '{privacy}' ? (
+              <Text key={i} role="link" style={styles.link} onPress={() => router.push('/privacy')}>
+                {t('Privacy policy')}
+              </Text>
+            ) : (
+              part
+            ),
+          )}
       </Text>
     </>
   );
@@ -98,8 +104,8 @@ function AgeFields({
           <View style={styles.row}>
             <View style={styles.cell}>
               <TextField
-                label="Month of birth"
-                placeholder="MM"
+                label={t('Month of birth')}
+                placeholder={t('MM')}
                 value={input.month}
                 onChangeText={(month) => set({ month })}
                 keyboardType="number-pad"
@@ -108,8 +114,8 @@ function AgeFields({
             </View>
             <View style={styles.cell}>
               <TextField
-                label="Year of birth"
-                placeholder="YYYY"
+                label={t('Year of birth')}
+                placeholder={t('YYYY')}
                 value={input.year}
                 onChangeText={(year) => set({ year })}
                 keyboardType="number-pad"
@@ -126,18 +132,20 @@ function AgeFields({
       )}
       {answer.kind === 'minor' && guest && (
         <Hint>
-          Under 18, you can play the computer as a guest. To play other people, make an account: we
-          will ask a parent or guardian to agree.
+          {t(
+            'Under 18, you can play the computer as a guest. To play other people, make an account: we will ask a parent or guardian to agree.',
+          )}
         </Hint>
       )}
       {asksParent(answer, guest) && (
         <>
           <Hint>
-            You are under 18, so we will email a parent or guardian to ask them to agree. Until they
-            do, you can play the computer and puzzles, but not other people.
+            {t(
+              'You are under 18, so we will email a parent or guardian to ask them to agree. Until they do, you can play the computer and puzzles, but not other people.',
+            )}
           </Hint>
           <TextField
-            label="Parent's or guardian's email"
+            label={t("Parent's or guardian's email")}
             value={input.parentEmail}
             onChangeText={(parentEmail) => set({ parentEmail })}
             error={fieldError('parent_email')}

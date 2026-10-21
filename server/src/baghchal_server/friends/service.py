@@ -57,11 +57,14 @@ async def _count_friends(db: AsyncSession, user_id: uuid.UUID) -> int:
 async def _check_room(db: AsyncSession, user: User, other: User) -> None:
     for who in (user, other):
         if await _count_friends(db, who.id) >= MAX_FRIENDS:
-            mine = who.id == user.id
             raise AppError(
                 409,
                 "friend_limit",
-                f"{'You have' if mine else f'{who.username} has'} {MAX_FRIENDS} friends already.",
+                "You have {limit} friends already."
+                if who.id == user.id
+                else "{name} has {limit} friends already.",
+                limit=MAX_FRIENDS,
+                name=who.username,
             )
 
 
@@ -72,13 +75,15 @@ async def request(db: AsyncSession, now: datetime, user: User, other: User) -> R
     if other_id == user_id:
         raise AppError(422, "cannot_friend_self", "You cannot add yourself.")
     if other.role == GUEST:
-        raise AppError(409, "guest_has_no_friends", f"{other.username} is playing as a guest.")
+        raise AppError(
+            409, "guest_has_no_friends", "{name} is playing as a guest.", name=other.username
+        )
     if (
         await lobby.has_blocked(db, user.id, other.id)
         or await lobby.has_blocked(db, other.id, user.id)
         or not plays_people(other, now)
     ):
-        raise AppError(403, "friend_refused", f"You cannot add {other.username}.")
+        raise AppError(403, "friend_refused", "You cannot add {name}.", name=other.username)
     row = await _row(db, user.id, other.id)
     if row is not None and row.accepted_at is None and row.addressee_id == user.id:
         await _check_room(db, user, other)
@@ -96,7 +101,8 @@ async def request(db: AsyncSession, now: datetime, user: User, other: User) -> R
         raise AppError(
             429,
             "too_many_friend_requests",
-            f"You have {MAX_REQUESTS} friend requests waiting. Cancel some first.",
+            "You have {limit} friend requests waiting. Cancel some first.",
+            limit=MAX_REQUESTS,
         )
     await _check_room(db, user, other)
     db.add(

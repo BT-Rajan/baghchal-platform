@@ -15,6 +15,7 @@ FREE = {
     "sounds_on": True,
     "emotes_on": True,
     "show_badge": True,
+    "language": "auto",
 }
 THEMED = {**FREE, "board": "walnut", "pieces": "porcelain", "sounds": "bells"}
 
@@ -109,3 +110,13 @@ async def test_a_change_keeps_the_rest(app: FastAPI, players: PlayerFactory) -> 
     bob = await players("bob")
     assert (await bob.http.patch(URL, json={"sounds": "gentle"})).status_code == 200
     assert (await bob.http.patch(URL, json={"sounds": "arcade"})).status_code == 403
+
+
+async def test_language_is_free_and_kept(players: PlayerFactory) -> None:
+    alice = await players("alice")
+    r = await alice.http.patch(URL, json={"language": "ta"})
+    assert r.status_code == 200
+    assert r.json() == {**FREE, "language": "ta"}
+    assert (await alice.http.get(URL)).json()["language"] == "ta"
+    assert (await alice.http.patch(URL, json={"language": "auto"})).json()["language"] == "auto"
+    assert (await alice.http.patch(URL, json={"language": "fr"})).status_code == 422

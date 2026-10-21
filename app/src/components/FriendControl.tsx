@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import type { FriendRelation } from '@/api/endpoints';
 import { describeError } from '@/api/errors';
+import { t } from '@/i18n';
 import { useFriendship } from '@/lobby/hooks';
 import { colors, spacing } from '@/theme';
 
@@ -28,8 +29,8 @@ export function FriendControl({
       {change.error !== null && <Notice tone="error">{describeError(change.error)}</Notice>}
       {relation === 'none' && (
         <Button
-          title={`Add ${username} as a friend`}
-          label="Add friend"
+          title={t('Add {name} as a friend', { name: username })}
+          label={t('Add friend')}
           icon="people"
           variant="secondary"
           busy={busy}
@@ -38,10 +39,10 @@ export function FriendControl({
       )}
       {relation === 'requested' && (
         <View style={styles.row}>
-          <Text style={styles.text}>Friend request sent.</Text>
+          <Text style={styles.text}>{t('Friend request sent.')}</Text>
           <Button
-            title={`Cancel the friend request to ${username}`}
-            label="Cancel request"
+            title={t('Cancel the friend request to {name}', { name: username })}
+            label={t('Cancel request')}
             variant="secondary"
             compact
             busy={busy}
@@ -51,12 +52,12 @@ export function FriendControl({
       )}
       {relation === 'incoming' && (
         <>
-          <Text style={styles.text}>{`${username} wants to be friends.`}</Text>
+          <Text style={styles.text}>{t('{name} wants to be friends.', { name: username })}</Text>
           <View style={styles.row}>
             <View style={styles.cell}>
               <Button
-                title={`Accept ${username}'s friend request`}
-                label="Accept"
+                title={t("Accept {name}'s friend request", { name: username })}
+                label={t('Accept')}
                 variant="secondary"
                 busy={busy && change.variables.add}
                 onPress={() => run(true)}
@@ -64,8 +65,8 @@ export function FriendControl({
             </View>
             <View style={styles.cell}>
               <Button
-                title={`Decline ${username}'s friend request`}
-                label="Decline"
+                title={t("Decline {name}'s friend request", { name: username })}
+                label={t('Decline')}
                 variant="secondary"
                 busy={busy && !change.variables.add}
                 onPress={() => run(false)}
@@ -77,18 +78,18 @@ export function FriendControl({
       {relation === 'friends' &&
         (confirming ? (
           <Confirm
-            question={`Remove ${username} from your friends?`}
-            confirmTitle={`Yes, remove ${username}`}
+            question={t('Remove {name} from your friends?', { name: username })}
+            confirmTitle={t('Yes, remove {name}', { name: username })}
             busy={busy}
             onConfirm={() => run(false)}
             onCancel={() => setConfirming(false)}
           />
         ) : (
           <View style={styles.row}>
-            <Text style={styles.text}>{`You and ${username} are friends.`}</Text>
+            <Text style={styles.text}>{t('You and {name} are friends.', { name: username })}</Text>
             <Button
-              title={`Remove ${username} from your friends`}
-              label="Remove"
+              title={t('Remove {name} from your friends', { name: username })}
+              label={t('Remove')}
               variant="secondary"
               compact
               onPress={() => setConfirming(true)}

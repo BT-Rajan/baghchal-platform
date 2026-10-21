@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { LegalDocumentName } from '@/api/endpoints';
 import { useLegalDocument } from '@/legal/hooks';
+import { t } from '@/i18n';
 import { parse, sections, type Body, type Span } from '@/legal/markdown';
 import { colors, spacing, type } from '@/theme';
 
@@ -38,7 +39,9 @@ export function LegalDocument({ document }: { document: LegalDocumentName }) {
           </Disclosure>
         ))}
       </View>
-      <Text style={styles.version}>{`Version of ${query.data.version}`}</Text>
+      <Text style={styles.version}>
+        {t('Version of {version}', { version: query.data.version })}
+      </Text>
     </Screen>
   );
 }
