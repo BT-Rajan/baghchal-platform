@@ -4,6 +4,7 @@
  */
 import type { Problems } from '@/auth/validation';
 import { emailProblem } from '@/auth/validation';
+import { t } from '@/i18n';
 
 import { birthMonth, classify, MIN_AGE, type AgeAnswer } from './age';
 
@@ -49,19 +50,19 @@ export function checkAgreement(
   const answer: AgeAnswer = known ? { kind: known } : classify(input.month, input.year, now);
   const problems: Problems<AgreementField> = {};
   if (answer.kind === 'incomplete')
-    problems.birth_month = 'Enter the month and year you were born.';
+    problems.birth_month = t('Enter the month and year you were born.');
   if (answer.kind === 'invalid')
-    problems.birth_month = 'Please check your month and year of birth.';
+    problems.birth_month = t('Please check your month and year of birth.');
   if (answer.kind === 'tooYoung') {
-    problems.birth_month = `You must be at least ${MIN_AGE} to play on ClawPlay.`;
+    problems.birth_month = t('You must be at least {age} to play on ClawPlay.', { age: MIN_AGE });
   }
   const parent = input.parentEmail.trim();
   if (asksParent(answer, guest)) {
     const problem =
-      parent === '' ? "Enter your parent's or guardian's email address." : emailProblem(parent);
+      parent === '' ? t("Enter your parent's or guardian's email address.") : emailProblem(parent);
     if (problem !== undefined) problems.parent_email = problem;
     else if (parent.toLowerCase() === ownEmail.trim().toLowerCase()) {
-      problems.parent_email = "Enter your parent's or guardian's address, not your own.";
+      problems.parent_email = t("Enter your parent's or guardian's address, not your own.");
     }
   }
   if (Object.keys(problems).length > 0) return { problems, details: null };

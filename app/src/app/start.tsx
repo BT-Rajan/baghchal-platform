@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { describeError } from '@/api/errors';
 import { useApi, useSession } from '@/auth/session';
 import { AgreementFields, useAgreement } from '@/components/AgreementFields';
+import { t } from '@/i18n';
 import { Button } from '@/components/Button';
 import { useFormErrors } from '@/components/form';
 import { Notice } from '@/components/Notice';
@@ -47,18 +48,18 @@ export default function Start() {
   };
 
   return (
-    <Screen title="Your first game" brand>
+    <Screen title={t('Your first game')} brand>
       {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
       {agreement.versions.isError && (
         <Notice tone="error">{describeError(agreement.versions.error)}</Notice>
       )}
       <AgreementFields agreement={agreement} fieldError={fieldError} />
       <Button
-        title="Start playing"
+        title={t('Start playing')}
         onPress={start}
         busy={play.isPending || agreement.versions.isPending}
       />
-      <TextLink href="/sign-in">Already have an account? Sign in</TextLink>
+      <TextLink href="/sign-in">{t('Already have an account? Sign in')}</TextLink>
     </Screen>
   );
 }

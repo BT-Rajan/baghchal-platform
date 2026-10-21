@@ -8,6 +8,7 @@ import { Hint } from '@/components/Card';
 import { useFormErrors } from '@/components/form';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
+import { t } from '@/i18n';
 import { AGREEMENT_CODE_FIELDS, AGREEMENT_FIELDS } from '@/legal/agreement';
 
 /**
@@ -45,28 +46,25 @@ export default function Agree() {
   };
 
   return (
-    <Screen title="Before you play on" brand>
+    <Screen title={t('Before you play on')} brand>
       <Hint>
         {me.age_needed
-          ? 'We now ask everyone for their month and year of birth, so players under 18 have a parent or guardian agree before they play other people.'
-          : 'We have updated our terms or privacy policy. Please read what changed.'}
+          ? t(
+              'We now ask everyone for their month and year of birth, so players under 18 have a parent or guardian agree before they play other people.',
+            )
+          : t('We have updated our terms or privacy policy. Please read what changed.')}
       </Hint>
       {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
       {agreement.versions.isError && (
         <Notice tone="error">{describeError(agreement.versions.error)}</Notice>
       )}
-      <AgreementFields
-        agreement={agreement}
-        fieldError={fieldError}
-        askAge={me.age_needed}
-        intro="By continuing you agree to our"
-      />
+      <AgreementFields agreement={agreement} fieldError={fieldError} askAge={me.age_needed} />
       <Button
-        title="Continue"
+        title={t('Continue')}
         onPress={submit}
         busy={send.isPending || agreement.versions.isPending}
       />
-      <Button title="Sign out" variant="secondary" onPress={() => void session.signOut()} />
+      <Button title={t('Sign out')} variant="secondary" onPress={() => void session.signOut()} />
     </Screen>
   );
 }

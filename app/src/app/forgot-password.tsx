@@ -9,6 +9,7 @@ import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { TextLink } from '@/components/TextLink';
+import { t } from '@/i18n';
 
 const FIELDS = ['email'] as const;
 
@@ -25,20 +26,22 @@ export default function ForgotPassword() {
 
   if (request.isSuccess) {
     return (
-      <Screen title="Check your email" brand>
+      <Screen title={t('Check your email')} brand>
         <Notice tone="success">
-          {`If ${email.trim()} belongs to an account, we sent it a link to choose a new password.`}
+          {t('If {email} belongs to an account, we sent it a link to choose a new password.', {
+            email: email.trim(),
+          })}
         </Notice>
-        <TextLink href="/sign-in">Back to sign in</TextLink>
+        <TextLink href="/sign-in">{t('Back to sign in')}</TextLink>
       </Screen>
     );
   }
 
   return (
-    <Screen title="Reset your password" brand>
+    <Screen title={t('Reset your password')} brand>
       {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
       <TextField
-        label="Email"
+        label={t('Email')}
         value={email}
         onChangeText={setEmail}
         error={fieldError('email')}
@@ -49,8 +52,8 @@ export default function ForgotPassword() {
         textContentType="emailAddress"
         onSubmitEditing={submit}
       />
-      <Button title="Email me a link" onPress={submit} busy={request.isPending} />
-      <TextLink href="/sign-in">Back to sign in</TextLink>
+      <Button title={t('Email me a link')} onPress={submit} busy={request.isPending} />
+      <TextLink href="/sign-in">{t('Back to sign in')}</TextLink>
     </Screen>
   );
 }

@@ -2,6 +2,7 @@
  * Errors from the server, which always answer `{"error": {"code", "message", "fields"?}}`.
  * Screens branch on `code` (`player_busy`, `stale_position`, …), never on the message text.
  */
+import { t } from '@/i18n';
 
 export interface FieldProblem {
   field: string;
@@ -48,21 +49,25 @@ export function errorFromBody(status: number, body: unknown): ApiError {
   if (isRecord(error) && typeof error.code === 'string' && typeof error.message === 'string') {
     return new ApiError(status, error.code, error.message, parseFields(error.fields));
   }
-  return new ApiError(status, 'http_error', `The server answered with an error (${status}).`);
+  return new ApiError(
+    status,
+    'http_error',
+    t('The server answered with an error ({status}).', { status }),
+  );
 }
 
 /** A message for people, for any error a request can throw. */
 export function describeError(error: unknown): string {
-  if (!(error instanceof ApiError)) return 'Something went wrong. Please try again.';
+  if (!(error instanceof ApiError)) return t('Something went wrong. Please try again.');
   switch (error.code) {
     case NETWORK_ERROR:
-      return 'Cannot reach the server. Check your connection and try again.';
+      return t('Cannot reach the server. Check your connection and try again.');
     case TIMEOUT:
-      return 'The server took too long to answer. Please try again.';
+      return t('The server took too long to answer. Please try again.');
     case BAD_RESPONSE:
-      return 'The server sent an answer we did not understand. Please try again.';
+      return t('The server sent an answer we did not understand. Please try again.');
     case 'invalid_request':
-      return 'Please check the highlighted fields.';
+      return t('Please check the highlighted fields.');
     default:
       return error.message;
   }

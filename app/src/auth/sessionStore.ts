@@ -10,6 +10,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { createClient, type Transport } from '@/api/client';
 import { ApiError, BAD_RESPONSE, isApiError } from '@/api/errors';
 import { createApi, type Agreement, type Api, type Me, type Session } from '@/api/endpoints';
+import { t } from '@/i18n';
 
 import type { TokenStore } from './tokenStore';
 
@@ -81,7 +82,7 @@ export class SessionStore {
   /** Start a session from a server response (signing in, or verifying an email address). */
   async start(session: Session): Promise<void> {
     if (this.transport === 'bearer') {
-      if (!session.token) throw new ApiError(200, BAD_RESPONSE, 'The server sent no token.');
+      if (!session.token) throw new ApiError(200, BAD_RESPONSE, t('The server sent no token.'));
       await this.options.tokenStore.save(session.token);
       this.currentToken = session.token;
     }

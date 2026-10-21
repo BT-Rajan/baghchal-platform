@@ -7,6 +7,7 @@ import { BoardAndPieces, LookNotices, useLookChoice } from '@/components/LookPic
 import { PeopleOnly } from '@/components/PeopleOnly';
 import { PlayerSearch } from '@/components/PlayerSearch';
 import { Screen } from '@/components/Screen';
+import { t } from '@/i18n';
 import { ErrorState, Loading } from '@/components/States';
 
 /**
@@ -19,7 +20,9 @@ export default function MakeItYours() {
   return (
     <Screen align="top" wide>
       <Hint>
-        Your account is ready. Two quick choices, both optional: you can change them any time.
+        {t(
+          'Your account is ready. Two quick choices, both optional: you can change them any time.',
+        )}
       </Hint>
       {ready !== null ? (
         <>
@@ -29,25 +32,26 @@ export default function MakeItYours() {
       ) : error !== null ? (
         <ErrorState error={error} onRetry={retry} />
       ) : (
-        <Loading label="Loading the boards" />
+        <Loading label={t('Loading the boards')} />
       )}
 
       <PeopleOnly>
-        <Disclosure title="Find friends">
+        <Disclosure title={t('Find friends')}>
           <Hint>
-            Search for a friend by username and open their profile to add them, or send a friend a
-            challenge by link if they are not on ClawPlay yet.
+            {t(
+              'Search for a friend by username and open their profile to add them, or send a friend a challenge by link if they are not on ClawPlay yet.',
+            )}
           </Hint>
           <Button
-            title="Challenge a friend by link"
+            title={t('Challenge a friend by link')}
             variant="secondary"
             onPress={() => router.push('/invite')}
           />
-          <PlayerSearch nobodyElse={<Hint>Nobody else is online right now.</Hint>} />
+          <PlayerSearch nobodyElse={<Hint>{t('Nobody else is online right now.')}</Hint>} />
         </Disclosure>
       </PeopleOnly>
 
-      <Button title="Start playing" onPress={play} />
+      <Button title={t('Start playing')} onPress={play} />
     </Screen>
   );
 }

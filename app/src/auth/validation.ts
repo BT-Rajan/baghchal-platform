@@ -1,4 +1,5 @@
 /** Client-side checks that mirror the server's rules, so most mistakes get a clear message early. */
+import { plural, t } from '@/i18n';
 
 export type Problems<F extends string> = Partial<Record<F, string>>;
 
@@ -8,24 +9,34 @@ export const PASSWORD_MIN = 10;
 export const PASSWORD_MAX = 128;
 
 export function usernameProblem(username: string): string | undefined {
-  if (username === '') return 'Choose a username.';
+  if (username === '') return t('Choose a username.');
   if (!USERNAME.test(username)) {
-    return '3–20 letters, digits, _ or -, starting with a letter or digit.';
+    return t('3–20 letters, digits, _ or -, starting with a letter or digit.');
   }
   return undefined;
 }
 
 export function emailProblem(email: string): string | undefined {
-  if (email === '') return 'Enter your email address.';
-  if (email.length > 254 || !EMAIL.test(email)) return 'Enter a valid email address.';
+  if (email === '') return t('Enter your email address.');
+  if (email.length > 254 || !EMAIL.test(email)) return t('Enter a valid email address.');
   return undefined;
 }
 
 export function passwordProblem(password: string, username = ''): string | undefined {
-  if (password.length < PASSWORD_MIN) return `Use at least ${PASSWORD_MIN} characters.`;
-  if (password.length > PASSWORD_MAX) return `Use at most ${PASSWORD_MAX} characters.`;
+  if (password.length < PASSWORD_MIN)
+    return plural(
+      PASSWORD_MIN,
+      'Use at least {count} character.',
+      'Use at least {count} characters.',
+    );
+  if (password.length > PASSWORD_MAX)
+    return plural(
+      PASSWORD_MAX,
+      'Use at most {count} character.',
+      'Use at most {count} characters.',
+    );
   if (username !== '' && password.toLowerCase() === username.toLowerCase()) {
-    return 'Your password must not be your username.';
+    return t('Your password must not be your username.');
   }
   return undefined;
 }
@@ -49,15 +60,15 @@ export function checkSignUp(form: { username: string; email: string; password: s
 
 export function checkSignIn(form: { login: string; password: string }) {
   return only({
-    login: form.login.trim() === '' ? 'Enter your username or email.' : undefined,
-    password: form.password === '' ? 'Enter your password.' : undefined,
+    login: form.login.trim() === '' ? t('Enter your username or email.') : undefined,
+    password: form.password === '' ? t('Enter your password.') : undefined,
   });
 }
 
 export function checkNewPassword(form: { password: string; confirm: string }) {
   return only({
     password: passwordProblem(form.password),
-    confirm: form.confirm !== form.password ? 'The passwords do not match.' : undefined,
+    confirm: form.confirm !== form.password ? t('The passwords do not match.') : undefined,
   });
 }
 
@@ -66,9 +77,9 @@ export function checkPasswordChange(
   username: string,
 ) {
   return only({
-    current: form.current === '' ? 'Enter your current password.' : undefined,
+    current: form.current === '' ? t('Enter your current password.') : undefined,
     password: passwordProblem(form.password, username),
-    confirm: form.confirm !== form.password ? 'The passwords do not match.' : undefined,
+    confirm: form.confirm !== form.password ? t('The passwords do not match.') : undefined,
   });
 }
 
@@ -78,14 +89,14 @@ export function checkEmailChange(form: { email: string; password: string }, curr
     email:
       emailProblem(email) ??
       (email.toLowerCase() === current.toLowerCase()
-        ? 'That is already your email address.'
+        ? t('That is already your email address.')
         : undefined),
-    password: form.password === '' ? 'Enter your password.' : undefined,
+    password: form.password === '' ? t('Enter your password.') : undefined,
   });
 }
 
 export function checkPasswordGiven(form: { password: string }) {
-  return only({ password: form.password === '' ? 'Enter your password.' : undefined });
+  return only({ password: form.password === '' ? t('Enter your password.') : undefined });
 }
 
 export function checkEmail(form: { email: string }) {

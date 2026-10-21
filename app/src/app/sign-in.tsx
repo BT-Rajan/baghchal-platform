@@ -11,6 +11,7 @@ import { ResendConfirmation } from '@/components/ResendConfirmation';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { TextLink } from '@/components/TextLink';
+import { t } from '@/i18n';
 
 const FIELDS = ['login', 'password'] as const;
 
@@ -28,19 +29,20 @@ export default function SignIn() {
   };
 
   return (
-    <Screen title="Sign in" brand>
+    <Screen title={t('Sign in')} brand>
       {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
       {isApiError(signIn.error, 'email_not_verified') &&
         (emailProblem(login.trim()) === undefined ? (
           <ResendConfirmation email={login} />
         ) : (
           <Notice tone="info">
-            Did the email not come? Sign in with your email address instead of your username, and we
-            can send the link again.
+            {t(
+              'Did the email not come? Sign in with your email address instead of your username, and we can send the link again.',
+            )}
           </Notice>
         ))}
       <TextField
-        label="Username or email"
+        label={t('Username or email')}
         value={login}
         onChangeText={setLogin}
         error={fieldError('login')}
@@ -51,7 +53,7 @@ export default function SignIn() {
         returnKeyType="next"
       />
       <TextField
-        label="Password"
+        label={t('Password')}
         value={password}
         onChangeText={setPassword}
         error={fieldError('password')}
@@ -61,9 +63,9 @@ export default function SignIn() {
         returnKeyType="go"
         onSubmitEditing={submit}
       />
-      <Button title="Sign in" onPress={submit} busy={signIn.isPending} />
-      <TextLink href="/forgot-password">Forgot your password?</TextLink>
-      <TextLink href="/sign-up">New here? Create an account</TextLink>
+      <Button title={t('Sign in')} onPress={submit} busy={signIn.isPending} />
+      <TextLink href="/forgot-password">{t('Forgot your password?')}</TextLink>
+      <TextLink href="/sign-up">{t('New here? Create an account')}</TextLink>
     </Screen>
   );
 }

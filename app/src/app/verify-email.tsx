@@ -9,6 +9,7 @@ import { isLinkToken } from '@/auth/validation';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { TextLink } from '@/components/TextLink';
+import { t } from '@/i18n';
 import { colors } from '@/theme';
 
 /** Opened from the link in the sign-up email: `/verify-email?token=…`. */
@@ -36,17 +37,17 @@ export default function VerifyEmail() {
 
   if (!valid || verify.isError) {
     return (
-      <Screen title="Confirm your email" brand>
+      <Screen title={t('Confirm your email')} brand>
         <Notice tone="error">
-          {valid ? describeError(verify.error) : 'This link is invalid or has expired.'}
+          {valid ? describeError(verify.error) : t('This link is invalid or has expired.')}
         </Notice>
-        <TextLink href="/sign-up">Sign up again</TextLink>
-        <TextLink href="/sign-in">Sign in</TextLink>
+        <TextLink href="/sign-up">{t('Sign up again')}</TextLink>
+        <TextLink href="/sign-in">{t('Sign in')}</TextLink>
       </Screen>
     );
   }
   return (
-    <Screen title="Confirming your email…" brand>
+    <Screen title={t('Confirming your email…')} brand>
       <ActivityIndicator color={colors.accent} size="large" />
     </Screen>
   );

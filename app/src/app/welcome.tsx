@@ -11,6 +11,7 @@ import { Coin } from '@/components/game/Coin';
 import { Segmented } from '@/components/Segmented';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import type { Piece } from '@/game/bfen';
+import { mark, t } from '@/i18n';
 import { colors, radius, spacing, tight } from '@/theme';
 
 /** Wide enough to put the board beside the words. */
@@ -19,31 +20,40 @@ const WIDE = 880;
 const STEPS: readonly { piece: Piece; title: string; text: string }[] = [
   {
     piece: 'goat',
-    title: '20 goats, 4 tigers',
-    text: 'The tigers start in the corners. The goats come onto the board one at a time.',
+    title: mark('20 goats, 4 tigers'),
+    text: mark('The tigers start in the corners. The goats come onto the board one at a time.'),
   },
   {
     piece: 'tiger',
-    title: 'Tigers hunt',
-    text: 'A tiger captures by jumping over a goat. Five captures and the tigers win.',
+    title: mark('Tigers hunt'),
+    text: mark('A tiger captures by jumping over a goat. Five captures and the tigers win.'),
   },
   {
     piece: 'goat',
-    title: 'Goats trap',
-    text: 'Hem the tigers in until none can move, and the goats win.',
+    title: mark('Goats trap'),
+    text: mark('Hem the tigers in until none can move, and the goats win.'),
   },
 ];
 
 const FEATURES: readonly { title: string; text: string }[] = [
-  { title: 'Live games', text: 'Quick or standard games with players online, rated or casual.' },
-  { title: 'The computer', text: 'Three levels, from a gentle start to a real fight.' },
-  { title: 'Friends', text: 'Send a friend a link to a game, or run a small tournament.' },
-  { title: 'Get better', text: 'The engine reviews your games; puzzles sharpen your openings.' },
+  {
+    title: mark('Live games'),
+    text: mark('Quick or standard games with players online, rated or casual.'),
+  },
+  { title: mark('The computer'), text: mark('Three levels, from a gentle start to a real fight.') },
+  {
+    title: mark('Friends'),
+    text: mark('Send a friend a link to a game, or run a small tournament.'),
+  },
+  {
+    title: mark('Get better'),
+    text: mark('The engine reviews your games; puzzles sharpen your openings.'),
+  },
 ];
 
 const TABS = [
-  { value: 'rules', label: "How it's played" },
-  { value: 'ways', label: 'Play your way' },
+  { value: 'rules', label: mark("How it's played") },
+  { value: 'ways', label: mark('Play your way') },
 ] as const;
 
 type Tab = (typeof TABS)[number]['value'];
@@ -67,19 +77,19 @@ function StartScreen() {
         </View>
         <View style={styles.startWords}>
           <Text role="heading" style={styles.startHeadline}>
-            Tigers hunt.{'\n'}Goats trap.
+            {t('Tigers hunt.\nGoats trap.')}
           </Text>
-          <Text style={styles.lede}>Bagh Chal, the strategy game of the Himalayas.</Text>
+          <Text style={styles.lede}>{t('Bagh Chal, the strategy game of the Himalayas.')}</Text>
         </View>
         <View style={styles.actions}>
           <Button
-            title="Play now, no sign-up"
+            title={t('Play now, no sign-up')}
             variant="bright"
             onPress={() => router.push('/start')}
           />
-          <Button title="Sign in" variant="light" onPress={() => router.push('/sign-in')} />
+          <Button title={t('Sign in')} variant="light" onPress={() => router.push('/sign-in')} />
           <Button
-            title="Create a free account"
+            title={t('Create a free account')}
             variant="light"
             onPress={() => router.push('/sign-up')}
           />
@@ -102,18 +112,19 @@ function LandingPage() {
           <View style={[styles.inner, wide && styles.row]}>
             <View style={[styles.pitch, wide && styles.half]}>
               <Text role="heading" style={[styles.headline, wide && styles.headlineWide]}>
-                Tigers hunt.{'\n'}Goats trap.
+                {t('Tigers hunt.\nGoats trap.')}
               </Text>
               <Text style={styles.lede}>
-                Bagh Chal, the strategy game of the Himalayas, played live. Four tigers against
-                twenty goats: which side will you take?
+                {t(
+                  'Bagh Chal, the strategy game of the Himalayas, played live. Four tigers against twenty goats: which side will you take?',
+                )}
               </Text>
               {/* Signing in and up are in the top bar; the terms and privacy in the footer. */}
               <View style={[styles.actions, wide && styles.actionsWide]}>
-                <Button title="Play now, no sign-up" variant="bright" onPress={play} />
+                <Button title={t('Play now, no sign-up')} variant="bright" onPress={play} />
               </View>
               <Text style={styles.small}>
-                No account needed: make one later to keep your rating.
+                {t('No account needed: make one later to keep your rating.')}
               </Text>
             </View>
             <View style={[styles.boardBox, wide && styles.half]} aria-hidden>
@@ -127,7 +138,12 @@ function LandingPage() {
         <View style={styles.section}>
           <View style={styles.inner}>
             {/* One section, two tabs: the page stays about a screen long. */}
-            <Segmented label="Find out more" options={TABS} value={tab} onChange={setTab} />
+            <Segmented
+              label={t('Find out more')}
+              options={TABS.map((o) => ({ value: o.value, label: t(o.label) }))}
+              value={tab}
+              onChange={setTab}
+            />
             <View style={[styles.cards, styles.wrap]}>
               {tab === 'rules'
                 ? STEPS.map((step) => (
@@ -138,16 +154,16 @@ function LandingPage() {
                         </Svg>
                       </View>
                       <View style={styles.cardWords}>
-                        <Text style={styles.cardTitle}>{step.title}</Text>
-                        <Text style={styles.cardText}>{step.text}</Text>
+                        <Text style={styles.cardTitle}>{t(step.title)}</Text>
+                        <Text style={styles.cardText}>{t(step.text)}</Text>
                       </View>
                     </View>
                   ))
                 : FEATURES.map((f) => (
                     <View key={f.title} style={[styles.card, styles.feature]}>
                       <View style={styles.cardWords}>
-                        <Text style={styles.cardTitle}>{f.title}</Text>
-                        <Text style={styles.cardText}>{f.text}</Text>
+                        <Text style={styles.cardTitle}>{t(f.title)}</Text>
+                        <Text style={styles.cardText}>{t(f.text)}</Text>
                       </View>
                     </View>
                   ))}

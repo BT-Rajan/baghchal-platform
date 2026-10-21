@@ -9,6 +9,7 @@ import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { ResendConfirmation } from '@/components/ResendConfirmation';
 import { TextLink } from '@/components/TextLink';
+import { t } from '@/i18n';
 
 export default function SignUp() {
   const api = useApi();
@@ -18,20 +19,22 @@ export default function SignUp() {
 
   if (register.isSuccess) {
     return (
-      <Screen title="Check your email" brand>
+      <Screen title={t('Check your email')} brand>
         <Notice tone="success">
-          {`We sent a link to ${register.variables.email}. Open it to confirm your address, then sign in.`}
+          {t('We sent a link to {email}. Open it to confirm your address, then sign in.', {
+            email: register.variables.email,
+          })}
         </Notice>
-        <Button title="Sign in" onPress={() => router.replace('/sign-in')} />
+        <Button title={t('Sign in')} onPress={() => router.replace('/sign-in')} />
         <ResendConfirmation email={register.variables.email} />
       </Screen>
     );
   }
 
   return (
-    <Screen title="Create an account" brand>
-      <AccountForm action={register} submitTitle="Create account" />
-      <TextLink href="/sign-in">Already have an account? Sign in</TextLink>
+    <Screen title={t('Create an account')} brand>
+      <AccountForm action={register} submitTitle={t('Create account')} />
+      <TextLink href="/sign-in">{t('Already have an account? Sign in')}</TextLink>
     </Screen>
   );
 }
