@@ -80,9 +80,19 @@ describe('board, pieces and sounds', () => {
       sounds: 'bells',
     });
 
-    await fireEvent.press(radio('Off'));
+    // On/off settings are switches, saved as they change.
+    const soundSwitch = () => screen.getByRole('switch', { name: 'Game sounds and vibration' });
+    expect(soundSwitch()).toBeChecked();
+    await fireEvent.press(soundSwitch());
     await waitFor(() => expect(saved.sounds_on).toBe(false));
-    await waitFor(() => expect(radio('Off')).toBeChecked());
+    await waitFor(() => expect(soundSwitch()).not.toBeChecked());
+    const messages = () =>
+      screen.getByRole('switch', {
+        name: "Show your opponent's messages in games (quick messages and chat)",
+      });
+    await fireEvent.press(messages());
+    await waitFor(() => expect(server.lastTo(`PATCH ${URL}`).body).toEqual({ emotes_on: false }));
+    await waitFor(() => expect(messages()).not.toBeChecked());
 
     played.mockClear();
     await fireEvent.press(screen.getByRole('button', { name: 'Hear Temple bells' }));

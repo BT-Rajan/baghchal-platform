@@ -56,6 +56,9 @@ export interface BoardProps {
   pieces?: PieceSet;
 }
 
+/** Large text grows the edge labels only so far: they sit in a narrow strip beside the board. */
+const EDGE_TEXT_GROWTH = 1.3;
+
 export function Board({
   position,
   legalMoves,
@@ -85,7 +88,9 @@ export function Board({
         <View style={styles.ranks} aria-hidden>
           {RANKS.map((p) => (
             <View key={p.rank} style={[styles.rank, { top: `${y(p) - GAP / 2}%` }]}>
-              <Text style={styles.label}>{String(p.rank + 1)}</Text>
+              <Text style={styles.label} maxFontSizeMultiplier={EDGE_TEXT_GROWTH}>
+                {String(p.rank + 1)}
+              </Text>
             </View>
           ))}
         </View>
@@ -148,7 +153,9 @@ export function Board({
       <View style={styles.files} aria-hidden>
         {FILES.map((p) => (
           <View key={p.file} style={[styles.file, { left: `${x(p) - GAP / 2}%` }]}>
-            <Text style={styles.label}>{p.name.charAt(0)}</Text>
+            <Text style={styles.label} maxFontSizeMultiplier={EDGE_TEXT_GROWTH}>
+              {p.name.charAt(0)}
+            </Text>
           </View>
         ))}
       </View>

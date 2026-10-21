@@ -20,7 +20,7 @@ export function Coach({ tip }: { tip: Tip }) {
 }
 
 const styles = StyleSheet.create({
-  label: { ...type.caption, fontWeight: '700', color: colors.accent, textTransform: 'uppercase' },
+  label: { ...type.caption, fontWeight: '700', color: colors.accent },
   title: { ...type.body, fontWeight: '700', color: colors.text },
   text: { ...type.small, color: colors.text },
 });

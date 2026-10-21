@@ -25,7 +25,8 @@ export function FriendControl({
   const busy = change.isPending;
   return (
     <View style={styles.box}>
-      <ErrorNotice error={change.error} />
+      {/* While asking, a failure shows in the question. */}
+      {!confirming && <ErrorNotice error={change.error} />}
       {relation === 'none' && (
         <Button
           title={t('Add {name} as a friend', { name: username })}
@@ -74,16 +75,19 @@ export function FriendControl({
           </View>
         </>
       )}
-      {relation === 'friends' &&
-        (confirming ? (
-          <Confirm
-            question={t('Remove {name} from your friends?', { name: username })}
-            confirmTitle={t('Yes, remove {name}', { name: username })}
-            busy={busy}
-            onConfirm={() => run(false)}
-            onCancel={() => setConfirming(false)}
-          />
-        ) : (
+      {relation === 'friends' && (
+        <Confirm
+          open={confirming}
+          question={t('Remove {name} from your friends?', { name: username })}
+          confirmTitle={t('Yes, remove {name}', { name: username })}
+          busy={busy}
+          error={change.error}
+          onConfirm={() => run(false)}
+          onCancel={() => {
+            change.reset();
+            setConfirming(false);
+          }}
+        >
           <View style={styles.row}>
             <Text style={styles.text}>{t('You and {name} are friends.', { name: username })}</Text>
             <Button
@@ -94,7 +98,8 @@ export function FriendControl({
               onPress={() => setConfirming(true)}
             />
           </View>
-        ))}
+        </Confirm>
+      )}
     </View>
   );
 }

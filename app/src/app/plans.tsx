@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   column: { flexGrow: 1, flexBasis: 260, borderRadius: radius.md },
   current: { borderWidth: 2, borderColor: colors.accent },
-  name: { fontSize: 22, fontWeight: '800', color: colors.brandInk },
+  name: { fontSize: 22, fontWeight: '800', color: colors.text },
   badge: { fontSize: 13, fontWeight: '700', color: colors.accent },
   price: { fontSize: 16, fontWeight: '600', color: colors.text },
   saving: { ...type.label, color: colors.success },

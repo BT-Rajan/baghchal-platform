@@ -4,10 +4,11 @@ Production refuses to start with unsafe or missing settings instead of falling b
 defaults: the defaults below are only fit for local development.
 """
 
+import re
 from datetime import timedelta
 from typing import Literal
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LEGAL_DETAILS = (
@@ -22,6 +23,8 @@ LEGAL_DETAILS = (
     "email_provider",
 )
 """Settings the privacy policy and terms quote (see legal/texts)."""
+
+_FINGERPRINT = re.compile(r"[0-9A-F]{2}(?::[0-9A-F]{2}){31}")
 
 
 class Settings(BaseSettings):
@@ -113,6 +116,23 @@ class Settings(BaseSettings):
     payments page (they are not set here). Any long random string, e.g. from
     ``python -c "import secrets; print(secrets.token_urlsafe(32))"``. Keep it safe; if it
     changes, the keys must be entered again."""
+
+    android_cert_sha256: tuple[str, ...] = ()
+    """SHA-256 fingerprints of the keys the Android app is signed with, e.g.
+    ``BAGHCHAL_ANDROID_CERT_SHA256='["FA:C6:…:9C"]'``. Served in
+    ``/.well-known/assetlinks.json``, so links to this site open in the app; empty, they open
+    in the browser. See docs/operations.md, "Links that open the Android app"."""
+
+    @field_validator("android_cert_sha256")
+    @classmethod
+    def _fingerprints(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        normalised = tuple(f.strip().upper() for f in value)
+        for fingerprint in normalised:
+            if not _FINGERPRINT.fullmatch(fingerprint):
+                raise ValueError(
+                    "android_cert_sha256 takes SHA-256 fingerprints: 32 hex pairs joined by ':'"
+                )
+        return normalised
 
     @property
     def is_production(self) -> bool:

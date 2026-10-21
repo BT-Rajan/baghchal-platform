@@ -13,7 +13,7 @@ import { FeatureLink } from '@/components/FeatureLink';
 import { FriendList, FriendRequests } from '@/components/Friends';
 import { GameHistory } from '@/components/GameHistory';
 import { GuestBanner } from '@/components/GuestBanner';
-import { Notice } from '@/components/Notice';
+import { SuccessNotice } from '@/components/Snackbar';
 import { PlayerSearch } from '@/components/PlayerSearch';
 import { Screen } from '@/components/Screen';
 import { ErrorState } from '@/components/States';
@@ -83,7 +83,7 @@ export default function Play() {
       ))}
       {outgoing.length > 0 && <SectionTitle>{t('Your challenges')}</SectionTitle>}
       {sentTo !== undefined && (
-        <Notice tone="success">{t('Challenge sent to {name}.', { name: sentTo })}</Notice>
+        <SuccessNotice>{t('Challenge sent to {name}.', { name: sentTo })}</SuccessNotice>
       )}
       {outgoing.map((c) => (
         <ChallengeCard

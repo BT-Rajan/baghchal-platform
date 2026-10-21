@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Platform, StyleSheet, Text, View, type TextInputInstance } from 'react-native';
 
 import { saveExport } from '@/auth/exportFile';
 import { useApi, useMe, useSession } from '@/auth/session';
@@ -18,6 +18,7 @@ import { useBlock, useBlocks } from '@/lobby/hooks';
 import { useFormErrors } from '@/components/form';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
+import { SuccessNotice } from '@/components/Snackbar';
 import { SignOutButton } from '@/components/SignOutButton';
 import { TextField } from '@/components/TextField';
 import { colors, spacing } from '@/theme';
@@ -131,6 +132,7 @@ function EmailSection() {
   const me = useMe();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const passwordField = useRef<TextInputInstance>(null);
   const change = useMutation({
     mutationFn: (to: string) => api.changeEmail(password, to),
     onSuccess: () => setPassword(''),
@@ -167,8 +169,12 @@ function EmailSection() {
               autoComplete="email"
               keyboardType="email-address"
               textContentType="emailAddress"
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => passwordField.current?.focus()}
             />
             <TextField
+              ref={passwordField}
               label={t('Your password (to change the email address)')}
               value={password}
               onChangeText={setPassword}
@@ -176,6 +182,7 @@ function EmailSection() {
               secureTextEntry
               autoComplete="current-password"
               textContentType="password"
+              returnKeyType="go"
               onSubmitEditing={submit}
             />
             <Button
@@ -199,6 +206,8 @@ function PasswordSection() {
   const [current, setCurrent] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const passwordField = useRef<TextInputInstance>(null);
+  const confirmField = useRef<TextInputInstance>(null);
   const change = useMutation({
     mutationFn: () => api.changePassword(current, password),
     onSuccess: () => {
@@ -222,9 +231,9 @@ function PasswordSection() {
     <Disclosure title={t('Password')}>
       <Card>
         {change.isSuccess && (
-          <Notice tone="success">
+          <SuccessNotice>
             {t('Your password has been changed. Your other devices have been signed out.')}
-          </Notice>
+          </SuccessNotice>
         )}
         {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
         <TextField
@@ -235,8 +244,12 @@ function PasswordSection() {
           secureTextEntry
           autoComplete="current-password"
           textContentType="password"
+          returnKeyType="next"
+          submitBehavior="submit"
+          onSubmitEditing={() => passwordField.current?.focus()}
         />
         <TextField
+          ref={passwordField}
           label={t('New password')}
           value={password}
           onChangeText={setPassword}
@@ -244,8 +257,12 @@ function PasswordSection() {
           secureTextEntry
           autoComplete="new-password"
           textContentType="newPassword"
+          returnKeyType="next"
+          submitBehavior="submit"
+          onSubmitEditing={() => confirmField.current?.focus()}
         />
         <TextField
+          ref={confirmField}
           label={t('Repeat the new password')}
           value={confirm}
           onChangeText={setConfirm}
@@ -253,6 +270,7 @@ function PasswordSection() {
           secureTextEntry
           autoComplete="new-password"
           textContentType="newPassword"
+          returnKeyType="go"
           onSubmitEditing={submit}
         />
         <Button title={t('Change password')} onPress={submit} busy={change.isPending} />
@@ -275,9 +293,10 @@ function DataSection() {
           )}
         </Hint>
         <ErrorNotice error={download.error} />
-        {/* In the apps the share sheet itself shows where the file went. */}
+        {/* In the apps the share sheet says where the file went (Android reports it shared
+            even when the sheet is just closed, so saying more here could be untrue). */}
         {download.isSuccess && Platform.OS === 'web' && (
-          <Notice tone="success">{t('Your data has been downloaded.')}</Notice>
+          <SuccessNotice>{t('Your data has been downloaded.')}</SuccessNotice>
         )}
         <Button
           title={t('Download my data')}

@@ -70,6 +70,8 @@ export function ChatPanel({ game, mine }: { game: Game; mine: Piece }) {
                   onChangeText={setText}
                   maxLength={MAX_LENGTH}
                   returnKeyType="send"
+                  // Sending keeps the keyboard up, for the next message.
+                  submitBehavior="submit"
                   onSubmitEditing={submit}
                 />
               </View>

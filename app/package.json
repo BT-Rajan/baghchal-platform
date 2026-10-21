@@ -26,6 +26,7 @@
     "@expo/metro-runtime": "^58.0.14",
     "@tanstack/react-query": "^5.104.3",
     "expo": "~58.0.13",
+    "expo-audio": "~58.0.9",
     "expo-constants": "~58.0.12",
     "expo-haptics": "~58.0.7",
     "expo-linking": "~58.0.13",

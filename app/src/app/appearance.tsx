@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Platform } from 'react-native';
 
 import type { SoundPack } from '@/api/endpoints';
 import { FREE_APPEARANCE, SOUNDS } from '@/appearance/catalog';
@@ -15,6 +16,7 @@ import {
 import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
 import { ErrorState, Loading } from '@/components/States';
+import { SwitchRow } from '@/components/SwitchRow';
 import { Upsell } from '@/components/Upsell';
 import { t } from '@/i18n';
 
@@ -77,14 +79,10 @@ function Sounds({ choice }: { choice: LookChoice }) {
   const isLocked = (sounds: SoundPack) => locked(sounds === FREE_APPEARANCE.sounds);
   return (
     <>
-      <Segmented
-        label={t('Game sounds and vibration')}
-        value={current.sounds_on ? 'on' : 'off'}
-        onChange={(value) => pick({ sounds_on: value === 'on' })}
-        options={[
-          { value: 'on', label: t('On') },
-          { value: 'off', label: t('Off') },
-        ]}
+      <SwitchRow
+        label={soundSwitchLabel()}
+        value={current.sounds_on}
+        onChange={(on) => pick({ sounds_on: on })}
       />
       <Segmented
         label={t('Sound pack')}
@@ -129,15 +127,16 @@ function Sounds({ choice }: { choice: LookChoice }) {
           }}
         />
       )}
-      <Segmented
-        label={t("Your opponent's messages in games (quick messages and chat)")}
-        value={current.emotes_on ? 'show' : 'hide'}
-        onChange={(value) => pick({ emotes_on: value === 'show' })}
-        options={[
-          { value: 'show', label: t('Show') },
-          { value: 'hide', label: t('Hide') },
-        ]}
+      <SwitchRow
+        label={t("Show your opponent's messages in games (quick messages and chat)")}
+        value={current.emotes_on}
+        onChange={(on) => pick({ emotes_on: on })}
       />
     </>
   );
+}
+
+/** The web has no vibration, so there the switch is for sounds alone. */
+function soundSwitchLabel(): string {
+  return Platform.OS === 'web' ? t('Game sounds') : t('Game sounds and vibration');
 }

@@ -2,7 +2,6 @@
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import type { Game, Pairing, Tournament } from '@/api/endpoints';
-import * as i18n from '@/i18n';
 import { colors } from '@/theme';
 
 import { renderApp } from './support/app';
@@ -28,7 +27,10 @@ async function press(name: string | RegExp) {
 
 /** Whether `first` is drawn before `second` on the screen. */
 function before(first: string, second: string): boolean {
-  const tree = JSON.stringify(screen.toJSON());
+  // (Play's pull-to-refresh, underneath, holds an element that cannot be written out.)
+  const tree = JSON.stringify(screen.toJSON(), (key, value: unknown) =>
+    key === 'refreshControl' ? undefined : value,
+  );
   const a = tree.indexOf(first);
   const b = tree.indexOf(second);
   return a !== -1 && b !== -1 && a < b;
@@ -178,7 +180,16 @@ describe('a game', () => {
     await openGame(game({ server_time: now() }));
     await screen.findByText('Your move');
     for (const label of ['a', 'e', '1', '5']) {
-      expect(screen.getByText(label, { includeHiddenElements: true })).toBeOnTheScreen();
+      // On the game's board, not the daily puzzle's on Play underneath.
+      const inFront = screen
+        .getAllByText(label, { includeHiddenElements: true })
+        .filter((element) => {
+          for (let node = element.parent; node !== null; node = node.parent) {
+            if (node.type === 'RNSScreen' && node.props['aria-hidden'] === true) return false;
+          }
+          return true;
+        });
+      expect(inFront).toHaveLength(1);
     }
   });
 
@@ -204,8 +215,7 @@ describe('a game', () => {
     );
   });
 
-  test('replay arrows point the way the row runs, also right to left', async () => {
-    jest.spyOn(i18n, 'isRTL').mockReturnValue(true);
+  test('replay buttons are icons, named for screen readers', async () => {
     const positions = ['T3T/5/5/5/T3T g 20 0', 'T3T/5/5/G4/T3T t 19 0', 'T3T/5/5/G4/1T2T g 19 0'];
     await openGame(
       game({
@@ -219,10 +229,15 @@ describe('a game', () => {
         server_time: now(),
       }),
     );
-    expect(await screen.findByRole('button', { name: 'Previous move' })).toHaveTextContent('▶');
-    expect(screen.getByRole('button', { name: 'Next move' })).toHaveTextContent('◀');
-    expect(screen.getByRole('button', { name: 'Start position' })).toHaveTextContent('⏭');
-    expect(screen.getByRole('button', { name: 'Final position' })).toHaveTextContent('⏮');
+    // (Which way the arrows point is in src/components/Icon.test.tsx.)
+    expect(await screen.findByRole('button', { name: 'Previous move' })).toHaveTextContent('');
+    expect(screen.getByRole('button', { name: 'Next move' })).toBeDisabled();
+    await fireEvent.press(screen.getByRole('button', { name: 'Start position' }));
+    expect(await screen.findByText('Start position')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Next move' }));
+    expect(await screen.findByText('After move 1 of 2')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Final position' }));
+    expect(await screen.findByText('After move 2 of 2')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Back to Play' })).toBeOnTheScreen();
   });
 });

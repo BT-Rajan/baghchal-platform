@@ -129,7 +129,8 @@ function BlockControl({ username, blocked }: { username: string; blocked: boolea
     change.mutate({ username, block }, { onSuccess: () => setConfirming(false) });
   return (
     <View style={styles.block}>
-      <ErrorNotice error={change.error} />
+      {/* While asking, a failure shows in the question. */}
+      {!confirming && <ErrorNotice error={change.error} />}
       {blocked ? (
         <>
           <Text style={styles.muted}>
@@ -144,23 +145,28 @@ function BlockControl({ username, blocked }: { username: string; blocked: boolea
             onPress={() => run(false)}
           />
         </>
-      ) : confirming ? (
+      ) : (
         <Confirm
+          open={confirming}
           question={t(
             'Block {name}? Neither of you will be able to challenge the other, and you will not see each other in the lobby.',
             { name: username },
           )}
           confirmTitle={t('Yes, block {name}', { name: username })}
           busy={change.isPending}
+          error={change.error}
           onConfirm={() => run(true)}
-          onCancel={() => setConfirming(false)}
-        />
-      ) : (
-        <Button
-          title={t('Block {name}', { name: username })}
-          variant="secondary"
-          onPress={() => setConfirming(true)}
-        />
+          onCancel={() => {
+            change.reset();
+            setConfirming(false);
+          }}
+        >
+          <Button
+            title={t('Block {name}', { name: username })}
+            variant="secondary"
+            onPress={() => setConfirming(true)}
+          />
+        </Confirm>
       )}
     </View>
   );

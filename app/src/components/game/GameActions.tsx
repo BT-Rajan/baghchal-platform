@@ -18,6 +18,8 @@ export interface GameActionsProps {
   me: Piece;
   onAction: (action: GameAction) => void;
   pending: GameAction | null;
+  /** Why the last action failed: shown in the question that asked for it, which stays open. */
+  error?: unknown;
 }
 
 /** How long the opponent must have been offline on their turn (the server checks it too). */
@@ -29,8 +31,20 @@ export const CLAIM_WAIT_MS = 60_000;
  * (not against the computer), and claim the win once the opponent has been offline for a minute
  * on their turn. The server decides whether each succeeds.
  */
-export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
+export function GameActions({ game, me, onAction, pending, error }: GameActionsProps) {
   const [confirming, setConfirming] = useState<'abort' | 'resign' | null>(null);
+  // The question stays open while its answer is carried out, and after a failure (to show
+  // why); it closes once the action has gone through.
+  const [asked, setAsked] = useState<{ action: GameAction; started: boolean } | null>(null);
+  const [failed, setFailed] = useState(false);
+  if (asked !== null && !asked.started && pending === asked.action) {
+    setAsked({ ...asked, started: true });
+  }
+  if (asked?.started === true && pending !== asked.action) {
+    setAsked(null);
+    if (error === null || error === undefined) setConfirming(null);
+    else setFailed(true);
+  }
   const opponent = playerOf(game, other(me));
   const opening = game.ply < 2;
   const waitingOnOpponent = !opening && game.side_to_move !== me;
@@ -56,46 +70,37 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
   const now = useNow();
   const claimIn = awaySince === null ? null : Math.max(0, awaySince + CLAIM_WAIT_MS - now);
 
-  if (confirming === 'abort') {
+  const ask = (action: 'abort' | 'resign') => ({
+    open: confirming === action,
+    busy: pending === action,
+    error: confirming === action && failed ? error : undefined,
+    onConfirm: () => {
+      setFailed(false);
+      setAsked({ action, started: false });
+      onAction(action);
+    },
+    onCancel: () => {
+      setFailed(false);
+      setConfirming(null);
+    },
+  });
+  if (opening && game.match?.game !== 2) {
+    // Leaving the computer harms nobody, so it does not count (the server agrees).
+    const counts = !isComputer(game, other(me));
     return (
       <Confirm
         question={t('Abort the game? Aborting counts toward the limit of 3 a day.')}
         confirmTitle={t('Yes, abort')}
         cancelTitle={t('Keep playing')}
-        busy={pending === 'abort'}
-        onConfirm={() => {
-          setConfirming(null);
-          onAction('abort');
-        }}
-        onCancel={() => setConfirming(null)}
-      />
-    );
-  }
-  if (opening && game.match?.game !== 2) {
-    // Leaving the computer harms nobody, so it does not count (the server agrees).
-    const counts = !isComputer(game, other(me));
-    return (
-      <Button
-        title={t('Abort game')}
-        variant="secondary"
-        busy={pending === 'abort'}
-        onPress={() => (counts ? setConfirming('abort') : onAction('abort'))}
-      />
-    );
-  }
-  if (confirming === 'resign') {
-    return (
-      <Confirm
-        question={t('Resign this game?')}
-        confirmTitle={t('Yes, resign')}
-        cancelTitle={t('Keep playing')}
-        busy={pending === 'resign'}
-        onConfirm={() => {
-          setConfirming(null);
-          onAction('resign');
-        }}
-        onCancel={() => setConfirming(null)}
-      />
+        {...ask('abort')}
+      >
+        <Button
+          title={t('Abort game')}
+          variant="secondary"
+          busy={pending === 'abort'}
+          onPress={() => (counts ? setConfirming('abort') : onAction('abort'))}
+        />
+      </Confirm>
     );
   }
   // Draws: once both have moved, between people. An offer stands until answered or moved past.
@@ -104,73 +109,80 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
   const offeredToMe = drawable && game.draw_offer === other(me);
   const iOffered = drawable && game.draw_offer === me;
   return (
-    <View style={styles.confirm}>
-      {offeredToMe && (
-        // An offer to answer, not an action to confirm: it stays in the panel, beside the board.
-        <Card tone="accent">
-          <Text style={styles.offer}>
-            {t('{name} offers a draw.', { name: opponent.username })}
+    <Confirm
+      question={t('Resign this game?')}
+      confirmTitle={t('Yes, resign')}
+      cancelTitle={t('Keep playing')}
+      {...ask('resign')}
+    >
+      <View style={styles.confirm}>
+        {offeredToMe && (
+          // An offer to answer, not an action to confirm: it stays in the panel, beside the board.
+          <Card tone="accent">
+            <Text style={styles.offer}>
+              {t('{name} offers a draw.', { name: opponent.username })}
+            </Text>
+            <View style={styles.row}>
+              <View style={styles.cell}>
+                <Button
+                  title={t('Accept the draw')}
+                  busy={pending === 'draw'}
+                  disabled={pending === 'draw/decline'}
+                  onPress={() => onAction('draw')}
+                />
+              </View>
+              <View style={styles.cell}>
+                <Button
+                  title={t('Decline')}
+                  variant="secondary"
+                  busy={pending === 'draw/decline'}
+                  disabled={pending === 'draw'}
+                  onPress={() => onAction('draw/decline')}
+                />
+              </View>
+            </View>
+          </Card>
+        )}
+        {claimIn !== null && claimIn > 0 && (
+          <Text style={styles.away} aria-live="polite">
+            {t(
+              '{name} seems to have left. If they are not back in {seconds} s, you can claim the win.',
+              { name: opponent.username, seconds: Math.ceil(claimIn / 1000) },
+            )}
           </Text>
-          <View style={styles.row}>
+        )}
+        <View style={styles.row}>
+          <View style={styles.cell}>
+            <Button
+              title={t('Resign')}
+              variant="secondary"
+              busy={pending === 'resign'}
+              onPress={() => setConfirming('resign')}
+            />
+          </View>
+          {drawable && !offeredToMe && (
             <View style={styles.cell}>
               <Button
-                title={t('Accept the draw')}
+                title={iOffered ? t('Draw offered') : t('Offer a draw')}
+                variant="secondary"
                 busy={pending === 'draw'}
-                disabled={pending === 'draw/decline'}
+                disabled={iOffered}
                 onPress={() => onAction('draw')}
               />
             </View>
+          )}
+          {claimIn === 0 && (
             <View style={styles.cell}>
               <Button
-                title={t('Decline')}
-                variant="secondary"
-                busy={pending === 'draw/decline'}
-                disabled={pending === 'draw'}
-                onPress={() => onAction('draw/decline')}
+                title={t('Claim the win')}
+                busy={pending === 'claim-abandonment'}
+                onPress={() => onAction('claim-abandonment')}
               />
             </View>
-          </View>
-        </Card>
-      )}
-      {claimIn !== null && claimIn > 0 && (
-        <Text style={styles.away} aria-live="polite">
-          {t(
-            '{name} seems to have left. If they are not back in {seconds} s, you can claim the win.',
-            { name: opponent.username, seconds: Math.ceil(claimIn / 1000) },
           )}
-        </Text>
-      )}
-      <View style={styles.row}>
-        <View style={styles.cell}>
-          <Button
-            title={t('Resign')}
-            variant="secondary"
-            busy={pending === 'resign'}
-            onPress={() => setConfirming('resign')}
-          />
         </View>
-        {drawable && !offeredToMe && (
-          <View style={styles.cell}>
-            <Button
-              title={iOffered ? t('Draw offered') : t('Offer a draw')}
-              variant="secondary"
-              busy={pending === 'draw'}
-              disabled={iOffered}
-              onPress={() => onAction('draw')}
-            />
-          </View>
-        )}
-        {claimIn === 0 && (
-          <View style={styles.cell}>
-            <Button
-              title={t('Claim the win')}
-              busy={pending === 'claim-abandonment'}
-              onPress={() => onAction('claim-abandonment')}
-            />
-          </View>
-        )}
       </View>
-    </View>
+    </Confirm>
   );
 }
 

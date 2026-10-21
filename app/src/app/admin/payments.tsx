@@ -6,6 +6,7 @@ import { ApiError } from '@/api/errors';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Confirm } from '@/components/Confirm';
+import { SuccessNotice } from '@/components/Snackbar';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
@@ -113,7 +114,7 @@ function KeysForm({ page }: { page: PaymentKeys }) {
       )}
       {problem !== null && <Notice tone="error">{problem}</Notice>}
       <ErrorNotice error={change.error} />
-      {change.isSuccess && <Notice tone="success">{t('Saved.')}</Notice>}
+      {change.isSuccess && <SuccessNotice>{t('Saved.')}</SuccessNotice>}
       <SectionTitle>{page.on ? t('Change the keys') : t('Enter the keys')}</SectionTitle>
       <Hint>
         {t(
@@ -157,22 +158,19 @@ function KeysForm({ page }: { page: PaymentKeys }) {
         disabled={!page.can_store}
         onPress={save}
       />
-      {page.on &&
-        (confirming ? (
-          <Confirm
-            question={t(
-              'Turn payments off? Players cannot buy plans until keys are entered again.',
-            )}
-            confirmTitle={t('Turn payments off')}
-            busy={turnOff.isPending}
-            error={turnOff.error}
-            onConfirm={() => turnOff.mutate(null, { onSuccess: () => setConfirming(false) })}
-            onCancel={() => {
-              turnOff.reset();
-              setConfirming(false);
-            }}
-          />
-        ) : (
+      {page.on && (
+        <Confirm
+          open={confirming}
+          question={t('Turn payments off? Players cannot buy plans until keys are entered again.')}
+          confirmTitle={t('Turn payments off')}
+          busy={turnOff.isPending}
+          error={turnOff.error}
+          onConfirm={() => turnOff.mutate(null, { onSuccess: () => setConfirming(false) })}
+          onCancel={() => {
+            turnOff.reset();
+            setConfirming(false);
+          }}
+        >
           <Button
             title={t('Turn payments off')}
             variant="secondary"
@@ -181,7 +179,8 @@ function KeysForm({ page }: { page: PaymentKeys }) {
               setConfirming(true);
             }}
           />
-        ))}
+        </Confirm>
+      )}
     </>
   );
 }

@@ -1,6 +1,6 @@
 import type { UseMutationResult } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
-import type { TextInputInstance } from 'react-native';
+import { Platform, type TextInputInstance } from 'react-native';
 
 import type { Agreement } from '@/api/endpoints';
 import { checkSignUp, PASSWORD_MIN } from '@/auth/validation';
@@ -66,7 +66,8 @@ export function AccountForm({
         error={fieldError('username')}
         autoCapitalize="none"
         autoCorrect={false}
-        autoComplete="username"
+        // A new account's name: Android's autofill offers to save it rather than fill one in.
+        autoComplete={Platform.OS === 'android' ? 'username-new' : 'username'}
         textContentType="username"
         maxLength={20}
         returnKeyType="next"
@@ -99,6 +100,7 @@ export function AccountForm({
         onChangeText={setPassword}
         error={fieldError('password')}
         secureTextEntry
+        // A new password (Android's "password-new"): autofill offers a strong one to save.
         autoComplete="new-password"
         textContentType="newPassword"
         returnKeyType="go"

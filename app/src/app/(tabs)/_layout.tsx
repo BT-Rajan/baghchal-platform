@@ -86,6 +86,8 @@ export default function TabsLayout() {
         ),
         tabBarActiveTintColor: android ? colors.text : colors.accent,
         tabBarInactiveTintColor: colors.muted,
+        // Android's navigation bar steps aside for the keyboard, as Android apps' bars do.
+        ...(android && { tabBarHideOnKeyboard: true }),
         ...(sidebar
           ? {
               tabBarPosition: 'left',
@@ -109,7 +111,8 @@ export default function TabsLayout() {
                 minHeight: (android ? 80 : 66) + insets.bottom,
                 height: 'auto',
                 paddingBottom: insets.bottom,
-                ...(android && { paddingTop: 12, elevation: 0 }),
+                // Android's navigation bar has no line along its top: its colour sets it apart.
+                ...(android && { paddingTop: 12, elevation: 0, borderTopWidth: 0 }),
               },
             }),
       }}

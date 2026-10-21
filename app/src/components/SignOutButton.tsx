@@ -17,25 +17,23 @@ export function SignOutButton() {
   const signOut = useMutation({ mutationFn: () => session.signOut() });
   const [leaving, setLeaving] = useState(false);
   const guest = me.role === 'guest';
-  if (leaving) {
-    return (
-      <Confirm
-        question={t(
-          'Sign out and lose this guest account? Its games cannot be got back. Make an account first to keep them.',
-        )}
-        confirmTitle={t('Sign out')}
-        busy={signOut.isPending}
-        onConfirm={() => signOut.mutate()}
-        onCancel={() => setLeaving(false)}
-      />
-    );
-  }
   return (
-    <Button
-      title={t('Sign out')}
-      variant="secondary"
-      onPress={() => (guest ? setLeaving(true) : signOut.mutate())}
+    <Confirm
+      open={leaving}
+      question={t(
+        'Sign out and lose this guest account? Its games cannot be got back. Make an account first to keep them.',
+      )}
+      confirmTitle={t('Sign out')}
       busy={signOut.isPending}
-    />
+      onConfirm={() => signOut.mutate()}
+      onCancel={() => setLeaving(false)}
+    >
+      <Button
+        title={t('Sign out')}
+        variant="secondary"
+        onPress={() => (guest ? setLeaving(true) : signOut.mutate())}
+        busy={signOut.isPending}
+      />
+    </Confirm>
   );
 }

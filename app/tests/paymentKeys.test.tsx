@@ -111,7 +111,6 @@ test('setting the keys, and turning payments off', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
   await fireEvent.press(screen.getByRole('button', { name: 'Turn payments off' }));
   expect(screen.getByText(/^Turn payments off\? Players cannot buy/)).toBeOnTheScreen();
-  expect(screen.queryByText('Saved.')).toBeNull();
   // A failure stays in the question, which stays open; trying again turns them off.
   failOff = true;
   await fireEvent.press(screen.getByRole('button', { name: 'Turn payments off' }));

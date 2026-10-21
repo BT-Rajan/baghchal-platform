@@ -64,16 +64,19 @@ export function Button({
       ) : (
         <View style={styles.content}>
           {icon !== undefined && <Icon name={icon} color={TEXT[variant]} size={20} />}
-          <Text
-            style={[
-              styles.text,
-              compact && styles.compactText,
-              android && [styles.androidText, { letterSpacing: spaced(0.1) }],
-              { color: TEXT[variant] },
-            ]}
-          >
-            {label}
-          </Text>
+          {/* An icon-only button (label "") draws no empty text beside its icon. */}
+          {label !== '' && (
+            <Text
+              style={[
+                styles.text,
+                compact && styles.compactText,
+                android && [styles.androidText, { letterSpacing: spaced(0.1) }],
+                { color: TEXT[variant] },
+              ]}
+            >
+              {label}
+            </Text>
+          )}
         </View>
       )}
     </Pressable>
