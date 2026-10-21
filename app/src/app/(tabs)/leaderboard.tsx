@@ -49,7 +49,7 @@ export default function Leaderboard() {
           <Button
             title={t('Play a rated game')}
             variant="secondary"
-            onPress={() => router.push('/play')}
+            onPress={() => router.push('/play?mode=rated')}
           />
         </Card>
       ) : (

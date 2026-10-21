@@ -244,7 +244,7 @@ export function createApi(client: Client, transport: Transport) {
         body: { winner },
       }),
     playPairing: (code: string, pairingId: string) =>
-      client.post<Game>(`${V1}/tournaments/${seg(code)}/pairings/${seg(pairingId)}/play`),
+      client.post<Challenge>(`${V1}/tournaments/${seg(code)}/pairings/${seg(pairingId)}/play`),
 
     // Trainer
     trainer: (kind: TrainerKind, signal?: AbortSignal) =>

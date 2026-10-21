@@ -485,6 +485,7 @@ export interface paths {
         /**
          * Accept Challenge
          * @description Accept and start the game (its id is in ``game_id``; both players get a ``game`` event).
+         *     For a tournament's challenge, it is that pairing's game.
          */
         post: operations["accept_challenge_api_v1_challenges__challenge_id__accept_post"];
         delete?: never;
@@ -603,7 +604,11 @@ export interface paths {
          */
         get: operations["waiting_players_api_v1_seeks_get"];
         put?: never;
-        /** Seek Game */
+        /**
+         * Seek Game
+         * @description Play anyone who wants the same kind of game: paired at once with whoever has waited
+         *     longest, or wait (two minutes) for the next person. Rated games are for members.
+         */
         post: operations["seek_game_api_v1_seeks_post"];
         /** Stop Seeking */
         delete: operations["stop_seeking_api_v1_seeks_delete"];
@@ -1436,7 +1441,8 @@ export interface paths {
         put?: never;
         /**
          * Play Pairing
-         * @description Start one of my games; my opponent must be online (both get a ``game`` event).
+         * @description "Play now": challenge my opponent in this game, who must be online. Accepting it
+         *     (``/challenges/{id}/accept``, like any challenge) starts the game.
          */
         post: operations["play_pairing_api_v1_tournaments__code__pairings__pairing_id__play_post"];
         delete?: never;
@@ -1806,12 +1812,25 @@ export interface components {
             expires_at: string;
             /** Game Id */
             game_id?: string | null;
+            tournament?: components["schemas"]["ChallengeTournamentOut"] | null;
         };
         /**
          * ChallengeStatus
          * @enum {string}
          */
         ChallengeStatus: "pending" | "accepted" | "declined" | "cancelled" | "expired";
+        /**
+         * ChallengeTournamentOut
+         * @description The tournament a challenge plays a game of.
+         */
+        ChallengeTournamentOut: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Round */
+            round: number;
+        };
         /** ChatIn */
         ChatIn: {
             /** Text */
@@ -2302,6 +2321,8 @@ export interface components {
             match: components["schemas"]["MatchOut"] | null;
             /** Computer */
             computer: ("easy" | "medium" | "hard") | null;
+            /** Tournament */
+            tournament?: string | null;
             /** Positions */
             positions: string[];
             /** Deadline At */
@@ -2472,6 +2493,8 @@ export interface components {
             games: string[];
             /** Score */
             score: components["schemas"]["MatchScoreOut"][];
+            /** Game 2 Starts At */
+            game_2_starts_at?: string | null;
         };
         /** MatchScoreOut */
         MatchScoreOut: {
@@ -5700,12 +5723,12 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GameOut"];
+                    "application/json": components["schemas"]["ChallengeOut"];
                 };
             };
             /** @description Validation Error */

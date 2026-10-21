@@ -43,6 +43,19 @@ describe('players', () => {
     expect(screen.getByRole('button', { name: 'Challenge carol' })).toBeDisabled();
   });
 
+  test('a guest sees who is online, with no Challenge buttons (that needs an account)', async () => {
+    await renderApp('/', {
+      token: 'tok',
+      routes: {
+        'GET /api/v1/me': { status: 200, body: { ...ME, username: 'guest-3fa9c1', role: 'guest' } },
+        'GET /api/v1/players/online': ONLINE,
+      },
+    });
+    expect(await screen.findByText('bob')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Challenge bob' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Challenge a friend by link' })).toBeNull();
+  });
+
   test('says when nobody is online', async () => {
     await lobby();
     expect(await screen.findByText(/^Nobody else is online right now\./)).toBeOnTheScreen();
@@ -244,10 +257,9 @@ describe('challenge form', () => {
     await press('Challenge bob');
     expect(await screen.findByRole('heading', { name: 'Challenge bob' })).toBeOnTheScreen();
     expect(app.getPathname()).toBe('/challenge/bob');
-    expect(screen.getByText(/rated match is two games/)).toBeOnTheScreen();
+    expect(screen.getByRole('radio', { name: 'Casual' })).toBeChecked(); // as everywhere
 
     await fireEvent.press(screen.getByRole('radio', { name: '2+1' }));
-    await fireEvent.press(screen.getByRole('radio', { name: 'Casual' }));
     await fireEvent.press(screen.getByRole('radio', { name: 'Tigers' }));
     expect(screen.getByRole('radio', { name: 'Tigers' })).toBeChecked();
     await press('Send challenge');
@@ -271,6 +283,8 @@ describe('challenge form', () => {
       },
     });
     await screen.findByRole('heading', { name: 'Challenge bob' });
+    await fireEvent.press(screen.getByRole('radio', { name: 'Rated' }));
+    expect(screen.getByText(/rated match is two games/)).toBeOnTheScreen();
     await press('Send challenge');
     expect(await screen.findByText('bob is not online.')).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/challenges').body).toEqual({

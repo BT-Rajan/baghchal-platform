@@ -6,7 +6,7 @@ import subprocess
 import sys
 import uuid
 from contextlib import AsyncExitStack, closing
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -229,13 +229,69 @@ async def test_the_second_game_cannot_be_aborted(
             "code": "cannot_abort",
             "message": "The second game of a rated match cannot be aborted.",
         }
-    # Not making a first move loses on time, and the loss is rated.
-    clock.advance(seconds=31)
+    # Not making a first move loses on time (after the break and the grace), rated.
+    clock.advance(seconds=41)
     game2 = (await alice.http.get(f"/api/v1/games/{game2['id']}")).json()
     assert game2["result"] == {"winner": "tiger", "reason": "timeout"}
     assert game2["ratings"]["goat"]["change"] < 0
     assert (await alice.http.get("/api/v1/games")).json() == []
     assert (await _profile(alice, "alice"))["ratings"]["blitz"]["games"] == 2
+
+
+async def test_the_second_game_starts_after_a_break(
+    app: FastAPI, players: PlayerFactory, clock: Clock
+) -> None:
+    """Game 1's result stays on screen for the break; game 2's first-move grace starts after
+    it, and a first move made during the break leaves the reply its whole grace."""
+    alice, bob = await players("alice"), await players("bob")
+    by_id = {alice.id: alice, bob.id: bob}
+    async with AsyncExitStack() as stack:
+        await stack.enter_async_context(open_socket(app, bob.auth))
+        game1 = await _accepted(alice, bob, rated=True)
+    assert game1["match"]["game_2_starts_at"] is None
+    assert game1["tournament"] is None
+    game1 = await _play(by_id, game1, FIVE_CAPTURES)
+    game2 = await _second_game(alice, game1)
+    game1 = (await alice.http.get(f"/api/v1/games/{game1['id']}")).json()
+    ended = datetime.fromisoformat(game1["finished_at"])
+    starts = datetime.fromisoformat(game1["match"]["game_2_starts_at"])
+    assert starts - ended == timedelta(seconds=10)
+    assert game2["match"]["game_2_starts_at"] == game1["match"]["game_2_starts_at"]
+    assert datetime.fromisoformat(game2["deadline_at"]) == starts + timedelta(seconds=30)
+    assert game2["clocks"]["running"] is None
+
+    # 35 s after game 1 ended is within game 2's grace: nothing has happened yet.
+    clock.advance(seconds=35)
+    game2 = (await alice.http.get(f"/api/v1/games/{game2['id']}")).json()
+    assert game2["status"] == "active"
+    clock.advance(seconds=4)  # 39 s: the goats move just in time
+    game2 = await _play(by_id, game2, FIVE_CAPTURES[:1])
+    now = starts + timedelta(seconds=29)
+    assert datetime.fromisoformat(game2["deadline_at"]) == now + timedelta(seconds=30)
+
+
+async def test_a_first_move_during_the_break_keeps_the_replys_grace(
+    app: FastAPI, players: PlayerFactory, clock: Clock
+) -> None:
+    alice, bob = await players("alice"), await players("bob")
+    by_id = {alice.id: alice, bob.id: bob}
+    async with AsyncExitStack() as stack:
+        await stack.enter_async_context(open_socket(app, bob.auth))
+        game1 = await _accepted(alice, bob, rated=True)
+    game1 = await _play(by_id, game1, FIVE_CAPTURES)
+    game2 = await _second_game(alice, game1)
+    starts = datetime.fromisoformat(game2["match"]["game_2_starts_at"])
+    clock.advance(seconds=3)  # "Play now": the goats move during the break
+    game2 = await _play(by_id, game2, FIVE_CAPTURES[:1])
+    assert datetime.fromisoformat(game2["deadline_at"]) == starts + timedelta(seconds=30)
+    clock.advance(seconds=3)
+    game2 = await _play(by_id, game2, FIVE_CAPTURES[1:2])  # the tigers too: the clocks start
+    assert game2["clocks"]["running"] == "goat"
+    assert game2["clocks"]["goat_ms"] == 180_000
+    assert game2["clocks"]["tiger_ms"] == 180_000
+    clock.advance(seconds=5)
+    game2 = (await alice.http.get(f"/api/v1/games/{game2['id']}")).json()
+    assert game2["clocks"]["goat_ms"] == 175_000
 
 
 async def _challenge(challenger: Player, opponent: Player, **options: object) -> httpx.Response:

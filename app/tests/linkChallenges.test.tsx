@@ -1,7 +1,9 @@
-import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { router } from 'expo-router';
+import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { Share } from 'react-native';
 
 import { renderApp } from './support/app';
-import { ME, error, type Route } from './support/fakeServer';
+import { AGREED, ME, error, type Route } from './support/fakeServer';
 import { BOB, challenge, game } from './support/games';
 
 const ALICE = { id: ME.id, username: ME.username };
@@ -62,7 +64,16 @@ describe('challenges by link', () => {
       side: 'goat',
     });
     expect(screen.getByText('2+1 · casual · you play goats')).toBeOnTheScreen();
-    expect(screen.getByLabelText('Link to share')).toHaveTextContent('/c/abc123');
+    // The website's full address, to copy, or to send with the phone's share sheet.
+    expect(screen.getByLabelText('Link to share')).toHaveTextContent(
+      'http://localhost:8000/c/abc123',
+    );
+    const share = jest
+      .spyOn(Share, 'share')
+      .mockResolvedValue({ action: 'sharedAction', activityType: undefined });
+    await press('Share the link');
+    expect(share).toHaveBeenCalledWith({ url: 'http://localhost:8000/c/abc123' });
+    share.mockRestore();
     expect(screen.getByText(/^Expires in (23 h 59 min|24 h)$/)).toBeOnTheScreen();
     await press('Cancel the challenge by link');
     await waitFor(() => expect(app.getPathname()).toBe('/'));
@@ -97,7 +108,10 @@ describe('challenges by link', () => {
     });
     expect(await screen.findByText('bob challenges you')).toBeOnTheScreen();
     expect(screen.getByText('5+3 · casual · you play tigers')).toBeOnTheScreen();
-    await press('Accept and play');
+    // The lobby's card: nothing to decline (whoever does not want it leaves it), nor to share.
+    expect(screen.queryByRole('button', { name: "Decline bob's challenge" })).toBeNull();
+    expect(screen.queryByLabelText('Link to share')).toBeNull();
+    await press("Accept bob's challenge");
     await waitFor(() => expect(app.getPathname()).toBe('/game/g1'));
   });
 
@@ -113,7 +127,7 @@ describe('challenges by link', () => {
         return error(409, 'challenge_closed', 'Someone else accepted first.');
       },
     });
-    await fireEvent.press(await screen.findByRole('button', { name: 'Accept and play' }));
+    await fireEvent.press(await screen.findByRole('button', { name: "Accept bob's challenge" }));
     expect(
       await screen.findByText('This challenge is closed. Ask your friend for a new link.'),
     ).toBeOnTheScreen();
@@ -163,5 +177,81 @@ describe('challenges by link', () => {
     expect(
       await screen.findByText('No such challenge. Ask your friend for a new link.'),
     ).toBeOnTheScreen();
+  });
+});
+
+describe('a signed-out friend opens a challenge link', () => {
+  const GUEST = {
+    ...ME,
+    username: 'guest-3fa9c1',
+    email: 'guest-3fa9c1@guest.invalid',
+    role: 'guest' as const,
+  };
+  const LINK_ROUTES: Record<string, Route> = {
+    [`GET ${URL}`]: { status: 200, body: link() },
+  };
+
+  async function arrive(routes: Record<string, Route> = {}) {
+    const rendered = await renderApp('/c/abc123', { routes: { ...LINK_ROUTES, ...routes } });
+    await waitFor(() => expect(rendered.app.getPathname()).toBe('/welcome'));
+    expect(
+      screen.getByText(
+        'Play now as a guest, or sign in, and we will take you to the link you opened.',
+      ),
+    ).toBeOnTheScreen();
+    return rendered;
+  }
+
+  test('plays as a guest and goes straight to the challenge, not the computer', async () => {
+    const { app, server } = await arrive({
+      'POST /api/v1/auth/guest': { status: 200, body: { user: GUEST, token: 'guest-tok' } },
+    });
+    await press('Play now, no sign-up');
+    await screen.findByRole('button', { name: 'Accept and play', busy: false });
+    await press('Accept and play');
+    await waitFor(() => expect(app.getPathname()).toBe('/c/abc123'));
+    expect(await screen.findByText('bob challenges you')).toBeOnTheScreen();
+    expect(server.lastTo('POST /api/v1/auth/guest').body).toEqual({
+      ...AGREED,
+      transport: 'bearer',
+    });
+    expect(server.requests.filter((r) => r.path === '/api/v1/games/computer')).toHaveLength(0);
+  });
+
+  test('signs in and goes on to the challenge', async () => {
+    const { app } = await arrive({
+      'POST /api/v1/auth/login': { status: 200, body: { user: ME, token: 'tok' } },
+    });
+    await press('Sign in');
+    await fireEvent.changeText(await screen.findByLabelText('Username or email'), 'alice');
+    await fireEvent.changeText(screen.getByLabelText('Password'), 'correct horse battery');
+    await press('Sign in');
+    await waitFor(() => expect(app.getPathname()).toBe('/c/abc123'));
+    expect(await screen.findByText('bob challenges you')).toBeOnTheScreen();
+  });
+
+  test('makes an account, confirms the email, and goes on to the challenge', async () => {
+    const { app } = await arrive({
+      'POST /api/v1/auth/verify-email': { status: 200, body: { user: ME, token: 'fresh' } },
+    });
+    // The link in the confirmation email.
+    await act(() => router.push(`/verify-email?token=${'a'.repeat(43)}`));
+    await waitFor(() => expect(app.getPathname()).toBe('/c/abc123'));
+    expect(await screen.findByText('bob challenges you')).toBeOnTheScreen();
+  });
+
+  test('without a link, a new account goes to make it theirs', async () => {
+    const { app } = await renderApp('/welcome', {
+      routes: {
+        'POST /api/v1/auth/verify-email': { status: 200, body: { user: ME, token: 'fresh' } },
+      },
+    });
+    expect(
+      screen.queryByText(
+        'Play now as a guest, or sign in, and we will take you to the link you opened.',
+      ),
+    ).toBeNull();
+    await act(() => router.push(`/verify-email?token=${'a'.repeat(43)}`));
+    await waitFor(() => expect(app.getPathname()).toBe('/make-it-yours'));
   });
 });

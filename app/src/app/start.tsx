@@ -1,12 +1,12 @@
 import { useMutation } from '@tanstack/react-query';
 
 import type { Agreement } from '@/api/endpoints';
-import { describeError } from '@/api/errors';
+import { peekReturn } from '@/auth/returnTo';
 import { useApi, useSession } from '@/auth/session';
 import { AgreementLine, useAgreement } from '@/components/AgreementLine';
 import { t } from '@/i18n';
 import { Button } from '@/components/Button';
-import { Notice } from '@/components/Notice';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { Screen } from '@/components/Screen';
 import { TextLink } from '@/components/TextLink';
 import { useOpenStartedGame } from '@/lobby/hooks';
@@ -17,7 +17,10 @@ import { useOpenStartedGame } from '@/lobby/hooks';
  */
 const FIRST_GAME = { level: 'easy', side: 'goat', time_control: '5+3' } as const;
 
-/** Play at once as a guest: nothing to type, only the agreement to accept. */
+/**
+ * Play at once as a guest: nothing to type, only the agreement to accept. Someone who came from
+ * a friend's link goes on to it (see the route guards in _layout) instead of the computer.
+ */
 export default function Start() {
   const { session } = useSession();
   const api = useApi();
@@ -25,7 +28,9 @@ export default function Start() {
   const agreement = useAgreement();
   const play = useMutation({
     mutationFn: async (body: Agreement) => {
+      const goingOn = peekReturn() !== null;
       await session.playAsGuest(body);
+      if (goingOn) return;
       const game = await api.playComputer(FIRST_GAME);
       // Open it once the screens for signed-in players are in place, or their guard would send
       // the game back to the welcome page.
@@ -41,7 +46,7 @@ export default function Start() {
 
   return (
     <Screen title={t('Your first game')} brand>
-      {play.error !== null && <Notice tone="error">{describeError(play.error)}</Notice>}
+      <ErrorNotice error={play.error} />
       <AgreementLine agreement={agreement} />
       <Button
         title={t('Accept and play')}

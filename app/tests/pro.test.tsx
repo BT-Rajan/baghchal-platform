@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { renderApp } from './support/app';
 import { ME, error, type Route } from './support/fakeServer';
-import { BOB, game } from './support/games';
+import { BOB, challenge, game } from './support/games';
 
 import type { MyPlan, Pairing, Tournament, Trainer } from '@/api/endpoints';
 
@@ -112,7 +112,7 @@ describe('tournaments', () => {
     });
     expect(await screen.findByText('At least 3 players are needed to start.')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Start the tournament' })).toBeDisabled();
-    expect(screen.getByText('/tournament/cup1')).toBeOnTheScreen();
+    expect(screen.getByText('http://localhost:8000/tournament/cup1')).toBeOnTheScreen();
   });
 
   test('join, leave, and a refusal', async () => {
@@ -223,19 +223,22 @@ describe('tournaments', () => {
     expect(screen.queryByText('Games not played yet')).toBeNull();
   });
 
-  test('start one of my games', async () => {
-    const started = game({
-      id: 'g2',
-      goat: BOB,
-      tiger: ALICE,
-      server_time: new Date().toISOString(),
+  test('"Play now" asks my opponent, who accepts like any challenge', async () => {
+    const asked = challenge({
+      challenger: ALICE,
+      opponent: { id: 'u3', username: 'carol' },
+      tournament: { code: 'cup1', name: 'Cup', round: 1 },
     });
-    const { app } = await open('/tournament/cup1', {
+    const { server, app } = await open('/tournament/cup1', {
       'GET /api/v1/tournaments/cup1': { status: 200, body: running() },
-      'POST /api/v1/tournaments/cup1/pairings/p2/play': { status: 200, body: started },
+      'POST /api/v1/tournaments/cup1/pairings/p2/play': { status: 201, body: asked },
     });
     await fireEvent.press(await screen.findByRole('button', { name: 'Play carol v alice' }));
-    await waitFor(() => expect(app.getPathname()).toBe('/game/g2'));
+    expect(
+      await screen.findByText('We asked carol to play. The game opens when they accept.'),
+    ).toBeOnTheScreen();
+    expect(server.lastTo('POST /api/v1/tournaments/cup1/pairings/p2/play')).toBeDefined();
+    expect(app.getPathname()).toBe('/tournament/cup1'); // nobody is pulled into a game
   });
 
   test('open one being played', async () => {

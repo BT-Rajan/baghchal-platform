@@ -18,10 +18,17 @@ from baghchal_server.friends.models import Friendship
 from baghchal_server.games import service as games
 from baghchal_server.games.models import Game
 from baghchal_server.lobby.models import Block, Challenge, ChallengeStatus
-from baghchal_server.lobby.schemas import ChallengeIn, ChallengeOut, PlayerOut
+from baghchal_server.lobby.schemas import (
+    ChallengeIn,
+    ChallengeOut,
+    ChallengeTournamentOut,
+    PlayerOut,
+)
 from baghchal_server.lobby.time_controls import TIME_CONTROLS, label_of
 from baghchal_server.notifications.models import Notification
 from baghchal_server.realtime.presence import Presence
+from baghchal_server.tournaments import pairings
+from baghchal_server.tournaments.models import Pairing, Tournament
 
 CHALLENGE_TTL: Final = timedelta(seconds=60)
 LINK_TTL: Final = timedelta(days=1)
@@ -211,7 +218,11 @@ async def _check_outgoing(db: AsyncSession, challenger_id: uuid.UUID, now: datet
     )
     if outgoing is not None and outgoing >= MAX_OUTGOING_CHALLENGES:
         raise AppError(
-            429, "too_many_challenges", "Wait for a reply before sending more challenges."
+            429,
+            "too_many_challenges",
+            "You have {limit} open challenges (links count too). Cancel one, or wait for a "
+            "reply, before sending more.",
+            limit=MAX_OUTGOING_CHALLENGES,
         )
 
 
@@ -272,27 +283,18 @@ async def create_challenge(
     await check_abort_cooldown(db, challenger.id, now)
     if not await presence.online([opponent.id]):
         raise AppError(409, "player_offline", "{name} is not online.", name=opponent.username)
-    if await games.busy(db, [challenger.id, opponent.id]):
-        raise busy_error()
+    await check_abort_cooldown(db, opponent.id, now, name=opponent.username)
+    await check_free(db, challenger.id, opponent.id)
     if data.rated:
         last = await games.last_rated_match(db, challenger.id, opponent.id)
         if last is not None and now - last < RATED_MATCH_EVERY:
             raise _rated_limit(opponent.username, last + RATED_MATCH_EVERY - now)
-    await _check_outgoing(db, challenger.id, now)
-
-    key = pair_key(challenger.id, opponent.id)
-    # A lapsed challenge between the two still holds the pair; release it first.
-    await db.execute(
-        update(Challenge)
-        .where(Challenge.pair_key == key, Challenge.expires_at <= now)
-        .values(status=ChallengeStatus.EXPIRED, pair_key=None)
-    )
     tc = TIME_CONTROLS[data.time_control]
     challenge = Challenge(
         id=uuid.uuid4(),
         challenger_id=challenger.id,
         opponent_id=opponent.id,
-        pair_key=key,
+        pair_key=pair_key(challenger.id, opponent.id),
         initial_seconds=tc.initial_seconds,
         increment_seconds=tc.increment_seconds,
         rated=data.rated,
@@ -301,8 +303,26 @@ async def create_challenge(
         created_at=now,
         expires_at=now + CHALLENGE_TTL,
     )
+    return await send_challenge(db, now, challenge, opponent.username)
+
+
+async def send_challenge(
+    db: AsyncSession, now: datetime, challenge: Challenge, opponent_name: str
+) -> Challenge:
+    """Open a challenge to a named player (checked by the caller), within the challenger's
+    limit and one open challenge per pair. Also for a tournament's "Play now"."""
+    opponent_id = challenge.opponent_id
+    key = challenge.pair_key
+    assert opponent_id is not None  # noqa: S101 - to a named player
+    assert key is not None  # noqa: S101 - pending, so it holds the pair
+    await _check_outgoing(db, challenge.challenger_id, now)
+    # A lapsed challenge between the two still holds the pair; release it first.
+    await db.execute(
+        update(Challenge)
+        .where(Challenge.pair_key == key, Challenge.expires_at <= now)
+        .values(status=ChallengeStatus.EXPIRED, pair_key=None)
+    )
     db.add(challenge)
-    opponent_id, opponent_name = opponent.id, opponent.username  # a rollback expires them
     try:
         await db.commit()
     except IntegrityError:
@@ -344,8 +364,9 @@ async def respond(
     One conditional UPDATE decides, so of two racing responses exactly one wins. Accepting
     starts the game in the same transaction: there is never an accepted challenge without one.
     """
+    pairing = None
     if response == "accept":
-        await check_abort_cooldown(db, user_id, now)
+        pairing = await _ready_to_start(db, now, user_id, challenge_id)
     actor = Challenge.challenger_id if response == "cancel" else Challenge.opponent_id
     result = await db.execute(
         update(Challenge)
@@ -362,14 +383,16 @@ async def respond(
         assert challenge is not None  # noqa: S101 - just updated
         game = None
         if response == "accept":
-            # Answered by its named opponent, so it has one.
-            players = [challenge.challenger_id, challenge.opponent_id or challenge.challenger_id]
+            challenger_id = challenge.challenger_id  # a rollback expires it
             try:
-                game = await games.start_game(db, challenge, now)
+                game = (
+                    await games.start_game(db, challenge, now)
+                    if pairing is None
+                    else await pairings.start_game(db, now, challenge, pairing)
+                )
             except IntegrityError:
                 await db.rollback()
-                if await games.busy(db, players):
-                    raise busy_error() from None
+                await check_free(db, user_id, challenger_id)
                 raise
         await db.commit()
         return challenge, game
@@ -380,6 +403,31 @@ async def respond(
     if (response == "cancel") != (user_id == challenge.challenger_id):
         raise AppError(403, "not_allowed", NOT_ALLOWED[response])
     raise AppError(409, "challenge_closed", "This challenge is no longer open.")
+
+
+async def _ready_to_start(
+    db: AsyncSession, now: datetime, user_id: uuid.UUID, challenge_id: uuid.UUID
+) -> Pairing | None:
+    """Before accepting: both players may start a game, and a tournament game is still to be
+    played. Returns its pairing, if it is one. A challenge that cannot be accepted at all is
+    left for ``respond`` to explain."""
+    challenge = await db.get(Challenge, challenge_id)
+    if (
+        challenge is None
+        or challenge.opponent_id != user_id
+        or challenge.status != ChallengeStatus.PENDING
+    ):
+        return None
+    pairing = None
+    if challenge.pairing_id is not None:
+        pairing = await db.get(Pairing, challenge.pairing_id)
+        assert pairing is not None  # noqa: S101 - challenges go with their pairing
+        await pairings.check_waiting(db, pairing)
+    await check_abort_cooldown(db, user_id, now)
+    challenger = await db.get(User, challenge.challenger_id)
+    assert challenger is not None  # noqa: S101 - challenges go with their challenger
+    await check_abort_cooldown(db, challenger.id, now, name=challenger.username)
+    return pairing
 
 
 async def find_link(db: AsyncSession, code: str, now: datetime) -> Challenge:
@@ -417,6 +465,8 @@ async def accept_link(
             name=challenger.username,
         )
     await check_abort_cooldown(db, user.id, now)
+    await check_abort_cooldown(db, challenger.id, now, name=challenger.username)
+    user_id, challenger_id = user.id, challenger.id  # a rollback expires them
     claimed = await db.execute(
         update(Challenge)
         .where(
@@ -435,29 +485,51 @@ async def accept_link(
         game = await games.start_game(db, challenge, now)
     except IntegrityError:
         await db.rollback()
-        raise busy_error() from None
+        await check_free(db, user_id, challenger_id)
+        raise
     await db.commit()
     return challenge, game
 
 
-async def check_abort_cooldown(db: AsyncSession, user_id: uuid.UUID, now: datetime) -> None:
+async def check_abort_cooldown(
+    db: AsyncSession, user_id: uuid.UUID, now: datetime, *, name: str | None = None
+) -> None:
+    """Refuse a game with another player while ``user_id`` is barred for aborting too many
+    (the computer stays open). With ``name``, the one checked is the other player."""
     wait = await games.abort_cooldown(db, user_id, now)
-    if wait > timedelta(0):
-        minutes = math.ceil(wait.total_seconds() / 60)
+    if wait <= timedelta(0):
+        return
+    minutes = math.ceil(wait.total_seconds() / 60)
+    retry = {"Retry-After": str(math.ceil(wait.total_seconds()))}
+    if name is not None:
         raise AppError(
-            429,
-            "abort_cooldown",
+            409,
+            "opponent_cooldown",
             (
-                "You have aborted {limit} games in the last 24 hours (not making a first move "
-                "counts too). You can start new games again in 1 minute."
+                "{name} has aborted too many games and can play again in 1 minute."
                 if minutes == 1
-                else "You have aborted {limit} games in the last 24 hours (not making a first "
-                "move counts too). You can start new games again in {minutes} minutes."
+                else "{name} has aborted too many games and can play again in {minutes} minutes."
             ),
-            headers={"Retry-After": str(math.ceil(wait.total_seconds()))},
-            limit=games.ABORT_LIMIT,
+            headers=retry,
+            name=name,
             minutes=minutes,
         )
+    raise AppError(
+        429,
+        "abort_cooldown",
+        (
+            "You have aborted {limit} games in the last 24 hours (not making a first move "
+            "counts too). You can play other players again in 1 minute. You can play the "
+            "computer meanwhile."
+            if minutes == 1
+            else "You have aborted {limit} games in the last 24 hours (not making a first "
+            "move counts too). You can play other players again in {minutes} minutes. You "
+            "can play the computer meanwhile."
+        ),
+        headers=retry,
+        limit=games.ABORT_LIMIT,
+        minutes=minutes,
+    )
 
 
 def _rated_limit(opponent: str, wait: timedelta) -> AppError:
@@ -478,8 +550,19 @@ def _rated_limit(opponent: str, wait: timedelta) -> AppError:
     )
 
 
-def busy_error() -> AppError:
-    return AppError(409, "player_busy", "One of you is already playing a game.")
+async def check_free(db: AsyncSession, me: uuid.UUID, other: uuid.UUID | None = None) -> None:
+    """Refuse when a live game is in the way: mine first, else the other player's."""
+    playing = await games.busy(db, [me] if other is None else [me, other])
+    if me in playing:
+        raise AppError(409, "player_busy", "Finish your live game first.")
+    if other in playing:
+        name = await db.scalar(select(User.username).where(User.id == other))
+        raise AppError(
+            409,
+            "player_busy",
+            "{name} is playing a game right now. Try again when it ends.",
+            name=name,
+        )
 
 
 async def open_challenges(db: AsyncSession, now: datetime, user: User) -> Sequence[Challenge]:
@@ -502,6 +585,17 @@ async def describe(db: AsyncSession, challenges: Sequence[Challenge]) -> list[Ch
     }
     rows = await db.execute(select(User.id, User.username).where(User.id.in_(ids)))
     names = dict(rows.all())
+    played_for = {c.pairing_id for c in challenges if c.pairing_id is not None}
+    tournaments = {
+        pairing_id: ChallengeTournamentOut(code=code, name=name, round=round_)
+        for pairing_id, code, name, round_ in (
+            await db.execute(
+                select(Pairing.id, Tournament.code, Tournament.name, Pairing.round)
+                .join(Tournament, Tournament.id == Pairing.tournament_id)
+                .where(Pairing.id.in_(played_for))
+            )
+        ).all()
+    }
     game_ids = dict(
         (
             await db.execute(
@@ -526,6 +620,7 @@ async def describe(db: AsyncSession, challenges: Sequence[Challenge]) -> list[Ch
             created_at=c.created_at,
             expires_at=c.expires_at,
             game_id=game_ids.get(c.id),
+            tournament=None if c.pairing_id is None else tournaments.get(c.pairing_id),
         )
         for c in challenges
     ]

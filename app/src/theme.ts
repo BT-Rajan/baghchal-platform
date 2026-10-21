@@ -63,6 +63,15 @@ export const colors = {
   gold: '#b8860b',
   silver: '#8a939c',
   bronze: '#a0612c',
+  /** Over the board at the end of a game (components/game/Victory.tsx): a dark veil, a darker
+   * plate behind the words, and the words on it (the headline warm when celebrating). */
+  overlay: 'rgba(31, 18, 6, 0.62)',
+  overlayPlate: 'rgba(31, 18, 6, 0.55)',
+  overlayText: '#ffffff',
+  overlayMuted: 'rgba(255, 255, 255, 0.75)',
+  overlayHeadline: '#ffe2a8',
+  overlayHeadlineQuiet: '#f1e9d8',
+  overlayShadow: 'rgba(0, 0, 0, 0.6)',
   /** Keyboard focus ring (web). */
   focus: '#1f5fbf',
   /** Android's touch ripple, on light surfaces and on dark or coloured ones. */
@@ -82,7 +91,8 @@ export function tight(letterSpacing: number): number {
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
 
-export const radius = { sm: 6, md: 10, lg: 16, pill: 999 } as const;
+/** `board`: the board's corners (and what is laid over it). */
+export const radius = { sm: 6, md: 10, lg: 16, board: 12, pill: 999 } as const;
 
 /**
  * The type scale: each step is clearly bigger or bolder than the next, so a screen reads at a
@@ -96,6 +106,9 @@ export const type = {
   label: { fontSize: 14, lineHeight: 19, fontWeight: '600' },
   caption: { fontSize: 13, lineHeight: 18, fontWeight: '400' },
 } as const;
+
+/** The confetti when I win a game: festive, in the pieces' and the brand's colours. */
+export const confetti = ['#f6c344', '#e07a22', '#2f7d6d', '#ffffff', '#c0392b', '#7fb3e0'] as const;
 
 /** A soft lift for cards and the board, instead of hard borders. */
 export const shadow = {

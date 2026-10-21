@@ -4,10 +4,12 @@ import { Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } fro
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg from 'react-native-svg';
 
+import { peekReturn } from '@/auth/returnTo';
 import { Brand } from '@/components/brand/Logo';
 import { Button } from '@/components/Button';
 import { BoardPreview } from '@/components/game/BoardPreview';
 import { Coin } from '@/components/game/Coin';
+import { Notice } from '@/components/Notice';
 import { Segmented } from '@/components/Segmented';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import type { Piece } from '@/game/bfen';
@@ -82,6 +84,7 @@ function StartScreen() {
           <Text style={styles.lede}>{t('Bagh Chal, the strategy game of the Himalayas.')}</Text>
         </View>
         <View style={styles.actions}>
+          <GoingOn />
           <Button
             title={t('Play now, no sign-up')}
             variant="bright"
@@ -96,6 +99,16 @@ function StartScreen() {
         </View>
       </View>
     </SafeAreaView>
+  );
+}
+
+/** Someone sent here from a friend's link: they get there once they are in. */
+function GoingOn() {
+  if (peekReturn() === null) return null;
+  return (
+    <Notice tone="info">
+      {t('Play now as a guest, or sign in, and we will take you to the link you opened.')}
+    </Notice>
   );
 }
 
@@ -120,6 +133,7 @@ function LandingPage() {
                 )}
               </Text>
               {/* Signing in and up are in the top bar; the terms and privacy in the footer. */}
+              <GoingOn />
               <View style={[styles.actions, wide && styles.actionsWide]}>
                 <Button title={t('Play now, no sign-up')} variant="bright" onPress={play} />
               </View>

@@ -4,14 +4,12 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { ModPlayer } from '@/api/endpoints';
-import { describeError } from '@/api/errors';
 import { queryKeys } from '@/api/queryKeys';
 import { useApi, useMe } from '@/auth/session';
 import { usernameProblem } from '@/auth/validation';
 import { Button } from '@/components/Button';
 import { Card, Hint } from '@/components/Card';
 import { FairPlaySection } from '@/components/FairPlaySection';
-import { Notice } from '@/components/Notice';
 import { PlanAdmin } from '@/components/PlanAdmin';
 import { Segmented } from '@/components/Segmented';
 import { Screen } from '@/components/Screen';
@@ -29,6 +27,7 @@ import {
   standingText,
 } from '@/lobby/moderation';
 import { colors, spacing } from '@/theme';
+import { ErrorNotice } from '@/components/ErrorNotice';
 
 type Action =
   | { kind: 'suspend'; days: number | null }
@@ -159,7 +158,7 @@ function Record({
         {player.role === 'admin' && <Text style={styles.muted}>{t('Admin')}</Text>}
       </Card>
       <Segmented label={t('Show')} options={tabs} value={tab} onChange={onTab} />
-      {act.error !== null && <Notice tone="error">{describeError(act.error)}</Notice>}
+      <ErrorNotice error={act.error} />
       {/* Every action asks why: acting, and dismissing a report. */}
       {(tab === 'act' ||
         (tab === 'reports' && player.reports.some((r) => r.status === 'open'))) && (

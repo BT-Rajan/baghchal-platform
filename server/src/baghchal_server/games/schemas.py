@@ -48,6 +48,9 @@ class MatchOut(BaseModel):
     games: list[uuid.UUID]
     """The match's games so far, in order."""
     score: list[MatchScoreOut]
+    game_2_starts_at: datetime | None = None
+    """When game 2's first-move grace begins: a short break after game 1 ends, while game 1's
+    result is still shown. None until game 2 exists."""
 
 
 class GameOut(BaseModel):
@@ -74,6 +77,8 @@ class GameOut(BaseModel):
     """Rated games are played as two-game matches."""
     computer: Literal["easy", "medium", "hard"] | None
     """Set when one of the players is the computer: its level."""
+    tournament: str | None = None
+    """The code of the tournament this game was played in, if any."""
     positions: list[str]
     """For replaying a finished game: the position (BFEN) before the first move and after each
     one, so ``positions[ply]``. Empty while the game is in progress."""

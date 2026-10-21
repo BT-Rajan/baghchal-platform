@@ -1,14 +1,13 @@
 import { useMutation } from '@tanstack/react-query';
 
 import type { Agreement } from '@/api/endpoints';
-import { describeError } from '@/api/errors';
 import { useApi, useSession } from '@/auth/session';
 import { AgreementLine, useAgreement } from '@/components/AgreementLine';
 import { Button } from '@/components/Button';
 import { Hint } from '@/components/Card';
-import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { t } from '@/i18n';
+import { ErrorNotice } from '@/components/ErrorNotice';
 
 /**
  * Shown in place of the app to an account whose terms or privacy policy changed since it agreed
@@ -34,7 +33,7 @@ export default function Agree() {
   return (
     <Screen title={t('Before you play on')} brand>
       <Hint>{t('We have updated our terms or privacy policy. Please read what changed.')}</Hint>
-      {send.error !== null && <Notice tone="error">{describeError(send.error)}</Notice>}
+      <ErrorNotice error={send.error} />
       <AgreementLine agreement={agreement} />
       <Button
         title={t('Accept')}

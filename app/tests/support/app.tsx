@@ -2,6 +2,7 @@
 import { renderRouter } from 'expo-router/testing-library';
 
 import { FREE_APPEARANCE } from '@/appearance/catalog';
+import { forgetReturn } from '@/auth/returnTo';
 import { serverClock } from '@/game/serverClock';
 
 import { fakeServer, type Route } from './fakeServer';
@@ -58,6 +59,8 @@ export async function renderApp(
 ) {
   mockSecure.clear();
   serverClock.reset();
+  // Each test starts afresh: nowhere remembered to go back to after signing in.
+  forgetReturn();
   if (token !== null) mockSecure.set('session-token', token);
   const server = fakeServer({ ...QUIET_LOBBY, ...routes });
   globalThis.fetch = server.fetch;

@@ -64,21 +64,27 @@ async def test_three_aborts_in_a_day_mean_a_break(
         assert r.json()["error"] == {
             "code": "abort_cooldown",
             "message": "You have aborted 3 games in the last 24 hours (not making a first move "
-            "counts too). You can start new games again in 60 minutes.",
+            "counts too). You can play other players again in 60 minutes. You can play the "
+            "computer meanwhile.",
         }
         assert r.headers["retry-after"] == "3600"
-        # Nor can alice accept a challenge; bob, who aborted nothing, is not held back.
-        challenge_id = (await _challenge(bob, alice)).json()["id"]
-        r = await alice.http.post(f"{CHALLENGES}/{challenge_id}/accept")
-        assert r.json()["error"]["code"] == "abort_cooldown"
-        assert (await alice.http.post(f"{CHALLENGES}/{challenge_id}/decline")).status_code == 200
+        # Nobody can challenge alice meanwhile (told at once, rather than waiting for an answer
+        # that cannot come); bob, who aborted nothing, is not held back.
+        r = await _challenge(bob, alice)
+        assert (r.status_code, r.json()["error"]) == (
+            409,
+            {
+                "code": "opponent_cooldown",
+                "message": "alice has aborted too many games and can play again in 60 minutes.",
+            },
+        )
         r = await _challenge(bob, carol)
         assert r.status_code == 201
         await carol.http.post(f"{CHALLENGES}/{r.json()['id']}/decline")
 
         clock.advance(minutes=59)
         r = await _challenge(alice, bob)
-        assert r.json()["error"]["message"].endswith("in 1 minute.")
+        assert "again in 1 minute." in r.json()["error"]["message"]
         clock.advance(minutes=1)
         r = await _challenge(alice, bob)
         assert r.status_code == 201
@@ -99,8 +105,10 @@ async def test_the_side_that_does_not_move_caused_the_abort(
             await alice.http.get(f"/api/v1/games/{game['id']}")
             clock.advance(minutes=5)
         assert (await _challenge(bob, alice)).json()["error"]["code"] == "abort_cooldown"
-        r = await _challenge(alice, bob)
-        assert r.status_code == 201
+        r = await _challenge(alice, bob)  # alice is free; bob, her opponent, is not
+        assert r.json()["error"]["code"] == "opponent_cooldown"
+        clock.advance(hours=1)
+        assert (await _challenge(alice, bob)).status_code == 201
 
 
 async def test_old_aborts_do_not_count(app: FastAPI, players: PlayerFactory, clock: Clock) -> None:

@@ -3,12 +3,10 @@ import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
 import type { TimeControl } from '@/api/endpoints';
-import { describeError } from '@/api/errors';
 import { has } from '@/billing/format';
 import { useMyPlan } from '@/billing/hooks';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
-import { Notice } from '@/components/Notice';
 import { Upsell } from '@/components/Upsell';
 import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
@@ -20,6 +18,7 @@ import { plural, t } from '@/i18n';
 import { tournamentStatusText } from '@/pro/format';
 import { useCreateTournament, useTournaments } from '@/pro/hooks';
 import { colors } from '@/theme';
+import { ErrorNotice } from '@/components/ErrorNotice';
 
 const SIZES = ['4', '8', '16', '32'];
 
@@ -63,7 +62,7 @@ function NewTournament() {
         value={size}
         onChange={setSize}
       />
-      {create.error !== null && <Notice tone="error">{describeError(create.error)}</Notice>}
+      <ErrorNotice error={create.error} />
       <Button
         title={t('Create the tournament')}
         busy={create.isPending}

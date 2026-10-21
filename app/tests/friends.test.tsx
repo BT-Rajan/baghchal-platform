@@ -111,12 +111,13 @@ describe('friends', () => {
     await waitFor(() => expect(screen.getByText('bob wants to be friends.')).toBeOnTheScreen());
   });
 
-  test('guests are not offered friends', async () => {
+  test('guests are not offered friends, nor a challenge by name', async () => {
     await open('/player/bob', {
       'GET /api/v1/me': { status: 200, body: { ...ME, username: 'guest-3fa9c1', role: 'guest' } },
       'GET /api/v1/players/bob': { status: 200, body: profile('none') },
     });
-    expect(await screen.findByRole('button', { name: 'Challenge bob' })).toBeOnTheScreen();
+    expect(await screen.findByRole('button', { name: 'Report bob' })).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Add bob as a friend' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Challenge bob' })).toBeNull();
   });
 });

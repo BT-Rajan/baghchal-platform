@@ -28,9 +28,38 @@ function upsert<T extends { id: string }>(list: T[], item: T): T[] {
   return index === -1 ? [...list, item] : list.map((x, i) => (i === index ? item : x));
 }
 
-/** File a challenge under incoming or outgoing while it is pending; drop it once it is not. */
+/**
+ * My challenges to a player that were declined or ran out, and when I heard (in
+ * server time), so I am told rather than see them silently vanish.
+ */
+export const CHALLENGE_OUTCOMES = ['challenge-outcomes'] as const;
+
+export interface ChallengeOutcome {
+  challenge: Challenge;
+  at: number;
+}
+
+/** Keep the outcome of a challenge of mine (each one once). */
+export function recordOutcome(queryClient: QueryClient, challenge: Challenge): void {
+  queryClient.setQueryData<ChallengeOutcome[]>(CHALLENGE_OUTCOMES, (list = []) =>
+    list.some((o) => o.challenge.id === challenge.id)
+      ? list
+      : [...list, { challenge, at: serverClock.now() }],
+  );
+}
+
+/**
+ * File a challenge under incoming or outgoing while it is pending; drop it once it is not. A
+ * challenge of mine to a player that was declined or expired is kept as an outcome to show.
+ */
 export function applyChallenge(queryClient: QueryClient, challenge: Challenge, myId: string): void {
   serverClock.observe(challenge.created_at);
+  if (
+    challenge.challenger.id === myId &&
+    challenge.opponent !== null &&
+    (challenge.status === 'declined' || challenge.status === 'expired')
+  )
+    recordOutcome(queryClient, challenge);
   queryClient.setQueryData<ChallengeList>(queryKeys.challenges, (lists) => {
     if (lists === undefined) return undefined; // nobody has loaded the lists yet
     const incoming = without(lists.incoming, challenge.id);

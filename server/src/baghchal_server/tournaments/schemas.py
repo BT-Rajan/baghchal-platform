@@ -20,7 +20,7 @@ class TournamentStatus(StrEnum):
 
 class PairingState(StrEnum):
     WAITING = "waiting"
-    """Not played yet: either player can start it while the other is online."""
+    """Not played yet: either player can ask the other ("Play now") while they are online."""
     PLAYING = "playing"
     DONE = "done"
 

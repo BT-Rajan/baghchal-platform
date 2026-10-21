@@ -1,5 +1,7 @@
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
+import { peekReturn } from '@/auth/returnTo';
+
 import { renderApp, savedToken } from './support/app';
 import { AGREED, LINK_TOKEN, ME, error } from './support/fakeServer';
 import { FakeSocket } from './support/fakeSocket';
@@ -81,6 +83,8 @@ describe('sign in', () => {
     expect(await screen.findByRole('button', { name: 'Play now, no sign-up' })).toBeOnTheScreen();
     expect(app.getPathname()).toBe('/welcome');
     expect(savedToken()).toBeNull();
+    // Where they signed out (Settings) is not somewhere to go back to on signing in again.
+    expect(peekReturn()).toBeNull();
   });
 });
 

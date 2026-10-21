@@ -6,7 +6,15 @@ import { BOB, challenge, game } from '../../tests/support/games';
 import type { ChallengeList, Game } from '@/api/endpoints';
 import { queryKeys } from '@/api/queryKeys';
 
-import { applyChallenge, applyGame, applyMessage, isNewer, refetchAfterReconnect } from './cache';
+import {
+  CHALLENGE_OUTCOMES,
+  type ChallengeOutcome,
+  applyChallenge,
+  applyGame,
+  applyMessage,
+  isNewer,
+  refetchAfterReconnect,
+} from './cache';
 
 /** Without garbage collection, whose 5-minute timers would outlive the tests. */
 const testQueryClient = () =>
@@ -72,6 +80,24 @@ describe('applyChallenge', () => {
     qc.setQueryData<ChallengeList>(queryKeys.challenges, { incoming: [challenge()], outgoing: [] });
     applyChallenge(qc, challenge({ status: 'accepted', game_id: 'g1' }), ME.id);
     expect(lists(qc)).toEqual({ incoming: [], outgoing: [] });
+  });
+
+  test('keeps my challenges that were declined or expired, once each, to tell me', () => {
+    const qc = testQueryClient();
+    const mine = { challenger: { id: ME.id, username: ME.username }, opponent: BOB };
+    const declined = challenge({ ...mine, id: 'c1', status: 'declined' });
+    applyChallenge(qc, declined, ME.id);
+    applyChallenge(qc, declined, ME.id);
+    applyChallenge(qc, challenge({ ...mine, id: 'c2', status: 'expired' }), ME.id);
+    // Not: one I cancelled, one by link nobody took, one for me that was declined.
+    applyChallenge(qc, challenge({ ...mine, id: 'c3', status: 'cancelled' }), ME.id);
+    applyChallenge(qc, challenge({ ...mine, id: 'c4', opponent: null, status: 'expired' }), ME.id);
+    applyChallenge(qc, challenge({ id: 'c5', status: 'declined' }), ME.id);
+    const kept = qc.getQueryData<ChallengeOutcome[]>(CHALLENGE_OUTCOMES) ?? [];
+    expect(kept.map((o) => [o.challenge.id, o.challenge.status])).toEqual([
+      ['c1', 'declined'],
+      ['c2', 'expired'],
+    ]);
   });
 
   test('ignores challenges between other players', () => {

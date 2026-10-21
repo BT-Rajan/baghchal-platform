@@ -149,22 +149,28 @@ async def list_challenges(user: CurrentUser, state: State, db: DB) -> ChallengeL
     )
 
 
-@router.post("/challenges", status_code=status.HTTP_201_CREATED)
-async def create_challenge(data: ChallengeIn, user: Member, state: State, db: DB) -> ChallengeOut:
-    await enforce_limit(state, CHALLENGES_PER_USER, str(user.id))
-    challenge = await service.create_challenge(db, state.presence, state.clock(), user, data)
+async def announce_challenge(state: AppState, db: DB, challenge: Challenge) -> ChallengeOut:
+    """A new challenge: both players' screens show it, and a named opponent is notified."""
+    challenger_id, opponent_id = challenge.challenger_id, challenge.opponent_id
     out = await notify_challenge(state, db, challenge)
-    if challenge.opponent_id is not None:
+    if opponent_id is not None:
         terms = f"{out.time_control} {'rated' if out.rated else 'casual'}"
         await notifications.notify(
             state,
             db,
-            challenge.opponent_id,
+            opponent_id,
             NotificationKind.CHALLENGE,
-            actor_id=user.id,
+            actor_id=challenger_id,
             ref=terms,
         )
     return out
+
+
+@router.post("/challenges", status_code=status.HTTP_201_CREATED)
+async def create_challenge(data: ChallengeIn, user: Member, state: State, db: DB) -> ChallengeOut:
+    await enforce_limit(state, CHALLENGES_PER_USER, str(user.id))
+    challenge = await service.create_challenge(db, state.presence, state.clock(), user, data)
+    return await announce_challenge(state, db, challenge)
 
 
 async def _respond(
@@ -201,7 +207,8 @@ async def accept_link_challenge(
 async def accept_challenge(
     challenge_id: uuid.UUID, user: CurrentUser, state: State, db: DB
 ) -> ChallengeOut:
-    """Accept and start the game (its id is in ``game_id``; both players get a ``game`` event)."""
+    """Accept and start the game (its id is in ``game_id``; both players get a ``game`` event).
+    For a tournament's challenge, it is that pairing's game."""
     return await _respond(challenge_id, "accept", user, state, db)
 
 
@@ -281,10 +288,10 @@ async def player_games(  # noqa: PLR0913, PLR0917 - FastAPI dependencies and que
 
 @router.post("/seeks")
 async def seek_game(data: seeks.SeekIn, user: CurrentUser, state: State, db: DB) -> seeks.SeekOut:
+    """Play anyone who wants the same kind of game: paired at once with whoever has waited
+    longest, or wait (two minutes) for the next person. Rated games are for members."""
     if data.rated:
         await get_member(user)
-    """Play anyone who wants the same kind of game: paired at once with whoever has waited
-    longest, or wait (two minutes) for the next person."""
     await enforce_limit(state, SEEKS_PER_USER, str(user.id))
     game, expires = await seeks.seek(
         db, state.presence, state.clock(), user, data.time_control, rated=data.rated

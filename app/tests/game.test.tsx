@@ -193,7 +193,9 @@ describe('clocks', () => {
     const opening = () =>
       game({ deadline_at: new Date(Date.now() + 25_000).toISOString(), server_time: now() });
     await openGame(opening(), { 'GET /api/v1/games/g1': () => ({ status: 200, body: opening() }) });
-    expect(await screen.findByText(/^Your move · \d+ s to make a first move$/)).toBeOnTheScreen();
+    expect(
+      await screen.findByText(/^Your move · \d+ s to make a first move, or the game is aborted$/),
+    ).toBeOnTheScreen();
   });
 });
 
@@ -212,6 +214,11 @@ describe('ending a game', () => {
     await screen.findByText('Your move');
     expect(screen.queryByRole('button', { name: 'Resign' })).toBeNull();
     await press('Abort game');
+    // It counts toward the daily limit, so it asks first.
+    expect(
+      screen.getByText('Abort the game? Aborting counts toward the limit of 3 a day.'),
+    ).toBeOnTheScreen();
+    await press('Yes, abort');
     expect(await screen.findByText('Game aborted: no result.')).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/games/g1/abort')).toBeDefined();
     await press('Back to the lobby');
@@ -409,7 +416,9 @@ describe('leaving a live game', () => {
     expect(await screen.findByText('Your move')).toBeOnTheScreen();
 
     await act(() => router.back());
-    const question = 'Leave the game? It goes on without you, and your clock keeps running.';
+    // Nobody has moved yet: leaving means an abort, which counts.
+    const question =
+      'Leave the game? If you do not make your first move it is aborted, which counts toward the limit of 3 a day.';
     expect(await screen.findByText(question)).toBeOnTheScreen();
     await press('Keep playing');
     expect(screen.queryByText(question)).toBeNull();

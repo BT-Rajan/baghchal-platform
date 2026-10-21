@@ -2,14 +2,13 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useState } from 'react';
 
 import type { FriendRelation } from '@/api/endpoints';
-import { describeError } from '@/api/errors';
 import { t } from '@/i18n';
 import { useFriendship } from '@/lobby/hooks';
 import { colors, spacing } from '@/theme';
 
 import { Button } from './Button';
 import { Confirm } from './Confirm';
-import { Notice } from './Notice';
+import { ErrorNotice } from './ErrorNotice';
 
 /** On a player's profile: become friends, answer or cancel a request, or unfriend. */
 export function FriendControl({
@@ -26,7 +25,7 @@ export function FriendControl({
   const busy = change.isPending;
   return (
     <View style={styles.box}>
-      {change.error !== null && <Notice tone="error">{describeError(change.error)}</Notice>}
+      <ErrorNotice error={change.error} />
       {relation === 'none' && (
         <Button
           title={t('Add {name} as a friend', { name: username })}

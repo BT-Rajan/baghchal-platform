@@ -2,24 +2,29 @@ import { router } from 'expo-router';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import type { Game } from '@/api/endpoints';
-import { describeError } from '@/api/errors';
 import { useMe } from '@/auth/session';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { ChallengeCard } from '@/components/ChallengeCard';
+import { ChallengeOutcome } from '@/components/ChallengeOutcome';
 import { DailyPuzzle } from '@/components/DailyPuzzle';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { FeatureLink } from '@/components/FeatureLink';
 import { FriendList, FriendRequests } from '@/components/Friends';
 import { GameHistory } from '@/components/GameHistory';
 import { GuestBanner } from '@/components/GuestBanner';
-import { Notice } from '@/components/Notice';
 import { PlayerSearch } from '@/components/PlayerSearch';
 import { Screen } from '@/components/Screen';
 import { ErrorState } from '@/components/States';
 import { useServerNow } from '@/components/useNow';
 import { t } from '@/i18n';
 import { isOpen } from '@/lobby/format';
-import { useActiveGames, useAnswerChallenge, useChallenges } from '@/lobby/hooks';
+import {
+  useActiveGames,
+  useAnswerChallenge,
+  useChallengeOutcomes,
+  useChallenges,
+} from '@/lobby/hooks';
 import { colors, spacing, type } from '@/theme';
 
 /** Two columns (my games and things to do | players) from this width. */
@@ -36,6 +41,7 @@ export default function Play() {
   const games = useActiveGames();
   const challenges = useChallenges();
   const answer = useAnswerChallenge();
+  const outcomes = useChallengeOutcomes(now);
 
   const incoming = challenges.data?.incoming.filter((c) => isOpen(c, now)) ?? [];
   const outgoing = challenges.data?.outgoing.filter((c) => isOpen(c, now)) ?? [];
@@ -52,7 +58,7 @@ export default function Play() {
       {games.data?.map((game) => (
         <LiveGame key={game.id} game={game} myId={me.id} />
       ))}
-      {answer.error !== null && <Notice tone="error">{describeError(answer.error)}</Notice>}
+      <ErrorNotice error={answer.error} />
       {challenges.error !== null && (
         <ErrorState error={challenges.error} onRetry={() => void challenges.refetch()} />
       )}
@@ -66,6 +72,9 @@ export default function Play() {
           pending={pendingFor(c.id)}
           onAnswer={(a) => answer.mutate({ id: c.id, answer: a })}
         />
+      ))}
+      {outcomes.map((c) => (
+        <ChallengeOutcome key={c.id} challenge={c} />
       ))}
       {outgoing.length > 0 && <SectionTitle>{t('Your challenges')}</SectionTitle>}
       {outgoing.map((c) => (

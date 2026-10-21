@@ -4,8 +4,8 @@ from typing import Annotated, Final
 from fastapi import APIRouter, Path, status
 
 from baghchal_server.deps import DB, CurrentUser, State, enforce_limit
-from baghchal_server.games.events import notify as notify_game
-from baghchal_server.games.schemas import GameOut
+from baghchal_server.lobby.routes import announce_challenge
+from baghchal_server.lobby.schemas import ChallengeOut
 from baghchal_server.notifications import service as notifications
 from baghchal_server.notifications.schemas import NotificationKind
 from baghchal_server.ratelimit import Limit
@@ -92,11 +92,12 @@ async def award_pairing(  # noqa: PLR0913, PLR0917 - FastAPI dependencies
     return await service.describe(db, state.clock(), tournament)
 
 
-@router.post("/tournaments/{code}/pairings/{pairing_id}/play")
+@router.post("/tournaments/{code}/pairings/{pairing_id}/play", status_code=status.HTTP_201_CREATED)
 async def play_pairing(
     code: Code, pairing_id: uuid.UUID, user: CurrentUser, state: State, db: DB
-) -> GameOut:
-    """Start one of my games; my opponent must be online (both get a ``game`` event)."""
+) -> ChallengeOut:
+    """ "Play now": challenge my opponent in this game, who must be online. Accepting it
+    (``/challenges/{id}/accept``, like any challenge) starts the game."""
     await enforce_limit(state, ACTIONS_PER_USER, str(user.id))
-    game = await service.play(db, state.presence, state.clock(), user, code, pairing_id)
-    return await notify_game(state, db, game)
+    challenge = await service.play(db, state.presence, state.clock(), user, code, pairing_id)
+    return await announce_challenge(state, db, challenge)

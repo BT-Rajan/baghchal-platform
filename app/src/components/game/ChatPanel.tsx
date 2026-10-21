@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { Game } from '@/api/endpoints';
-import { describeError } from '@/api/errors';
 import type { Piece } from '@/game/bfen';
 import { nameOf } from '@/game/describe';
 import { useChat, useSendChat } from '@/game/hooks';
@@ -11,8 +10,8 @@ import { colors, spacing, type } from '@/theme';
 
 import { Button } from '../Button';
 import { Card, Hint, SectionTitle } from '../Card';
-import { Notice } from '../Notice';
 import { TextField } from '../TextField';
+import { ErrorNotice } from '../ErrorNotice';
 
 const MAX_LENGTH = 200;
 
@@ -61,7 +60,7 @@ export function ChatPanel({ game, mine }: { game: Game; mine: Piece }) {
               ))}
             </Card>
           )}
-          {send.error !== null && <Notice tone="error">{describeError(send.error)}</Notice>}
+          <ErrorNotice error={send.error} />
           {data.open && (
             <View style={styles.compose}>
               <View style={styles.field}>

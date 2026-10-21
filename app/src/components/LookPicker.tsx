@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Appearance, BoardTheme, PieceSet } from '@/api/endpoints';
-import { describeError } from '@/api/errors';
 import { BOARDS, FREE_APPEARANCE, isThemed, PIECES } from '@/appearance/catalog';
 import { useAppearanceQuery, useChooseAppearance } from '@/appearance/hooks';
 import { has } from '@/billing/format';
@@ -13,9 +12,9 @@ import { colors, radius, spacing } from '@/theme';
 import { SectionTitle } from './Card';
 import { focusRing } from './focus';
 import { BoardPreview } from './game/BoardPreview';
-import { Notice } from './Notice';
 import { ripple } from './press';
 import { Upsell } from './Upsell';
+import { ErrorNotice } from './ErrorNotice';
 
 /**
  * My board, pieces and sounds as the server has them, and the way to change them: choices my
@@ -58,7 +57,7 @@ export function LookNotices({ choice }: { choice: LookChoice }) {
           {t('More boards, pieces and sound packs, and a badge by your name.')}
         </Upsell>
       )}
-      {chooseError !== null && <Notice tone="error">{describeError(chooseError)}</Notice>}
+      <ErrorNotice error={chooseError} />
     </>
   );
 }

@@ -19,13 +19,12 @@ import Svg, { Circle, G, Path } from 'react-native-svg';
 import type { PieceSet } from '@/api/endpoints';
 import type { Ending } from '@/game/ending';
 import { t } from '@/i18n';
-import { colors } from '@/theme';
+import { colors, confetti, radius, spacing, type } from '@/theme';
 
 import { Coin } from './Coin';
 
 const SHOW_MS = 6000;
 const CONFETTI = 28;
-const CONFETTI_COLOURS = ['#f6c344', '#e07a22', '#2f7d6d', '#ffffff', '#c0392b', '#7fb3e0'];
 const native = Platform.OS !== 'web';
 
 /** Where each piece of confetti flies: spread round a circle, with a fixed scatter. */
@@ -39,7 +38,7 @@ const PIECES = (() => {
       x: Math.cos(angle) * distance,
       y: Math.sin(angle) * distance - 30,
       turn: `${Math.round(rand() * 720 - 360)}deg`,
-      colour: CONFETTI_COLOURS[i % CONFETTI_COLOURS.length],
+      colour: confetti[i % confetti.length],
       wide: i % 3 === 0,
     };
   });
@@ -200,8 +199,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 12,
-    backgroundColor: 'rgba(31, 18, 6, 0.62)',
+    borderRadius: radius.board,
+    backgroundColor: colors.overlay,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -212,22 +211,26 @@ const styles = StyleSheet.create({
   coin: { width: '42%', aspectRatio: 1 },
   words: {
     alignItems: 'center',
-    marginTop: 6,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 14,
-    backgroundColor: 'rgba(31, 18, 6, 0.55)',
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    backgroundColor: colors.overlayPlate,
   },
   headline: {
-    fontSize: 34,
-    fontWeight: '800',
-    color: '#ffe2a8',
+    ...type.display,
+    color: colors.overlayHeadline,
     textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowColor: colors.overlayShadow,
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 6,
   },
-  lost: { color: '#f1e9d8' },
-  detail: { fontSize: 17, fontWeight: '600', color: '#ffffff', textAlign: 'center', marginTop: 4 },
-  hint: { fontSize: 13, color: 'rgba(255, 255, 255, 0.75)', marginTop: 10 },
+  lost: { color: colors.overlayHeadlineQuiet },
+  detail: {
+    ...type.heading,
+    color: colors.overlayText,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
+  hint: { ...type.caption, color: colors.overlayMuted, marginTop: spacing.sm },
 });

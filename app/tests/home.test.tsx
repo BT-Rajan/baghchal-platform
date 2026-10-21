@@ -59,9 +59,8 @@ describe('home', () => {
     expect(
       screen.getByRole('button', { name: "Today's position", expanded: true }),
     ).toBeOnTheScreen();
-    expect(
-      screen.getByText('Train every day with opening and endgame puzzles from real games.'),
-    ).toBeOnTheScreen();
+    // The trainer's own screen says what it is and which plan has it (one upsell).
+    expect(screen.getByRole('button', { name: 'More puzzles in the trainer' })).toBeOnTheScreen();
   });
 
   test('Pro players go on to the trainer; a failed puzzle can be tried again', async () => {

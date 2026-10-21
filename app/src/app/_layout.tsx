@@ -2,15 +2,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { router, Stack, usePathname, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import type { Game } from '@/api/endpoints';
 import { describeError } from '@/api/errors';
 import { followAppFocus } from '@/api/focus';
 import { t } from '@/i18n';
 import { LanguageRoot } from '@/i18n/LanguageRoot';
 import { shouldRetry } from '@/api/retry';
+import { rememberReturn, takeReturn } from '@/auth/returnTo';
 import { SessionProvider, useSession } from '@/auth/session';
 import { Button } from '@/components/Button';
 import { AppBanners, BannersOnScreens } from '@/components/AppBanners';
@@ -19,6 +21,7 @@ import { Screen } from '@/components/Screen';
 import { statusBarStyle } from '@/components/statusBar';
 import { WebTopBar } from '@/components/site/WebTopBar';
 import { API_URL } from '@/config';
+import { openedFromScreen } from '@/game/onScreen';
 import { socketUrl } from '@/realtime/connection';
 import { RealtimeProvider } from '@/realtime/RealtimeProvider';
 import { colors } from '@/theme';
@@ -59,8 +62,12 @@ export default function RootLayout() {
   );
 }
 
-/** A game of mine just started (accepted elsewhere, or game 2 of a match): open it. */
-function openGame(game: { id: string }) {
+/**
+ * A game of mine just started (accepted elsewhere, or game 2 of a match): open it. Game 1's
+ * screen, when in front, counts down to game 2 and opens it itself.
+ */
+function openGame(game: Game) {
+  if (openedFromScreen(game)) return;
   router.push(`/game/${game.id}`);
 }
 
@@ -71,6 +78,25 @@ function Routes() {
   useEffect(() => {
     if (!loading) void SplashScreen.hideAsync().catch(() => {});
   }, [loading]);
+  const signedIn = state.status === 'signedIn';
+  // An account with changed terms to agree to sees only that until done.
+  const agreeing = signedIn && state.user.consents_needed.length > 0;
+  const playing = signedIn && !agreeing;
+  // A signed-out person who opened a link (a friend's challenge, a tournament) is sent to the
+  // welcome page: remember where they were going (not where they were when signing out)...
+  const lastStatus = useRef(state.status);
+  useEffect(() => {
+    const before = lastStatus.current;
+    lastStatus.current = state.status;
+    if (state.status === 'signedOut' && before !== 'signedIn') rememberReturn(pathname);
+  }, [state.status, pathname]);
+  // ...and take them there once they are in (as a guest, signed in, or with a new account).
+  useEffect(() => {
+    if (!playing) return;
+    const next = takeReturn();
+    // Once the screens for signed-in players are in place, or their guard would send it back.
+    if (next !== null) setTimeout(() => router.replace(next), 0);
+  }, [playing]);
   if (loading) {
     return (
       <View style={styles.center}>
@@ -89,10 +115,6 @@ function Routes() {
       </View>
     );
   }
-  const signedIn = state.status === 'signedIn';
-  // An account with changed terms to agree to sees only that until done.
-  const agreeing = signedIn && state.user.consents_needed.length > 0;
-  const playing = signedIn && !agreeing;
   return (
     <View style={styles.app}>
       <StatusBar style={statusBarStyle(pathname)} />

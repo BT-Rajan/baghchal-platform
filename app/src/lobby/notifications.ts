@@ -37,8 +37,17 @@ export function notificationText(n: Notification): string {
   }
 }
 
-/** Where a notification leads: the tournament, or the player; null if they are gone. */
-export function notificationLink(n: Notification): string | null {
+/** How long a challenge to a player stays open (the server's `CHALLENGE_TTL`). */
+export const CHALLENGE_OPEN_MS = 60_000;
+
+/**
+ * Where a notification leads: a challenge to the lobby, where it is answered (and nowhere once
+ * it has expired); the tournament; or the player. Null if there is nowhere to go.
+ */
+export function notificationLink(n: Notification, nowMs: number = Date.now()): string | null {
+  if (n.kind === 'challenge') {
+    return nowMs - Date.parse(n.created_at) < CHALLENGE_OPEN_MS ? '/' : null;
+  }
   if (n.tournament !== null) return `/tournament/${n.tournament.code}`;
   return n.actor === null ? null : `/player/${n.actor.username}`;
 }

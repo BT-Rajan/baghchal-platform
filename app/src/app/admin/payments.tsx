@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
 import type { PaymentKeys } from '@/api/endpoints';
-import { ApiError, describeError } from '@/api/errors';
+import { ApiError } from '@/api/errors';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Confirm } from '@/components/Confirm';
@@ -14,6 +14,7 @@ import { t } from '@/i18n';
 import { keysProblem, keysText } from '@/payments/format';
 import { useAdminCode, useChangePaymentKeys, usePaymentKeys } from '@/payments/hooks';
 import { colors, type } from '@/theme';
+import { ErrorNotice } from '@/components/ErrorNotice';
 
 /** For admins: the Razorpay keys payments are taken with, behind a code sent by email. */
 export default function PaymentsAdmin() {
@@ -45,7 +46,7 @@ function CodeStep() {
         )}
       </Hint>
       {send.isSuccess && <Notice tone="success">{t('We have emailed you a code.')}</Notice>}
-      {error !== null && <Notice tone="error">{describeError(error)}</Notice>}
+      <ErrorNotice error={error} />
       {send.isSuccess && (
         <TextField
           label={t('Code')}
@@ -109,7 +110,7 @@ function KeysForm({ page }: { page: PaymentKeys }) {
         </Notice>
       )}
       {problem !== null && <Notice tone="error">{problem}</Notice>}
-      {change.error !== null && <Notice tone="error">{describeError(change.error)}</Notice>}
+      <ErrorNotice error={change.error} />
       <SectionTitle>{page.on ? t('Change the keys') : t('Enter the keys')}</SectionTitle>
       <Hint>
         {t(

@@ -13,10 +13,12 @@ npm ci
 npm run web                     # http://localhost:8081, against http://localhost:8000
 ```
 
-The only setting is the API's address, read at build time:
-`EXPO_PUBLIC_API_URL=https://api.example.com npm run export:web`. For the web build, the server
-must list the app's origin in `BAGHCHAL_ALLOWED_ORIGINS` and use it as `BAGHCHAL_PUBLIC_BASE_URL`
-(the links in emails open the app there).
+Two settings, read at build time: the API's address,
+`EXPO_PUBLIC_API_URL=https://api.example.com npm run export:web`, and the website's,
+`EXPO_PUBLIC_WEB_URL` (the address the apps put in links they share, such as a challenge link;
+it defaults to the API's, for a server that serves both). For the web build, the server must list
+the app's origin in `BAGHCHAL_ALLOWED_ORIGINS` and use it as `BAGHCHAL_PUBLIC_BASE_URL` (the
+links in emails open the app there).
 
 Release builds must use `https` for the API (plain `http` is allowed only to this machine):
 `expo export` fails otherwise, and a release bundle refuses to start. Development builds may use

@@ -6,9 +6,10 @@ import type { Piece } from '@/game/bfen';
 import { isComputer, other, playerOf } from '@/game/describe';
 import { t } from '@/i18n';
 import { AWAY_REFRESH_MS, PRESENCE_REFRESH_MS, useProfile } from '@/lobby/hooks';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, type } from '@/theme';
 
 import { Button } from '../Button';
+import { Card } from '../Card';
 import { Confirm } from '../Confirm';
 import { useNow } from '../useNow';
 
@@ -23,13 +24,13 @@ export interface GameActionsProps {
 export const CLAIM_WAIT_MS = 60_000;
 
 /**
- * Abort (before both sides have moved, except in the second game of a match), resign (with a
- * confirmation), offer a draw or answer one (not against the computer), and claim the win once
- * the opponent has been offline for a minute on their turn. The server decides whether each
- * succeeds.
+ * Abort (before both sides have moved, except in the second game of a match; asking first when
+ * it counts toward the daily limit), resign (with a confirmation), offer a draw or answer one
+ * (not against the computer), and claim the win once the opponent has been offline for a minute
+ * on their turn. The server decides whether each succeeds.
  */
 export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
-  const [confirming, setConfirming] = useState(false);
+  const [confirming, setConfirming] = useState<'abort' | 'resign' | null>(null);
   const opponent = playerOf(game, other(me));
   const opening = game.ply < 2;
   const waitingOnOpponent = !opening && game.side_to_move !== me;
@@ -55,17 +56,34 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
   const now = useNow();
   const claimIn = awaySince === null ? null : Math.max(0, awaySince + CLAIM_WAIT_MS - now);
 
+  if (confirming === 'abort') {
+    return (
+      <Confirm
+        question={t('Abort the game? Aborting counts toward the limit of 3 a day.')}
+        confirmTitle={t('Yes, abort')}
+        cancelTitle={t('Keep playing')}
+        busy={pending === 'abort'}
+        onConfirm={() => {
+          setConfirming(null);
+          onAction('abort');
+        }}
+        onCancel={() => setConfirming(null)}
+      />
+    );
+  }
   if (opening && game.match?.game !== 2) {
+    // Leaving the computer harms nobody, so it does not count (the server agrees).
+    const counts = !isComputer(game, other(me));
     return (
       <Button
         title={t('Abort game')}
         variant="secondary"
         busy={pending === 'abort'}
-        onPress={() => onAction('abort')}
+        onPress={() => (counts ? setConfirming('abort') : onAction('abort'))}
       />
     );
   }
-  if (confirming) {
+  if (confirming === 'resign') {
     return (
       <Confirm
         question={t('Resign this game?')}
@@ -73,10 +91,10 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
         cancelTitle={t('Keep playing')}
         busy={pending === 'resign'}
         onConfirm={() => {
-          setConfirming(false);
+          setConfirming(null);
           onAction('resign');
         }}
-        onCancel={() => setConfirming(false)}
+        onCancel={() => setConfirming(null)}
       />
     );
   }
@@ -88,14 +106,31 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
   return (
     <View style={styles.confirm}>
       {offeredToMe && (
-        <Confirm
-          question={t('{name} offers a draw.', { name: opponent.username })}
-          confirmTitle={t('Accept the draw')}
-          cancelTitle={t('Decline')}
-          busy={pending === 'draw'}
-          onConfirm={() => onAction('draw')}
-          onCancel={() => onAction('draw/decline')}
-        />
+        // An offer to answer, not an action to confirm: it stays in the panel, beside the board.
+        <Card tone="accent">
+          <Text style={styles.offer}>
+            {t('{name} offers a draw.', { name: opponent.username })}
+          </Text>
+          <View style={styles.row}>
+            <View style={styles.cell}>
+              <Button
+                title={t('Accept the draw')}
+                busy={pending === 'draw'}
+                disabled={pending === 'draw/decline'}
+                onPress={() => onAction('draw')}
+              />
+            </View>
+            <View style={styles.cell}>
+              <Button
+                title={t('Decline')}
+                variant="secondary"
+                busy={pending === 'draw/decline'}
+                disabled={pending === 'draw'}
+                onPress={() => onAction('draw/decline')}
+              />
+            </View>
+          </View>
+        </Card>
       )}
       {claimIn !== null && claimIn > 0 && (
         <Text style={styles.away} aria-live="polite">
@@ -111,7 +146,7 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
             title={t('Resign')}
             variant="secondary"
             busy={pending === 'resign'}
-            onPress={() => setConfirming(true)}
+            onPress={() => setConfirming('resign')}
           />
         </View>
         {drawable && !offeredToMe && (
@@ -141,7 +176,8 @@ export function GameActions({ game, me, onAction, pending }: GameActionsProps) {
 
 const styles = StyleSheet.create({
   confirm: { gap: spacing.sm },
-  away: { fontSize: 15, color: colors.text },
+  away: { ...type.body, color: colors.text },
+  offer: { ...type.body, fontWeight: '600', color: colors.text },
   row: { flexDirection: 'row', gap: spacing.sm },
   cell: { flex: 1 },
 });

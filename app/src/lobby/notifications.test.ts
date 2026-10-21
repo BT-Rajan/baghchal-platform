@@ -48,9 +48,21 @@ test('what each notification says, and where it leads', () => {
   expect(notificationText(note({ kind: 'tournament_round' }))).toBe(
     'New round in your tournament: you play alice.',
   );
-  expect(notificationLink(note({ tournament: cup }))).toBe('/tournament/cup1');
-  expect(notificationLink(note({}))).toBe('/player/alice');
-  expect(notificationLink(note({ actor: null }))).toBeNull();
+  const friend = note({ kind: 'friend_request', detail: null });
+  expect(notificationLink({ ...friend, kind: 'tournament_started', tournament: cup })).toBe(
+    '/tournament/cup1',
+  );
+  expect(notificationLink(friend)).toBe('/player/alice');
+  expect(notificationLink({ ...friend, actor: null })).toBeNull();
+});
+
+test('a challenge leads to the lobby, where it is answered, until it expires', () => {
+  const sent = Date.parse('2026-01-01T12:00:00Z');
+  expect(notificationLink(note({}), sent + 59_000)).toBe('/');
+  expect(notificationLink(note({ actor: null }), sent + 1_000)).toBe('/');
+  expect(notificationLink(note({}), sent + 60_000)).toBeNull();
+  // Without a time given: now (long after this one expired).
+  expect(notificationLink(note({}))).toBeNull();
 });
 
 test('how long ago', () => {

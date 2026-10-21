@@ -17,7 +17,7 @@ from baghchal_server.tournaments.models import Pairing, Tournament
 
 from .conftest import PASSWORD, Player, PlayerFactory
 from .test_games import _online
-from .test_tournaments import URL, _get, _host, _mine, _play
+from .test_tournaments import URL, _get, _host, _mine, _play, _start_pairing
 
 NAMES = ("alice", "bob", "carol", "dave")
 
@@ -50,7 +50,7 @@ async def test_the_next_round_is_paired_when_the_last_game_ends(
         await _online(app, stack, *people.values())
         for pairing in _round(t, 1):
             goat = people[pairing["goat"]["username"]]
-            game = (await _play(goat, code, pairing)).json()
+            game = await _start_pairing(people, code, pairing)
             assert (await goat.http.post(f"/api/v1/games/{game['id']}/resign")).status_code == 200
     # Nobody looked at the tournament in between: the round moved on with the last game.
     async with app.state.ctx.sessions() as db:
@@ -67,6 +67,18 @@ async def test_the_next_round_is_paired_when_the_last_game_ends(
             assert ("tournament_round", them["username"]) in notes
             item = (await people[me["username"]].http.get("/api/v1/notifications")).json()
             assert item["items"][0]["tournament"] == {"code": code, "name": "Friday cup"}
+
+
+async def test_a_tournament_game_names_its_tournament(app: FastAPI, players: PlayerFactory) -> None:
+    """So the game screen can lead back to the tournament."""
+    people, code = await _started(app, players)
+    pairing = _round(await _get(people["alice"], code), 1)[0]
+    goat = people[pairing["goat"]["username"]]
+    async with AsyncExitStack() as stack:
+        await _online(app, stack, *people.values())
+        game = await _start_pairing(people, code, pairing)
+    assert game["tournament"] == code
+    assert (await goat.http.get(f"/api/v1/games/{game['id']}")).json()["tournament"] == code
 
 
 async def test_the_host_gives_a_game_to_the_player_who_turned_up(
@@ -99,7 +111,7 @@ async def test_the_host_gives_a_game_to_the_player_who_turned_up(
     async with AsyncExitStack() as stack:
         await _online(app, stack, *people.values())
         mover = people[second["goat"]["username"]]
-        game = (await _play(mover, code, second)).json()
+        game = await _start_pairing(people, code, second)
         r = await people["alice"].http.post(
             f"{URL}/{code}/pairings/{second['id']}/award", json={"winner": "tiger"}
         )
@@ -135,7 +147,7 @@ async def test_a_player_who_leaves_loses_their_games_and_is_paired_no_more(
     async with AsyncExitStack() as stack:
         await _online(app, stack, *[people[n] for n in NAMES[:3]])
         goat = people[other["goat"]["username"]]
-        game = (await _play(goat, code, other)).json()
+        game = await _start_pairing(people, code, other)
         await goat.http.post(f"/api/v1/games/{game['id']}/resign")
     t = await _get(people["alice"], code)
     # Three left: one game and a bye, without dave; he stays in the standings.

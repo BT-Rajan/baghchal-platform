@@ -3,7 +3,6 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { describeError } from '@/api/errors';
 import { saveExport } from '@/auth/exportFile';
 import { useApi, useMe, useSession } from '@/auth/session';
 import { checkEmailChange, checkPasswordChange, checkPasswordGiven } from '@/auth/validation';
@@ -23,6 +22,7 @@ import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { colors, spacing } from '@/theme';
+import { ErrorNotice } from '@/components/ErrorNotice';
 
 /**
  * Settings, all in one place: the plan, the board and sounds, moderation and payments (for
@@ -118,7 +118,7 @@ function BlockedPlayers() {
   const change = useBlock();
   return (
     <Disclosure title={t('Blocked players')}>
-      {change.error !== null && <Notice tone="error">{describeError(change.error)}</Notice>}
+      <ErrorNotice error={change.error} />
       {blocks.error !== null ? (
         <ErrorState error={blocks.error} onRetry={() => void blocks.refetch()} />
       ) : blocks.data === undefined ? (
@@ -296,7 +296,7 @@ function DataSection() {
             'A copy of everything we keep about you: your account, ratings, games with their moves, challenges and blocked players.',
           )}
         </Hint>
-        {download.error !== null && <Notice tone="error">{describeError(download.error)}</Notice>}
+        <ErrorNotice error={download.error} />
         <Button
           title={t('Download my data')}
           variant="secondary"

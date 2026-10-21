@@ -13,6 +13,7 @@ import { colors, spacing } from '@/theme';
 
 import { Button } from './Button';
 import { Card } from './Card';
+import { ShareButton } from './ShareButton';
 
 export interface ChallengeCardProps {
   challenge: Challenge;
@@ -23,13 +24,21 @@ export interface ChallengeCardProps {
   pending: ChallengeAnswer | null;
 }
 
-/** A challenge for me, or mine to a player or by link (`opponent` is null until it is accepted). */
+/**
+ * A challenge for me (by name, or someone's link I opened), or mine to a player or by link
+ * (`opponent` is null until it is accepted): the one place to accept, decline, share or cancel
+ * one.
+ */
 export function ChallengeCard({ challenge, myId, now, onAnswer, pending }: ChallengeCardProps) {
   const { challenger, opponent, code } = challenge;
-  const incoming = opponent?.id === myId;
+  const mine = challenger.id === myId;
+  // A link has nobody to decline it: whoever does not want it just leaves it.
+  const byLink = opponent === null;
+  const incoming = !mine;
   const other = incoming ? challenger.username : opponent?.username;
   const seconds = challengeSecondsLeft(challenge, now);
   const busy = pending !== null;
+  const myLink = mine && byLink && typeof code === 'string' ? linkPath(code) : null;
   return (
     <Card>
       <Text style={styles.title}>
@@ -40,9 +49,17 @@ export function ChallengeCard({ challenge, myId, now, onAnswer, pending }: Chall
             : t('Waiting for {name}', { name: other })}
       </Text>
       <Text style={styles.terms}>{challengeTerms(challenge, myId)}</Text>
-      {opponent === null && typeof code === 'string' && (
+      {challenge.tournament !== null && challenge.tournament !== undefined && (
+        <Text style={styles.terms}>
+          {t('Round {round} of {tournament}', {
+            round: challenge.tournament.round,
+            tournament: challenge.tournament.name,
+          })}
+        </Text>
+      )}
+      {myLink !== null && (
         <Text style={styles.link} selectable aria-label={t('Link to share')}>
-          {shareLink(linkPath(code))}
+          {shareLink(myLink)}
         </Text>
       )}
       <Text style={styles.expiry} aria-live="polite">
@@ -62,32 +79,41 @@ export function ChallengeCard({ challenge, myId, now, onAnswer, pending }: Chall
                 onPress={() => onAnswer('accept')}
               />
             </View>
+            {!byLink && (
+              <View style={styles.action}>
+                <Button
+                  title={t("Decline {name}'s challenge", { name: other! })}
+                  label={t('Decline')}
+                  variant="secondary"
+                  busy={pending === 'decline'}
+                  disabled={busy}
+                  onPress={() => onAnswer('decline')}
+                />
+              </View>
+            )}
+          </>
+        ) : (
+          <>
+            {myLink !== null && (
+              <View style={styles.action}>
+                <ShareButton path={myLink} />
+              </View>
+            )}
             <View style={styles.action}>
               <Button
-                title={t("Decline {name}'s challenge", { name: other! })}
-                label={t('Decline')}
+                title={
+                  other === undefined
+                    ? t('Cancel the challenge by link')
+                    : t('Cancel the challenge to {name}', { name: other })
+                }
+                label={t('Cancel')}
                 variant="secondary"
-                busy={pending === 'decline'}
+                busy={pending === 'cancel'}
                 disabled={busy}
-                onPress={() => onAnswer('decline')}
+                onPress={() => onAnswer('cancel')}
               />
             </View>
           </>
-        ) : (
-          <View style={styles.action}>
-            <Button
-              title={
-                other === undefined
-                  ? t('Cancel the challenge by link')
-                  : t('Cancel the challenge to {name}', { name: other })
-              }
-              label={t('Cancel')}
-              variant="secondary"
-              busy={pending === 'cancel'}
-              disabled={busy}
-              onPress={() => onAnswer('cancel')}
-            />
-          </View>
         )}
       </View>
     </Card>
