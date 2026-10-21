@@ -107,14 +107,13 @@ Write each language's listing with a native speaker rather than a machine transl
 stilted listing loses more installs than it wins.
 
 The app itself speaks English, Tamil, Hindi and Arabic (Settings → Language, or the phone's
-language), so the listing should too, and should say so.
+language), so the listing should too, and should say so. More languages come once these four are
+tested and settled.
 
 1. **en-IN** (done) and **en-US**: the same text works for both; copy the folder.
 2. **hi-IN** (Hindi): India is where most players will come from.
 3. **ta-IN** (Tamil).
 4. **ar** (Arabic): screenshots taken in Arabic show the right-to-left layout.
-5. **ne-NP** (Nepali): Bagh Chal is Nepal's game, and Nepali searches are there to win. The
-   app does not speak Nepali yet, so its listing must not claim it.
 
 ## After launch
 
