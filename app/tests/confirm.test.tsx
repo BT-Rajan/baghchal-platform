@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 
 import { ApiError } from '@/api/errors';
+import { Button } from '@/components/Button';
 import { Confirm } from '@/components/Confirm';
 
 afterEach(() => jest.restoreAllMocks());
@@ -65,4 +66,58 @@ test('on the web, a failure shows with the question; Cancel waits while busy', a
   expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
   await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
   expect(answers.cancel).not.toHaveBeenCalled();
+});
+
+/** A button that asks, wrapped in the question it asks. */
+function asking(open: boolean) {
+  const answers = { confirm: jest.fn(), cancel: jest.fn() };
+  return {
+    answers,
+    element: (
+      <Confirm
+        open={open}
+        question="Block bob?"
+        confirmTitle="Yes, block bob"
+        onConfirm={answers.confirm}
+        onCancel={answers.cancel}
+      >
+        <Button title="Block bob" variant="secondary" onPress={() => {}} />
+      </Confirm>
+    ),
+  };
+}
+
+test('in the apps, the button that asked stays, under the dialog and out of the way', async () => {
+  const { element } = asking(false);
+  await render(element);
+  expect(screen.getByRole('button', { name: 'Block bob' })).toBeOnTheScreen();
+  expect(screen.queryByRole('alertdialog')).toBeNull();
+  await screen.rerender(asking(true).element);
+  expect(screen.getByRole('alertdialog', { name: 'Block bob?' })).toBeOnTheScreen();
+  // Still drawn (the page does not move), but the screen reader stays in the dialog.
+  expect(
+    screen.getByRole('button', { name: 'Block bob', includeHiddenElements: true }),
+  ).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Block bob' })).toBeNull();
+});
+
+test('on the web, the question takes the place of the button while asked', async () => {
+  jest.replaceProperty(Platform, 'OS', 'web');
+  await render(asking(false).element);
+  expect(screen.getByRole('button', { name: 'Block bob' })).toBeOnTheScreen();
+  await screen.rerender(asking(true).element);
+  expect(
+    screen.queryByRole('button', { name: 'Block bob', includeHiddenElements: true }),
+  ).toBeNull();
+  expect(screen.getByText('Block bob?')).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Yes, block bob' })).toBeOnTheScreen();
+});
+
+test('long answers wrap, stacking at the end of the dialog', async () => {
+  await render(ask().element);
+  expect(screen.getByTestId('answers')).toHaveStyle({
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+  });
 });

@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { t } from '@/i18n';
 import { useNotifications } from '@/lobby/hooks';
@@ -21,11 +21,16 @@ export function NotificationBell() {
       }
       onPress={() => router.push('/notifications')}
       {...ripple(true)}
-      style={(state) => [styles.bell, pressedLook(state.pressed, styles.pressed), focusRing(state)]}
+      style={(state) => [
+        styles.bell,
+        Platform.OS === 'android' && styles.bellAndroid,
+        pressedLook(state.pressed, styles.pressed),
+        focusRing(state),
+      ]}
     >
       <Icon name="bell" color={colors.brandCream} />
       {unread > 0 && (
-        <View style={styles.badge}>
+        <View style={[styles.badge, Platform.OS === 'android' && styles.badgeAndroid]}>
           <Text style={styles.count} maxFontSizeMultiplier={1.4}>
             {unread > 9 ? '9+' : String(unread)}
           </Text>
@@ -38,6 +43,8 @@ export function NotificationBell() {
 const styles = StyleSheet.create({
   // 44 points: the smallest comfortable touch target.
   bell: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  // Android's icon buttons: 48 across, the ripple a circle inside them.
+  bellAndroid: { width: 48, height: 48, borderRadius: radius.pill, overflow: 'hidden' },
   pressed: { opacity: 0.7 },
   badge: {
     position: 'absolute',
@@ -51,5 +58,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Inside the round button's circle, so its clipping (for the ripple) leaves the badge whole.
+  badgeAndroid: { top: 8, end: 8 },
   count: { ...type.badge, color: colors.surface },
 });

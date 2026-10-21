@@ -111,6 +111,11 @@ describe('chat', () => {
     });
     expect(await screen.findByText('Chat')).toBeOnTheScreen();
     expect(screen.getByText(/good luck/)).toBeOnTheScreen();
+    // Sending from the keyboard keeps it up, for the next message.
+    expect(screen.getByLabelText('Message').props).toMatchObject({
+      returnKeyType: 'send',
+      submitBehavior: 'submit',
+    });
     await fireEvent.changeText(screen.getByLabelText('Message'), ' you too ');
     await press('Send');
     expect(await screen.findByText(/you too/)).toBeOnTheScreen();

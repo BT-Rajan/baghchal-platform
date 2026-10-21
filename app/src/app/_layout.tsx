@@ -1,8 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { router, Stack, usePathname, type ErrorBoundaryProps } from 'expo-router';
+import { NavigationBar } from 'expo-navigation-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { AppState, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -18,7 +20,9 @@ import { Button } from '@/components/Button';
 import { AppBanners, BannersOnScreens } from '@/components/AppBanners';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
+import { SnackbarHost } from '@/components/Snackbar';
 import { Loading } from '@/components/States';
+import { navigationBarStyle } from '@/components/navigationBar';
 import { statusBarStyle } from '@/components/statusBar';
 import { WebTopBar } from '@/components/site/WebTopBar';
 import { API_URL } from '@/config';
@@ -41,6 +45,31 @@ const APP_BAR =
         headerTitleStyle: { color: colors.brandCream },
       };
 
+/** A link opened from outside (a cold start) has Play underneath, so back goes there. */
+export const unstable_settings = { anchor: '(tabs)' };
+
+/**
+ * Each screen sets the system bars' icons for itself, from whether it shows an app bar: the
+ * screen in front was mounted last, so its settings win, and going back restores the last.
+ */
+function ScreenBars({
+  route,
+  options,
+  children,
+}: {
+  route: { name: string };
+  options: { headerShown?: boolean };
+  children: ReactElement;
+}) {
+  return (
+    <>
+      <StatusBar style={statusBarStyle(route.name, options.headerShown === true)} />
+      {Platform.OS === 'android' && <NavigationBar style={navigationBarStyle(route.name)} />}
+      {children}
+    </>
+  );
+}
+
 export default function RootLayout() {
   const [queryClient] = useState(
     () => new QueryClient({ defaultOptions: { queries: { retry: shouldRetry } } }),
@@ -48,6 +77,11 @@ export default function RootLayout() {
   // Clearing also cancels the cache's clean-up timers (the root only unmounts in tests).
   useEffect(() => () => queryClient.clear(), [queryClient]);
   useEffect(followAppFocus, []);
+  // The window behind the screens (and Android's navigation bar) in the page colour, dark in
+  // dark mode, not the light colour the app was built with.
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(colors.background).catch(() => {});
+  }, []);
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
@@ -91,12 +125,13 @@ function Routes() {
     lastStatus.current = state.status;
     if (state.status === 'signedOut' && before !== 'signedIn') rememberReturn(pathname);
   }, [state.status, pathname]);
-  // ...and take them there once they are in (as a guest, signed in, or with a new account).
+  // ...and take them there once they are in (as a guest, signed in, or with a new account), over
+  // Play, so back from there goes to Play.
   useEffect(() => {
     if (!playing) return;
     const next = takeReturn();
     // Once the screens for signed-in players are in place, or their guard would send it back.
-    if (next !== null) setTimeout(() => router.replace(next), 0);
+    if (next !== null) setTimeout(() => router.push(next), 0);
   }, [playing]);
   const unreachable = state.status === 'unreachable';
   // Unreachable: try again by itself once the app is in front again, or the browser is online.
@@ -131,32 +166,35 @@ function Routes() {
       </View>
     );
   }
+  // The forms that open over a screen (a challenge, a report, a link to send): a sheet on iOS;
+  // on Android a screen with its app bar, whose back arrow closes it, as Android apps do.
+  const sheet =
+    Platform.OS === 'android' ? { headerShown: true } : ({ presentation: 'modal' } as const);
   return (
     <View style={styles.app}>
-      <StatusBar style={statusBarStyle(pathname)} />
       {Platform.OS === 'web' && <WebTopBar playing={playing} />}
       {/* In the apps each screen shows these under its own header (Screen). */}
       {playing && Platform.OS === 'web' && <AppBanners />}
       <BannersOnScreens.Provider value={playing}>
-        <Stack screenOptions={{ headerShown: false, ...APP_BAR }}>
+        <Stack screenOptions={{ headerShown: false, ...APP_BAR }} screenLayout={ScreenBars}>
           <Stack.Protected guard={playing} redirectTo={agreeing ? '/agree' : '/welcome'}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="player/[username]" options={{ headerShown: true, title: '' }} />
-            <Stack.Screen name="challenge/[username]" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="challenge/[username]" options={sheet} />
             <Stack.Screen name="game/[id]" options={{ headerShown: true, title: t('Game') }} />
             <Stack.Screen name="settings" options={{ headerShown: true, title: t('Settings') }} />
             <Stack.Screen
               name="notifications"
               options={{ headerShown: true, title: t('Notifications') }}
             />
-            <Stack.Screen name="report/[username]" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="report/[username]" options={sheet} />
             <Stack.Screen name="play" options={{ headerShown: true, title: t('Play now') }} />
             <Stack.Screen name="plans" options={{ headerShown: true, title: t('Plans') }} />
             <Stack.Screen
               name="appearance"
               options={{ headerShown: true, title: t('Board, pieces and sounds') }}
             />
-            <Stack.Screen name="invite" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="invite" options={sheet} />
             <Stack.Screen name="c/[code]" options={{ headerShown: true, title: t('Challenge') }} />
             <Stack.Screen
               name="tournaments"
@@ -216,6 +254,8 @@ function Routes() {
           />
         </Stack>
       </BannersOnScreens.Provider>
+      {/* Over the screens: short messages that need no answer. */}
+      <SnackbarHost />
     </View>
   );
 }

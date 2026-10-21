@@ -219,6 +219,7 @@ and the Caddyfile.
 | WS | `/api/v1/ws` | Live events — see [`docs/realtime.md`](docs/realtime.md) |
 | GET | `/health/live`, `/health/ready` | Liveness; readiness (database, Redis) |
 | GET | `/metrics` | Prometheus metrics; only with `BAGHCHAL_METRICS_TOKEN` set and sent as a bearer token |
+| GET | `/.well-known/assetlinks.json` | Which signed Android apps open this site's links: `com.clawplay.app` with the fingerprints in `BAGHCHAL_ANDROID_CERT_SHA256` (none set: `[]`). See [`docs/operations.md`](docs/operations.md) |
 
 Browsers authenticate with an HttpOnly session cookie; native apps pass
 `"transport": "bearer"` when signing in and send `Authorization: Bearer <token>`.

@@ -7,6 +7,7 @@ import { useMe } from '@/auth/session';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Confirm } from '@/components/Confirm';
+import { SuccessNotice } from '@/components/Snackbar';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { Notice } from '@/components/Notice';
 import { ShareButton } from '@/components/ShareButton';
@@ -42,7 +43,8 @@ function Details({ tournament: tour }: { tournament: Tournament }) {
   const play = usePlayPairing(tour.code);
   const host = tour.host.id === me.id;
   const playing = tour.players.some((p) => p.id === me.id);
-  const error = action.error ?? play.error;
+  // While asking to end it, a failure to end it shows in the question.
+  const error = (ending ? null : action.error) ?? play.error;
   // My game this round (the earlier ones are under the rounds below).
   const mine = tour.pairings.filter((p) => p.round === tour.round && isMine(p, me.id));
   const sitting = tour.byes.some((b) => b.round === tour.round && b.player.id === me.id);
@@ -62,7 +64,7 @@ function Details({ tournament: tour }: { tournament: Tournament }) {
         })}
       </Text>
       <ErrorNotice error={error} />
-      {left && <Notice tone="success">{t('You left the tournament.')}</Notice>}
+      {left && <SuccessNotice>{t('You left the tournament.')}</SuccessNotice>}
 
       {tour.status === 'open' && (
         <Card>
@@ -182,25 +184,28 @@ function Details({ tournament: tour }: { tournament: Tournament }) {
 
       {host && tour.status === 'running' && <NoShows tournament={tour} />}
 
-      {host &&
-        tour.status === 'running' &&
-        (ending ? (
-          <Confirm
-            question={t(
-              'End the tournament now? Games not yet played are not played, and the standings stay as they are.',
-            )}
-            confirmTitle={t('End the tournament')}
-            busy={action.isPending}
-            onConfirm={() => action.mutate('finish', { onSettled: () => setEnding(false) })}
-            onCancel={() => setEnding(false)}
-          />
-        ) : (
+      {host && tour.status === 'running' && (
+        <Confirm
+          open={ending}
+          question={t(
+            'End the tournament now? Games not yet played are not played, and the standings stay as they are.',
+          )}
+          confirmTitle={t('End the tournament')}
+          busy={action.isPending}
+          error={action.error}
+          onConfirm={() => action.mutate('finish', { onSuccess: () => setEnding(false) })}
+          onCancel={() => {
+            action.reset();
+            setEnding(false);
+          }}
+        >
           <Button
             title={t('End the tournament')}
             variant="secondary"
             onPress={() => setEnding(true)}
           />
-        ))}
+        </Confirm>
+      )}
     </>
   );
 }
@@ -219,46 +224,51 @@ function NoShows({ tournament: tour }: { tournament: Tournament }) {
           'If a player does not turn up, give the game to the other: a point for them, and the round can go on.',
         )}
       </Hint>
-      <ErrorNotice error={award.error} />
-      {waiting.map((p) =>
-        giving?.pairing.id === p.id ? (
+      {/* While asking, a failure shows in the question. */}
+      {giving === null && <ErrorNotice error={award.error} />}
+      {waiting.map((p) => {
+        const winner = giving?.pairing.id === p.id ? giving.winner : null;
+        return (
           <Confirm
             key={p.id}
+            open={winner !== null}
             question={t(
               'Give this game to {winner}? {loser} gets no point, and it is not played.',
               {
-                winner: (giving.winner === 'goat' ? p.goat : p.tiger).username,
-                loser: (giving.winner === 'goat' ? p.tiger : p.goat).username,
+                winner: (winner === 'goat' ? p.goat : p.tiger).username,
+                loser: (winner === 'goat' ? p.tiger : p.goat).username,
               },
             )}
             confirmTitle={t('Give the game')}
             busy={award.isPending}
+            error={award.error}
             onConfirm={() =>
-              award.mutate(
-                { pairingId: p.id, winner: giving.winner },
-                { onSettled: () => setGiving(null) },
-              )
+              winner !== null &&
+              award.mutate({ pairingId: p.id, winner }, { onSuccess: () => setGiving(null) })
             }
-            onCancel={() => setGiving(null)}
-          />
-        ) : (
-          <Card key={p.id}>
-            <Text style={styles.text}>{pairingText(p)}</Text>
-            <View style={styles.row}>
-              {(['goat', 'tiger'] as const).map((side) => (
-                <Button
-                  key={side}
-                  title={t('Give the game to {name}', { name: p[side].username })}
-                  label={t('Give to {name}', { name: p[side].username })}
-                  variant="secondary"
-                  compact
-                  onPress={() => setGiving({ pairing: p, winner: side })}
-                />
-              ))}
-            </View>
-          </Card>
-        ),
-      )}
+            onCancel={() => {
+              award.reset();
+              setGiving(null);
+            }}
+          >
+            <Card>
+              <Text style={styles.text}>{pairingText(p)}</Text>
+              <View style={styles.row}>
+                {(['goat', 'tiger'] as const).map((side) => (
+                  <Button
+                    key={side}
+                    title={t('Give the game to {name}', { name: p[side].username })}
+                    label={t('Give to {name}', { name: p[side].username })}
+                    variant="secondary"
+                    compact
+                    onPress={() => setGiving({ pairing: p, winner: side })}
+                  />
+                ))}
+              </View>
+            </Card>
+          </Confirm>
+        );
+      })}
     </>
   );
 }

@@ -1,4 +1,4 @@
-import type { ColorValue } from 'react-native';
+import { I18nManager, Platform, type ColorValue } from 'react-native';
 import Svg, { Circle, Line, Path, Polyline, Rect } from 'react-native-svg';
 
 import { isRTL } from '@/i18n';
@@ -16,12 +16,36 @@ export type IconName =
   | 'computer'
   | 'people'
   | 'chevron'
+  | 'first'
+  | 'previous'
+  | 'next'
+  | 'last'
   | 'settings'
   | 'palette'
   | 'shield'
   | 'bell'
   | 'chat'
-  | 'document';
+  | 'document'
+  | 'eye'
+  | 'eye-off';
+
+/**
+ * Whether the screen is laid out right to left, which is the way arrows must point. In the apps
+ * that is the layout direction in effect (I18nManager.isRTL, which changes only when the app
+ * restarts after a change of language); on the web it is the current language's.
+ */
+export function layoutIsRTL(): boolean {
+  return Platform.OS === 'web' ? isRTL() : I18nManager.isRTL;
+}
+
+/** Arrows drawn pointing "onward" (to the right), and pointing back, mirrored right to left. */
+const ARROWS = {
+  chevron: { bar: null, points: [9, 5, 16, 12, 9, 19] },
+  next: { bar: null, points: [9, 5, 16, 12, 9, 19] },
+  previous: { bar: null, points: [15, 5, 8, 12, 15, 19] },
+  last: { bar: 18, points: [7, 5, 14, 12, 7, 19] },
+  first: { bar: 6, points: [17, 5, 10, 12, 17, 19] },
+} as const;
 
 /**
  * The app's line icons (24-unit grid, 2-unit stroke), drawn in the colour they are given. They
@@ -108,10 +132,9 @@ export function Icon({
           <Path d="M15.5 4.6a3.5 3.5 0 0 1 0 6.8M18 15.3c1.7.7 2.9 2.2 3.5 4.7" {...stroke} />
         </>
       )}
-      {/* "Onward": to the end of the line, the left in a right-to-left language. */}
-      {name === 'chevron' && (
-        <Polyline points={isRTL() ? '15 5 8 12 15 19' : '9 5 16 12 9 19'} {...stroke} />
-      )}
+      {/* "Onward": to the end of the line, the left in a right-to-left layout. The replay's
+          first, previous, next and last turn the same way. */}
+      {name in ARROWS && <Arrow arrow={ARROWS[name as keyof typeof ARROWS]} stroke={stroke} />}
       {name === 'document' && (
         <>
           <Path d="M14 3H6v18h12V7z" {...stroke} />
@@ -138,6 +161,13 @@ export function Icon({
           <Circle cx={15} cy={8} r={1} {...stroke} />
         </>
       )}
+      {(name === 'eye' || name === 'eye-off') && (
+        <>
+          <Path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" {...stroke} />
+          <Circle cx={12} cy={12} r={3} {...stroke} />
+        </>
+      )}
+      {name === 'eye-off' && <Line x1={3} y1={3} x2={21} y2={21} {...stroke} />}
       {name === 'chat' && <Path d="M4 5h16v11H9l-5 4z" {...stroke} />}
       {name === 'bell' && (
         <Path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0" {...stroke} />
@@ -146,5 +176,19 @@ export function Icon({
         <Path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z" {...stroke} />
       )}
     </Svg>
+  );
+}
+
+function Arrow({ arrow, stroke }: { arrow: (typeof ARROWS)[keyof typeof ARROWS]; stroke: object }) {
+  const mirror = layoutIsRTL();
+  const x = (value: number) => (mirror ? 24 - value : value);
+  const points = arrow.points.map((value, i) => (i % 2 === 0 ? x(value) : value)).join(' ');
+  return (
+    <>
+      <Polyline points={points} {...stroke} />
+      {arrow.bar !== null && (
+        <Line x1={x(arrow.bar)} y1={5} x2={x(arrow.bar)} y2={19} {...stroke} />
+      )}
+    </>
   );
 }

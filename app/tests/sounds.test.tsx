@@ -1,4 +1,5 @@
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { Platform } from 'react-native';
 
 import { renderApp } from './support/app';
 import { ME, error } from './support/fakeServer';
@@ -61,14 +62,14 @@ test('moves and captures sound as they arrive, until sounds are turned off', asy
 
   // The same setting as on "Board, pieces and sounds": kept on the server, for every device.
   const { server } = rendered;
-  await fireEvent.press(screen.getByRole('button', { name: 'Turn sounds off' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Turn sounds and vibration off' }));
   await waitFor(() =>
     expect(server.lastTo('PATCH /api/v1/me/appearance').body).toEqual({ sounds_on: false }),
   );
   await arrive(5, 'T3T/5/1TG2/2G2/4T t 17 1', ['c3', 'a1-b1', 'b2', 'b1xb3', 'c2']);
   expect(await screen.findByText('bob to move')).toBeOnTheScreen();
   expect(played).toHaveBeenCalledTimes(3);
-  expect(screen.getByRole('button', { name: 'Turn sounds on' })).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Turn sounds and vibration on' })).toBeOnTheScreen();
 });
 
 test('sounds turned off on any device stay off', async () => {
@@ -87,7 +88,9 @@ test('sounds turned off on any device stay off', async () => {
       },
     },
   });
-  expect(await screen.findByRole('button', { name: 'Turn sounds on' })).toBeOnTheScreen();
+  expect(
+    await screen.findByRole('button', { name: 'Turn sounds and vibration on' }),
+  ).toBeOnTheScreen();
 });
 
 test('sounds can be turned off before the setting has loaded', async () => {
@@ -106,7 +109,27 @@ test('sounds can be turned off before the setting has loaded', async () => {
       },
     },
   });
-  await fireEvent.press(await screen.findByRole('button', { name: 'Turn sounds off' }));
-  expect(await screen.findByRole('button', { name: 'Turn sounds on' })).toBeOnTheScreen();
+  await fireEvent.press(
+    await screen.findByRole('button', { name: 'Turn sounds and vibration off' }),
+  );
+  expect(
+    await screen.findByRole('button', { name: 'Turn sounds and vibration on' }),
+  ).toBeOnTheScreen();
   expect(server.lastTo('PATCH /api/v1/me/appearance').body).toEqual({ sounds_on: false });
+});
+
+test('on the web the toggle is for sounds alone (nothing vibrates there)', async () => {
+  jest.replaceProperty(Platform, 'OS', 'web');
+  await renderApp('/game/g1', {
+    token: 'tok',
+    routes: {
+      'GET /api/v1/me': { status: 200, body: ME },
+      'GET /api/v1/games/g1': {
+        status: 200,
+        body: game({ ply: 1, side_to_move: 'tiger', moves: ['c3'], server_time: now() }),
+      },
+    },
+  });
+  expect(await screen.findByRole('button', { name: 'Turn sounds off' })).toBeOnTheScreen();
+  jest.restoreAllMocks();
 });

@@ -13,10 +13,33 @@ export function gameLayout(width: number, height: number): Layout {
   return height < 600 ? 'short' : 'side';
 }
 
-/** The board is square and as large as fits, keeping both clocks on screen. */
-export function boardSize(layout: Layout, width: number, height: number): number {
-  // Height taken by the header, player bars and spacing, in points.
-  const chrome = layout === 'short' ? 110 : 240;
-  const available = layout === 'stacked' ? width : Math.min(640, width / 2);
+/** What the screen around the game takes: its header bar and the device's safe-area insets. */
+export interface Room {
+  /** The header bar's height (0 without one); it already keeps clear of the status bar. */
+  header: number;
+  insets: { top: number; bottom: number; left: number; right: number };
+}
+
+// Heights in points of what sits above and below the board on the game screen.
+/** The page's padding above and below (components/Screen.tsx: spacing.md and spacing.xl). */
+const PAGE_PADDING = 16 + 32;
+/** A player bar (components/game/PlayerBar.tsx: its clock, padding and border) and its gap. */
+const PLAYER_BAR = 66 + 8;
+/** The letters under the board (a–e). */
+const EDGE_LABELS = 18;
+
+/**
+ * The board is square and as large as fits, keeping both clocks on screen: the height left
+ * once the header (or the status bar, without one), the bottom inset, the page's padding and
+ * the player bars beside the board are taken away. A phone on its side ('short') has its player
+ * bars in the panel instead.
+ */
+export function boardSize(layout: Layout, width: number, height: number, room: Room): number {
+  const { header, insets } = room;
+  const above = header > 0 ? header : insets.top;
+  const bars = layout === 'short' ? 0 : 2 * PLAYER_BAR;
+  const chrome = above + insets.bottom + PAGE_PADDING + bars + EDGE_LABELS;
+  const across = width - insets.left - insets.right;
+  const available = layout === 'stacked' ? across : Math.min(640, across / 2);
   return Math.max(200, Math.min(available, height - chrome));
 }

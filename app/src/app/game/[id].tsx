@@ -6,8 +6,10 @@ import {
   useNavigation,
   usePreventRemove,
 } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { HeaderHeightContext } from 'expo-router/react-navigation';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { annotate } from '@/analysis/format';
 import { useAnalysis } from '@/analysis/hooks';
@@ -32,6 +34,7 @@ import { PlayerBar } from '@/components/game/PlayerBar';
 import { soundSupported } from '@/components/game/sound';
 import { useEnding, useMoveSounds } from '@/components/game/useMoveSounds';
 import { Victory } from '@/components/game/Victory';
+import type { IconName } from '@/components/Icon';
 import { IconButton } from '@/components/IconButton';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
@@ -57,7 +60,7 @@ import { showingGame } from '@/game/onScreen';
 import { candidateMoves, premoveDecision } from '@/game/premove';
 import { boardSize, gameLayout } from '@/game/layout';
 import { isOpen, TIME_CONTROLS } from '@/lobby/format';
-import { isRTL, plural, t } from '@/i18n';
+import { plural, t } from '@/i18n';
 import {
   useChallengeOutcomes,
   useChallenges,
@@ -73,6 +76,9 @@ export default function GameScreen() {
   const move = useMove(id);
   const action = useGameAction(id);
   const { width, height } = useWindowDimensions();
+  // The board fits between the header bar and the bottom inset (a phone on its side too).
+  const header = useContext(HeaderHeightContext) ?? 0;
+  const insets = useSafeAreaInsets();
   const [shown, setShown] = useState<number | null>(null); // the move being replayed
   const game = query.data;
   const look = useAppearance();
@@ -194,6 +200,7 @@ export default function GameScreen() {
     <PlayerBar game={game} side={bottom} isMe={mine === bottom} emote={emoteOf(bottom)} />
   );
 
+  const asksFirst = mine !== null && game.status === 'active';
   const panel = (
     <View style={styles.panel}>
       {layout === 'short' && opponentBar}
@@ -207,9 +214,13 @@ export default function GameScreen() {
           me={mine}
           pending={action.isPending ? action.variables : null}
           onAction={(a) => action.mutate(a)}
+          error={action.error}
         />
       )}
-      <ErrorNotice error={action.error} />
+      {/* A failed abort or resign is said in the question that asked for it (GameActions). */}
+      {!(asksFirst && (action.variables === 'abort' || action.variables === 'resign')) && (
+        <ErrorNotice error={action.error} />
+      )}
       {game.status === 'finished' && (
         // What next, straight after the result: game 2 of the match, back to the tournament,
         // or play again; or back to Play.
@@ -257,7 +268,7 @@ export default function GameScreen() {
           {soundSupported() && game.status === 'active' && (
             <IconButton
               icon={soundOn ? 'sound' : 'mute'}
-              title={soundOn ? t('Turn sounds off') : t('Turn sounds on')}
+              title={soundToggleTitle(soundOn)}
               selected={soundOn}
               onPress={() => chooseLook.mutate({ sounds_on: !soundOn })}
             />
@@ -331,7 +342,12 @@ export default function GameScreen() {
       <View style={wide ? styles.row : styles.column}>
         <View style={wide ? styles.boardWide : styles.boardColumn}>
           {layout !== 'short' && opponentBar}
-          <View style={[styles.boardBox, { maxWidth: boardSize(layout, width, height) }]}>
+          <View
+            style={[
+              styles.boardBox,
+              { maxWidth: boardSize(layout, width, height, { header, insets }) },
+            ]}
+          >
             {board}
             {ending !== null && (
               <Victory ending={ending} onClose={dismissEnding} pieces={look.pieces} />
@@ -478,8 +494,8 @@ function QuickMessages({
 }
 
 /**
- * Step through a finished game: start, back, forward, end. The row runs the language's way, so
- * in a right-to-left language the start is on the right and the arrows point that way.
+ * Step through a finished game: start, back, forward, end. The row runs the layout's way, and
+ * the arrows point with it (in a right-to-left layout the start is on the right).
  */
 function Replay({
   ply,
@@ -490,48 +506,39 @@ function Replay({
   total: number;
   onShow: (ply: number) => void;
 }) {
-  const rtl = isRTL();
+  const steps: { title: string; icon: IconName; disabled: boolean; to: number }[] = [
+    { title: t('Start position'), icon: 'first', disabled: ply === 0, to: 0 },
+    { title: t('Previous move'), icon: 'previous', disabled: ply === 0, to: ply - 1 },
+    { title: t('Next move'), icon: 'next', disabled: ply === total, to: ply + 1 },
+    { title: t('Final position'), icon: 'last', disabled: ply === total, to: total },
+  ];
   return (
     <View style={styles.replay}>
       <Text style={styles.counts}>
         {ply === 0 ? t('Start position') : t('After move {ply} of {total}', { ply, total })}
       </Text>
       <View style={styles.replayButtons}>
-        <Button
-          title={t('Start position')}
-          label={rtl ? '⏭' : '⏮'}
-          compact
-          variant="secondary"
-          disabled={ply === 0}
-          onPress={() => onShow(0)}
-        />
-        <Button
-          title={t('Previous move')}
-          label={rtl ? '▶' : '◀'}
-          compact
-          variant="secondary"
-          disabled={ply === 0}
-          onPress={() => onShow(ply - 1)}
-        />
-        <Button
-          title={t('Next move')}
-          label={rtl ? '◀' : '▶'}
-          compact
-          variant="secondary"
-          disabled={ply === total}
-          onPress={() => onShow(ply + 1)}
-        />
-        <Button
-          title={t('Final position')}
-          label={rtl ? '⏮' : '⏭'}
-          compact
-          variant="secondary"
-          disabled={ply === total}
-          onPress={() => onShow(total)}
-        />
+        {steps.map((step) => (
+          <Button
+            key={step.icon}
+            title={step.title}
+            label=""
+            icon={step.icon}
+            compact
+            variant="secondary"
+            disabled={step.disabled}
+            onPress={() => onShow(step.to)}
+          />
+        ))}
       </View>
     </View>
   );
+}
+
+/** The game's sound toggle; in the apps it also turns the vibration on and off. */
+function soundToggleTitle(on: boolean): string {
+  if (Platform.OS === 'web') return on ? t('Turn sounds off') : t('Turn sounds on');
+  return on ? t('Turn sounds and vibration off') : t('Turn sounds and vibration on');
 }
 
 /** Another game against the computer at the same level, sides swapped. */

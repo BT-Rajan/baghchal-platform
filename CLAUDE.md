@@ -38,8 +38,14 @@
   link (`/invite`), both from `app/src/components/ChallengeForm.tsx` and `POST /challenges`.
 - **Share a link**: `shareLink` in `app/src/lobby/format.ts`.
 - **Confirm an action that is hard to undo** (resign, block, leave a live game):
-  `app/src/components/Confirm.tsx`, shown in place of the button that asked on the web, and as
-  the apps' own dialog in Android and iOS (the same component either way).
+  `app/src/components/Confirm.tsx`, wrapping the button that asks (`<Confirm open={asking} …>
+  <Button …/></Confirm>`): on the web the question replaces the button; in Android and iOS the
+  button stays put under the apps' own dialog (the same component either way).
+- **Show an error**: `app/src/components/ErrorNotice.tsx` (with its next step, where there is one).
+- **Say an action succeeded, for a moment**: `<SuccessNotice>` from
+  `app/src/components/Snackbar.tsx`: a success Notice in place on the web, the snackbar in the apps
+  (above the tab bar and the keyboard, 4 s). What stays true for a while (a link sent, a challenge
+  waiting) stays a Notice.
 - **Look and feel**: the tokens in `app/src/theme.ts` (colours by role, the `type` scale,
   `radius`, `shadow`) and the shared components (`Button`, `Segmented`, `Card`, `Notice`,
   `Screen`, `Icon`, `IconButton`). One `primary` button per screen for its main action; other

@@ -5,7 +5,7 @@ import type { Piece } from '@/game/bfen';
 import { formatClock, remainingMs } from '@/game/clock';
 import { SIDE_PLURAL, isComputer, nameOf, playerOf, ratingChangeText } from '@/game/describe';
 import { t } from '@/i18n';
-import { colors, radius, spaced, spacing, type } from '@/theme';
+import { colors, radius, spacing, type } from '@/theme';
 
 import { BadgePill } from '../BadgePill';
 import { useServerNow } from '../useNow';
@@ -44,9 +44,8 @@ export function PlayerBar({
           </View>
         )}
         {toMove && (
-          // Letters spaced apart, except in a joined script (Arabic).
-          <Text style={[styles.toMoveTag, { letterSpacing: spaced(0.8) }]} aria-hidden>
-            {t('TO MOVE')}
+          <Text style={styles.toMoveTag} aria-hidden>
+            {t('To move')}
           </Text>
         )}
         {emote !== null && (
@@ -80,7 +79,10 @@ function Clock({ game, side }: { game: Game; side: Piece }) {
       }
       style={[styles.clock, running && styles.running, running && ms < LOW_TIME_MS && styles.low]}
     >
-      <Text style={[styles.time, running && styles.runningText]}>{text}</Text>
+      {/* Large text grows the clock only so far, so both clocks stay beside their names. */}
+      <Text style={[styles.time, running && styles.runningText]} maxFontSizeMultiplier={1.3}>
+        {text}
+      </Text>
     </View>
   );
 }

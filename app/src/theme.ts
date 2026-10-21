@@ -208,6 +208,8 @@ export const type = {
   nav: { fontSize: 12, lineHeight: 16, fontWeight: '500' },
   /** A count on a badge. */
   badge: { fontSize: 11, lineHeight: 14, fontWeight: '800' },
+  /** The title in an Android app bar (Material's title-large). */
+  appBar: { fontSize: 20, lineHeight: 28, fontWeight: '500' },
   /** A game clock: big, steady digits. */
   clock: { fontSize: 22, lineHeight: 28, fontWeight: '700' },
 } as const;

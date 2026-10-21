@@ -9,7 +9,10 @@
 
 	# The API and its WebSocket. "api" resolves to every API replica; requests go to the one
 	# with the fewest in flight, and replicas failing their readiness check are skipped.
-	handle /api/* {
+	# /.well-known/assetlinks.json is the API's too: Android checks it before opening this
+	# site's links in the app (see docs/operations.md).
+	@api path /api/* /.well-known/assetlinks.json
+	handle @api {
 		reverse_proxy {
 			dynamic a api 8000 {
 				refresh 10s

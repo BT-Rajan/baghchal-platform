@@ -35,7 +35,10 @@ const SECURITY_HEADERS = {
   'X-Frame-Options': 'DENY',
 };
 
-const isApi = (url) => url === '/api' || url.startsWith('/api/');
+// Android checks /.well-known/assetlinks.json (the API's) before opening this site's links in
+// the app.
+const isApi = (url) =>
+  url === '/api' || url.startsWith('/api/') || url === '/.well-known/assetlinks.json';
 
 /** Headers for the API: the client's address goes in X-Forwarded-For, for rate limits. */
 function forwarded(req) {

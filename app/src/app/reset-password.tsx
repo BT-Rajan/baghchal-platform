@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import type { TextInputInstance } from 'react-native';
 
 import { useSession } from '@/auth/session';
 import { checkNewPassword, isLinkToken } from '@/auth/validation';
@@ -21,6 +22,7 @@ export default function ResetPassword() {
   const { session } = useSession();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const confirmField = useRef<TextInputInstance>(null);
   const reset = useMutation({
     mutationFn: async (linkToken: string) => {
       await session.api.confirmPasswordReset(linkToken, password);
@@ -66,8 +68,12 @@ export default function ResetPassword() {
         secureTextEntry
         autoComplete="new-password"
         textContentType="newPassword"
+        returnKeyType="next"
+        submitBehavior="submit"
+        onSubmitEditing={() => confirmField.current?.focus()}
       />
       <TextField
+        ref={confirmField}
         label={t('Repeat the new password')}
         value={confirm}
         onChangeText={setConfirm}
@@ -75,6 +81,7 @@ export default function ResetPassword() {
         secureTextEntry
         autoComplete="new-password"
         textContentType="newPassword"
+        returnKeyType="go"
         onSubmitEditing={submit}
       />
       <Button title={t('Change password')} onPress={submit} busy={reset.isPending} />

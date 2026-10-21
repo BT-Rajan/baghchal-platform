@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { t } from '@/i18n';
@@ -20,14 +21,32 @@ interface ConfirmProps {
   onCancel: () => void;
 }
 
+interface ConfirmAskingProps extends ConfirmProps {
+  /** Whether the question is being asked now (by default, it is). */
+  open?: boolean;
+  /**
+   * What asked: the button, or the controls around it. On the web the question takes its place
+   * while open; in the apps it stays where it is, under the dialog, so the page does not move.
+   */
+  children?: ReactNode;
+}
+
 /**
  * The one way to confirm an action that is hard to undo: the question, said plainly, and the
- * two answers. Shown in place of the button that asked; in the apps, as their own dialog over
- * the screen (the back button, or a tap outside, cancels, unless the answer is being carried
- * out). The screen keeps it open until the action succeeds, showing `error` if it fails.
+ * two answers. Wrap the button that asks in it: on the web the question is shown in place of
+ * the button; in the apps, as their own dialog over the screen, the button staying put (the
+ * back button, or a tap outside, cancels, unless the answer is being carried out). The screen
+ * keeps it open until the action succeeds, showing `error` if it fails.
  */
-export function Confirm(props: ConfirmProps) {
-  return Platform.OS === 'web' ? <InPlace {...props} /> : <Dialog {...props} />;
+export function Confirm({ open = true, children, ...ask }: ConfirmAskingProps) {
+  if (Platform.OS === 'web') return open ? <InPlace {...ask} /> : <>{children}</>;
+  return (
+    <>
+      {/* Behind the dialog, out of the screen reader's way until it is answered. */}
+      {children !== undefined && <View aria-hidden={open}>{children}</View>}
+      {open && <Dialog {...ask} />}
+    </>
+  );
 }
 
 function InPlace({
@@ -84,7 +103,7 @@ function Dialog({
         >
           <Text style={styles.dialogText}>{question}</Text>
           <ErrorNotice error={error} />
-          <View style={styles.actions}>
+          <View style={styles.actions} testID="answers">
             <TextAction title={cancelTitle} disabled={busy} onPress={cancel} />
             <TextAction title={confirmTitle} busy={busy} onPress={onConfirm} strong />
           </View>
@@ -131,8 +150,9 @@ function TextAction({
 
 const styles = StyleSheet.create({
   question: { ...type.body, fontWeight: '600', color: colors.text },
-  row: { flexDirection: 'row', gap: spacing.sm },
-  cell: { flex: 1 },
+  // The answers share a row while each fits, and stack when a translation is long.
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  cell: { flexGrow: 1, flexBasis: 140 },
   scrim: {
     flex: 1,
     backgroundColor: colors.scrim,
@@ -152,10 +172,12 @@ const styles = StyleSheet.create({
     ...shadow,
   },
   dialogText: { ...type.body, color: colors.text },
-  actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm },
+  // At the end, side by side; a long answer wraps the row, the answers stacking at the end.
+  actions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: spacing.sm },
   action: {
     minHeight: 48,
     minWidth: 64,
+    maxWidth: '100%',
     paddingHorizontal: spacing.md,
     borderRadius: radius.pill,
     alignItems: 'center',

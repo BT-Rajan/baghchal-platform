@@ -75,6 +75,37 @@ plain `http://` address the app is built to allow it, so passwords cross the net
 unencrypted: keep it to a network you trust, or put an https proxy in front and set
 `PUBLIC_URL` to the https address.
 
+## Links that open the Android app
+
+A shared challenge or tournament link, and the links in emails (confirming an email, a new
+password), open in the Android app when it is installed, instead of the browser. Two halves:
+
+- **The app** (`app/app.config.ts`) claims the website's `/c/`, `/tournament/`, `/challenge/`,
+  `/verify-email`, `/reset-password`, `/confirm-email`, `/privacy` and `/terms` links, on the host
+  of `EXPO_PUBLIC_WEB_URL` (or `EXPO_PUBLIC_API_URL` when the site is at the API's address).
+  Only an **https** website: Android cannot verify a plain-http host (such as the
+  `http://…:7070` test server), so a build for one claims nothing and its links stay browser
+  links.
+- **The website** says the app is its own: `GET /.well-known/assetlinks.json` names the
+  package `com.clawplay.app` and the SHA-256 fingerprints of the keys the app is signed with,
+  from `BAGHCHAL_ANDROID_CERT_SHA256` (a JSON list, e.g.
+  `BAGHCHAL_ANDROID_CERT_SHA256='["FA:C6:17:…:3B:9C"]'`; unset, the list is empty and links
+  open in the browser). The front door (Caddy, or `deploy/pm2/web.mjs`) must pass that path to
+  the API like `/api`.
+
+Android checks the statement when the app is installed, so after changing the setting,
+reinstall the app (or wait for Android to check again).
+
+**Which fingerprint.** The test APKs from `.github/workflows/android.yml` are signed with React
+Native's standard debug keystore (`android/app/debug.keystore` from Expo's template, the same
+on every machine), whose SHA-256 is
+`FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C`.
+Anyone can sign an app with that key, so list it only on a test server. A store build is
+signed with its own upload key, and Google Play re-signs it with the app signing key: list the
+app signing key's fingerprint (Play Console → Test and release → App integrity), and the upload
+key's too if APKs signed with it are installed directly. To read any APK's:
+`keytool -printcert -jarfile app-release.apk` (or `apksigner verify --print-certs`).
+
 ## Upgrading
 
 ```bash

@@ -1,11 +1,10 @@
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { isRTL } from '@/i18n';
 import { colors, spacing, type } from '@/theme';
 
 import { focusRing } from './focus';
-import { Icon } from './Icon';
+import { Icon, layoutIsRTL } from './Icon';
 import { pressedLook, ripple } from './press';
 
 /**
@@ -31,8 +30,8 @@ export function Disclosure({ title, children }: { title: string; children: React
           ]}
         >
           <Text style={styles.title}>{title}</Text>
-          {/* Open, the chevron turns to point down (it starts mirrored in right-to-left). */}
-          <View style={open && (isRTL() ? styles.turnedBack : styles.turned)}>
+          {/* Open, the chevron turns to point down (it starts mirrored in a right-to-left layout). */}
+          <View style={open && (layoutIsRTL() ? styles.turnedBack : styles.turned)}>
             <Icon name="chevron" color={colors.muted} size={20} />
           </View>
         </Pressable>

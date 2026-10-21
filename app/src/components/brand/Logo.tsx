@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
  * (assets/brand/clawplay-mark.svg).
  */
 import { useId } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import { mark, t } from '@/i18n';
@@ -39,7 +39,7 @@ export function ClawMark({ size = 48 }: { size?: number }) {
         height={92}
         rx={24}
         fill="none"
-        stroke="#ffffff"
+        stroke={colors.pieceShine}
         strokeOpacity={0.25}
         strokeWidth={2}
       />
@@ -49,7 +49,7 @@ export function ClawMark({ size = 48 }: { size?: number }) {
             <Path d="M47 17 Q38 50 50 85 Q47 50 55 18 Q51 15 47 17 Z" fill={`url(#${id}claw)`} />
             <Path
               d="M54.6 20 Q48.6 50 52.6 80"
-              stroke="#ffd9a0"
+              stroke={colors.tigerBevel}
               strokeOpacity={0.45}
               strokeWidth={1.4}
               fill="none"
@@ -68,7 +68,7 @@ export function Wordmark({ size = 28, onDark = false }: { size?: number; onDark?
       aria-label={BRAND}
       style={[styles.word, { fontSize: size, letterSpacing: tight(-size / 40) }]}
     >
-      <Text style={{ color: onDark ? colors.brandCream : colors.brandInk }}>Claw</Text>
+      <Text style={{ color: onDark ? colors.brandCream : colors.text }}>Claw</Text>
       <Text style={{ color: onDark ? colors.brandLight : colors.brandDeep }}>Play</Text>
     </Text>
   );
@@ -118,12 +118,18 @@ export function BrandBar({
   title?: string | null;
   children?: ReactNode;
 }) {
+  // On Android, as tall as its own app bars, with their medium-weight title.
+  const android = Platform.OS === 'android';
   return (
-    <View role="banner" style={styles.bar}>
+    <View role="banner" style={[styles.bar, android && styles.barAndroid]}>
       {title === null ? (
         <Brand size={30} onDark />
       ) : (
-        <Text role="heading" numberOfLines={1} style={styles.barTitle}>
+        <Text
+          role="heading"
+          numberOfLines={1}
+          style={[styles.barTitle, android && styles.barTitleAndroid]}
+        >
           {title}
         </Text>
       )}
@@ -147,6 +153,8 @@ const styles = StyleSheet.create({
     color: colors.brandCream,
     flexShrink: 1,
   },
+  // Android's top app bar title (no type token yet: an app-bar step would be one).
+  barTitleAndroid: { ...type.appBar, letterSpacing: 0 },
   bar: {
     backgroundColor: colors.brandInk,
     paddingHorizontal: spacing.md,
@@ -154,4 +162,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  // Android's top app bar: 64 tall.
+  barAndroid: { minHeight: 64, paddingVertical: 0 },
 });

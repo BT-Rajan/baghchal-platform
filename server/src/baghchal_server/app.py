@@ -16,6 +16,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from baghchal_server.accounts.routes import router as accounts_router
 from baghchal_server.achievements.routes import router as achievements_router
+from baghchal_server.app_links import router as app_links_router
 from baghchal_server.appearance import models as _appearance_models  # noqa: F401  (registers tables)
 from baghchal_server.appearance.routes import router as appearance_router
 from baghchal_server.billing import models as _billing_models  # noqa: F401  (registers tables)
@@ -197,6 +198,7 @@ def create_app(
         chat_router,
         trainer_router,
         health_router,
+        app_links_router,
         ws_router,
     ):
         app.include_router(router)

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { ModPlayer } from '@/api/endpoints';
@@ -10,8 +10,8 @@ import { usernameProblem } from '@/auth/validation';
 import { Button } from '@/components/Button';
 import { Card, Hint } from '@/components/Card';
 import { Confirm } from '@/components/Confirm';
+import { SuccessNotice } from '@/components/Snackbar';
 import { FairPlaySection } from '@/components/FairPlaySection';
-import { Notice } from '@/components/Notice';
 import { PlanAdmin } from '@/components/PlanAdmin';
 import { Segmented } from '@/components/Segmented';
 import { Screen } from '@/components/Screen';
@@ -170,21 +170,28 @@ function Record({
     setNameError(problem);
     if (problem === undefined) run({ kind: 'rename', username: newName });
   };
-  const confirm = (action: Extract<Action, { kind: 'suspend' | 'rename' }>) => (
-    <Confirm
-      question={question(action, player.username)}
-      confirmTitle={
-        action.kind === 'rename' ? t('Rename') : action.days === null ? t('Ban') : t('Suspend')
-      }
-      busy={act.isPending}
-      error={act.error}
-      onConfirm={() => act.mutate(action)}
-      onCancel={() => {
-        act.reset();
-        setConfirming(null);
-      }}
-    />
-  );
+  /** Asks before a suspension or a rename, over (or, on the web, in place of) its buttons. */
+  const confirm = (kind: 'suspend' | 'rename', buttons: ReactNode) => {
+    const action = confirming?.kind === kind ? confirming : null;
+    return (
+      <Confirm
+        open={action !== null}
+        question={action === null ? '' : question(action, player.username)}
+        confirmTitle={
+          action?.kind === 'rename' ? t('Rename') : action?.days === null ? t('Ban') : t('Suspend')
+        }
+        busy={act.isPending}
+        error={act.error}
+        onConfirm={() => action !== null && act.mutate(action)}
+        onCancel={() => {
+          act.reset();
+          setConfirming(null);
+        }}
+      >
+        {buttons}
+      </Confirm>
+    );
+  };
   const busy = act.isPending ? act.variables : null;
   const failed = act.error === null ? null : act.variables;
   const suspended = (!player.deleted && isSuspended(player, now)) || player.banned;
@@ -224,7 +231,7 @@ function Record({
           onTab(next);
         }}
       />
-      {done !== null && <Notice tone="success">{done}</Notice>}
+      {done !== null && <SuccessNotice>{done}</SuccessNotice>}
       {tab === 'act' && (
         <>
           {/* Every action asks why. */}
@@ -236,23 +243,24 @@ function Record({
               onPress={() => run({ kind: 'unsuspend' })}
               busy={busy?.kind === 'unsuspend'}
             />
-          ) : confirming?.kind === 'suspend' ? (
-            confirm(confirming)
           ) : (
-            <View style={styles.actions}>
-              {[
-                { title: t('Suspend for 1 day'), days: 1 },
-                { title: t('Suspend for 7 days'), days: 7 },
-                { title: t('Ban permanently'), days: null },
-              ].map(({ title, days }) => (
-                <Button
-                  key={String(days)}
-                  title={title}
-                  variant="secondary"
-                  onPress={() => run({ kind: 'suspend', days })}
-                />
-              ))}
-            </View>
+            confirm(
+              'suspend',
+              <View style={styles.actions}>
+                {[
+                  { title: t('Suspend for 1 day'), days: 1 },
+                  { title: t('Suspend for 7 days'), days: 7 },
+                  { title: t('Ban permanently'), days: null },
+                ].map(({ title, days }) => (
+                  <Button
+                    key={String(days)}
+                    title={title}
+                    variant="secondary"
+                    onPress={() => run({ kind: 'suspend', days })}
+                  />
+                ))}
+              </View>,
+            )
           )}
           <TextField
             label={t('New username')}
@@ -262,14 +270,13 @@ function Record({
             autoCapitalize="none"
             autoCorrect={false}
           />
-          {confirming?.kind === 'rename' ? (
-            confirm(confirming)
-          ) : (
+          {confirm(
+            'rename',
             <Button
               title={t('Rename {name}', { name: player.username })}
               variant="secondary"
               onPress={rename}
-            />
+            />,
           )}
         </>
       )}
