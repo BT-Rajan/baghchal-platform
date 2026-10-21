@@ -66,7 +66,10 @@ async def report(
         game = await db.get(Game, data.game_id)
         if game is None or {game.goat_id, game.tiger_id} != {reporter.id, target.id}:
             raise AppError(
-                422, "invalid_game", f"That game is not one between you and {target.username}."
+                422,
+                "invalid_game",
+                "That game is not one between you and {name}.",
+                name=target.username,
             )
     open_key = f"{reporter.id}:{target.id}"
     if await has_open_report(db, open_key):

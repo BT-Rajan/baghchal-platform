@@ -1749,6 +1749,7 @@ export interface components {
             emotes_on?: boolean | null;
             /** Show Badge */
             show_badge?: boolean | null;
+            language?: components["schemas"]["Language"] | null;
         };
         /**
          * AppearanceOut
@@ -1764,6 +1765,7 @@ export interface components {
             emotes_on: boolean;
             /** Show Badge */
             show_badge: boolean;
+            language: components["schemas"]["Language"];
         };
         /** AwardIn */
         AwardIn: {
@@ -2489,6 +2491,12 @@ export interface components {
          * @enum {string}
          */
         Kind: "opening" | "endgame";
+        /**
+         * Language
+         * @description The app's language: the device's (``auto``), or one chosen.
+         * @enum {string}
+         */
+        Language: "auto" | "en" | "ta" | "hi" | "ar";
         /** LeaderboardEntry */
         LeaderboardEntry: {
             /** Rank */

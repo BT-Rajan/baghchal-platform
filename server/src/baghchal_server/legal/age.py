@@ -46,7 +46,9 @@ def adult_from(birth_month: str, now: datetime) -> datetime | None:
     if surely(birth_month, 0) > now or surely(birth_month, OLDEST) < now:
         raise AppError(422, "invalid_birth_month", "Please check your month of birth.")
     if surely(birth_month, MIN_AGE) > now:
-        raise AppError(403, "too_young", f"You must be at least {MIN_AGE} to play on ClawPlay.")
+        raise AppError(
+            403, "too_young", "You must be at least {age} to play on ClawPlay.", age=MIN_AGE
+        )
     adult = surely(birth_month, ADULT_AGE)
     return adult if adult > now else None
 

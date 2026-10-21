@@ -25,6 +25,16 @@ class SoundPack(StrEnum):
     ARCADE = "arcade"
 
 
+class Language(StrEnum):
+    """The app's language: the device's (``auto``), or one chosen."""
+
+    AUTO = "auto"
+    ENGLISH = "en"
+    TAMIL = "ta"
+    HINDI = "hi"
+    ARABIC = "ar"
+
+
 class AppearanceIn(BaseModel):
     """A change: only the fields given are changed."""
 
@@ -38,6 +48,7 @@ class AppearanceIn(BaseModel):
     emotes_on: bool | None = None
     """Whether the opponent's quick messages reach me in games."""
     show_badge: bool | None = None
+    language: Language | None = None
 
 
 class AppearanceOut(BaseModel):
@@ -49,3 +60,5 @@ class AppearanceOut(BaseModel):
     sounds_on: bool
     emotes_on: bool
     show_badge: bool
+    language: Language
+    """The app's language on every device (``auto``: each device's own)."""

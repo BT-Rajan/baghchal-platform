@@ -925,8 +925,9 @@ async def claim_abandonment(
             raise AppError(
                 409,
                 "cannot_claim",
-                "You can claim the game once your opponent has been offline for "
-                f"{int(ABANDON_AFTER.total_seconds())} seconds on their turn.",
+                "You can claim the game once your opponent has been offline for {seconds} "
+                "seconds on their turn.",
+                seconds=int(ABANDON_AFTER.total_seconds()),
             )
         return side, EndReason.ABANDONED
 

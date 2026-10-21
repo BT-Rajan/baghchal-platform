@@ -65,8 +65,13 @@ async def checkout(data: CheckoutIn, user: Member, state: State, db: DB) -> Chec
         mail = service.parent_mail(state.settings, user, plan)
         if mail is not None and not await state.limiter.hit(PARENT_TOLD, f"{user.id}:{plan}"):
             await deliver(state.mailer, mail)  # now: the error below drops background tasks
-        told = " We have told your parent or guardian by email." if mail is not None else ""
-        raise AppError(403, "under_18", f"Players under 18 cannot buy plans.{told}")
+        raise AppError(
+            403,
+            "under_18",
+            "Players under 18 cannot buy plans. We have told your parent or guardian by email."
+            if mail is not None
+            else "Players under 18 cannot buy plans.",
+        )
     return await service.checkout(db, gateway, user, now, data)
 
 

@@ -10,6 +10,7 @@ from typing import Final
 import structlog
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from baghchal_server import i18n
 from baghchal_server.errors import error_body
 from baghchal_server.metrics import Metrics
 
@@ -26,8 +27,9 @@ def _header(scope: Scope, name: bytes) -> bytes | None:
     return None
 
 
-async def _reject(send: Send, status: int, code: str, message: str) -> None:
-    body = json.dumps(error_body(code, message)).encode()
+async def _reject(scope: Scope, send: Send, status: int, code: str, message: str) -> None:
+    language = i18n.pick((_header(scope, b"accept-language") or b"").decode("latin-1"))
+    body = json.dumps(error_body(code, i18n.translate(message, {}, language))).encode()
     await send(
         {
             "type": "http.response.start",
@@ -131,10 +133,12 @@ class CrossSiteGuard:
             origin = _header(scope, b"origin")
             if origin is not None:
                 if origin not in self.allowed:
-                    await _reject(send, 403, "forbidden_origin", "Request origin not allowed.")
+                    await _reject(
+                        scope, send, 403, "forbidden_origin", "Request origin not allowed."
+                    )
                     return
             elif _header(scope, b"cookie") is not None:
-                await _reject(send, 403, "forbidden_origin", "Request origin missing.")
+                await _reject(scope, send, 403, "forbidden_origin", "Request origin missing.")
                 return
         await self.app(scope, receive, send)
 
@@ -156,7 +160,7 @@ class BodyLimit:
             return
         declared = _header(scope, b"content-length")
         if declared is not None and (not declared.isdigit() or int(declared) > self.max_bytes):
-            await _reject(send, 413, "body_too_large", "Request body too large.")
+            await _reject(scope, send, 413, "body_too_large", "Request body too large.")
             return
         chunks: list[bytes] = []
         size = 0
@@ -167,7 +171,7 @@ class BodyLimit:
             chunk = message.get("body", b"")
             size += len(chunk)
             if size > self.max_bytes:
-                await _reject(send, 413, "body_too_large", "Request body too large.")
+                await _reject(scope, send, 413, "body_too_large", "Request body too large.")
                 return
             chunks.append(chunk)
             if not message.get("more_body", False):

@@ -97,12 +97,16 @@ async def checkout(
         raise AppError(
             409,
             "plan_held_for_good",
-            f"You have ClawPlay {NAMES[held.plan]} for good, so there is nothing to buy.",
+            "You have ClawPlay {plan} for good, so there is nothing to buy.",
+            plan=NAMES[held.plan],
         )
     amount = price(plan, data.period)
     if amount is None:
         raise AppError(
-            422, "not_sold_for_a_year", f"ClawPlay {NAMES[plan]} is sold a month at a time."
+            422,
+            "not_sold_for_a_year",
+            "ClawPlay {plan} is sold a month at a time.",
+            plan=NAMES[plan],
         )
     payment = Payment(
         id=uuid.uuid4(),
