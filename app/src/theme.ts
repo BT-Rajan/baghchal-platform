@@ -1,14 +1,33 @@
-import { Platform } from 'react-native';
+import { Appearance, Platform } from 'react-native';
 
 import { isRTL } from '@/i18n';
+
+/** The phone's (or the browser's) light or dark setting, read once when the app starts. */
+export type ColorScheme = 'light' | 'dark';
+
+/**
+ * The scheme the app is drawn in. Styles are made when the app loads, so a change in the
+ * phone's setting shows the next time the app starts. The web reads the browser's
+ * `prefers-color-scheme` the same way, once at load.
+ */
+export function systemColorScheme(): ColorScheme {
+  if (Platform.OS === 'web') {
+    const query =
+      typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-color-scheme: dark)')
+        : null;
+    return query?.matches ? 'dark' : 'light';
+  }
+  return Appearance.getColorScheme() === 'dark' ? 'dark' : 'light';
+}
 
 /**
  * The visual system. Colours have one job each: `accent` is the main action on a screen (and
  * only that), `ink` marks what is selected or current, `link` is for links, and success,
- * danger and info carry their meaning. Contrast checked: text ≥ 4.5:1 on its background, UI
- * parts and pieces ≥ 3:1.
+ * danger and info carry their meaning. Contrast checked in both schemes (tests/theme.test.ts):
+ * text ≥ 4.5:1 on its background, UI parts and pieces ≥ 3:1.
  */
-export const colors = {
+const light = {
   background: '#f6f1e7',
   surface: '#ffffff',
   /** A quiet fill: segmented controls, chips, the goats' tray. */
@@ -49,6 +68,9 @@ export const colors = {
   goatShade: '#b8a98a',
   goatEdge: '#6f6252',
   goatInk: '#5a4b3a',
+  /** A coin's shadow on the board and the shine on its face. */
+  pieceShadow: '#000000',
+  pieceShine: '#ffffff',
   /** Where a piece can go: cream dots with an ink ring read on every board. */
   highlight: '#fff3df',
   highlightRing: '#2a1608',
@@ -61,10 +83,13 @@ export const colors = {
   brandDeep: '#b44d17',
   brandInk: '#2a1608',
   brandCream: '#fff3df',
-  /** The leaderboard's top three. */
+  /** The leaderboard's top three, the same in both schemes, each with a number that reads on it. */
   gold: '#b8860b',
   silver: '#8a939c',
   bronze: '#a0612c',
+  goldText: '#1f1a14',
+  silverText: '#1f1a14',
+  bronzeText: '#ffffff',
   /** Over the board at the end of a game (components/game/Victory.tsx): a dark veil, a darker
    * plate behind the words, and the words on it (the headline warm when celebrating). */
   overlay: 'rgba(31, 18, 6, 0.62)',
@@ -83,7 +108,49 @@ export const colors = {
   rippleOnDark: 'rgba(255, 243, 223, 0.28)',
   /** The current place in a dark bar (the web's top bar). */
   currentOnDark: 'rgba(255, 243, 223, 0.14)',
-} as const;
+};
+
+export type Palette = { readonly [K in keyof typeof light]: string };
+
+/**
+ * The same roles after dark: brown-black pages with cream text, and the accent, links and
+ * meanings lightened to read on them. What is selected turns cream with dark letters. The
+ * brand's bars stay dark, and the board and its pieces stay the wood and coins they are.
+ */
+const dark: Palette = {
+  ...light,
+  background: '#17120e',
+  surface: '#231c16',
+  subtle: '#2f271f',
+  text: '#f3eadb',
+  muted: '#b5a998',
+  accent: '#ee8a5a',
+  accentText: '#1f1208',
+  accentSurface: '#3d2618',
+  ink: '#f3e2c4',
+  inkText: '#2a1608',
+  link: '#8cc0ea',
+  border: '#433a30',
+  danger: '#f28b80',
+  dangerSurface: '#3d1d1a',
+  success: '#80c787',
+  successSurface: '#1d3221',
+  online: '#55bb63',
+  offline: '#91877a',
+  /** "Play" in the wordmark, on the dark page. */
+  brandDeep: '#f59a4a',
+  scrim: 'rgba(0, 0, 0, 0.6)',
+  focus: '#8ab4ff',
+  ripple: 'rgba(255, 243, 223, 0.16)',
+};
+
+/** Both schemes' colours, by scheme (for tests and checks; screens use `colors`). */
+export const palettes: { readonly light: Palette; readonly dark: Palette } = { light, dark };
+
+/** The scheme the app was started in. */
+export const colorScheme: ColorScheme = systemColorScheme();
+
+export const colors: Palette = palettes[colorScheme];
 
 /**
  * Tighter letters for big headings, where the font is drawn for it (iOS, the web); Android's
@@ -112,13 +179,23 @@ export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
 /** `board`: the board's corners (and what is laid over it); `dialog`: the apps' own dialogs. */
 export const radius = { sm: 6, md: 10, lg: 16, board: 12, dialog: 28, pill: 999 } as const;
 
+/** The big headings' weight: extra bold, but bold on Android, whose headlines are never Black. */
+function headlineWeight(): '700' | '800' {
+  return Platform.OS === 'android' ? '700' : '800';
+}
+
 /**
  * The type scale: each step is clearly bigger or bolder than the next, so a screen reads at a
  * glance (title, section, body, label, caption).
  */
 export const type = {
-  display: { fontSize: 32, lineHeight: 38, fontWeight: '800', letterSpacing: tight(-0.5) },
-  title: { fontSize: 26, lineHeight: 32, fontWeight: '800', letterSpacing: tight(-0.3) },
+  display: {
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: headlineWeight(),
+    letterSpacing: tight(-0.5),
+  },
+  title: { fontSize: 26, lineHeight: 32, fontWeight: headlineWeight(), letterSpacing: tight(-0.3) },
   heading: { fontSize: 18, lineHeight: 24, fontWeight: '700' },
   body: { fontSize: 16, lineHeight: 23, fontWeight: '400' },
   /** Text beside the main text: notices, hints, list rows. */
@@ -140,5 +217,8 @@ export const confetti = ['#f6c344', '#e07a22', '#2f7d6d', '#ffffff', '#c0392b', 
 
 /** A soft lift for cards and the board, instead of hard borders. */
 export const shadow = {
-  boxShadow: '0px 1px 2px rgba(42, 22, 8, 0.06), 0px 4px 14px rgba(42, 22, 8, 0.07)',
+  boxShadow:
+    colorScheme === 'dark'
+      ? '0px 1px 2px rgba(0, 0, 0, 0.35), 0px 4px 14px rgba(0, 0, 0, 0.4)'
+      : '0px 1px 2px rgba(42, 22, 8, 0.06), 0px 4px 14px rgba(42, 22, 8, 0.07)',
 } as const;

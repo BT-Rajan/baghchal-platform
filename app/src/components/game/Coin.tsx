@@ -17,6 +17,7 @@ import {
 import type { PieceSet } from '@/api/endpoints';
 import { PIECES } from '@/appearance/catalog';
 import type { Piece } from '@/game/bfen';
+import { colors } from '@/theme';
 
 /** Tigers are a little larger, so the two read apart at a glance as well as by colour. */
 const RADIUS: Record<Piece, number> = { tiger: 40, goat: 37 };
@@ -42,7 +43,14 @@ export function Coin({ piece, set = 'classic' }: { piece: Piece; set?: PieceSet 
         </LinearGradient>
       </Defs>
       {/* Shadow on the board, then the coin's edge showing below its face. */}
-      <Ellipse cx={51} cy={50 + r * 0.22} rx={r} ry={r * 0.95} fill="#000" opacity={0.28} />
+      <Ellipse
+        cx={51}
+        cy={50 + r * 0.22}
+        rx={r}
+        ry={r * 0.95}
+        fill={colors.pieceShadow}
+        opacity={0.28}
+      />
       <Circle cx={50} cy={50 + r * 0.12} r={r} fill={c.edge} />
       <Circle cx={50} cy={face} r={r} fill={`url(#${id}face)`} />
       <Circle
@@ -67,7 +75,7 @@ export function Coin({ piece, set = 'classic' }: { piece: Piece; set?: PieceSet 
         cy={30}
         rx={r * 0.45}
         ry={r * 0.22}
-        fill="#fff"
+        fill={colors.pieceShine}
         opacity={0.28}
         rotation={-30}
         origin="38, 30"

@@ -19,9 +19,9 @@ import { colors, radius, shadow, spacing, type } from '@/theme';
 
 /** The top three's medals, each with a number that reads on it (dark on gold and silver). */
 const MEDALS = [
-  { color: colors.gold, text: colors.text },
-  { color: colors.silver, text: colors.text },
-  { color: colors.bronze, text: colors.surface },
+  { color: colors.gold, text: colors.goldText },
+  { color: colors.silver, text: colors.silverText },
+  { color: colors.bronze, text: colors.bronzeText },
 ] as const;
 
 /** The best players by time control: the top three on a podium, then everyone listed. */

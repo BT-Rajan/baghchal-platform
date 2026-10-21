@@ -30,5 +30,5 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.8,
   },
-  pro: { backgroundColor: colors.text },
+  pro: { backgroundColor: colors.ink, color: colors.inkText },
 });
