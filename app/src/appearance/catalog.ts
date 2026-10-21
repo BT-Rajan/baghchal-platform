@@ -13,6 +13,7 @@ export const FREE_APPEARANCE: Appearance = {
   sounds_on: true,
   emotes_on: true,
   show_badge: true,
+  language: 'auto',
 };
 
 export interface BoardPalette {

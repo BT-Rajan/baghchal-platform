@@ -6,11 +6,13 @@ import { useApi } from '@/auth/session';
 
 import { FREE_APPEARANCE } from './catalog';
 
-export function useAppearanceQuery() {
+/** My appearance from the server (`enabled: false` while nobody is signed in). */
+export function useAppearanceQuery(enabled = true) {
   const api = useApi();
   return useQuery({
     queryKey: queryKeys.appearance,
     queryFn: ({ signal }) => api.appearance(signal),
+    enabled,
   });
 }
 
