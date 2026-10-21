@@ -14,6 +14,7 @@ import {
 import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
 import { ErrorState, Loading } from '@/components/States';
+import { t } from '@/i18n';
 
 type Tab = 'look' | 'sounds' | 'badge';
 
@@ -31,7 +32,7 @@ export default function AppearanceScreen() {
         {error !== null ? (
           <ErrorState error={error} onRetry={retry} />
         ) : (
-          <Loading label="Loading your board and pieces" />
+          <Loading label={t('Loading your board and pieces')} />
         )}
       </Screen>
     );
@@ -40,25 +41,25 @@ export default function AppearanceScreen() {
   const { current, plan, pick } = ready;
   const badge = has(plan, 'badge');
   const tabs: { value: Tab; label: string }[] = [
-    { value: 'look', label: 'Board and pieces' },
-    { value: 'sounds', label: 'Sounds and messages' },
-    ...(badge ? [{ value: 'badge' as const, label: 'Badge' }] : []),
+    { value: 'look', label: t('Board and pieces') },
+    { value: 'sounds', label: t('Sounds and messages') },
+    ...(badge ? [{ value: 'badge' as const, label: t('Badge') }] : []),
   ];
 
   return (
     <Screen align="top" wide>
       <LookNotices choice={ready} />
-      <Segmented label="Show" options={tabs} value={tab} onChange={setTab} />
+      <Segmented label={t('Show')} options={tabs} value={tab} onChange={setTab} />
       {tab === 'look' && <BoardAndPieces choice={ready} />}
       {tab === 'sounds' && <Sounds choice={ready} />}
       {tab === 'badge' && (
         <Segmented
-          label="Next to my name, others see"
+          label={t('Next to my name, others see')}
           value={current.show_badge ? 'show' : 'hide'}
           onChange={(value) => pick({ show_badge: value === 'show' })}
           options={[
-            { value: 'show', label: 'My badge' },
-            { value: 'hide', label: 'Nothing' },
+            { value: 'show', label: t('My badge') },
+            { value: 'hide', label: t('Nothing') },
           ]}
         />
       )}
@@ -71,27 +72,35 @@ function Sounds({ choice }: { choice: LookChoice }) {
   return (
     <>
       <Segmented
-        label="Game sounds and vibration"
+        label={t('Game sounds and vibration')}
         value={current.sounds_on ? 'on' : 'off'}
         onChange={(value) => pick({ sounds_on: value === 'on' })}
         options={[
-          { value: 'on', label: 'On' },
-          { value: 'off', label: 'Off' },
+          { value: 'on', label: t('On') },
+          { value: 'off', label: t('Off') },
         ]}
       />
       <Segmented
-        label="Sound pack"
+        label={t('Sound pack')}
         vertical
         value={current.sounds}
         onChange={(sounds) => pick({ sounds })}
         options={(Object.keys(SOUNDS) as SoundPack[]).map((sounds) => ({
           value: sounds,
-          label: `${SOUNDS[sounds].name}${locked(sounds === FREE_APPEARANCE.sounds) ? ' (Plus)' : ''}: ${SOUNDS[sounds].description}`,
+          label: locked(sounds === FREE_APPEARANCE.sounds)
+            ? t('{name} (Plus): {description}', {
+                name: t(SOUNDS[sounds].name),
+                description: t(SOUNDS[sounds].description),
+              })
+            : t('{name}: {description}', {
+                name: t(SOUNDS[sounds].name),
+                description: t(SOUNDS[sounds].description),
+              }),
         }))}
       />
       {soundSupported() && (
         <Button
-          title={`Hear ${SOUNDS[current.sounds].name}`}
+          title={t('Hear {name}', { name: t(SOUNDS[current.sounds].name) })}
           variant="secondary"
           compact
           onPress={() => {
@@ -101,12 +110,12 @@ function Sounds({ choice }: { choice: LookChoice }) {
         />
       )}
       <Segmented
-        label="Your opponent's messages in games (quick messages and chat)"
+        label={t("Your opponent's messages in games (quick messages and chat)")}
         value={current.emotes_on ? 'show' : 'hide'}
         onChange={(value) => pick({ emotes_on: value === 'show' })}
         options={[
-          { value: 'show', label: 'Show' },
-          { value: 'hide', label: 'Hide' },
+          { value: 'show', label: t('Show') },
+          { value: 'hide', label: t('Hide') },
         ]}
       />
     </>

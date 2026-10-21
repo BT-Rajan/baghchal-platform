@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { Feature } from '@/api/endpoints';
 import { PLAN_NAMES, planFor } from '@/billing/format';
 import { usePlans } from '@/billing/hooks';
+import { t } from '@/i18n';
 import { colors, radius, spacing } from '@/theme';
 
 import { BadgePill } from './BadgePill';
@@ -24,7 +25,9 @@ export function Upsell({ feature, children }: { feature: Feature; children: stri
         <Text style={styles.text}>{children}</Text>
       </View>
       <Button
-        title={plan === null ? 'See plans' : `Get ClawPlay ${PLAN_NAMES[plan]}`}
+        title={
+          plan === null ? t('See plans') : t('Get ClawPlay {plan}', { plan: PLAN_NAMES[plan] })
+        }
         compact
         onPress={() => router.push('/plans')}
       />

@@ -1,7 +1,14 @@
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import type { MyPlan, Period, PlanInfo } from '@/api/endpoints';
-import { comparisonRows, myPlanText, PLAN_NAMES, priceText, yearlySaving } from '@/billing/format';
+import {
+  comparisonRows,
+  myPlanText,
+  planName,
+  PLAN_NAMES,
+  priceText,
+  yearlySaving,
+} from '@/billing/format';
 import { useMyPlan, usePlans } from '@/billing/hooks';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
@@ -9,6 +16,7 @@ import { Disclosure } from '@/components/Disclosure';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
+import { t } from '@/i18n';
 import {
   buyErrorText,
   buyLabel,
@@ -48,7 +56,7 @@ export default function Plans() {
           }}
         />
       ) : plans.data === undefined || mine.data === undefined || payments.data === undefined ? (
-        <Loading label="Loading the plans" />
+        <Loading label={t('Loading the plans')} />
       ) : (
         <>
           {buy.data !== undefined ? (
@@ -58,8 +66,9 @@ export default function Plans() {
           )}
           {buyError !== null && <Notice tone="error">{buyError}</Notice>}
           <Hint>
-            Everyone plays live games, rated matches and quick pairing for free. Ratings can never
-            be bought: paid plans add extras, not advantages.
+            {t(
+              'Everyone plays live games, rated matches and quick pairing for free. Ratings can never be bought: paid plans add extras, not advantages.',
+            )}
           </Hint>
           <View style={styles.grid}>
             {plans.data.map((plan, i) => {
@@ -85,14 +94,20 @@ export default function Plans() {
           <Comparison plans={plans.data} mine={mine.data} />
           <Hint>
             {inApp
-              ? 'Plus lasts 45 finished games or a month, whichever comes first; Pro has no limits.'
+              ? t(
+                  'Plus lasts 45 finished games or a month, whichever comes first; Pro has no limits.',
+                )
               : payments.data.enabled
-                ? 'Payments are taken by Razorpay: cards, UPI, net banking and wallets. Plus lasts 45 finished games or a month, whichever comes first; Pro has no limits. Plans are paid in advance and never renew by themselves; buying again adds on. Pro starts at once, and Plus you had left follows it; Plus bought while you have Pro starts when Pro ends. Players under 18 cannot buy plans: their parent or guardian is told instead.'
-                : 'Paying online is coming soon. Until then, ClawPlay can add a plan to your account.'}
+                ? t(
+                    'Payments are taken by Razorpay: cards, UPI, net banking and wallets. Plus lasts 45 finished games or a month, whichever comes first; Pro has no limits. Plans are paid in advance and never renew by themselves; buying again adds on. Pro starts at once, and Plus you had left follows it; Plus bought while you have Pro starts when Pro ends. Players under 18 cannot buy plans: their parent or guardian is told instead.',
+                  )
+                : t(
+                    'Paying online is coming soon. Until then, ClawPlay can add a plan to your account.',
+                  )}
           </Hint>
           {payments.data.payments.length > 0 && (
             <>
-              <SectionTitle>Your payments</SectionTitle>
+              <SectionTitle>{t('Your payments')}</SectionTitle>
               <Card>
                 {payments.data.payments.map((p) => (
                   <Text key={p.id} style={styles.payment}>
@@ -128,26 +143,35 @@ function PlanColumn({
 }) {
   const current = plan.plan === mine.plan;
   const saving = yearlySaving(plan);
+  const name = planName(plan.plan);
   return (
     <View
       style={[styles.column, current && styles.current]}
-      aria-label={`${PLAN_NAMES[plan.plan]}${current ? ', your plan' : ''}`}
+      aria-label={current ? t('{plan}, your plan', { plan: name }) : name}
     >
       <Card>
         <Text role="heading" style={styles.name}>
-          {PLAN_NAMES[plan.plan]}
+          {name}
         </Text>
-        {current && <Text style={styles.badge}>Your plan</Text>}
+        {current && <Text style={styles.badge}>{t('Your plan')}</Text>}
         {priced && <Text style={styles.price}>{priceText(plan)}</Text>}
         {priced && saving !== null && <Text style={styles.saving}>{saving}</Text>}
         {onBuy !== null && cheaper && (
-          <Hint>{`Starts when your ${PLAN_NAMES[mine.plan]} ends, so none of it is spent underneath it.`}</Hint>
+          <Hint>
+            {t('Starts when your {plan} ends, so none of it is spent underneath it.', {
+              plan: planName(mine.plan),
+            })}
+          </Hint>
         )}
         {onBuy !== null &&
           periodsOf(plan).map((period, i) => (
             <Button
               key={period}
-              title={`Buy ClawPlay ${PLAN_NAMES[plan.plan]} for a ${period}`}
+              title={
+                period === 'month'
+                  ? t('Buy ClawPlay {plan} for a month', { plan: PLAN_NAMES[plan.plan] })
+                  : t('Buy ClawPlay {plan} for a year', { plan: PLAN_NAMES[plan.plan] })
+              }
               label={buyLabel(plan, period)}
               variant={i === 0 ? 'primary' : 'secondary'}
               disabled={buying}
@@ -162,13 +186,13 @@ function PlanColumn({
 /** What each plan includes, row by row, from the server's plans. */
 function Comparison({ plans, mine }: { plans: readonly PlanInfo[]; mine: MyPlan }) {
   return (
-    <Disclosure title="Compare the plans">
+    <Disclosure title={t('Compare the plans')}>
       <Card>
         <View style={styles.tableRow}>
           <Text style={styles.feature} />
           {plans.map((plan) => (
             <Text key={plan.plan} style={[styles.head, plan.plan === mine.plan && styles.headMine]}>
-              {PLAN_NAMES[plan.plan]}
+              {planName(plan.plan)}
             </Text>
           ))}
         </View>
@@ -178,9 +202,13 @@ function Comparison({ plans, mine }: { plans: readonly PlanInfo[]; mine: MyPlan 
             {row.cells.map((cell, i) => (
               <Text
                 key={plans[i]!.plan}
-                aria-label={`${PLAN_NAMES[plans[i]!.plan]}: ${
-                  cell === '✓' ? 'included' : cell === '—' ? 'not included' : cell
-                }`}
+                aria-label={
+                  cell === '✓'
+                    ? t('{plan}: included', { plan: planName(plans[i]!.plan) })
+                    : cell === '—'
+                      ? t('{plan}: not included', { plan: planName(plans[i]!.plan) })
+                      : t('{plan}: {value}', { plan: planName(plans[i]!.plan), value: cell })
+                }
                 style={[styles.cell, cell === '✓' && styles.yes, cell === '—' && styles.no]}
               >
                 {cell}

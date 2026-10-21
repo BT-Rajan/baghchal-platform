@@ -1,41 +1,55 @@
 /** Words for plans, features, prices and grants. */
 import type { Feature, Grant, MyPlan, PaidPlan, Plan, PlanInfo } from '@/api/endpoints';
+import { language, locale, mark, plural, t } from '@/i18n';
 import { dayText } from '@/lobby/format';
 
-export const PLAN_NAMES: Record<Plan, string> = { free: 'Free', plus: 'Plus', pro: 'Pro' };
+export const PLAN_NAMES: Record<Plan, string> = { free: mark('Free'), plus: 'Plus', pro: 'Pro' };
+
+/** A plan's name as shown on its own: "Free" in the player's language, "Plus" or "Pro". */
+export function planName(plan: Plan): string {
+  return plan === 'free' ? t(PLAN_NAMES.free) : PLAN_NAMES[plan];
+}
 
 export const FEATURE_LABELS: Record<Feature, string> = {
-  computer_hard: 'Play the Hard computer',
-  full_history: 'Your whole game history',
-  analysis: 'The engine’s review of your finished games',
-  themes: 'Board and coin themes, and sound packs',
-  badge: 'A badge next to your name',
-  tournaments: 'Host small tournaments',
-  trainer: 'Opening and endgame trainer',
+  computer_hard: mark('Play the Hard computer'),
+  full_history: mark('Your whole game history'),
+  analysis: mark('The engine’s review of your finished games'),
+  themes: mark('Board and coin themes, and sound packs'),
+  badge: mark('A badge next to your name'),
+  tournaments: mark('Host small tournaments'),
+  trainer: mark('Opening and endgame trainer'),
 };
 
 export function featureText(feature: Feature): string {
-  return FEATURE_LABELS[feature];
+  return t(FEATURE_LABELS[feature]);
 }
 
 function rupees(paise: number): string {
-  return `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+  return `₹${(paise / 100).toLocaleString(language() === 'en' ? 'en-IN' : locale(), { maximumFractionDigits: 2 })}`;
 }
 
 /** "45 games or a month", "A month or a year", or "Always" (Free). */
 export function lastsText(plan: PlanInfo): string {
-  if (plan.monthly_paise === null) return 'Always';
-  if (plan.games !== null) return `${plan.games} games or a month`;
-  return plan.yearly_paise === null ? 'A month' : 'A month or a year';
+  if (plan.monthly_paise === null) return t('Always');
+  if (plan.games !== null)
+    return plural(plan.games, '{count} game or a month', '{count} games or a month');
+  return plan.yearly_paise === null ? t('A month') : t('A month or a year');
 }
 
 /** "₹299 a month · ₹2,990 a year", "₹149 for 45 games or a month", or "Free for everyone". */
 export function priceText(plan: PlanInfo): string {
-  if (plan.monthly_paise === null) return 'Free for everyone';
+  if (plan.monthly_paise === null) return t('Free for everyone');
+  const price = rupees(plan.monthly_paise);
   if (plan.games !== null)
-    return `${rupees(plan.monthly_paise)} for ${plan.games} games or a month`;
-  const year = plan.yearly_paise === null ? '' : ` · ${rupees(plan.yearly_paise)} a year`;
-  return `${rupees(plan.monthly_paise)} a month${year}`;
+    return plural(
+      plan.games,
+      '{price} for {count} game or a month',
+      '{price} for {count} games or a month',
+      { price },
+    );
+  return plan.yearly_paise === null
+    ? t('{price} a month', { price })
+    : t('{price} a month · {yearly} a year', { price, yearly: rupees(plan.yearly_paise) });
 }
 
 /** " Then ClawPlay Plus until 30 Jan 2028.": plan time lined up after the current plan. */
@@ -44,7 +58,10 @@ function thenText(mine: MyPlan): string {
   for (const g of mine.waiting)
     if (g.plan !== null && g.plan !== mine.plan && g.ends_at !== null) ends.set(g.plan, g.ends_at);
   return [...ends]
-    .map(([plan, end]) => ` Then ClawPlay ${PLAN_NAMES[plan]} until ${dayText(end)}.`)
+    .map(
+      ([plan, end]) =>
+        ` ${t('Then ClawPlay {plan} until {date}.', { plan: PLAN_NAMES[plan], date: dayText(end) })}`,
+    )
     .join('');
 }
 
@@ -54,14 +71,57 @@ function thenText(mine: MyPlan): string {
  * waiting its turn follows: "… Then ClawPlay Plus until 30 Jan 2028."
  */
 export function myPlanText(mine: MyPlan, who: string | null = null): string {
-  const then = thenText(mine);
+  return `${planSentence(mine, who)}${thenText(mine)}`;
+}
+
+/** The first sentence of myPlanText, whole, for each case. */
+function planSentence(mine: MyPlan, who: string | null): string {
+  const name = who ?? '';
   if (mine.plan === 'free')
-    return `${who ?? 'You'} ${who === null ? 'are' : 'is'} on the Free plan.${then}`;
-  const until = mine.plan_until === null ? '' : ` until ${dayText(mine.plan_until)}`;
-  const has = `${who ?? 'You'} ${who === null ? 'have' : 'has'} ClawPlay ${PLAN_NAMES[mine.plan]}`;
-  if (mine.games_left !== null)
-    return `${has} for up to ${mine.games_left} more ${mine.games_left === 1 ? 'game' : 'games'}${until} at the latest.${then}`;
-  return `${has}${until}.${then}`;
+    return who === null
+      ? t('You are on the Free plan.')
+      : t('{name} is on the Free plan.', { name });
+  const values = { name, plan: PLAN_NAMES[mine.plan] };
+  const until = mine.plan_until;
+  if (mine.games_left !== null) {
+    const count = mine.games_left;
+    if (until === null)
+      return who === null
+        ? plural(
+            count,
+            'You have ClawPlay {plan} for up to {count} more game at the latest.',
+            'You have ClawPlay {plan} for up to {count} more games at the latest.',
+            values,
+          )
+        : plural(
+            count,
+            '{name} has ClawPlay {plan} for up to {count} more game at the latest.',
+            '{name} has ClawPlay {plan} for up to {count} more games at the latest.',
+            values,
+          );
+    const dated = { ...values, date: dayText(until) };
+    return who === null
+      ? plural(
+          count,
+          'You have ClawPlay {plan} for up to {count} more game until {date} at the latest.',
+          'You have ClawPlay {plan} for up to {count} more games until {date} at the latest.',
+          dated,
+        )
+      : plural(
+          count,
+          '{name} has ClawPlay {plan} for up to {count} more game until {date} at the latest.',
+          '{name} has ClawPlay {plan} for up to {count} more games until {date} at the latest.',
+          dated,
+        );
+  }
+  if (until === null)
+    return who === null
+      ? t('You have ClawPlay {plan}.', values)
+      : t('{name} has ClawPlay {plan}.', values);
+  const dated = { ...values, date: dayText(until) };
+  return who === null
+    ? t('You have ClawPlay {plan} until {date}.', dated)
+    : t('{name} has ClawPlay {plan} until {date}.', dated);
 }
 
 /**
@@ -74,23 +134,33 @@ export function grantText(grant: Grant, now: number = Date.now()): string {
     grant.plan !== null
       ? `ClawPlay ${PLAN_NAMES[grant.plan]}`
       : grant.feature !== null
-        ? FEATURE_LABELS[grant.feature]
-        : 'Access';
+        ? t(FEATURE_LABELS[grant.feature])
+        : t('Access');
   const when =
     grant.revoked_at !== null
-      ? `revoked ${dayText(grant.revoked_at)}`
+      ? t('revoked {date}', { date: dayText(grant.revoked_at) })
       : grant.ends_at === null
-        ? 'until revoked'
+        ? t('until revoked')
         : Date.parse(grant.starts_at) > now
-          ? `from ${dayText(grant.starts_at)} until ${dayText(grant.ends_at)}`
-          : `${grant.active ? 'until' : 'ended'} ${dayText(grant.ends_at)}`;
+          ? t('from {start} until {end}', {
+              start: dayText(grant.starts_at),
+              end: dayText(grant.ends_at),
+            })
+          : grant.active
+            ? t('until {date}', { date: dayText(grant.ends_at) })
+            : t('ended {date}', { date: dayText(grant.ends_at) });
   const games =
     grant.games_left === null
       ? ''
-      : ` · ${grant.games_left} ${grant.games_left === 1 ? 'game' : 'games'} left`;
+      : ` · ${plural(grant.games_left, '{count} game left', '{count} games left')}`;
+  const reason = grant.reason;
   return grant.paid
-    ? `${what} · ${when}${games} · ${grant.reason}`
-    : `${what} · ${when} · given by ${grant.granted_by ?? 'a former admin'}: ${grant.reason}`;
+    ? `${what} · ${when}${games} · ${reason}`
+    : `${what} · ${when} · ${
+        grant.granted_by === null
+          ? t('given by a former admin: {reason}', { reason })
+          : t('given by {name}: {reason}', { name: grant.granted_by, reason })
+      }`;
 }
 
 /** One line of the plans' comparison: what it is, and what each plan has of it. */
@@ -104,16 +174,17 @@ export interface ComparisonRow {
 export function comparisonRows(plans: readonly PlanInfo[]): ComparisonRow[] {
   const all = (label: string) => ({ label, cells: plans.map(() => '✓') });
   return [
-    { label: 'How long it lasts', cells: plans.map(lastsText) },
-    all('Live and rated games, quick pairing'),
-    all('The Easy and Medium computer'),
-    all('The daily puzzle'),
+    { label: t('How long it lasts'), cells: plans.map(lastsText) },
+    all(t('Live and rated games, quick pairing')),
+    all(t('The Easy and Medium computer')),
+    all(t('The daily puzzle')),
     ...(Object.keys(FEATURE_LABELS) as Feature[]).map((feature) => ({
-      label: FEATURE_LABELS[feature],
+      label: t(FEATURE_LABELS[feature]),
       cells: plans.map((plan) => {
-        if (!plan.features.includes(feature)) return feature === 'full_history' ? '30 days' : '—';
+        if (!plan.features.includes(feature))
+          return feature === 'full_history' ? t('30 days') : '—';
         if (feature === 'analysis' && plan.analyses_per_day !== null)
-          return `${plan.analyses_per_day} a day`;
+          return t('{count} a day', { count: plan.analyses_per_day });
         return '✓';
       }),
     })),
@@ -125,7 +196,11 @@ export function yearlySaving(plan: PlanInfo): string | null {
   if (plan.monthly_paise === null || plan.yearly_paise === null) return null;
   const months = Math.round(12 - plan.yearly_paise / plan.monthly_paise);
   if (months < 1) return null;
-  return `${months} ${months === 1 ? 'month' : 'months'} free when you pay for a year`;
+  return plural(
+    months,
+    '{count} month free when you pay for a year',
+    '{count} months free when you pay for a year',
+  );
 }
 
 /** The cheapest paid plan that includes a feature (plans as the server lists them, cheapest
@@ -141,7 +216,7 @@ export function has(mine: MyPlan | undefined, feature: Feature): boolean {
   return mine?.features.includes(feature) ?? false;
 }
 
-/** What an admin can grant: a whole plan, or one feature. */
+/** What an admin can grant: a whole plan, or one feature (its label to show with `t()`). */
 export const GRANTABLE: readonly { value: string; label: string }[] = [
   { value: 'plus', label: 'Plus' },
   { value: 'pro', label: 'Pro' },
@@ -158,10 +233,11 @@ export function grantBody(choice: string): { plan: Plan } | { feature: Feature }
     : { plan: choice as Plan };
 }
 
+/** How long a grant lasts (labels to show with `t()`). */
 export const DURATIONS: readonly { value: string; label: string; days: number | null }[] = [
-  { value: '7', label: '7 days', days: 7 },
-  { value: '30', label: '30 days', days: 30 },
-  { value: '90', label: '90 days', days: 90 },
-  { value: '365', label: '1 year', days: 365 },
-  { value: 'forever', label: 'Until revoked', days: null },
+  { value: '7', label: mark('7 days'), days: 7 },
+  { value: '30', label: mark('30 days'), days: 30 },
+  { value: '90', label: mark('90 days'), days: 90 },
+  { value: '365', label: mark('1 year'), days: 365 },
+  { value: 'forever', label: mark('Until revoked'), days: null },
 ];

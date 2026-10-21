@@ -4,6 +4,7 @@
  */
 import type { Appearance, BoardTheme, PieceSet, SoundPack } from '@/api/endpoints';
 import type { Piece } from '@/game/bfen';
+import { mark } from '@/i18n';
 import { colors } from '@/theme';
 
 export const FREE_APPEARANCE: Appearance = {
@@ -31,9 +32,10 @@ export interface BoardPalette {
   knot: boolean;
 }
 
+/** Names and descriptions here are marked; show them with `t()`. */
 export const BOARDS: Record<BoardTheme, { name: string; palette: BoardPalette }> = {
   wood: {
-    name: 'Wood',
+    name: mark('Wood'),
     palette: {
       light: colors.woodLight,
       base: colors.board,
@@ -46,7 +48,7 @@ export const BOARDS: Record<BoardTheme, { name: string; palette: BoardPalette }>
     },
   },
   walnut: {
-    name: 'Walnut',
+    name: mark('Walnut'),
     palette: {
       light: '#b5835a',
       base: '#7f5332',
@@ -59,7 +61,7 @@ export const BOARDS: Record<BoardTheme, { name: string; palette: BoardPalette }>
     },
   },
   slate: {
-    name: 'Slate',
+    name: mark('Slate'),
     palette: {
       light: '#88929b',
       base: '#5e676f',
@@ -72,7 +74,7 @@ export const BOARDS: Record<BoardTheme, { name: string; palette: BoardPalette }>
     },
   },
   jade: {
-    name: 'Jade',
+    name: mark('Jade'),
     palette: {
       light: '#a8dcbf',
       base: '#62ab86',
@@ -85,7 +87,7 @@ export const BOARDS: Record<BoardTheme, { name: string; palette: BoardPalette }>
     },
   },
   night: {
-    name: 'Midnight',
+    name: mark('Midnight'),
     palette: {
       light: '#41528a',
       base: '#26335f',
@@ -132,9 +134,9 @@ const CLASSIC: Record<Piece, Finish> = {
 };
 
 export const PIECES: Record<PieceSet, { name: string; finish: Record<Piece, Finish> }> = {
-  classic: { name: 'Classic', finish: CLASSIC },
+  classic: { name: mark('Classic'), finish: CLASSIC },
   bronze: {
-    name: 'Bronze and pearl',
+    name: mark('Bronze and pearl'),
     finish: {
       tiger: {
         light: '#f2c992',
@@ -157,7 +159,7 @@ export const PIECES: Record<PieceSet, { name: string; finish: Record<Piece, Fini
     },
   },
   porcelain: {
-    name: 'Porcelain',
+    name: mark('Porcelain'),
     finish: {
       tiger: {
         light: '#7fa6ea',
@@ -180,7 +182,7 @@ export const PIECES: Record<PieceSet, { name: string; finish: Record<Piece, Fini
     },
   },
   royal: {
-    name: 'Gold and silver',
+    name: mark('Gold and silver'),
     finish: {
       tiger: {
         light: '#fff1a8',
@@ -205,10 +207,13 @@ export const PIECES: Record<PieceSet, { name: string; finish: Record<Piece, Fini
 };
 
 export const SOUNDS: Record<SoundPack, { name: string; description: string }> = {
-  gentle: { name: 'Gentle', description: 'A soft tock, and a growl for a capture' },
-  woodblock: { name: 'Woodblock', description: 'Crisp wooden knocks, a heavy thud for a capture' },
-  bells: { name: 'Temple bells', description: 'Small bells, and a gong for a capture' },
-  arcade: { name: 'Arcade', description: 'Bleeps and a zap, like an old game console' },
+  gentle: { name: mark('Gentle'), description: mark('A soft tock, and a growl for a capture') },
+  woodblock: {
+    name: mark('Woodblock'),
+    description: mark('Crisp wooden knocks, a heavy thud for a capture'),
+  },
+  bells: { name: mark('Temple bells'), description: mark('Small bells, and a gong for a capture') },
+  arcade: { name: mark('Arcade'), description: mark('Bleeps and a zap, like an old game console') },
 };
 
 /** Whether a choice needs the themes feature (anything but the first board, pieces, sounds). */

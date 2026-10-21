@@ -7,6 +7,7 @@ import { BOARDS, FREE_APPEARANCE, isThemed, PIECES } from '@/appearance/catalog'
 import { useAppearanceQuery, useChooseAppearance } from '@/appearance/hooks';
 import { has } from '@/billing/format';
 import { useMyPlan } from '@/billing/hooks';
+import { t } from '@/i18n';
 import { colors, radius, spacing } from '@/theme';
 
 import { SectionTitle } from './Card';
@@ -54,7 +55,7 @@ export function LookNotices({ choice }: { choice: LookChoice }) {
     <>
       {!themes && (
         <Upsell feature="themes">
-          More boards, pieces and sound packs, and a badge by your name.
+          {t('More boards, pieces and sound packs, and a badge by your name.')}
         </Upsell>
       )}
       {chooseError !== null && <Notice tone="error">{describeError(chooseError)}</Notice>}
@@ -68,12 +69,12 @@ export function BoardAndPieces({ choice }: { choice: LookChoice }) {
   const { current, pick, locked } = choice;
   return (
     <>
-      <SectionTitle>Board</SectionTitle>
-      <View role="radiogroup" aria-label="Board" style={styles.grid}>
+      <SectionTitle>{t('Board')}</SectionTitle>
+      <View role="radiogroup" aria-label={t('Board')} style={styles.grid}>
         {(Object.keys(BOARDS) as BoardTheme[]).map((board) => (
           <Tile
             key={board}
-            name={BOARDS[board].name}
+            name={t(BOARDS[board].name)}
             selected={current.board === board}
             locked={locked(board === FREE_APPEARANCE.board)}
             onPress={() => pick({ board })}
@@ -83,12 +84,12 @@ export function BoardAndPieces({ choice }: { choice: LookChoice }) {
         ))}
       </View>
 
-      <SectionTitle>Pieces</SectionTitle>
-      <View role="radiogroup" aria-label="Pieces" style={styles.grid}>
+      <SectionTitle>{t('Pieces')}</SectionTitle>
+      <View role="radiogroup" aria-label={t('Pieces')} style={styles.grid}>
         {(Object.keys(PIECES) as PieceSet[]).map((pieces) => (
           <Tile
             key={pieces}
-            name={PIECES[pieces].name}
+            name={t(PIECES[pieces].name)}
             selected={current.pieces === pieces}
             locked={locked(pieces === FREE_APPEARANCE.pieces)}
             onPress={() => pick({ pieces })}
@@ -118,7 +119,7 @@ function Tile({
     <Pressable
       role="radio"
       aria-checked={selected}
-      aria-label={locked ? `${name}, comes with Plus` : name}
+      aria-label={locked ? t('{name}, comes with Plus', { name }) : name}
       aria-disabled={locked}
       disabled={locked}
       onPress={onPress}
@@ -131,7 +132,7 @@ function Tile({
       ]}
     >
       <View style={styles.preview}>{children}</View>
-      <Text style={styles.name}>{locked ? `${name} · Plus` : name}</Text>
+      <Text style={styles.name}>{locked ? t('{name} · Plus', { name }) : name}</Text>
     </Pressable>
   );
 }

@@ -16,12 +16,13 @@ import { Segmented } from '@/components/Segmented';
 import { ErrorState, Loading } from '@/components/States';
 import { TextField } from '@/components/TextField';
 import { TimeControlPicker } from '@/components/TimeControlPicker';
+import { plural, t } from '@/i18n';
 
 import { tournamentStatusText } from '@/pro/format';
 import { useCreateTournament, useTournaments } from '@/pro/hooks';
 import { colors } from '@/theme';
 
-const SIZES = ['4', '8', '16', '32'].map((n) => ({ value: n, label: `${n} players` }));
+const SIZES = ['4', '8', '16', '32'];
 
 /** Small tournaments: hosting one (Pro), and the ones I am in. */
 export default function Tournaments() {
@@ -29,16 +30,16 @@ export default function Tournaments() {
   return (
     <Screen align="top" refreshable>
       <Hint>
-        A Swiss tournament for 3 to 32 friends: each round you meet a player on your score, never
-        the same one twice if it can be helped, with sides taking turns. Games are casual; anyone
-        can join with the link.
+        {t(
+          'A Swiss tournament for 3 to 32 friends: each round you meet a player on your score, never the same one twice if it can be helped, with sides taking turns. Games are casual; anyone can join with the link.',
+        )}
       </Hint>
       <PeopleOnly>
         {plan.data !== undefined &&
           (has(plan.data, 'tournaments') ? (
             <NewTournament />
           ) : (
-            <Upsell feature="tournaments">Host small tournaments for your friends.</Upsell>
+            <Upsell feature="tournaments">{t('Host small tournaments for your friends.')}</Upsell>
           ))}
       </PeopleOnly>
       <MyTournaments />
@@ -53,19 +54,27 @@ function NewTournament() {
   const create = useCreateTournament();
   return (
     <>
-      <SectionTitle>Host a tournament</SectionTitle>
-      <TextField label="Name" value={name} onChangeText={setName} maxLength={60} />
+      <SectionTitle>{t('Host a tournament')}</SectionTitle>
+      <TextField label={t('Name')} value={name} onChangeText={setName} maxLength={60} />
       <TimeControlPicker value={timeControl} onChange={setTimeControl} />
-      <Segmented label="Up to" options={SIZES} value={size} onChange={setSize} />
+      <Segmented
+        label={t('Up to')}
+        options={SIZES.map((n) => ({
+          value: n,
+          label: plural(Number(n), '{count} player', '{count} players'),
+        }))}
+        value={size}
+        onChange={setSize}
+      />
       {create.error !== null && <Notice tone="error">{describeError(create.error)}</Notice>}
       <Button
-        title="Create the tournament"
+        title={t('Create the tournament')}
         busy={create.isPending}
         disabled={name.trim() === ''}
         onPress={() =>
           create.mutate(
             { name: name.trim(), time_control: timeControl, max_players: Number(size) },
-            { onSuccess: (t) => router.push(`/tournament/${t.code}`) },
+            { onSuccess: (made) => router.push(`/tournament/${made.code}`) },
           )
         }
       />
@@ -77,26 +86,30 @@ function MyTournaments() {
   const mine = useTournaments();
   return (
     <>
-      <SectionTitle>Your tournaments</SectionTitle>
+      <SectionTitle>{t('Your tournaments')}</SectionTitle>
       {mine.error !== null ? (
         <ErrorState error={mine.error} onRetry={() => void mine.refetch()} />
       ) : mine.data === undefined ? (
-        <Loading label="Loading your tournaments" />
+        <Loading label={t('Loading your tournaments')} />
       ) : mine.data.length === 0 ? (
-        <Hint>You are not in any tournament yet. Join one with a link from a friend.</Hint>
+        <Hint>{t('You are not in any tournament yet. Join one with a link from a friend.')}</Hint>
       ) : (
-        mine.data.map((t) => (
-          <Card key={t.code}>
-            <Text style={styles.name}>{t.name}</Text>
+        mine.data.map((tour) => (
+          <Card key={tour.code}>
+            <Text style={styles.name}>{tour.name}</Text>
             <Text style={styles.muted}>
-              {`${t.time_control} · hosted by ${t.host.username} · ${tournamentStatusText(t)}`}
+              {t('{time} · hosted by {name} · {status}', {
+                time: tour.time_control,
+                name: tour.host.username,
+                status: tournamentStatusText(tour),
+              })}
             </Text>
             <Button
-              title={`Open ${t.name}`}
-              label="Open"
+              title={t('Open {name}', { name: tour.name })}
+              label={t('Open')}
               variant="secondary"
               compact
-              onPress={() => router.push(`/tournament/${t.code}`)}
+              onPress={() => router.push(`/tournament/${tour.code}`)}
             />
           </Card>
         ))

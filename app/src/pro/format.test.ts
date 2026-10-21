@@ -71,6 +71,9 @@ test('tournaments', () => {
   expect(pairingText(pairing({ state: 'done' }))).toBe(
     'alice (goats) v bob (tigers) · won by nobody',
   );
+  expect(pairingText(pairing({ state: 'done', forfeit: true }))).toBe(
+    'alice (goats) v bob (tigers) · won by nobody (no game)',
+  );
   expect(pairingText(pairing({ state: 'done', winner: ALICE, forfeit: true }))).toBe(
     'alice (goats) v bob (tigers) · won by alice (no game)',
   );

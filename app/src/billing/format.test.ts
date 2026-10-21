@@ -10,12 +10,14 @@ import {
   has,
   myPlanText,
   planFor,
+  planName,
   comparisonRows,
   yearlySaving,
   priceText,
 } from './format';
 
 import type { Grant } from '@/api/endpoints';
+import { setLanguage } from '@/i18n';
 
 const grant = (overrides: Partial<Grant> = {}): Grant => ({
   id: 'g1',
@@ -50,6 +52,21 @@ test('plans and prices in words', () => {
   );
   expect(myPlanText(FREE, 'alice')).toBe('alice is on the Free plan.');
   expect(myPlanText(PLUS_UNTIL, 'alice')).toBe('alice has ClawPlay Plus until 1 Feb 2026.');
+  expect(myPlanText({ ...PLUS_UNTIL, games_left: 2 }, 'alice')).toBe(
+    'alice has ClawPlay Plus for up to 2 more games until 1 Feb 2026 at the latest.',
+  );
+  expect(myPlanText({ ...PLUS_UNTIL, games_left: 2, plan_until: null })).toBe(
+    'You have ClawPlay Plus for up to 2 more games at the latest.',
+  );
+  expect(myPlanText({ ...PLUS_UNTIL, games_left: 2, plan_until: null }, 'alice')).toBe(
+    'alice has ClawPlay Plus for up to 2 more games at the latest.',
+  );
+  expect(myPlanText({ ...PLUS_UNTIL, plan_until: null }, 'alice')).toBe('alice has ClawPlay Plus.');
+  expect(['free', 'plus', 'pro'].map((p) => planName(p as 'free'))).toEqual([
+    'Free',
+    'Plus',
+    'Pro',
+  ]);
   // Plan time waiting for a better plan to end follows it.
   const waiting = [
     grant({ plan: 'plus', starts_at: '2026-02-01T12:00:00Z', ends_at: '2026-03-03T12:00:00Z' }),
@@ -129,6 +146,15 @@ test('the plans side by side, from the server', () => {
   expect(row('Your whole game history')).toEqual(['30 days', '✓', '✓']);
   expect(row('The engine’s review of your finished games')).toEqual(['—', '5 a day', '✓']);
   expect(row('Opening and endgame trainer')).toEqual(['—', '—', '✓']);
+});
+
+test('prices in rupees, in the player’s language', () => {
+  setLanguage('ar');
+  try {
+    expect(priceText(PLANS[2]!)).toContain('2,990');
+  } finally {
+    setLanguage('en');
+  }
 });
 
 test('the yearly saving', () => {
