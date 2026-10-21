@@ -40,10 +40,14 @@ describe('board, pieces and sounds', () => {
     expect(radio('Wood')).toBeChecked();
     expect(screen.queryByRole('radio', { name: 'Badge' })).toBeNull();
 
-    // Locked choices are marked and do nothing; the one upsell above the tabs says why.
+    // Locked choices are marked with the plan that has them, and the upsell says why.
     expect(radio('Walnut, comes with Plus')).toBeDisabled();
+    expect(screen.getByText('Walnut · Plus')).toBeOnTheScreen();
     await fireEvent.press(radio('Sounds and messages'));
-    await fireEvent.press(radio(/^Temple bells \(Plus\)/));
+    // A locked sound pack pressed: the upsell beside the packs names it, nothing is chosen.
+    await fireEvent.press(radio(/^Temple bells · Plus: /));
+    expect(screen.getByText(/^Use Temple bells and the other sound packs/)).toBeOnTheScreen();
+    expect(radio(/^Gentle: /)).toBeChecked();
     await fireEvent.press(radio('Board and pieces'));
     expect(radio('Wood')).toBeChecked();
     expect(server.requests.some((r) => r.method === 'PATCH')).toBe(false);

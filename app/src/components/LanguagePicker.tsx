@@ -2,6 +2,7 @@ import { useAppearance, useChooseAppearance } from '@/appearance/hooks';
 import { LANGUAGE_NAMES, t, type Language, type LanguageChoice } from '@/i18n';
 import { needsRestart, useDeviceLanguage } from '@/i18n/LanguageRoot';
 
+import { ErrorNotice } from './ErrorNotice';
 import { Notice } from './Notice';
 import { Segmented } from './Segmented';
 
@@ -28,8 +29,9 @@ export function LanguagePicker() {
         value={choice}
         onChange={(language) => choose.mutate({ language })}
       />
+      <ErrorNotice error={choose.error} />
       {needsRestart() && (
-        <Notice tone="info">{t('Close and open ClawPlay again to turn the layout around.')}</Notice>
+        <Notice tone="info">{t('Close and open ClawPlay again to update the layout.')}</Notice>
       )}
     </>
   );

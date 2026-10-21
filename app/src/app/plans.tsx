@@ -16,13 +16,13 @@ import { Disclosure } from '@/components/Disclosure';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
-import { t } from '@/i18n';
+import { plural, t } from '@/i18n';
 import { buyErrorText, buyLabel, paymentText, periodsOf, thanksText } from '@/payments/format';
 import { useBuy, usePayments } from '@/payments/hooks';
 import { colors, radius, spacing, type } from '@/theme';
 
 /**
- * Free, Plus and Pro: what each costs, a way to buy it, and a table of what each includes
+ * The server's plans: what each costs, a way to buy it, and a table of what each includes
  * (folded shut until asked for).
  */
 export default function Plans() {
@@ -31,7 +31,6 @@ export default function Plans() {
   const payments = usePayments();
   const buy = useBuy();
   const error = plans.error ?? mine.error ?? payments.error;
-  const buyError = buy.error === null ? null : buyErrorText(buy.error);
   // The apps do not sell plans, nor point to where they are sold (app stores forbid it): they
   // show what each plan includes. Buying is on the website, which says so itself.
   const inApp = Platform.OS !== 'web';
@@ -50,12 +49,7 @@ export default function Plans() {
         <Loading label={t('Loading the plans')} />
       ) : (
         <>
-          {buy.data !== undefined ? (
-            <Notice tone="success">{thanksText(buy.data)}</Notice>
-          ) : (
-            <Notice tone="info">{myPlanText(mine.data)}</Notice>
-          )}
-          {buyError !== null && <Notice tone="error">{buyError}</Notice>}
+          <Notice tone="info">{myPlanText(mine.data)}</Notice>
           <Hint>
             {t(
               'Everyone plays live games, rated matches and quick pairing for free. Ratings can never be bought: paid plans add extras, not advantages.',
@@ -64,38 +58,54 @@ export default function Plans() {
           <View style={styles.grid}>
             {plans.data.map((plan, i) => {
               const paid = plan.plan === 'free' ? null : plan.plan;
+              // The server lists the plans cheapest first.
+              const mineAt = plans.data.findIndex((p) => p.plan === mine.data.plan);
               return (
                 <PlanColumn
                   key={plan.plan}
                   plan={plan}
                   mine={mine.data}
-                  // The server lists the plans cheapest first.
-                  cheaper={i < plans.data.findIndex((p) => p.plan === mine.data.plan)}
+                  cheaper={i < mineAt}
+                  // The one main action: the plan above mine.
+                  next={i === mineAt + 1}
                   onBuy={
                     payments.data.enabled && paid !== null && !inApp
                       ? (period) => buy.mutate({ plan: paid, period })
                       : null
                   }
-                  buying={buy.isPending}
+                  buy={buy}
                   priced={!inApp}
                 />
               );
             })}
           </View>
           <Comparison plans={plans.data} mine={mine.data} />
-          <Hint>
-            {inApp
-              ? t(
-                  'Plus lasts 45 finished games or a month, whichever comes first; Pro has no limits.',
-                )
-              : payments.data.enabled
-                ? t(
-                    'Payments are taken by Razorpay: cards, UPI, net banking and wallets. Plus lasts 45 finished games or a month, whichever comes first; Pro has no limits. Plans are paid in advance and never renew by themselves; buying again adds on. Pro starts at once, and Plus you had left follows it; Plus bought while you have Pro starts when Pro ends.',
-                  )
-                : t(
-                    'Paying online is coming soon. Until then, ClawPlay can add a plan to your account.',
-                  )}
-          </Hint>
+          <View role="list" style={styles.list}>
+            {[
+              ...(inApp
+                ? []
+                : payments.data.enabled
+                  ? [t('Payments are taken by Razorpay: cards, UPI, net banking and wallets.')]
+                  : [t('Paying online is coming soon.')]),
+              ...plans.data.filter((plan) => plan.plan !== 'free').map(lastsLine),
+              ...(!inApp && payments.data.enabled
+                ? [
+                    t('Plans are paid in advance and never renew by themselves.'),
+                    t('Buying again adds on.'),
+                    t(
+                      'A better plan starts at once, and what you had left of another follows it. A plan bought while you have a better one starts when that one ends.',
+                    ),
+                  ]
+                : []),
+            ].map((line) => (
+              <View key={line} role="listitem" style={styles.itemRow}>
+                <Text aria-hidden style={styles.item}>
+                  •
+                </Text>
+                <Text style={[styles.item, styles.itemText]}>{line}</Text>
+              </View>
+            ))}
+          </View>
           {payments.data.payments.length > 0 && (
             <>
               <SectionTitle>{t('Your payments')}</SectionTitle>
@@ -114,25 +124,44 @@ export default function Plans() {
   );
 }
 
+/** "Plus lasts 45 finished games or a month, whichever comes first.", from the server's plan. */
+function lastsLine(plan: PlanInfo): string {
+  const values = { plan: planName(plan.plan) };
+  return plan.games === null
+    ? t('{plan} has no game limit.', values)
+    : plural(
+        plan.games,
+        '{plan} lasts {count} finished game or a month, whichever comes first.',
+        '{plan} lasts {count} finished games or a month, whichever comes first.',
+        values,
+      );
+}
+
 function PlanColumn({
   plan,
   mine,
   cheaper,
+  next,
   onBuy,
-  buying,
+  buy,
   priced,
 }: {
   plan: PlanInfo;
   mine: MyPlan;
   /** Cheaper than the player's plan: time bought now waits for it to end. */
   cheaper: boolean;
+  /** The plan above the player's: its first way to buy is the screen's main action. */
+  next: boolean;
   /** Null where this plan cannot be bought (Free, or payments off). */
   onBuy: ((period: Period) => void) | null;
-  buying: boolean;
+  buy: ReturnType<typeof useBuy>;
   /** Prices shown (on the website; the apps show what a plan includes, not what it costs). */
   priced: boolean;
 }) {
   const current = plan.plan === mine.plan;
+  // A purchase's result shows in the card of the plan bought.
+  const bought = buy.variables?.plan === plan.plan;
+  const buyError = bought && buy.error !== null ? buyErrorText(buy.error) : null;
   const saving = yearlySaving(plan);
   const name = planName(plan.plan);
   return (
@@ -164,11 +193,14 @@ function PlanColumn({
                   : t('Buy ClawPlay {plan} for a year', { plan: PLAN_NAMES[plan.plan] })
               }
               label={buyLabel(plan, period)}
-              variant={i === 0 ? 'primary' : 'secondary'}
-              disabled={buying}
+              variant={next && i === 0 ? 'primary' : 'secondary'}
+              busy={buy.isPending && bought && buy.variables.period === period}
+              disabled={buy.isPending}
               onPress={() => onBuy(period)}
             />
           ))}
+        {bought && buy.data !== undefined && <Notice tone="success">{thanksText(buy.data)}</Notice>}
+        {buyError !== null && <Notice tone="error">{buyError}</Notice>}
       </Card>
     </View>
   );
@@ -220,7 +252,11 @@ const styles = StyleSheet.create({
   badge: { fontSize: 13, fontWeight: '700', color: colors.accent },
   price: { fontSize: 16, fontWeight: '600', color: colors.text },
   saving: { ...type.label, color: colors.success },
-  payment: { fontSize: 15, color: colors.text },
+  payment: { ...type.small, color: colors.text },
+  list: { gap: spacing.xs },
+  itemRow: { flexDirection: 'row', gap: spacing.sm },
+  item: { ...type.small, color: colors.muted },
+  itemText: { flex: 1 },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',

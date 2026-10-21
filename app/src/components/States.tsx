@@ -1,11 +1,10 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import { describeError } from '@/api/errors';
 import { t } from '@/i18n';
 import { colors, spacing, type } from '@/theme';
 
 import { Button } from './Button';
-import { Notice } from './Notice';
+import { ErrorNotice } from './ErrorNotice';
 
 export function Loading({ label = t('Loading') }: { label?: string }) {
   return (
@@ -20,7 +19,7 @@ export function Loading({ label = t('Loading') }: { label?: string }) {
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry: () => void }) {
   return (
     <View style={styles.error}>
-      <Notice tone="error">{describeError(error)}</Notice>
+      <ErrorNotice error={error} />
       <Button title={t('Try again')} variant="secondary" compact onPress={onRetry} />
     </View>
   );

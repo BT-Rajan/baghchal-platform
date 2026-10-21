@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { isRTL } from '@/i18n';
 import { colors, spacing, type } from '@/theme';
 
 import { focusRing } from './focus';
@@ -30,7 +31,8 @@ export function Disclosure({ title, children }: { title: string; children: React
           ]}
         >
           <Text style={styles.title}>{title}</Text>
-          <View style={open && styles.turned}>
+          {/* Open, the chevron turns to point down (it starts mirrored in right-to-left). */}
+          <View style={open && (isRTL() ? styles.turnedBack : styles.turned)}>
             <Icon name="chevron" color={colors.muted} size={20} />
           </View>
         </Pressable>
@@ -51,5 +53,6 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
   title: { ...type.heading, color: colors.text, flex: 1 },
   turned: { transform: [{ rotate: '90deg' }] },
+  turnedBack: { transform: [{ rotate: '-90deg' }] },
   body: { gap: spacing.md, paddingBottom: spacing.md },
 });

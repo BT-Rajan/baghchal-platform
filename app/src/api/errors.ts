@@ -67,7 +67,10 @@ export function describeError(error: unknown): string {
     case BAD_RESPONSE:
       return t('The server sent an answer we did not understand. Please try again.');
     case 'invalid_request':
-      return t('Please check the highlighted fields.');
+      // Only when there are fields to highlight.
+      return error.fields.length > 0
+        ? t('Please check the highlighted fields.')
+        : t('Please check what you entered.');
     default:
       return error.message;
   }
@@ -101,5 +104,14 @@ export function formErrors<F extends string>(
     if (known.has(field)) fields[field as F] ??= problem;
     else unplaced = true;
   }
-  return { fields, message: unplaced ? describeError(error) : null };
+  if (!unplaced) return { fields, message: null };
+  // Nothing on this form is highlighted: no pointing at highlighted fields.
+  const highlighted = Object.keys(fields).length > 0;
+  return {
+    fields,
+    message:
+      highlighted || error.code !== 'invalid_request'
+        ? describeError(error)
+        : t('Please check what you entered.'),
+  };
 }

@@ -1,8 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
 
+import { isApiError } from '@/api/errors';
 import { useMe } from '@/auth/session';
 import { Button } from '@/components/Button';
 import { Hint } from '@/components/Card';
+import { Notice } from '@/components/Notice';
 import { ChallengeCard } from '@/components/ChallengeCard';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { Screen } from '@/components/Screen';
@@ -29,9 +31,14 @@ export default function LinkChallenge() {
   const gameId = c?.game_id ?? null;
   // Only the two players can open the game.
   const myGame = mine || c?.opponent?.id === me.id ? gameId : null;
+  const unknown = isApiError(link.error, 'challenge_not_found');
+  // Nothing more to do with this link (closed, taken, or never a link): back to Play.
+  const done = unknown || (c !== undefined && !isOpen(c, now) && myGame === null);
   return (
     <Screen align="top">
-      {link.error !== null ? (
+      {unknown ? (
+        <Notice tone="info">{t("This link doesn't work. Ask your friend for a new one.")}</Notice>
+      ) : link.error !== null ? (
         <ErrorState error={link.error} onRetry={() => void link.refetch()} />
       ) : c === undefined ? (
         <Loading label={t('Loading the challenge')} />
@@ -44,7 +51,7 @@ export default function LinkChallenge() {
       ) : (
         <>
           <ErrorNotice error={mine ? answer.error : accept.error} />
-          {/* The lobby's card: accept a friend's link here, or share or cancel my own. */}
+          {/* Play's card: accept a friend's link here, or share or cancel my own. */}
           <ChallengeCard
             challenge={c}
             myId={me.id}
@@ -61,12 +68,9 @@ export default function LinkChallenge() {
         </>
       )}
       {myGame !== null && (
-        <Button
-          title={t('Go to the game')}
-          variant="secondary"
-          onPress={() => router.push(`/game/${myGame}`)}
-        />
+        <Button title={t('Go to the game')} onPress={() => router.push(`/game/${myGame}`)} />
       )}
+      {done && <Button title={t('Go to Play')} onPress={() => router.replace('/')} />}
     </Screen>
   );
 }

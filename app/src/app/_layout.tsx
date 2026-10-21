@@ -3,7 +3,7 @@ import { router, Stack, usePathname, type ErrorBoundaryProps } from 'expo-router
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
+import { AppState, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import type { Game } from '@/api/endpoints';
@@ -18,6 +18,7 @@ import { Button } from '@/components/Button';
 import { AppBanners, BannersOnScreens } from '@/components/AppBanners';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
+import { Loading } from '@/components/States';
 import { statusBarStyle } from '@/components/statusBar';
 import { WebTopBar } from '@/components/site/WebTopBar';
 import { API_URL } from '@/config';
@@ -97,18 +98,33 @@ function Routes() {
     // Once the screens for signed-in players are in place, or their guard would send it back.
     if (next !== null) setTimeout(() => router.replace(next), 0);
   }, [playing]);
+  const unreachable = state.status === 'unreachable';
+  // Unreachable: try again by itself once the app is in front again, or the browser is online.
+  useEffect(() => {
+    if (!unreachable) return;
+    const retry = () => void session.retry();
+    if (Platform.OS === 'web') {
+      if (typeof window === 'undefined') return;
+      window.addEventListener('online', retry);
+      return () => window.removeEventListener('online', retry);
+    }
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active') retry();
+    });
+    return () => subscription.remove();
+  }, [unreachable, session]);
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={colors.accent} size="large" />
+        <Loading />
       </View>
     );
   }
-  if (state.status === 'unreachable') {
+  if (unreachable) {
     return (
       <View style={styles.app}>
         {Platform.OS === 'web' && <WebTopBar playing={false} />}
-        <Screen title="ClawPlay">
+        <Screen title={t("Can't reach ClawPlay")}>
           <Notice tone="error">{describeError(state.error)}</Notice>
           <Button title={t('Try again')} onPress={() => void session.retry()} />
         </Screen>
@@ -138,7 +154,7 @@ function Routes() {
             <Stack.Screen name="plans" options={{ headerShown: true, title: t('Plans') }} />
             <Stack.Screen
               name="appearance"
-              options={{ headerShown: true, title: t('Look and sound') }}
+              options={{ headerShown: true, title: t('Board, pieces and sounds') }}
             />
             <Stack.Screen name="invite" options={{ presentation: 'modal' }} />
             <Stack.Screen name="c/[code]" options={{ headerShown: true, title: t('Challenge') }} />
@@ -213,6 +229,7 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
         {t('This screen ran into a problem. Trying again usually helps.')}
       </Notice>
       <Button title={t('Try again')} onPress={() => void retry()} />
+      <Button title={t('Go to Play')} variant="secondary" onPress={() => router.replace('/')} />
     </Screen>
   );
 }

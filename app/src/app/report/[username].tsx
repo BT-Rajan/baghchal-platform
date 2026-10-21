@@ -23,12 +23,13 @@ function leave() {
 export default function ReportForm() {
   const { username, game } = useLocalSearchParams<{ username: string; game?: string }>();
   const api = useApi();
-  const [reason, setReason] = useState<ReportReason>('cheating');
+  // No reason is suggested: the reporter picks one.
+  const [reason, setReason] = useState<ReportReason | null>(null);
   const [details, setDetails] = useState('');
   const send = useMutation({
-    mutationFn: () =>
+    mutationFn: (chosen: ReportReason) =>
       api.report(username, {
-        reason,
+        reason: chosen,
         details: details.trim(),
         ...(game !== undefined && { game_id: game }),
       }),
@@ -45,11 +46,10 @@ export default function ReportForm() {
   return (
     <Screen title={t('Report {name}', { name: username })}>
       <ErrorNotice error={send.error} />
-      <Hint>
-        {game !== undefined
-          ? t('The report includes this game, so moderators can replay it.')
-          : t('Reports go to the moderators. The player is not told who reported them.')}
-      </Hint>
+      <Hint>{t('Reports go to the moderators. The player is not told who reported them.')}</Hint>
+      {game !== undefined && (
+        <Hint>{t('The report includes this game, so moderators can replay it.')}</Hint>
+      )}
       <Segmented
         label={t('What happened?')}
         options={REPORT_REASONS.map(({ value, label }) => ({ value, label: t(label) }))}
@@ -64,7 +64,12 @@ export default function ReportForm() {
         multiline
         numberOfLines={4}
       />
-      <Button title={t('Send report')} onPress={() => send.mutate()} busy={send.isPending} />
+      <Button
+        title={t('Send report')}
+        onPress={() => reason !== null && send.mutate(reason)}
+        disabled={reason === null}
+        busy={send.isPending}
+      />
       <Button title={t('Cancel')} variant="secondary" onPress={leave} />
     </Screen>
   );

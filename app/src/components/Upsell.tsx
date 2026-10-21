@@ -5,7 +5,7 @@ import type { Feature } from '@/api/endpoints';
 import { PLAN_NAMES, planFor } from '@/billing/format';
 import { usePlans } from '@/billing/hooks';
 import { t } from '@/i18n';
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius, spacing, type } from '@/theme';
 
 import { BadgePill } from './BadgePill';
 import { Button } from './Button';
@@ -41,11 +41,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.brand,
+    borderStartWidth: 4,
+    borderStartColor: colors.brand,
     padding: spacing.md,
     gap: spacing.sm,
   },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
-  text: { flex: 1, fontSize: 15, lineHeight: 22, color: colors.text },
+  text: { flex: 1, ...type.small, color: colors.text },
 });

@@ -221,7 +221,7 @@ describe('ending a game', () => {
     await press('Yes, abort');
     expect(await screen.findByText('Game aborted: no result.')).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/games/g1/abort')).toBeDefined();
-    await press('Back to the lobby');
+    await press('Back to Play');
     await waitFor(() => expect(app.getPathname()).toBe('/'));
   });
 

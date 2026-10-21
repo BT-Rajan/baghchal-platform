@@ -2,7 +2,7 @@ import { StyleSheet, Text } from 'react-native';
 
 import type { Tip } from '@/game/coach';
 import { t } from '@/i18n';
-import { colors } from '@/theme';
+import { colors, type } from '@/theme';
 
 import { Card } from '../Card';
 
@@ -20,7 +20,7 @@ export function Coach({ tip }: { tip: Tip }) {
 }
 
 const styles = StyleSheet.create({
-  label: { fontSize: 12, fontWeight: '700', color: colors.accent, textTransform: 'uppercase' },
-  title: { fontSize: 16, fontWeight: '700', color: colors.text },
-  text: { fontSize: 15, lineHeight: 22, color: colors.text },
+  label: { ...type.caption, fontWeight: '700', color: colors.accent, textTransform: 'uppercase' },
+  title: { ...type.body, fontWeight: '700', color: colors.text },
+  text: { ...type.small, color: colors.text },
 });

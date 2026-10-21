@@ -36,9 +36,12 @@ const FIRST = 5;
 export function GameHistory({
   username,
   preview = false,
+  isMe = false,
 }: {
   username: string;
   preview?: boolean;
+  /** My own games: the only history whose length my plan sets, so the only one to upsell. */
+  isMe?: boolean;
 }) {
   const api = useApi();
   const history = useInfiniteQuery({
@@ -58,7 +61,7 @@ export function GameHistory({
     if (next > all.length && history.hasNextPage) void history.fetchNextPage();
   };
   const mine = useMyPlan();
-  const limited = mine.data !== undefined && !has(mine.data, 'full_history');
+  const limited = isMe && mine.data !== undefined && !has(mine.data, 'full_history');
   return (
     <>
       <SectionTitle>{t('Recent games')}</SectionTitle>

@@ -57,7 +57,14 @@ export function ChallengeForm({ opponent }: { opponent?: string }) {
         rated,
         ...(!rated && { side }),
       },
-      { onSuccess: (challenge) => (byLink ? setMade(challenge) : leave()) },
+      {
+        // A link is shown here, to send; a challenge by name is listed on Play, with a word
+        // that it went.
+        onSuccess: (challenge) =>
+          byLink
+            ? setMade(challenge)
+            : router.navigate({ pathname: '/', params: { sent: challenge.id } }),
+      },
     );
 
   return (
@@ -113,7 +120,7 @@ function MadeLink({ title, challenge }: { title: string; challenge: Challenge })
     <Screen title={title}>
       <Hint>
         {t(
-          'Send this link to a friend. The game starts when they open it while you are online; it is also under Your challenges in the lobby.',
+          'Send this link to a friend. The game starts when they open it while you are online; it is also under Your challenges on Play.',
         )}
       </Hint>
       <ErrorNotice error={answer.error} />
@@ -123,6 +130,7 @@ function MadeLink({ title, challenge }: { title: string; challenge: Challenge })
         now={now}
         pending={answer.isPending ? answer.variables.answer : null}
         onAnswer={(a) => answer.mutate({ id: challenge.id, answer: a }, { onSuccess: leave })}
+        main
       />
       <Button title={t('Done')} variant="secondary" onPress={leave} />
     </Screen>

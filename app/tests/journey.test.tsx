@@ -19,18 +19,19 @@ describe('a confirmation email that went missing', () => {
         'POST /api/v1/auth/verify-email/resend': { status: 202, body: { status: 'accepted' } },
       },
     });
-    await screen.findByRole('button', { name: 'Accept and create account', busy: false });
+    await screen.findByRole('button', { name: 'Accept and make my account', busy: false });
     await type('Username', 'alice');
     await type('Email', 'alice@example.com');
     await type('Password', 'correct horse');
-    await press('Accept and create account');
+    await press('Accept and make my account');
+    expect(await screen.findByText(/Open the link in it to start playing\.$/)).toBeOnTheScreen();
     await fireEvent.press(await screen.findByRole('button', { name: 'Send the link again' }));
     expect(server.lastTo('POST /api/v1/auth/register').body).toMatchObject(AGREED);
     expect(await screen.findByText(/^We sent a new link to alice@example\.com/)).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/auth/verify-email/resend').body).toEqual({
       email: 'alice@example.com',
     });
-    await press('Sign in');
+    await press('Back to sign in');
     await waitFor(() => expect(app.getPathname()).toBe('/sign-in'));
   });
 

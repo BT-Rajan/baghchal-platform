@@ -1,4 +1,5 @@
-import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { AppState } from 'react-native';
 
 import { peekReturn } from '@/auth/returnTo';
 
@@ -41,6 +42,12 @@ describe('sign in', () => {
     expect(screen.getByText('Enter your username or email.')).toBeOnTheScreen();
     expect(screen.getByText('Enter your password.')).toBeOnTheScreen();
     expect(server.requests).toHaveLength(0);
+  });
+
+  test('offers a game without signing up', async () => {
+    const { app } = await renderApp('/sign-in');
+    await fireEvent.press(await screen.findByRole('link', { name: 'Play now, no sign-up' }));
+    await waitFor(() => expect(app.getPathname()).toBe('/start'));
   });
 
   test("shows the server's answer for wrong credentials", async () => {
@@ -90,11 +97,11 @@ describe('sign in', () => {
 
 describe('sign up', () => {
   async function fill(username: string, email: string, password: string) {
-    await screen.findByRole('heading', { name: 'Create an account' });
+    await screen.findByRole('heading', { name: 'Make a free account' });
     await type('Username', username);
     await type('Email', email);
     await type('Password', password);
-    await press('Accept and create account');
+    await press('Accept and make my account');
   }
 
   test('checks the form before asking the server', async () => {
@@ -180,7 +187,7 @@ describe('verify email', () => {
   });
 
   test('an expired link says so', async () => {
-    await renderApp(`/verify-email?token=${LINK_TOKEN}`, {
+    const { app } = await renderApp(`/verify-email?token=${LINK_TOKEN}`, {
       routes: {
         'POST /api/v1/auth/verify-email': error(
           400,
@@ -190,7 +197,10 @@ describe('verify email', () => {
       },
     });
     expect(await screen.findByText('This link is invalid or has expired.')).toBeOnTheScreen();
-    expect(screen.getByText('Sign up again')).toBeOnTheScreen();
+    // The way forward: signing in to an unconfirmed account offers to send the link again.
+    expect(screen.queryByText('Sign up again')).toBeNull();
+    await press('Sign in to get a new link');
+    await waitFor(() => expect(app.getPathname()).toBe('/sign-in'));
   });
 });
 
@@ -267,9 +277,29 @@ test('an unreachable server can be retried', async () => {
     routes: { 'GET /api/v1/me': error(503, 'unavailable', 'Down.') },
   });
   expect(await screen.findByText('Down.')).toBeOnTheScreen();
+  expect(screen.getByRole('heading', { name: "Can't reach ClawPlay" })).toBeOnTheScreen();
   server.on('GET /api/v1/me', { status: 200, body: ME });
   await press('Try again');
   expect(await screen.findByRole('heading', { name: 'Play' })).toBeOnTheScreen();
+});
+
+test('an unreachable server is tried again when the app comes back to the front', async () => {
+  const listeners: ((state: string) => void)[] = [];
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, listener) => {
+    listeners.push(listener as (state: string) => void);
+    return { remove: () => {} } as ReturnType<typeof AppState.addEventListener>;
+  });
+  const { server } = await renderApp('/', {
+    token: 'tok',
+    routes: { 'GET /api/v1/me': error(503, 'unavailable', 'Down.') },
+  });
+  expect(await screen.findByText('Down.')).toBeOnTheScreen();
+  server.on('GET /api/v1/me', { status: 200, body: ME });
+  await act(() => listeners.forEach((listener) => listener('background')));
+  expect(screen.getByText('Down.')).toBeOnTheScreen();
+  await act(() => listeners.forEach((listener) => listener('active')));
+  expect(await screen.findByRole('heading', { name: 'Play' })).toBeOnTheScreen();
+  jest.restoreAllMocks();
 });
 
 test('signing in opens the live connection; signing out closes it', async () => {

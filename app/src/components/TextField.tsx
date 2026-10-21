@@ -1,27 +1,44 @@
-import { useState } from 'react';
-import { Platform, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { useId, useState, type Ref } from 'react';
+import {
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type TextInputInstance,
+  type TextInputProps,
+} from 'react-native';
 
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius, spacing, type } from '@/theme';
 
 export interface TextFieldProps extends Omit<TextInputProps, 'style'> {
   label: string;
   error?: string | undefined;
+  /** The input itself, to focus it (the next field of a form). */
+  ref?: Ref<TextInputInstance>;
 }
 
-export function TextField({ label, error, ...input }: TextFieldProps) {
+export function TextField({ label, error, ref, ...input }: TextFieldProps) {
   const [focused, setFocused] = useState(false);
   const android = Platform.OS === 'android';
+  const errorId = useId();
+  const invalid = error !== undefined;
   return (
     <View style={styles.field}>
       <Text style={[styles.label, android && focused && styles.labelFocused]}>{label}</Text>
       <TextInput
+        ref={ref}
         aria-label={label}
-        aria-invalid={error !== undefined}
+        aria-invalid={invalid}
+        // The error is read with the field: described by it on the web, its hint in the apps.
+        {...(invalid &&
+          (Platform.OS === 'web' ? { 'aria-describedby': errorId } : { accessibilityHint: error }))}
         placeholderTextColor={colors.muted}
         style={[
           styles.input,
           android && styles.android,
-          error !== undefined && styles.inputError,
+          input.multiline === true && styles.multiline,
+          invalid && styles.inputError,
           focused && (android ? styles.androidFocused : styles.inputFocused),
         ]}
         // Android tints the cursor and selected text; ours, not the system's teal.
@@ -37,8 +54,8 @@ export function TextField({ label, error, ...input }: TextFieldProps) {
           input.onBlur?.(event);
         }}
       />
-      {error !== undefined && (
-        <Text role="alert" style={styles.error}>
+      {invalid && (
+        <Text id={errorId} role="alert" style={styles.error}>
           {error}
         </Text>
       )}
@@ -48,7 +65,7 @@ export function TextField({ label, error, ...input }: TextFieldProps) {
 
 const styles = StyleSheet.create({
   field: { gap: spacing.xs },
-  label: { fontSize: 14, fontWeight: '600', color: colors.text },
+  label: { ...type.label, color: colors.text },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -56,9 +73,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
-    fontSize: 16,
+    fontSize: type.body.fontSize,
     color: colors.text,
   },
+  // Room for a few lines, written from the top.
+  multiline: { minHeight: 96, textAlignVertical: 'top' },
   inputError: { borderColor: colors.danger },
   // A thicker border in the focus colour (React Native Web removes the browser's outline).
   inputFocused: { borderColor: colors.focus, borderWidth: 2, margin: -1 },
@@ -66,5 +85,5 @@ const styles = StyleSheet.create({
   android: { minHeight: 56, borderRadius: 4, borderColor: colors.muted },
   androidFocused: { borderColor: colors.accent, borderWidth: 2, margin: -1 },
   labelFocused: { color: colors.accent },
-  error: { fontSize: 14, color: colors.danger },
+  error: { ...type.label, fontWeight: '400', color: colors.danger },
 });

@@ -1,16 +1,15 @@
 import { useMutation } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { ActivityIndicator } from 'react-native';
 
-import { describeError } from '@/api/errors';
 import { useSession } from '@/auth/session';
 import { isLinkToken } from '@/auth/validation';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
+import { Loading } from '@/components/States';
 import { TextLink } from '@/components/TextLink';
 import { t } from '@/i18n';
-import { colors } from '@/theme';
 
 /** Opened from the link sent to a new email address: `/confirm-email?token=…`. */
 export default function ConfirmEmail() {
@@ -40,9 +39,11 @@ export default function ConfirmEmail() {
   if (!valid || confirm.isError) {
     return (
       <Screen title={t('Confirm your new email')} brand>
-        <Notice tone="error">
-          {valid ? describeError(confirm.error) : t('This link is invalid or has expired.')}
-        </Notice>
+        {valid ? (
+          <ErrorNotice error={confirm.error} />
+        ) : (
+          <Notice tone="error">{t('This link is invalid or has expired.')}</Notice>
+        )}
         <TextLink href={home}>{next}</TextLink>
       </Screen>
     );
@@ -58,8 +59,8 @@ export default function ConfirmEmail() {
     );
   }
   return (
-    <Screen title={t('Confirming your new email…')} brand>
-      <ActivityIndicator color={colors.accent} size="large" />
+    <Screen title={t('Confirm your new email')} brand>
+      <Loading label={t('Confirming your new email')} />
     </Screen>
   );
 }

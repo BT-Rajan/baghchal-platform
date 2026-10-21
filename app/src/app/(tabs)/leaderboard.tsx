@@ -13,16 +13,24 @@ import { ErrorState, Loading } from '@/components/States';
 import { Segmented } from '@/components/Segmented';
 import { TextLink } from '@/components/TextLink';
 import { t, plural } from '@/i18n';
-import { CATEGORIES } from '@/lobby/format';
+import { CATEGORIES, defaultCategory } from '@/lobby/format';
 import { useLeaderboard, useProfile } from '@/lobby/hooks';
 import { colors, radius, shadow, spacing, type } from '@/theme';
 
-const MEDALS = [colors.gold, colors.silver, colors.bronze] as const;
+/** The top three's medals, each with a number that reads on it (dark on gold and silver). */
+const MEDALS = [
+  { color: colors.gold, text: colors.text },
+  { color: colors.silver, text: colors.text },
+  { color: colors.bronze, text: colors.surface },
+] as const;
 
 /** The best players by time control: the top three on a podium, then everyone listed. */
 export default function Leaderboard() {
   const me = useMe();
-  const [category, setCategory] = useState<Category>('blitz');
+  const profile = useProfile(me.username);
+  // Until I pick one: a time control I have a rating in (else Quick).
+  const [chosen, setCategory] = useState<Category | null>(null);
+  const category = chosen ?? defaultCategory(profile.data?.ratings);
   const board = useLeaderboard(category);
   const found = CATEGORIES.find((c) => c.value === category);
   const label = found === undefined ? '' : t(found.label);
@@ -43,7 +51,7 @@ export default function Leaderboard() {
         <Card>
           <Hint>
             {t(
-              'Nobody is listed yet. Players appear once their rating has settled and they have played a rated game in the last 30 days.',
+              'Nobody is listed yet. Players appear after a few more rated games, once they have played one in the last 30 days.',
             )}
           </Hint>
           <Button
@@ -80,6 +88,7 @@ export default function Leaderboard() {
 /** Where I stand in this time control, from my profile: my rank, or why I have none yet. */
 function MyStanding({ category, label }: { category: Category; label: string }) {
   const me = useMe();
+  // The same query as the leaderboard's own (cached once).
   const profile = useProfile(me.username);
   const rating = profile.data?.ratings[category];
   if (profile.data === undefined) return null;
@@ -91,7 +100,7 @@ function MyStanding({ category, label }: { category: Category; label: string }) 
       : rating.rank !== null
         ? t('You are #{rank}, rated {rating}.', { rank: rating.rank, rating: rating.rating })
         : t(
-            'You are rated {rating}. You will be listed once your rating settles and you have played a rated game in the last 30 days.',
+            'You are rated {rating}. You will be listed after a few more rated games, as long as you have played one in the last 30 days.',
             { rating: rating.rating },
           );
   return (
@@ -113,11 +122,19 @@ function Name({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
   );
 }
 
-function Podium({ entry, medal, isMe }: { entry: LeaderboardEntry; medal: string; isMe: boolean }) {
+function Podium({
+  entry,
+  medal,
+  isMe,
+}: {
+  entry: LeaderboardEntry;
+  medal: (typeof MEDALS)[number];
+  isMe: boolean;
+}) {
   return (
     <View style={[styles.place, isMe && styles.meBox]}>
-      <View style={[styles.medal, { backgroundColor: medal }]}>
-        <Text style={styles.medalText}>{entry.rank}</Text>
+      <View style={[styles.medal, { backgroundColor: medal.color }]}>
+        <Text style={[styles.medalText, { color: medal.text }]}>{entry.rank}</Text>
       </View>
       <Name entry={entry} isMe={isMe} />
       <Text style={styles.bigRating}>{String(entry.rating)}</Text>
@@ -130,9 +147,12 @@ function Row({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
   return (
     <View style={[styles.row, isMe && styles.meRow]}>
       <Text style={styles.rank}>{`#${entry.rank}`}</Text>
-      <Name entry={entry} isMe={isMe} />
+      {/* The games count goes under the name where the row is narrow. */}
+      <View style={styles.who}>
+        <Name entry={entry} isMe={isMe} />
+        <Text style={styles.games}>{plural(entry.games, '{count} game', '{count} games')}</Text>
+      </View>
       <Text style={styles.rating}>{String(entry.rating)}</Text>
-      <Text style={styles.games}>{plural(entry.games, '{count} game', '{count} games')}</Text>
     </View>
   );
 }
@@ -146,7 +166,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.md,
   },
-  mineText: { flex: 1, fontSize: 15, lineHeight: 21, color: colors.text },
+  mineText: { ...type.small, flex: 1, color: colors.text },
   podium: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   place: {
     flexGrow: 1,
@@ -166,7 +186,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  medalText: { fontSize: 15, fontWeight: '800', color: colors.surface },
+  medalText: { ...type.small, fontWeight: '800' },
   bigRating: { ...type.title, color: colors.text },
   row: {
     flexDirection: 'row',
@@ -177,8 +197,21 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   meRow: { backgroundColor: colors.accentSurface },
-  rank: { width: 44, fontSize: 15, color: colors.muted },
-  name: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  rating: { fontSize: 16, fontWeight: '700', color: colors.text },
-  games: { minWidth: 76, fontSize: 13, color: colors.muted },
+  rank: { ...type.small, width: 44, color: colors.muted },
+  who: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    columnGap: spacing.md,
+  },
+  name: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  rating: { ...type.body, fontWeight: '700', color: colors.text },
+  games: { ...type.caption, color: colors.muted },
 });

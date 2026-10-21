@@ -22,7 +22,7 @@ import { ChallengeOutcome } from '@/components/ChallengeOutcome';
 import { Confirm } from '@/components/Confirm';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { AnalysisPanel } from '@/components/game/AnalysisPanel';
-import { Board } from '@/components/game/Board';
+import { Board, BoardUnavailable } from '@/components/game/Board';
 import { Coach } from '@/components/game/Coach';
 import { ChatPanel } from '@/components/game/ChatPanel';
 import { GameActions } from '@/components/game/GameActions';
@@ -57,7 +57,7 @@ import { showingGame } from '@/game/onScreen';
 import { candidateMoves, premoveDecision } from '@/game/premove';
 import { boardSize, gameLayout } from '@/game/layout';
 import { isOpen, TIME_CONTROLS } from '@/lobby/format';
-import { plural, t } from '@/i18n';
+import { isRTL, plural, t } from '@/i18n';
 import {
   useChallengeOutcomes,
   useChallenges,
@@ -146,7 +146,6 @@ export default function GameScreen() {
   // Bottom of the screen is me; spectators see goats at the bottom.
   const bottom: Piece = mine ?? 'goat';
   const myTurn = game.status === 'active' && game.side_to_move === mine && !move.isPending;
-  const error = move.error ?? action.error;
   const layout = gameLayout(width, height);
   const wide = layout !== 'stacked';
   // Games against the Easy computer come with tips (the board never marks goats in danger).
@@ -162,7 +161,7 @@ export default function GameScreen() {
 
   const board =
     position === null ? (
-      <Notice tone="error">{t('This position could not be shown.')}</Notice>
+      <BoardUnavailable onRetry={() => void query.refetch()} />
     ) : (
       <Board
         key={`${game.ply}-${ply}`}
@@ -200,13 +199,24 @@ export default function GameScreen() {
       {layout === 'short' && opponentBar}
       {layout === 'short' && myBar}
       <Status game={game} mine={mine} />
+      {/* Right after the status (above the chat on a phone): a draw offered to me, the win
+          to claim, and my resign and draw buttons. */}
+      {mine !== null && game.status === 'active' && (
+        <GameActions
+          game={game}
+          me={mine}
+          pending={action.isPending ? action.variables : null}
+          onAction={(a) => action.mutate(a)}
+        />
+      )}
+      <ErrorNotice error={action.error} />
       {game.status === 'finished' && (
         // What next, straight after the result: game 2 of the match, back to the tournament,
-        // or play again; or back to the lobby.
+        // or play again; or back to Play.
         <View style={styles.next}>
           {mine !== null && <NextGame game={game} mine={mine} guest={me.role === 'guest'} />}
           <Button
-            title={t('Back to the lobby')}
+            title={t('Back to Play')}
             variant="secondary"
             onPress={() => router.navigate('/')}
           />
@@ -235,7 +245,6 @@ export default function GameScreen() {
       )}
       {tip !== null && <Coach tip={tip} />}
       {replaying && <Replay ply={ply} total={game.ply} onShow={setShown} />}
-      <ErrorNotice error={error} />
       {position !== null && (
         <View style={styles.countsRow}>
           <View style={styles.grow}>
@@ -273,14 +282,6 @@ export default function GameScreen() {
         />
       )}
       {mine !== null && <ChatPanel game={game} mine={mine} />}
-      {mine !== null && game.status === 'active' && (
-        <GameActions
-          game={game}
-          me={mine}
-          pending={action.isPending ? action.variables : null}
-          onAction={(a) => action.mutate(a)}
-        />
-      )}
       <SectionTitle>{t('Moves')}</SectionTitle>
       <MoveList
         moves={annotate(game.moves, analysis.data?.moves ?? [])}
@@ -336,6 +337,8 @@ export default function GameScreen() {
               <Victory ending={ending} onClose={dismissEnding} pieces={look.pieces} />
             )}
           </View>
+          {/* A refused move is explained where it was tried. */}
+          <ErrorNotice error={move.error} />
           {layout !== 'short' && myBar}
         </View>
         {panel}
@@ -474,7 +477,10 @@ function QuickMessages({
   );
 }
 
-/** Step through a finished game: start, back, forward, end. */
+/**
+ * Step through a finished game: start, back, forward, end. The row runs the language's way, so
+ * in a right-to-left language the start is on the right and the arrows point that way.
+ */
 function Replay({
   ply,
   total,
@@ -484,6 +490,7 @@ function Replay({
   total: number;
   onShow: (ply: number) => void;
 }) {
+  const rtl = isRTL();
   return (
     <View style={styles.replay}>
       <Text style={styles.counts}>
@@ -492,7 +499,7 @@ function Replay({
       <View style={styles.replayButtons}>
         <Button
           title={t('Start position')}
-          label="⏮"
+          label={rtl ? '⏭' : '⏮'}
           compact
           variant="secondary"
           disabled={ply === 0}
@@ -500,7 +507,7 @@ function Replay({
         />
         <Button
           title={t('Previous move')}
-          label="◀"
+          label={rtl ? '▶' : '◀'}
           compact
           variant="secondary"
           disabled={ply === 0}
@@ -508,7 +515,7 @@ function Replay({
         />
         <Button
           title={t('Next move')}
-          label="▶"
+          label={rtl ? '◀' : '▶'}
           compact
           variant="secondary"
           disabled={ply === total}
@@ -516,7 +523,7 @@ function Replay({
         />
         <Button
           title={t('Final position')}
-          label="⏭"
+          label={rtl ? '⏮' : '⏭'}
           compact
           variant="secondary"
           disabled={ply === total}
@@ -614,10 +621,10 @@ const styles = StyleSheet.create({
   premove: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   premoveText: { ...type.body, flex: 1, color: colors.text },
   emotes: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
-  turn: { fontSize: 18, fontWeight: '700', color: colors.text },
-  counts: { fontSize: 14, color: colors.muted },
+  turn: { ...type.heading, color: colors.text },
+  counts: { ...type.caption, color: colors.muted },
   countsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   grow: { flex: 1 },
-  matchTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
-  matchScore: { fontSize: 20, fontWeight: '700', color: colors.text },
+  matchTitle: { ...type.small, fontWeight: '600', color: colors.text },
+  matchScore: { ...type.heading, color: colors.text },
 });

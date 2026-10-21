@@ -69,7 +69,7 @@ test('Arabic turns the layout around, from the next start in the apps', async ()
   await waitFor(() => expect(forceRTL).toHaveBeenLastCalledWith(true));
   expect(
     await screen.findByText(
-      inLanguage('ar', 'Close and open ClawPlay again to turn the layout around.'),
+      inLanguage('ar', 'Close and open ClawPlay again to update the layout.'),
     ),
   ).toBeOnTheScreen();
 });

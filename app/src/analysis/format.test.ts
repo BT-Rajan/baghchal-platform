@@ -29,8 +29,8 @@ test('what the engine thought of a move', () => {
 
 test('scores in words', () => {
   expect(scoreText(99)).toBe('About even');
-  expect(scoreText(-2500)).toBe('Goats ahead (+2.5)');
-  expect(scoreText(1200)).toBe('Tigers ahead (+1.2)');
+  expect(scoreText(-2500)).toBe('Goats ahead');
+  expect(scoreText(1200)).toBe('Tigers ahead');
   expect(scoreText(5000)).toBe('Tigers winning');
   expect(scoreText(-5000)).toBe('Goats winning');
 });

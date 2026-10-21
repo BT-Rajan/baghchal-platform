@@ -67,9 +67,9 @@ describe('play now', () => {
     });
     expect(await screen.findByText('Nobody is waiting for this game right now.')).toBeOnTheScreen();
     await press('Find an opponent');
-    expect(
-      await screen.findByText(/^Looking for an opponent for 5\+3 casual… \d+ s$/),
-    ).toBeOnTheScreen();
+    // Said once; the seconds beside it are not read out as they count down.
+    expect(await screen.findByText('Looking for an opponent for 5+3 casual…')).toBeOnTheScreen();
+    expect(screen.getByText(/^\d+ s left$/)).toBeOnTheScreen();
     await press('Stop looking');
     expect(await screen.findByRole('button', { name: 'Find an opponent' })).toBeOnTheScreen();
     expect(server.requests.some((r) => r.method === 'DELETE' && r.path === '/api/v1/seeks')).toBe(

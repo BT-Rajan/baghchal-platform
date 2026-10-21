@@ -16,13 +16,13 @@ describe('signing up', () => {
     const { server } = await renderApp('/sign-up', {
       routes: { 'POST /api/v1/auth/register': { status: 202, body: { status: 'accepted' } } },
     });
-    await screen.findByRole('button', { name: 'Accept and create account', busy: false });
+    await screen.findByRole('button', { name: 'Accept and make my account', busy: false });
     expect(screen.getByText(/^By pressing Accept you agree to our /)).toBeOnTheScreen();
     expect(screen.queryByLabelText('Month of birth')).toBeNull();
     await type('Username', 'sita');
     await type('Email', 'sita@example.com');
     await type('Password', 'correct horse');
-    await press('Accept and create account');
+    await press('Accept and make my account');
     expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/auth/register').body).toEqual({
       ...AGREED,
@@ -56,8 +56,9 @@ describe('the terms and privacy policy', () => {
     });
     await fireEvent.press(await screen.findByRole('link', { name: 'Terms of service' }));
     await waitFor(() => expect(app.getPathname()).toBe('/terms'));
-    expect(await screen.findByRole('heading', { name: 'Terms' })).toBeOnTheScreen();
-    expect(screen.getByText('fair')).toBeOnTheScreen();
+    expect(await screen.findByText('fair')).toBeOnTheScreen();
+    // In the apps the header bar names the document: its own title is not repeated.
+    expect(screen.queryByRole('heading', { name: 'Terms' })).toBeNull();
     // Each section is shut until opened: its heading holds the button.
     expect(screen.queryAllByRole('listitem')).toHaveLength(0);
     const accounts = screen.getByRole('button', { name: 'Accounts', expanded: false });
@@ -65,7 +66,7 @@ describe('the terms and privacy policy', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
     await fireEvent.press(screen.getByRole('button', { name: 'Accounts', expanded: true }));
     expect(screen.queryAllByRole('listitem')).toHaveLength(0);
-    expect(screen.getByText(`Version of ${LEGAL.terms}`)).toBeOnTheScreen();
+    expect(screen.getByText(/^Updated \d+ \w+ \d{4}$/)).toBeOnTheScreen();
   });
 
   test('a privacy policy that fails to load can be asked for again', async () => {
@@ -88,7 +89,7 @@ describe('the terms and privacy policy', () => {
     expect(await screen.findByText('Try again soon.')).toBeOnTheScreen();
     fail = false;
     await press('Try again');
-    expect(await screen.findByRole('heading', { name: 'Privacy' })).toBeOnTheScreen();
+    expect(await screen.findByText(/^Updated /)).toBeOnTheScreen();
   });
 });
 
@@ -111,8 +112,9 @@ describe('an account whose terms changed', () => {
   test('accepts them before playing on', async () => {
     const sent: unknown[] = [];
     const { app } = await asking({ ...ME, consents_needed: ['privacy'] }, (r) => sent.push(r.body));
-    expect(await screen.findByText(/^We have updated our terms/)).toBeOnTheScreen();
+    expect(await screen.findByText('Our terms or privacy policy have changed.')).toBeOnTheScreen();
     expect(app.getPathname()).toBe('/agree');
+    expect(screen.getByRole('link', { name: 'Privacy policy' })).toBeOnTheScreen();
     expect(screen.getByText(/^By pressing Accept you agree to our /)).toBeOnTheScreen();
     await screen.findByRole('button', { name: 'Accept', busy: false });
     await press('Accept');
@@ -151,7 +153,7 @@ describe('an account whose terms changed', () => {
         },
       },
     });
-    expect(await screen.findByText(/^We have updated our terms/)).toBeOnTheScreen();
+    expect(await screen.findByText('Our terms or privacy policy have changed.')).toBeOnTheScreen();
     expect(app.getPathname()).toBe('/agree');
   });
 });

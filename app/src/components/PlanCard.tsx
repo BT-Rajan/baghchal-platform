@@ -4,7 +4,7 @@ import { StyleSheet, Text } from 'react-native';
 import { myPlanText } from '@/billing/format';
 import { useMyPlan } from '@/billing/hooks';
 import { t } from '@/i18n';
-import { colors } from '@/theme';
+import { colors, type } from '@/theme';
 
 import { Button } from './Button';
 import { Card, SectionTitle } from './Card';
@@ -24,7 +24,7 @@ export function PlanCard() {
         <Card>
           <Text style={styles.text}>{myPlanText(mine.data)}</Text>
           <Button
-            title={mine.data.plan === 'free' ? t('See Plus and Pro') : t('See plans')}
+            title={t('See plans')}
             variant="secondary"
             onPress={() => router.push('/plans')}
           />
@@ -35,5 +35,5 @@ export function PlanCard() {
 }
 
 const styles = StyleSheet.create({
-  text: { fontSize: 16, fontWeight: '600', color: colors.text },
+  text: { ...type.body, fontWeight: '600', color: colors.text },
 });

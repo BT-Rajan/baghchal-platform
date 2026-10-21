@@ -69,8 +69,8 @@ export function puzzlePrompt(puzzle: TrainerPuzzle): string {
 
 export function answerText(answer: Pick<TrainerAnswer, 'correct' | 'best'>): string {
   return answer.correct
-    ? t('Correct! That is the best move.')
-    : t('Not quite. The best move was {move}.', { move: answer.best });
+    ? t('Correct! That is the best move, shown on the board.')
+    : t('Not quite. The best move was {move}, shown on the board.', { move: answer.best });
 }
 
 /** "Daily streak: 3 days", or null before there is one. */
@@ -79,11 +79,11 @@ export function dailyStreakText(days: number): string | null {
   return plural(days, 'Daily streak: {count} day', 'Daily streak: {count} days');
 }
 
-/** "Solved 12 of 60 · Streak 3" */
+/** "Solved 12 of 60 · In a row: 3" */
 export function progressText(progress: Pick<Trainer, 'solved' | 'total' | 'streak'>): string {
-  return t('Solved {solved} of {total} · Streak {streak}', {
+  return t('Solved {solved} of {total} · In a row: {count}', {
     solved: progress.solved,
     total: progress.total,
-    streak: progress.streak,
+    count: progress.streak,
   });
 }

@@ -31,6 +31,7 @@ export function DailyPuzzle() {
       best={result?.best}
       busy={answer.isPending}
       maxWidth={280}
+      onRetry={() => void daily.refetch()}
       onMove={(move) =>
         answer.mutate({ id: daily.data.puzzle.id, move }, { onSuccess: () => void daily.refetch() })
       }
@@ -46,7 +47,12 @@ export function DailyPuzzle() {
       ) : (
         <Card>
           {streak !== null && <Text style={styles.streak}>{streak}</Text>}
-          {result === null ? board : <Disclosure title={t("Today's position")}>{board}</Disclosure>}
+          {/* Just answered, the board stays to show the best move; later it folds away. */}
+          {result === null || answer.isSuccess ? (
+            board
+          ) : (
+            <Disclosure title={t("Today's position")}>{board}</Disclosure>
+          )}
           <ErrorNotice error={answer.error} />
           {result !== null && (
             <>

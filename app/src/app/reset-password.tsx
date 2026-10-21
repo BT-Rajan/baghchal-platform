@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
 import { useSession } from '@/auth/session';
@@ -45,7 +45,7 @@ export default function ResetPassword() {
         <Notice tone="success">
           {t('Your password has been changed and you have been signed out everywhere.')}
         </Notice>
-        <TextLink href="/sign-in">{t('Sign in')}</TextLink>
+        <Button title={t('Sign in')} onPress={() => router.replace('/sign-in')} />
       </Screen>
     );
   }

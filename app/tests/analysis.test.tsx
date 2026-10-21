@@ -68,7 +68,7 @@ describe('game analysis', () => {
     expect(await screen.findByText('Best move')).toBeOnTheScreen();
     expect(server.lastTo(`POST ${URL}`)).toBeDefined();
     expect(screen.getByText("Move 2, tigers a1-b1: the engine's choice.")).toBeOnTheScreen();
-    expect(screen.getByText('Before the move: Tigers ahead (+1.2)')).toBeOnTheScreen();
+    expect(screen.getByText('Before the move: Tigers ahead')).toBeOnTheScreen();
     expect(screen.getByText('Goats (alice): 1 blunder')).toBeOnTheScreen();
     expect(screen.getByText('Tigers (bob): 1 best')).toBeOnTheScreen();
     expect(screen.getByText('4 analyses of new games left today.')).toBeOnTheScreen();

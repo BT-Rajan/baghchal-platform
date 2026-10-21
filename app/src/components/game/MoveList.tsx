@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { movePairs } from '@/game/describe';
 import { t } from '@/i18n';
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius, spacing, type } from '@/theme';
 
 import { Hint } from '../Card';
 import { focusRing } from '../focus';
@@ -62,9 +62,17 @@ const styles = StyleSheet.create({
     rowGap: spacing.xs,
   },
   pair: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  number: { fontSize: 15, color: colors.muted, fontVariant: ['tabular-nums'] },
-  move: { fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
-  tap: { paddingHorizontal: 6, paddingVertical: 4, borderRadius: radius.sm },
+  number: { ...type.small, color: colors.muted, fontVariant: ['tabular-nums'] },
+  move: { ...type.small, color: colors.text, fontVariant: ['tabular-nums'] },
+  // A finger-sized target around each move.
+  tap: {
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    borderRadius: radius.sm,
+  },
   selected: { backgroundColor: colors.ink },
   selectedText: { color: colors.inkText, fontWeight: '700' },
 });

@@ -48,10 +48,27 @@ describe('home', () => {
     });
     expect(await screen.findByText('Goats to play: find the best move.')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: /^a2, empty, move here/ }));
-    expect(await screen.findByText('Not quite. The best move was c3.')).toBeOnTheScreen();
+    expect(
+      await screen.findByText('Not quite. The best move was c3, shown on the board.'),
+    ).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/trainer/o006/answer').body).toEqual({ move: 'a2' });
     expect(screen.getByText('A new puzzle comes tomorrow.')).toBeOnTheScreen();
-    // Answered, the board folds away; it can be looked at again.
+    // Just answered, the board stays, to show the best move.
+    expect(screen.getByText('Goats to play: find the best move.')).toBeOnTheScreen();
+    // The trainer's own screen says what it is and which plan has it (one upsell).
+    expect(screen.getByRole('button', { name: 'More puzzles in the trainer' })).toBeOnTheScreen();
+  });
+
+  test('a puzzle answered earlier folds away; it can be looked at again', async () => {
+    await home({
+      [`GET ${DAILY_URL}`]: {
+        status: 200,
+        body: { ...DAILY, answer: { move: 'a2', correct: false, best: 'c3' } },
+      },
+    });
+    expect(
+      await screen.findByText('Not quite. The best move was c3, shown on the board.'),
+    ).toBeOnTheScreen();
     expect(screen.queryByText('Goats to play: find the best move.')).toBeNull();
     await fireEvent.press(
       screen.getByRole('button', { name: "Today's position", expanded: false }),
@@ -59,8 +76,6 @@ describe('home', () => {
     expect(
       screen.getByRole('button', { name: "Today's position", expanded: true }),
     ).toBeOnTheScreen();
-    // The trainer's own screen says what it is and which plan has it (one upsell).
-    expect(screen.getByRole('button', { name: 'More puzzles in the trainer' })).toBeOnTheScreen();
   });
 
   test('Pro players go on to the trainer; a failed puzzle can be tried again', async () => {
@@ -114,7 +129,8 @@ describe('home', () => {
       [`GET ${DAILY_URL}`]: { status: 200, body: { ...DAILY, streak: 3 } },
     });
     expect(await screen.findByText('Daily streak: 3 days')).toBeOnTheScreen();
-    expect(screen.getByRole('link', { name: 'Trainer' })).toHaveTextContent(/PRO/);
+    // The trainer is offered by today's puzzle, not a second time beside it.
+    expect(screen.queryByRole('link', { name: 'Trainer' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Tournaments' })).not.toHaveTextContent(/PRO/);
     await fireEvent.press(screen.getByRole('link', { name: 'Tournaments' }));
     await waitFor(() => expect(app.getPathname()).toBe('/tournaments'));

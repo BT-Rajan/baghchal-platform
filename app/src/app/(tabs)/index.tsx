@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import type { Game } from '@/api/endpoints';
@@ -13,6 +13,7 @@ import { FeatureLink } from '@/components/FeatureLink';
 import { FriendList, FriendRequests } from '@/components/Friends';
 import { GameHistory } from '@/components/GameHistory';
 import { GuestBanner } from '@/components/GuestBanner';
+import { Notice } from '@/components/Notice';
 import { PlayerSearch } from '@/components/PlayerSearch';
 import { Screen } from '@/components/Screen';
 import { ErrorState } from '@/components/States';
@@ -45,10 +46,14 @@ export default function Play() {
 
   const incoming = challenges.data?.incoming.filter((c) => isOpen(c, now)) ?? [];
   const outgoing = challenges.data?.outgoing.filter((c) => isOpen(c, now)) ?? [];
+  // Back from challenging someone by name: a word that it went, while it is open.
+  const sentId = useLocalSearchParams<{ sent?: string }>().sent;
+  const sentTo = outgoing.find((c) => c.id === sentId)?.opponent?.username;
   const pendingFor = (id: string) =>
     answer.isPending && answer.variables.id === id ? answer.variables.answer : null;
 
   const wide = width >= WIDE;
+  const live = (games.data?.length ?? 0) > 0;
 
   const gamesAndChallenges = (
     <View style={styles.column}>
@@ -77,6 +82,9 @@ export default function Play() {
         <ChallengeOutcome key={c.id} challenge={c} />
       ))}
       {outgoing.length > 0 && <SectionTitle>{t('Your challenges')}</SectionTitle>}
+      {sentTo !== undefined && (
+        <Notice tone="success">{t('Challenge sent to {name}.', { name: sentTo })}</Notice>
+      )}
       {outgoing.map((c) => (
         <ChallengeCard
           key={c.id}
@@ -88,31 +96,45 @@ export default function Play() {
         />
       ))}
       <FriendRequests />
-      {games.data?.length === 0 && (
+      {/* Shown unless a game is on (also while my games load, or when they could not be). */}
+      {!live && (
         <Card>
           <Text style={styles.cardTitle}>{t('Ready for a game?')}</Text>
           <Hint>
             {t('Quick or standard, rated or casual, with whoever is waiting or the computer.')}
           </Hint>
-          <Button title={t('Play now')} onPress={() => router.push('/play')} />
+          {/* One main action: answering a challenge comes first when there is one. */}
+          <Button
+            title={t('Play now')}
+            variant={incoming.length > 0 ? 'secondary' : 'primary'}
+            onPress={() => router.push('/play')}
+          />
         </Card>
       )}
       <MoreWaysToPlay guest={me.role === 'guest'} />
       <DailyPuzzle />
       <GameHistory username={me.username} preview />
+      <GuestBanner />
     </View>
   );
 
   const playerList = (
     <View style={styles.column}>
       <FriendList myId={me.id} />
-      <PlayerSearch nobodyElse={<NobodyOnline guest={me.role === 'guest'} />} />
+      <PlayerSearch
+        nobodyElse={
+          <Hint>
+            {t(
+              'Nobody else is online right now. Play now finds you a game, with the computer if need be.',
+            )}
+          </Hint>
+        }
+      />
     </View>
   );
 
   return (
     <Screen title={t('Play')} align="top" wide={wide} refreshable>
-      <GuestBanner />
       {wide ? (
         <View style={styles.row}>
           <View style={styles.half}>{gamesAndChallenges}</View>
@@ -128,20 +150,10 @@ export default function Play() {
   );
 }
 
-/** Nobody to challenge here: the next steps are Play now and the ways to play beside it. */
-function NobodyOnline({ guest }: { guest: boolean }) {
-  return (
-    <Hint>
-      {guest
-        ? t(
-            'Nobody else is online right now. Play now finds you a game, with the computer if need be.',
-          )
-        : t('Nobody else is online right now. Send a friend a challenge by link, or Play now.')}
-    </Hint>
-  );
-}
-
-/** The app's other ways to play, where they are seen: challenges by link, tournaments, the trainer. */
+/**
+ * The app's other ways to play, where they are seen: challenges by link and tournaments (the
+ * trainer is offered by today's puzzle, below).
+ */
 function MoreWaysToPlay({ guest }: { guest: boolean }) {
   return (
     <>
@@ -160,13 +172,6 @@ function MoreWaysToPlay({ guest }: { guest: boolean }) {
         title={t('Tournaments')}
         text={t('Swiss tournaments with friends: join one by link, or host your own.')}
         onPress={() => router.push('/tournaments')}
-      />
-      <FeatureLink
-        icon="puzzle"
-        title={t('Trainer')}
-        text={t('Opening and endgame puzzles from real games, one best move each.')}
-        feature="trainer"
-        onPress={() => router.push('/trainer')}
       />
     </>
   );
@@ -187,7 +192,7 @@ function LiveGame({ game, myId }: { game: Game; myId: string }) {
 
 const styles = StyleSheet.create({
   cardTitle: { ...type.heading, color: colors.text },
-  live: { fontSize: 16, color: colors.text },
+  live: { ...type.body, color: colors.text },
   row: { flexDirection: 'row', gap: spacing.xl, alignItems: 'flex-start' },
   half: { flex: 1 },
   column: { gap: spacing.md },

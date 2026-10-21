@@ -6,6 +6,7 @@ import { useApi, useSession } from '@/auth/session';
 import { AgreementLine, useAgreement } from '@/components/AgreementLine';
 import { t } from '@/i18n';
 import { Button } from '@/components/Button';
+import { Hint } from '@/components/Card';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { Screen } from '@/components/Screen';
 import { TextLink } from '@/components/TextLink';
@@ -44,8 +45,16 @@ export default function Start() {
     if (agreement.body) play.mutate(agreement.body);
   };
 
+  // Someone who came from a friend's link goes on to it, not to the computer.
+  const firstGame = peekReturn() === null;
+
   return (
-    <Screen title={t('Your first game')} brand>
+    <Screen title={t('Play as a guest')} brand>
+      {firstGame && (
+        <Hint>
+          {t("You'll play the goats against the Easy computer, which gives tips as you play.")}
+        </Hint>
+      )}
       <ErrorNotice error={play.error} />
       <AgreementLine agreement={agreement} />
       <Button

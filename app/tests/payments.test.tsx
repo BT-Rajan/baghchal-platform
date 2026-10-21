@@ -187,6 +187,14 @@ test('Plus bought on Pro waits for Pro to end', async () => {
   expect(screen.getAllByText(/^Starts when your Pro ends/)).toHaveLength(1); // only on Plus
   await fireEvent.press(screen.getByRole('button', { name: 'Buy ClawPlay Plus for a month' }));
   await waitFor(() => expect(opened).toHaveLength(1));
+  // The pressed button is the busy one; the others wait.
+  expect(
+    await screen.findByRole('button', { name: 'Buy ClawPlay Plus for a month', busy: true }),
+  ).toBeOnTheScreen();
+  expect(screen.getByRole('button', { name: 'Buy ClawPlay Pro for a month' })).toBeDisabled();
+  expect(
+    screen.getByRole('button', { name: 'Buy ClawPlay Pro for a month', busy: false }),
+  ).toBeOnTheScreen();
   await act(() =>
     opened[0]!.options.handler({
       razorpay_order_id: 'order_1',

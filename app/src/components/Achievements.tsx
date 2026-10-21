@@ -8,6 +8,7 @@ import { colors, radius, shadow, spacing, type } from '@/theme';
 import type { Achievement } from '@/api/endpoints';
 
 import { SectionTitle } from './Card';
+import { ErrorState, Loading } from './States';
 import { Disclosure } from './Disclosure';
 import { Icon } from './Icon';
 
@@ -17,7 +18,23 @@ import { Icon } from './Icon';
  */
 export function Achievements({ username }: { username: string }) {
   const achievements = useAchievements(username);
-  const list = achievements.data ?? [];
+  if (achievements.error !== null) {
+    return (
+      <>
+        <SectionTitle>{t('Achievements')}</SectionTitle>
+        <ErrorState error={achievements.error} onRetry={() => void achievements.refetch()} />
+      </>
+    );
+  }
+  if (achievements.data === undefined) {
+    return (
+      <>
+        <SectionTitle>{t('Achievements')}</SectionTitle>
+        <Loading label={t('Loading achievements')} />
+      </>
+    );
+  }
+  const list = achievements.data;
   if (list.length === 0) return null;
   const earned = list.filter((a) => a.earned_at !== null);
   const locked = list.filter((a) => a.earned_at === null);
@@ -45,7 +62,7 @@ function Tiles({ list }: { list: Achievement[] }) {
         return (
           <View
             key={a.key}
-            style={[styles.tile, !earned && styles.locked]}
+            style={styles.tile}
             accessible
             aria-label={t('{name}: {text} {when}', {
               name,
@@ -53,7 +70,8 @@ function Tiles({ list }: { list: Achievement[] }) {
               when: earned ? earnedText(a.earned_at!) : t('Not yet earned'),
             })}
           >
-            <View style={[styles.medal, earned && styles.medalEarned]}>
+            {/* Only the medal is dimmed while still to earn: the words stay readable. */}
+            <View style={[styles.medal, earned ? styles.medalEarned : styles.locked]}>
               <Icon name="trophy" color={earned ? colors.accentText : colors.muted} size={20} />
             </View>
             <Text style={styles.name}>{name}</Text>

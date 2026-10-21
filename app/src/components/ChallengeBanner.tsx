@@ -5,16 +5,16 @@ import { useMe } from '@/auth/session';
 import { plural } from '@/i18n';
 import { isOpen } from '@/lobby/format';
 import { useActiveGames, useAnswerChallenge, useChallenges } from '@/lobby/hooks';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, type } from '@/theme';
 
 import { ChallengeCard } from './ChallengeCard';
 import { ErrorNotice } from './ErrorNotice';
 import { useServerNow } from './useNow';
 
 /**
- * A challenge for me, shown on every screen but the lobby (which lists them all), so it is not
+ * A challenge for me, shown on every screen but Play (which lists them all), so it is not
  * missed while looking at a profile, the leaderboard or a finished game. Hidden during a game of
- * my own: I could not accept it then. The same card as the lobby's, to accept or decline it.
+ * my own: I could not accept it then. The same card as Play's, to accept or decline it.
  */
 export function ChallengeBanner() {
   const pathname = usePathname();
@@ -42,7 +42,7 @@ export function ChallengeBanner() {
       />
       {more > 0 && (
         <Text style={styles.more}>
-          {plural(more, 'And {count} more in the lobby.', 'And {count} more in the lobby.')}
+          {plural(more, 'And 1 more challenge on Play.', 'And {count} more challenges on Play.')}
         </Text>
       )}
     </View>
@@ -58,5 +58,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     gap: spacing.sm,
   },
-  more: { fontSize: 13, color: colors.muted },
+  more: { ...type.caption, color: colors.muted },
 });

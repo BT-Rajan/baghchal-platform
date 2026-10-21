@@ -53,9 +53,21 @@ describe('notifications', () => {
     expect(screen.getByText('just now')).toBeOnTheScreen();
     expect(screen.getByText('5 min ago')).toBeOnTheScreen();
     await waitFor(() => expect(server.lastTo('POST /api/v1/notifications/read')).toBeDefined());
-    // A challenge still open leads to the lobby, where it is answered.
+    // Read now, but what was new when the list opened stays marked new for this visit.
+    await waitFor(() =>
+      expect(
+        server.requests.filter((r) => r.path === '/api/v1/notifications').length,
+      ).toBeGreaterThan(1),
+    );
+    expect(screen.getByText('bob challenged you to a 5+3 rated game.')).toHaveStyle({
+      fontWeight: '700',
+    });
+    expect(screen.getByText('Friday cup has started: your games are ready.')).not.toHaveStyle({
+      fontWeight: '700',
+    });
+    // A challenge still open leads to the lobby, where it is answered; each says when.
     await fireEvent.press(
-      screen.getByRole('link', { name: 'bob challenged you to a 5+3 rated game.' }),
+      screen.getByRole('link', { name: 'bob challenged you to a 5+3 rated game. (just now)' }),
     );
     await waitFor(() => expect(app.getPathname()).toBe('/'));
   });
@@ -70,7 +82,7 @@ describe('notifications', () => {
     });
     expect(await screen.findByText('bob challenged you to a 5+3 rated game.')).toBeOnTheScreen();
     expect(
-      screen.queryByRole('link', { name: 'bob challenged you to a 5+3 rated game.' }),
+      screen.queryByRole('link', { name: /^bob challenged you to a 5\+3 rated game\./ }),
     ).toBeNull();
   });
 

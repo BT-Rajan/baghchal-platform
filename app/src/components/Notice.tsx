@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius, spacing, type } from '@/theme';
 
 const tones = {
   error: { backgroundColor: colors.dangerSurface, color: colors.danger },
@@ -21,5 +21,5 @@ export function Notice({ tone, children }: { tone: keyof typeof tones; children:
 
 const styles = StyleSheet.create({
   box: { borderRadius: radius.md, padding: spacing.md },
-  text: { fontSize: 15, lineHeight: 22 },
+  text: { ...type.small },
 });
