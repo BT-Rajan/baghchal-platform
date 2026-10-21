@@ -7,25 +7,9 @@ import { colors, radius, spacing } from '@/theme';
 
 import { Button } from './Button';
 
-/**
- * What holds the account back: for guests, who they are playing as and the way to keep it; for
- * a player under 18, that a parent or guardian has yet to agree.
- */
+/** For guests: who they are playing as, and the way to keep it. */
 export function GuestBanner() {
   const me = useMe();
-  // Guests under 18 are never asked for a parent (they play only the computer), so this is
-  // for accounts.
-  if (me.parent_consent === 'pending' && me.role !== 'guest') {
-    return (
-      <View style={styles.box}>
-        <Text style={styles.text}>
-          {t(
-            'We emailed your parent or guardian. Until they agree you can play the computer and puzzles, but not other people. Ask them to open the link in the email.',
-          )}
-        </Text>
-      </View>
-    );
-  }
   if (me.role !== 'guest') return null;
   return (
     <View style={styles.box}>

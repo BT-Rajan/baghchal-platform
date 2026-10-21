@@ -90,8 +90,8 @@ function Routes() {
     );
   }
   const signedIn = state.status === 'signedIn';
-  // An account with something to agree to (its age, or changed terms) sees only that until done.
-  const agreeing = signedIn && (state.user.age_needed || state.user.consents_needed.length > 0);
+  // An account with changed terms to agree to sees only that until done.
+  const agreeing = signedIn && state.user.consents_needed.length > 0;
   const playing = signedIn && !agreeing;
   return (
     <View style={styles.app}>
@@ -161,7 +161,6 @@ function Routes() {
           <Stack.Screen name="verify-email" />
           <Stack.Screen name="reset-password" />
           <Stack.Screen name="confirm-email" />
-          <Stack.Screen name="parent-consent" />
           {/* The terms and privacy policy can be read by anyone, from anywhere. */}
           {/* The web's top bar is enough there: the document's own heading names the page. */}
           <Stack.Screen

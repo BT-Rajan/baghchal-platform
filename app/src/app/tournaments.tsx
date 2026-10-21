@@ -9,7 +9,6 @@ import { useMyPlan } from '@/billing/hooks';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Notice } from '@/components/Notice';
-import { PeopleOnly } from '@/components/PeopleOnly';
 import { Upsell } from '@/components/Upsell';
 import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
@@ -34,14 +33,12 @@ export default function Tournaments() {
           'A Swiss tournament for 3 to 32 friends: each round you meet a player on your score, never the same one twice if it can be helped, with sides taking turns. Games are casual; anyone can join with the link.',
         )}
       </Hint>
-      <PeopleOnly>
-        {plan.data !== undefined &&
-          (has(plan.data, 'tournaments') ? (
-            <NewTournament />
-          ) : (
-            <Upsell feature="tournaments">{t('Host small tournaments for your friends.')}</Upsell>
-          ))}
-      </PeopleOnly>
+      {plan.data !== undefined &&
+        (has(plan.data, 'tournaments') ? (
+          <NewTournament />
+        ) : (
+          <Upsell feature="tournaments">{t('Host small tournaments for your friends.')}</Upsell>
+        ))}
       <MyTournaments />
     </Screen>
   );

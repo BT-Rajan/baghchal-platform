@@ -84,14 +84,13 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
       {!isMe &&
         !profile.blocked &&
         guestViewer === false &&
-        me.plays_people &&
         !profile.username.startsWith('guest-') && (
           <FriendControl username={profile.username} relation={profile.friend ?? 'none'} />
         )}
       {!isMe && !profile.blocked && (
         <Button
           title={t('Challenge {name}', { name: profile.username })}
-          disabled={!me.plays_people || !canChallenge(profile)}
+          disabled={!canChallenge(profile)}
           onPress={() => router.push(`/challenge/${profile.username}`)}
         />
       )}

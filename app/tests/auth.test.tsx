@@ -90,9 +90,7 @@ describe('sign up', () => {
     await type('Username', username);
     await type('Email', email);
     await type('Password', password);
-    await type('Month of birth', '1');
-    await type('Year of birth', '1990');
-    await press('Create account');
+    await press('Accept and create account');
   }
 
   test('checks the form before asking the server', async () => {

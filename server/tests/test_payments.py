@@ -450,50 +450,6 @@ async def test_plus_lasts_45_games(app: FastAPI, players: PlayerFactory, clock: 
     assert [g["games_left"] for g in mine["waiting"]] == [44]
 
 
-async def test_under_18s_cannot_buy_and_their_parent_is_told(
-    app: FastAPI, players: PlayerFactory, gateway: FakeGateway, mailer: MemoryMailer, clock: Clock
-) -> None:
-    kid = await players("kid")
-    state: AppState = app.state.ctx
-    async with state.sessions() as db:
-        await db.execute(
-            update(User)
-            .where(User.id == uuid.UUID(kid.id))
-            .values(adult_from=clock() + timedelta(days=300), parent_email="mum@example.com")
-        )
-        await db.commit()
-    checkout = "/api/v1/payments/checkout"
-    r = await kid.http.post(checkout, json={"plan": "plus", "period": "month"})
-    assert (r.status_code, r.json()["error"]) == (
-        403,
-        {
-            "code": "under_18",
-            "message": "Players under 18 cannot buy plans. "
-            "We have told your parent or guardian by email.",
-        },
-    )
-    told = mailer.outbox[-1]
-    assert (told.to, told.subject) == ("mum@example.com", "kid would like ClawPlay Plus")
-    assert "₹149 for 45 games or a month" in told.body
-    assert "nothing was charged" in told.body
-    assert gateway.orders == []  # no order made
-
-    sent = len(mailer.outbox)
-    await kid.http.post(checkout, json={"plan": "plus", "period": "month"})  # once a day
-    assert len(mailer.outbox) == sent
-    await kid.http.post(checkout, json={"plan": "pro", "period": "year"})
-    assert mailer.outbox[-1].subject == "kid would like ClawPlay Pro"
-    assert "₹299 for a month or a year" in mailer.outbox[-1].body
-
-    # Without a parent's address on record, nobody is told.
-    async with state.sessions() as db:
-        await db.execute(update(User).where(User.id == uuid.UUID(kid.id)).values(parent_email=None))
-        await db.commit()
-    clock.advance(days=2)
-    r = await kid.http.post(checkout, json={"plan": "plus", "period": "month"})
-    assert r.json()["error"]["message"] == "Players under 18 cannot buy plans."
-
-
 def _refund(refund_id: str, payment_id: str, amount: int) -> dict[str, Any]:
     return {
         "event": "refund.processed",

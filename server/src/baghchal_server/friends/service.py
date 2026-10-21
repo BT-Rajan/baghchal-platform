@@ -16,7 +16,6 @@ from baghchal_server.accounts.service import GUEST
 from baghchal_server.errors import AppError
 from baghchal_server.friends.models import Friendship
 from baghchal_server.friends.schemas import Relation
-from baghchal_server.legal.age import plays_people
 from baghchal_server.lobby import service as lobby
 
 MAX_FRIENDS: Final = 200
@@ -78,10 +77,8 @@ async def request(db: AsyncSession, now: datetime, user: User, other: User) -> R
         raise AppError(
             409, "guest_has_no_friends", "{name} is playing as a guest.", name=other.username
         )
-    if (
-        await lobby.has_blocked(db, user.id, other.id)
-        or await lobby.has_blocked(db, other.id, user.id)
-        or not plays_people(other, now)
+    if await lobby.has_blocked(db, user.id, other.id) or await lobby.has_blocked(
+        db, other.id, user.id
     ):
         raise AppError(403, "friend_refused", "You cannot add {name}.", name=other.username)
     row = await _row(db, user.id, other.id)

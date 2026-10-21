@@ -21,8 +21,6 @@ from baghchal_server.chat.service import KEPT as CHAT
 from baghchal_server.config import Settings
 from baghchal_server.errors import AppError
 from baghchal_server.fair_play.models import FairPlayCheck, FairPlaySide
-from baghchal_server.legal.age import PENDING
-from baghchal_server.legal.consents import PARENT_DEADLINE
 from baghchal_server.mail import Mail, deliver
 from baghchal_server.moderation.models import ModerationAction, Report
 from baghchal_server.payments.models import Payment
@@ -47,32 +45,6 @@ PAYMENTS: Final = timedelta(days=8 * 365)
 async def _delete(db: AsyncSession, statement: object) -> int:
     result = await db.execute(statement)  # type: ignore[call-overload]
     return int(result.rowcount)
-
-
-async def _without_parent(
-    db: AsyncSession, settings: Settings, now: datetime, outbox: list[Mail]
-) -> int:
-    """Accounts of players under 18 whose parent did not agree in time: deleted like any
-    account (anonymised), except while they are in a live game (next time)."""
-    waiting = (
-        await db.scalars(
-            select(User).where(
-                User.parent_consent == PENDING,
-                User.is_active.is_(True),
-                User.age_checked_at < now - PARENT_DEADLINE,
-                User.adult_from > now,
-            )
-        )
-    ).all()
-    deleted = 0
-    for user in waiting:
-        try:
-            _, goodbye = await lifecycle.delete_account(db, settings, now, user)
-        except AppError:  # a live game: next time
-            continue
-        outbox.append(goodbye)  # they play only the computer: no challenges to anyone
-        deleted += 1
-    return deleted
 
 
 async def _lost_guests(db: AsyncSession, settings: Settings, now: datetime) -> int:
@@ -133,7 +105,6 @@ async def tidy(
         ),
     }
     await db.commit()
-    done["accounts_without_parent"] = await _without_parent(db, settings, now, outbox)
     done["guest_accounts"] = await _lost_guests(db, settings, now)
     return done
 

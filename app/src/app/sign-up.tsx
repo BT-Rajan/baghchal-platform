@@ -3,7 +3,6 @@ import { router } from 'expo-router';
 
 import { useApi } from '@/auth/session';
 import { AccountForm, type AccountDetails } from '@/components/AccountForm';
-import { withAge } from '@/legal/agreement';
 import { Button } from '@/components/Button';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
@@ -14,7 +13,7 @@ import { t } from '@/i18n';
 export default function SignUp() {
   const api = useApi();
   const register = useMutation({
-    mutationFn: (details: AccountDetails) => api.register(withAge(details)),
+    mutationFn: (details: AccountDetails) => api.register(details),
   });
 
   if (register.isSuccess) {
@@ -33,7 +32,7 @@ export default function SignUp() {
 
   return (
     <Screen title={t('Create an account')} brand>
-      <AccountForm action={register} submitTitle={t('Create account')} />
+      <AccountForm action={register} submitTitle={t('Accept and create account')} />
       <TextLink href="/sign-in">{t('Already have an account? Sign in')}</TextLink>
     </Screen>
   );

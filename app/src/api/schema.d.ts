@@ -78,8 +78,7 @@ export interface paths {
         put?: never;
         /**
          * Verify Email
-         * @description Confirm the address and sign in. For a player under 18, this is when their parent is
-         *     emailed to agree.
+         * @description Confirm the address and sign in.
          */
         post: operations["verify_email_api_v1_auth_verify_email_post"];
         delete?: never;
@@ -352,51 +351,9 @@ export interface paths {
         put?: never;
         /**
          * Accept
-         * @description Accept the current terms and privacy policy (asked again after they change), and give
-         *     the month of birth if the account predates that question.
+         * @description Accept the current terms and privacy policy (asked again after they change).
          */
         post: operations["accept_api_v1_me_consents_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/parent-consent/look-up": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Look Up
-         * @description Who a parent's link is about, before they decide.
-         */
-        post: operations["look_up_api_v1_parent_consent_look_up_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/parent-consent": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Decide
-         * @description A parent or guardian agrees, refuses, or withdraws an earlier agreement (which deletes
-         *     the account).
-         */
-        post: operations["decide_api_v1_parent_consent_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1581,7 +1538,7 @@ export interface paths {
         };
         /**
          * Read Chat
-         * @description The game's chat: whether it is open (adults with accounts, both with messages on, no
+         * @description The game's chat: whether it is open (players with accounts, both with messages on, no
          *     block, the game on or just over), and what has been said.
          */
         get: operations["read_chat_api_v1_games__game_id__chat_get"];
@@ -1883,7 +1840,7 @@ export interface components {
             /** Open */
             open: boolean;
             /** Closed Because */
-            closed_because: ("computer" | "guest" | "under_18" | "messages_off" | "blocked" | "game_over") | null;
+            closed_because: ("computer" | "guest" | "messages_off" | "blocked" | "game_over") | null;
             /** Messages */
             messages: components["schemas"]["ChatMessageOut"][];
         };
@@ -1948,10 +1905,13 @@ export interface components {
         };
         /**
          * ClaimIn
-         * @description A guest's account: as for sign-up, but the month of birth the guest gave is kept, so
-         *     it is asked again only of guests who never gave one.
+         * @description A guest's account: as for sign-up.
          */
         ClaimIn: {
+            /** Terms Version */
+            terms_version: string;
+            /** Privacy Version */
+            privacy_version: string;
             /** Username */
             username: string;
             /**
@@ -1961,14 +1921,6 @@ export interface components {
             email: string;
             /** Password */
             password: string;
-            /** Terms Version */
-            terms_version: string;
-            /** Privacy Version */
-            privacy_version: string;
-            /** Birth Month */
-            birth_month?: string | null;
-            /** Parent Email */
-            parent_email?: string | null;
         };
         /** ClocksOut */
         ClocksOut: {
@@ -2002,18 +1954,13 @@ export interface components {
         };
         /**
          * ConsentsIn
-         * @description Accepting the current documents again, after they changed; an account made before we
-         *     asked for the month of birth gives it here too.
+         * @description Accepting the current documents again, after they changed.
          */
         ConsentsIn: {
             /** Terms Version */
             terms_version: string;
             /** Privacy Version */
             privacy_version: string;
-            /** Birth Month */
-            birth_month?: string | null;
-            /** Parent Email */
-            parent_email?: string | null;
         };
         /** DailyAnswerOut */
         DailyAnswerOut: {
@@ -2105,12 +2052,6 @@ export interface components {
             created_at: string;
             /** Email Verified At */
             email_verified_at: string | null;
-            /** Adult From */
-            adult_from: string | null;
-            /** Parent Email */
-            parent_email: string | null;
-            /** Parent Consented At */
-            parent_consented_at: string | null;
         };
         /** ExportChallenge */
         ExportChallenge: {
@@ -2468,8 +2409,6 @@ export interface components {
         };
         /** GuestIn */
         GuestIn: {
-            /** Birth Month */
-            birth_month: string;
             /** Terms Version */
             terms_version: string;
             /** Privacy Version */
@@ -2561,12 +2500,6 @@ export interface components {
              * @enum {string}
              */
             role: "guest" | "player" | "moderator" | "admin";
-            /** Plays People */
-            plays_people: boolean;
-            /** Parent Consent */
-            parent_consent: ("pending" | "given") | null;
-            /** Age Needed */
-            age_needed: boolean;
             /** Consents Needed */
             consents_needed: ("terms" | "privacy")[];
         };
@@ -2736,33 +2669,6 @@ export interface components {
          * @enum {string}
          */
         PairingState: "waiting" | "playing" | "done";
-        /** ParentDecisionIn */
-        ParentDecisionIn: {
-            /** Token */
-            token: string;
-            /**
-             * Decision
-             * @enum {string}
-             */
-            decision: "agree" | "refuse";
-        };
-        /** ParentLinkIn */
-        ParentLinkIn: {
-            /** Token */
-            token: string;
-        };
-        /** ParentLinkOut */
-        ParentLinkOut: {
-            /** Username */
-            username: string;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "pending" | "given" | "deleted";
-            /** Adult From */
-            adult_from: string | null;
-        };
         /** PasswordChangeIn */
         PasswordChangeIn: {
             /** Current Password */
@@ -3014,8 +2920,6 @@ export interface components {
         };
         /** RegisterIn */
         RegisterIn: {
-            /** Birth Month */
-            birth_month: string;
             /** Terms Version */
             terms_version: string;
             /** Privacy Version */
@@ -3029,8 +2933,6 @@ export interface components {
             email: string;
             /** Password */
             password: string;
-            /** Parent Email */
-            parent_email?: string | null;
         };
         /** RelationOut */
         RelationOut: {
@@ -3902,72 +3804,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    look_up_api_v1_parent_consent_look_up_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ParentLinkIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ParentLinkOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    decide_api_v1_parent_consent_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ParentDecisionIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ParentLinkOut"];
                 };
             };
             /** @description Validation Error */

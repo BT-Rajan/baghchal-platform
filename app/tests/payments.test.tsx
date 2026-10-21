@@ -201,31 +201,6 @@ test('Plus bought on Pro waits for Pro to end', async () => {
   ).toBeOnTheScreen();
 });
 
-test('under 18: buying is refused, the parent is told, and the buttons turn off', async () => {
-  const { server } = await open({
-    'POST /api/v1/payments/checkout': error(
-      403,
-      'under_18',
-      'Players under 18 cannot buy plans. We have told your parent or guardian by email.',
-    ),
-  });
-  await fireEvent.press(
-    await screen.findByRole('button', { name: 'Buy ClawPlay Plus for a month' }),
-  );
-  expect(
-    await screen.findByText(
-      'Players under 18 cannot buy plans. We have told your parent or guardian by email.',
-    ),
-  ).toBeOnTheScreen();
-  expect(opened).toHaveLength(0);
-  for (const name of ['Buy ClawPlay Plus for a month', 'Buy ClawPlay Pro for a year'])
-    expect(screen.getByRole('button', { name })).toBeDisabled();
-  expect(server.lastTo('POST /api/v1/payments/checkout').body).toEqual({
-    plan: 'plus',
-    period: 'month',
-  });
-});
-
 test('the apps show what plans include, with no prices and nowhere to buy', async () => {
   jest.replaceProperty(Platform, 'OS', 'android');
   const { server } = await open();

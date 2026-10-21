@@ -3,7 +3,9 @@
  *
  * On start, `restore()` asks the server (`GET /me`) whether a session exists. Whenever the
  * server says the session is over (`401 not_authenticated`), local state and the query cache
- * are cleared, and the route guards send the user back to sign-in.
+ * are cleared, and the route guards send the user back to sign-in. Whenever it says the terms
+ * changed and must be accepted first (`403 consents_needed`), the user is asked again, so the
+ * route guards show the agreement at once.
  */
 import type { QueryClient } from '@tanstack/react-query';
 
@@ -48,6 +50,10 @@ export class SessionStore {
       auth: () => ({ token: this.currentToken, epoch: this.epoch }),
       onSignedOut: (epoch) => {
         if (epoch === this.epoch) void this.forget();
+      },
+      onConsentsNeeded: (epoch) => {
+        // The request that was refused shows its own error; a failed refresh changes nothing.
+        if (epoch === this.epoch) this.refresh().catch(() => {});
       },
     });
     this.api = createApi(client, options.transport);

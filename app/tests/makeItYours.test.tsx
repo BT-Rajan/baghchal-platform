@@ -40,11 +40,4 @@ describe('make it yours: a new account’s first stop', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Challenge a friend by link' }));
     await waitFor(() => expect(app.getPathname()).toBe('/invite'));
   });
-
-  test('a player waiting for a parent sees why friends are not open yet', async () => {
-    await open({ ...ME, plays_people: false, parent_consent: 'pending' });
-    expect(await screen.findByRole('radio', { name: 'Wood' })).toBeChecked();
-    expect(screen.queryByRole('button', { name: 'Find friends' })).toBeNull();
-    expect(screen.getByText(/^A parent or guardian has to agree/)).toBeOnTheScreen();
-  });
 });

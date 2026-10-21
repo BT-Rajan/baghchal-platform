@@ -21,6 +21,8 @@ export interface ClientOptions {
   auth: () => Auth;
   /** Called when the server says the session is over (`401 not_authenticated`). */
   onSignedOut: (epoch: number) => void;
+  /** Called when the server refuses until changed terms are accepted (`403 consents_needed`). */
+  onConsentsNeeded: (epoch: number) => void;
   timeoutMs?: number;
   fetch?: typeof fetch;
 }
@@ -105,6 +107,7 @@ export function createClient(options: ClientOptions): Client {
     if (!response.ok) {
       const error = errorFromBody(response.status, body);
       if (error.code === 'not_authenticated') options.onSignedOut(epoch);
+      if (error.code === 'consents_needed') options.onConsentsNeeded(epoch);
       throw error;
     }
     if (body === undefined && response.status !== 204) {

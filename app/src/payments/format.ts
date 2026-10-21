@@ -50,11 +50,6 @@ export function periodsOf(plan: PlanInfo): Period[] {
   );
 }
 
-/** Whether buying was refused because the player is under 18 (their parent has been told). */
-export function refusedAsMinor(error: unknown): boolean {
-  return error instanceof ApiError && error.code === 'under_18';
-}
-
 /**
  * "Thank you! You have ClawPlay Plus until 17 Nov 2026.", or for time lined up after a better
  * plan, "Thank you! Your ClawPlay Plus starts on 1 Jan 2027, after the plan time you already have, and

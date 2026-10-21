@@ -13,7 +13,6 @@ import { mark, t } from '@/i18n';
 import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Notice } from '@/components/Notice';
-import { PeopleOnly } from '@/components/PeopleOnly';
 import { Screen } from '@/components/Screen';
 import { Segmented } from '@/components/Segmented';
 import { Upsell } from '@/components/Upsell';
@@ -47,9 +46,7 @@ export default function PlayNow() {
   return (
     <Screen align="top">
       <TimeControlPicker value={timeControl} onChange={setTimeControl} />
-      <PeopleOnly>
-        <FindOpponent timeControl={timeControl} />
-      </PeopleOnly>
+      <FindOpponent timeControl={timeControl} />
       <PlayComputer timeControl={timeControl} />
     </Screen>
   );

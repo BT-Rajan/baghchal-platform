@@ -17,7 +17,7 @@ MESSAGES_PER_USER: Final = Limit("chat", 20, 60)
 
 @router.get("/games/{game_id}/chat")
 async def read_chat(game_id: uuid.UUID, user: CurrentUser, state: State, db: DB) -> ChatOut:
-    """The game's chat: whether it is open (adults with accounts, both with messages on, no
+    """The game's chat: whether it is open (players with accounts, both with messages on, no
     block, the game on or just over), and what has been said."""
     game = await games.get_game(db, game_id)
     return await service.read(db, game, user.id, state.clock())

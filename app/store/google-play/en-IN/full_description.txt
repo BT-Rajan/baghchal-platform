@@ -35,8 +35,8 @@ Ratings can never be bought: live games, rated matches and quick pairing are fre
 
 FAIR AND SAFE
 • Fair-play checks on rated games, penalties for players who keep abandoning games, and blocking and reporting in one tap.
-• Chat with your opponent is for adults only, filtered, and can be turned off.
-• Players aged 13 to 17 need a parent or guardian's agreement before they play other people; until then they can play the computer and puzzles.
+• Chat with your opponent is for players with accounts, filtered, and can be turned off.
+• ClawPlay is for players aged 13 and over; players under 18 need a parent's or guardian's permission.
 
 Start as a guest in seconds, then make a free account to keep your games and rating.
 

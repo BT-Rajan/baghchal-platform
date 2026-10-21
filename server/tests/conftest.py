@@ -33,11 +33,10 @@ SERVER_DIR = Path(__file__).resolve().parents[1]
 ORIGIN = "http://localhost:8081"
 PASSWORD = "correct horse battery"
 AGREE = {
-    "birth_month": "1990-01",
     "terms_version": VERSIONS[Document.TERMS],
     "privacy_version": VERSIONS[Document.PRIVACY],
 }
-"""What sign-up asks besides the account: an adult who accepts the current documents."""
+"""What sign-up asks besides the account: accepting the current documents."""
 
 
 @pytest.fixture(scope="session")

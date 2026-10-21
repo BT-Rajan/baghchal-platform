@@ -7,7 +7,6 @@ import { Button } from '@/components/Button';
 import { Card, Hint } from '@/components/Card';
 import { ChallengeCard } from '@/components/ChallengeCard';
 import { Notice } from '@/components/Notice';
-import { PeopleOnly } from '@/components/PeopleOnly';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
 import { useServerNow } from '@/components/useNow';
@@ -61,13 +60,11 @@ export default function LinkChallenge() {
           </Text>
           <Text style={styles.text}>{challengeTerms(c, me.id)}</Text>
           {accept.error !== null && <Notice tone="error">{describeError(accept.error)}</Notice>}
-          <PeopleOnly>
-            <Button
-              title={t('Accept and play')}
-              busy={accept.isPending}
-              onPress={() => accept.mutate()}
-            />
-          </PeopleOnly>
+          <Button
+            title={t('Accept and play')}
+            busy={accept.isPending}
+            onPress={() => accept.mutate()}
+          />
         </Card>
       )}
       {myGame !== null && (

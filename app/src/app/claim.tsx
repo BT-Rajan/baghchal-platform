@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 
-import { useApi, useMe, useSession } from '@/auth/session';
+import { useApi, useSession } from '@/auth/session';
 import { AccountForm, type AccountDetails } from '@/components/AccountForm';
 import { Button } from '@/components/Button';
 import { Hint } from '@/components/Card';
@@ -12,10 +12,7 @@ import { t } from '@/i18n';
 /** A guest makes a real account, keeping their games. */
 export default function Claim() {
   const api = useApi();
-  const me = useMe();
   const { session } = useSession();
-  // The age the guest gave when they started playing is kept, not asked again.
-  const knownAge = me.parent_consent === 'pending' ? 'minor' : 'adult';
   const claim = useMutation({
     mutationFn: async (details: AccountDetails) => {
       await api.claimAccount(details);
@@ -32,14 +29,6 @@ export default function Claim() {
             { email: claim.variables.email },
           )}
         </Notice>
-        {claim.variables.parent_email !== undefined && (
-          <Notice tone="info">
-            {t(
-              'We also emailed {email} to ask them to agree. Until they do you can play the computer and puzzles.',
-              { email: claim.variables.parent_email },
-            )}
-          </Notice>
-        )}
         <Button title={t('Make it yours')} onPress={() => router.replace('/make-it-yours')} />
         <Button
           title={t('Back to playing')}
@@ -57,11 +46,7 @@ export default function Claim() {
           'Keep your games, play rated games and climb the leaderboard, challenge friends, and sign in on any device.',
         )}
       </Hint>
-      <AccountForm
-        action={claim}
-        submitTitle={t('Make my account')}
-        {...(!me.age_needed && { knownAge })}
-      />
+      <AccountForm action={claim} submitTitle={t('Accept and make my account')} />
     </Screen>
   );
 }

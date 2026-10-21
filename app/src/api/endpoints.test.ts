@@ -33,7 +33,7 @@ test('every endpoint calls the right method, path and body', async () => {
   const api = createApi(client, 'bearer');
   const signal = new AbortController().signal;
 
-  const agreed = { birth_month: '1990-01', terms_version: 't1', privacy_version: 'p1' };
+  const agreed = { terms_version: 't1', privacy_version: 'p1' };
   await api.register({ ...agreed, username: 'alice', email: 'a@example.com', password: 'p' });
   await api.verifyEmail('tok');
   await api.login('alice', 'pw');
@@ -45,8 +45,6 @@ test('every endpoint calls the right method, path and body', async () => {
   await api.legalVersions(signal);
   await api.legalDocument('privacy', signal);
   await api.acceptConsents({ terms_version: 't1', privacy_version: 'p1' });
-  await api.parentLookUp('tok');
-  await api.parentDecide('tok', 'refuse');
   await api.searchPlayers('al', signal);
   await api.onlinePlayers();
   await api.profile('a b');
@@ -98,8 +96,6 @@ test('every endpoint calls the right method, path and body', async () => {
     ['GET', `${V}/legal`, { signal }],
     ['GET', `${V}/legal/privacy`, { signal }],
     ['POST', `${V}/me/consents`, { body: { terms_version: 't1', privacy_version: 'p1' } }],
-    ['POST', `${V}/parent-consent/look-up`, { body: { token: 'tok' } }],
-    ['POST', `${V}/parent-consent`, { body: { token: 'tok', decision: 'refuse' } }],
     ['GET', `${V}/players`, { query: { prefix: 'al' }, signal }],
     ['GET', `${V}/players/online`, { signal: undefined }],
     ['GET', `${V}/players/a%20b`, { signal: undefined }],

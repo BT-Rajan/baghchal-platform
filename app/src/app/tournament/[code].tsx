@@ -9,7 +9,6 @@ import { Button } from '@/components/Button';
 import { Card, Hint, SectionTitle } from '@/components/Card';
 import { Confirm } from '@/components/Confirm';
 import { Notice } from '@/components/Notice';
-import { PeopleOnly } from '@/components/PeopleOnly';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
 import { plural, t } from '@/i18n';
@@ -65,13 +64,11 @@ function Details({ tournament: tour }: { tournament: Tournament }) {
             {shareLink(`/tournament/${tour.code}`)}
           </Text>
           {!playing && (
-            <PeopleOnly>
-              <Button
-                title={t('Join')}
-                busy={action.isPending}
-                onPress={() => action.mutate('join')}
-              />
-            </PeopleOnly>
+            <Button
+              title={t('Join')}
+              busy={action.isPending}
+              onPress={() => action.mutate('join')}
+            />
           )}
           {playing && !host && (
             <Button

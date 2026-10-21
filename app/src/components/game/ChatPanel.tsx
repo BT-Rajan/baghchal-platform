@@ -17,9 +17,9 @@ import { TextField } from '../TextField';
 const MAX_LENGTH = 200;
 
 /**
- * Chat with my opponent, beside the quick messages: only between two adults with accounts who
+ * Chat with my opponent, beside the quick messages: only between two players with accounts who
  * both have messages on (the server decides, and says why not). Nothing shows against the
- * computer, a guest or a player under 18, who keep the quick messages.
+ * computer or a guest, who keep the quick messages.
  */
 export function ChatPanel({ game, mine }: { game: Game; mine: Piece }) {
   const chat = useChat(game.id, game.computer === null, game.status !== 'active');

@@ -17,14 +17,7 @@ import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { ErrorState, Loading } from '@/components/States';
 import { t } from '@/i18n';
-import {
-  buyErrorText,
-  buyLabel,
-  paymentText,
-  periodsOf,
-  refusedAsMinor,
-  thanksText,
-} from '@/payments/format';
+import { buyErrorText, buyLabel, paymentText, periodsOf, thanksText } from '@/payments/format';
 import { useBuy, usePayments } from '@/payments/hooks';
 import { colors, radius, spacing, type } from '@/theme';
 
@@ -39,8 +32,6 @@ export default function Plans() {
   const buy = useBuy();
   const error = plans.error ?? mine.error ?? payments.error;
   const buyError = buy.error === null ? null : buyErrorText(buy.error);
-  // Under 18: the server told their parent; buying stays off.
-  const minor = refusedAsMinor(buy.error);
   // The apps do not sell plans, nor point to where they are sold (app stores forbid it): they
   // show what each plan includes. Buying is on the website, which says so itself.
   const inApp = Platform.OS !== 'web';
@@ -85,7 +76,7 @@ export default function Plans() {
                       ? (period) => buy.mutate({ plan: paid, period })
                       : null
                   }
-                  buying={buy.isPending || minor}
+                  buying={buy.isPending}
                   priced={!inApp}
                 />
               );
@@ -99,7 +90,7 @@ export default function Plans() {
                 )
               : payments.data.enabled
                 ? t(
-                    'Payments are taken by Razorpay: cards, UPI, net banking and wallets. Plus lasts 45 finished games or a month, whichever comes first; Pro has no limits. Plans are paid in advance and never renew by themselves; buying again adds on. Pro starts at once, and Plus you had left follows it; Plus bought while you have Pro starts when Pro ends. Players under 18 cannot buy plans: their parent or guardian is told instead.',
+                    'Payments are taken by Razorpay: cards, UPI, net banking and wallets. Plus lasts 45 finished games or a month, whichever comes first; Pro has no limits. Plans are paid in advance and never renew by themselves; buying again adds on. Pro starts at once, and Plus you had left follows it; Plus bought while you have Pro starts when Pro ends.',
                   )
                 : t(
                     'Paying online is coming soon. Until then, ClawPlay can add a plan to your account.',
