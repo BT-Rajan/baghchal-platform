@@ -1,5 +1,5 @@
 import { useLocales } from 'expo-localization';
-import { Fragment, useEffect, type ReactNode } from 'react';
+import { createContext, Fragment, useContext, useEffect, type ReactNode } from 'react';
 import { I18nManager, Platform } from 'react-native';
 
 import { useAppearanceQuery } from '@/appearance/hooks';
@@ -13,11 +13,27 @@ export function useDeviceLanguage(): Language {
   return fromDevice(locales.map((l) => l.languageTag));
 }
 
+const LanguageContext = createContext<Language>('en');
+
+/** The language in use, for what must be drawn again when it changes (layouts' titles). */
+export function useLanguage(): Language {
+  return useContext(LanguageContext);
+}
+
+/**
+ * A screen's content, drawn afresh in a new language. Each screen is redrawn inside its own
+ * place in the navigation, rather than the whole app at once: rebuilding every navigator and
+ * native screen together is what made switching fragile on Android.
+ */
+export function InLanguage({ children }: { children: ReactNode }) {
+  return <Fragment key={useLanguage()}>{children}</Fragment>;
+}
+
 /**
  * Speaks the player's language: their appearance's choice (once signed in), else the
- * device's. Everything below is drawn afresh when it changes. Arabic turns the layout right to
- * left: at once on the web, and from the next start in the apps (Android and iOS set the
- * direction as the app opens).
+ * device's. Screens are drawn again in it (InLanguage, in each navigator's screen layout).
+ * Arabic turns the layout right to left: at once on the web, and from the next start in the
+ * apps (Android and iOS set the direction as the app opens).
  */
 export function LanguageRoot({ children }: { children: ReactNode }) {
   const { state } = useSession();
@@ -38,7 +54,7 @@ export function LanguageRoot({ children }: { children: ReactNode }) {
       I18nManager.forceRTL(rtl);
     }
   }, [language, rtl]);
-  return <Fragment key={language}>{children}</Fragment>;
+  return <LanguageContext.Provider value={language}>{children}</LanguageContext.Provider>;
 }
 
 /** Whether the apps must be opened again to turn the layout the language's way. */

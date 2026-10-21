@@ -16,6 +16,7 @@ import { NotificationBell } from '@/components/NotificationBell';
 import { LOGO_TAB } from '@/components/tabs';
 import { t } from '@/i18n';
 import { colors, spaced, spacing, type } from '@/theme';
+import { InLanguage, useLanguage } from '@/i18n/LanguageRoot';
 
 /** From this width the tabs are a sidebar, not a bar stretched along the bottom. */
 const SIDEBAR_WIDTH = 900;
@@ -61,6 +62,7 @@ function label(text: string, position: number, style: TextStyle) {
 }
 
 export default function TabsLayout() {
+  useLanguage(); // the tab labels and titles, in a new language
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const sidebar = width >= SIDEBAR_WIDTH;
@@ -77,6 +79,7 @@ export default function TabsLayout() {
       };
   return (
     <Tabs
+      screenLayout={({ children }) => <InLanguage>{children}</InLanguage>}
       {...(web && { tabBar: () => null })}
       screenOptions={{
         ...(web && { headerShown: false }),
