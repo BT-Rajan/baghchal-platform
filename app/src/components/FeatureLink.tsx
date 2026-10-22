@@ -14,13 +14,15 @@ import { Icon, type IconName } from './Icon';
  * A way into one of the app's features: an icon, what it is, and (where the name is not
  * enough) one short line on what it does; a row in the apps' drill-down menus too. A
  * feature the player's plan lacks carries that plan's badge (named by the server's plans, as
- * the Upsell does); its page shows the Upsell itself.
+ * the Upsell does); its page shows the Upsell itself. As a `tile` it stands on its own, side by
+ * side with others (the web's home: its ways to play).
  */
 export function FeatureLink({
   icon,
   title,
   text,
   feature,
+  tile = false,
   onPress,
 }: {
   icon: IconName;
@@ -28,6 +30,8 @@ export function FeatureLink({
   text?: string;
   /** The paid feature it needs, if any. */
   feature?: Feature;
+  /** A card in a row of them, icon above the words, rather than a row in a list. */
+  tile?: boolean;
   onPress: () => void;
 }) {
   const mine = useMyPlan();
@@ -40,10 +44,15 @@ export function FeatureLink({
       aria-label={title}
       onPress={onPress}
       {...ripple()}
-      style={(state) => [styles.tile, pressedLook(state.pressed, styles.pressed), focusRing(state)]}
+      style={(state) => [
+        styles.tile,
+        tile && styles.card,
+        pressedLook(state.pressed, styles.pressed),
+        focusRing(state),
+      ]}
     >
-      <View style={styles.icon}>
-        <Icon name={icon} color={colors.accent} />
+      <View style={[styles.icon, tile && styles.bigIcon]}>
+        <Icon name={icon} color={colors.accent} size={tile ? 28 : 24} />
       </View>
       <View style={styles.words}>
         <View style={styles.titleRow}>
@@ -52,7 +61,7 @@ export function FeatureLink({
         </View>
         {text !== undefined && <Text style={styles.text}>{text}</Text>}
       </View>
-      <Icon name="chevron" color={colors.muted} size={18} />
+      {!tile && <Icon name="chevron" color={colors.muted} size={18} />}
     </Pressable>
   );
 }
@@ -68,6 +77,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...shadow,
   },
+  card: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    flexGrow: 1,
+    flexBasis: 180,
+    minHeight: 150,
+    padding: spacing.lg,
+  },
   pressed: { transform: [{ scale: 0.99 }], opacity: 0.85 },
   icon: {
     width: 44,
@@ -77,6 +94,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  bigIcon: { width: 56, height: 56 },
   words: { flex: 1, gap: 2 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   title: { ...type.label, fontSize: 16, color: colors.text },
