@@ -1,5 +1,5 @@
 // End-to-end smoke test: the production web build against a real server, played by two
-// browsers. Alice and Bob sign up through the app, confirm their email links, Alice
+// browsers. Alice and Bob sign up through the app (which signs them in at once), Alice
 // challenges Bob, Bob accepts, and they play the game to a result on the board.
 //
 //   npm run e2e:smoke                  (from app/; needs uv and Chromium for Playwright)
@@ -228,12 +228,12 @@ async function signUp(browser, username) {
   await visible(page.getByLabel('Username', { exact: true })).fill(username);
   await visible(page.getByLabel('Email', { exact: true })).fill(`${username}@example.com`);
   await visible(page.getByLabel('Password', { exact: true })).fill(PASSWORD);
-  await visible(page.getByRole('button', { name: 'Create account' })).click();
-  await visible(page.getByRole('heading', { name: 'Check your email' })).waitFor();
-  const link = await waitFor(() => verificationLink(username), `${username}'s email`);
-  await page.goto(link);
-  await visible(page.getByRole('heading', { name: 'Play' })).waitFor();
-  step(`${username} signed up and confirmed their email`);
+  await visible(page.getByRole('button', { name: 'Sign up', exact: true })).click();
+  await page.waitForURL(/\/make-it-yours/);
+  await waitFor(() => verificationLink(username), `${username}'s email`);
+  await page.goto(WEB);
+  await visible(page.getByRole('heading', { name: 'Play' })).first().waitFor();
+  step(`${username} signed up, signed in at once, and was sent the optional email`);
   return page;
 }
 

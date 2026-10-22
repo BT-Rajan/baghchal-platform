@@ -254,22 +254,23 @@ describe('undo', () => {
       {
         'POST /api/v1/games/g1/undo': {
           status: 200,
-          body: game({ ...COMPUTER, undo: 'now', server_time: later() }),
+          body: game({ ...COMPUTER, undo: 'none', server_time: later() }),
         },
       },
     );
     await fireEvent.press(await screen.findByRole('button', { name: 'Take back your move' }));
     expect(await screen.findByText('No moves yet.')).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/games/g1/undo')).toBeDefined();
-    // Nothing of mine left to take back.
-    expect(screen.getByRole('button', { name: 'Take back your move' })).toBeDisabled();
+    // Nothing of mine left to take back (the server says so).
+    expect(screen.queryByRole('button', { name: 'Take back your move' })).toBeNull();
   });
 
   test('against a person it asks; the button says so until answered', async () => {
     const { server } = await openGame(game({ ...UNDER_WAY, undo: 'ask', server_time: now() }), {
       'POST /api/v1/games/g1/undo': {
         status: 200,
-        body: game({ ...UNDER_WAY, undo: 'ask', takeback_offer: 'goat', server_time: later() }),
+        // While a request is open the server offers no undo: the button stays, saying so.
+        body: game({ ...UNDER_WAY, undo: 'none', takeback_offer: 'goat', server_time: later() }),
       },
     });
     await fireEvent.press(
@@ -281,7 +282,7 @@ describe('undo', () => {
 
   test("my opponent's request: accept it, and their move is taken back", async () => {
     const { server } = await openGame(
-      game({ ...UNDER_WAY, undo: 'ask', takeback_offer: 'tiger', server_time: now() }),
+      game({ ...UNDER_WAY, undo: 'none', takeback_offer: 'tiger', server_time: now() }),
       {
         'POST /api/v1/games/g1/undo/accept': {
           status: 200,
@@ -291,7 +292,7 @@ describe('undo', () => {
     );
     expect(await screen.findByText('bob asks to take back a move')).toBeOnTheScreen();
     // Mine waits while theirs is open.
-    expect(screen.getByRole('button', { name: 'Ask to take back your move' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Ask to take back your move' })).toBeNull();
     await press('Accept the takeback');
     await waitFor(() => expect(screen.queryByText('bob asks to take back a move')).toBeNull());
     expect(server.lastTo('POST /api/v1/games/g1/undo/accept')).toBeDefined();
@@ -300,7 +301,7 @@ describe('undo', () => {
 
   test('or decline it, and play on', async () => {
     const { server } = await openGame(
-      game({ ...UNDER_WAY, undo: 'ask', takeback_offer: 'tiger', server_time: now() }),
+      game({ ...UNDER_WAY, undo: 'none', takeback_offer: 'tiger', server_time: now() }),
       {
         'POST /api/v1/games/g1/undo/decline': {
           status: 200,

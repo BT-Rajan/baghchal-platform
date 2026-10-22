@@ -84,11 +84,12 @@ export function GameActions({ game, me, onAction, pending, error }: GameActionsP
   const drawable = !computer && !opening;
   const offeredToMe = drawable && game.draw_offer === other(me);
   const iOffered = drawable && game.draw_offer === me;
-  // Undo: the server says how ('none' in rated and tournament games); only after a move of mine.
+  // Undo: the server says how ('none' in rated and tournament games, and while a takeback
+  // request is open); only after a move of mine. An open request is answered or awaited here.
   const undo = game.undo;
   const iMoved = game.ply >= (me === 'goat' ? 1 : 2);
-  const takebackToMe = undo !== 'none' && game.takeback_offer === other(me);
-  const iAskedTakeback = undo !== 'none' && game.takeback_offer === me;
+  const takebackToMe = game.takeback_offer === other(me);
+  const iAskedTakeback = game.takeback_offer === me;
   const busy = pending !== null;
 
   const question =
@@ -183,7 +184,7 @@ export function GameActions({ game, me, onAction, pending, error }: GameActionsP
               onPress={() => onAction('draw')}
             />
           )}
-          {undo !== 'none' && (
+          {(undo !== 'none' || iAskedTakeback) && (
             <Control
               icon="undo"
               title={
