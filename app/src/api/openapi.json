@@ -6068,6 +6068,10 @@
             ],
             "title": "Role"
           },
+          "email_verified": {
+            "type": "boolean",
+            "title": "Email Verified"
+          },
           "consents_needed": {
             "items": {
               "type": "string",
@@ -6087,6 +6091,7 @@
           "created_at",
           "email",
           "role",
+          "email_verified",
           "consents_needed"
         ],
         "title": "MeOut"

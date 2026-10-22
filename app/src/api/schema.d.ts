@@ -2671,6 +2671,8 @@ export interface components {
              * @enum {string}
              */
             role: "guest" | "player" | "moderator" | "admin";
+            /** Email Verified */
+            email_verified: boolean;
             /** Consents Needed */
             consents_needed: ("terms" | "privacy")[];
         };

@@ -62,8 +62,10 @@ async def test_sign_up_signs_in_at_once(client: httpx.AsyncClient, mailer: Memor
     r = await client.post(LOGIN, json={"login": "alice", "password": PASSWORD})
     assert r.status_code == 200, r.text
 
+    assert r.json()["user"]["email_verified"] is False
     r = await client.post(VERIFY, json={"token": last_token(mailer)})
     assert r.status_code == 200
+    assert r.json()["user"]["email_verified"] is True
 
 
 async def test_sign_up_with_a_bearer_token(

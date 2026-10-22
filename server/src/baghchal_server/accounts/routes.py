@@ -87,6 +87,7 @@ async def describe_me(db: DB, user: User) -> MeOut:
         email=user.email,
         created_at=user.created_at,
         role=user.role if user.role in {*service.STAFF, service.GUEST} else "player",
+        email_verified=user.email_verified_at is not None,
         consents_needed=await consents.needed(db, user.id),
     )
 

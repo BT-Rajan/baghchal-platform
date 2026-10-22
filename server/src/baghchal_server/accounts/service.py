@@ -105,10 +105,6 @@ def email_key(email: str) -> str:
 # ── Registration and verification ─────────────────────────────────────────
 
 
-EMAIL_TAKEN: Final = "That email is already in use. Sign in instead."
-USERNAME_TAKEN: Final = "That username is taken."
-
-
 async def register(
     db: AsyncSession, hasher: PasswordHasher, settings: Settings, now: datetime, data: RegisterIn
 ) -> tuple[User, str, Mail]:
@@ -128,9 +124,9 @@ async def register(
         raise AppError(422, "weak_password", "Your password must not be your username.")
     password_hash = await hasher.hash(data.password)
     if await db.scalar(select(User.id).where(User.username_key == ukey)):
-        raise AppError(409, "username_taken", USERNAME_TAKEN)
+        raise AppError(409, "username_taken", "That username is taken.")
     if await db.scalar(select(User.id).where(User.email_key == ekey)):
-        raise AppError(409, "email_taken", EMAIL_TAKEN)
+        raise AppError(409, "email_taken", "That email is already in use. Sign in instead.")
     user = User(
         id=uuid.uuid4(),
         username=data.username,
@@ -150,8 +146,10 @@ async def register(
         # Lost a race with a concurrent registration of the same name or address.
         await db.rollback()
         if await db.scalar(select(User.id).where(User.username_key == ukey)):
-            raise AppError(409, "username_taken", USERNAME_TAKEN) from None
-        raise AppError(409, "email_taken", EMAIL_TAKEN) from None
+            raise AppError(409, "username_taken", "That username is taken.") from None
+        raise AppError(
+            409, "email_taken", "That email is already in use. Sign in instead."
+        ) from None
     await legal.record(db, user.id, now)
     token = await issue_token(db, user.id, VERIFY, now + settings.verify_email_ttl, now)
     session_token = await create_session(db, user.id, now, settings.session_ttl)
@@ -324,7 +322,7 @@ async def google_sign_in(  # noqa: PLR0913, PLR0917 - who Google says it is, and
         if user is not None:
             _check_can_sign_in(user, now)
             if user.google_subject is not None or user.role in {GUEST, BOT_ROLE}:
-                raise AppError(409, "email_taken", EMAIL_TAKEN)
+                raise AppError(409, "email_taken", "That email is already in use. Sign in instead.")
             user.google_subject = google.subject
             if user.email_verified_at is None:
                 user.password_hash = await hasher.hash(secrets.token_urlsafe(32))

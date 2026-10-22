@@ -128,6 +128,9 @@ class MeOut(UserOut):
     email: str
     """A guest's is a placeholder until they claim the account."""
     role: Literal["guest", "player", "moderator", "admin"]
+    email_verified: bool
+    """Whether the address was confirmed (the emailed link, a password reset or Google). Not
+    needed to play; while false, the app may offer to send the link again."""
     consents_needed: list[Literal["terms", "privacy"]]
     """Documents changed since the player last accepted them: ask again (POST /me/consents)."""
 
