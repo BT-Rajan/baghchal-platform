@@ -1,8 +1,8 @@
 /** Words for payments. */
 import type { Payment, PaymentKeys, Period, PlanInfo } from '@/api/endpoints';
 import { ApiError, describeError } from '@/api/errors';
-import { PLAN_NAMES } from '@/billing/format';
-import { language, locale, mark, plural, t } from '@/i18n';
+import { PLAN_NAMES, rupees } from '@/billing/format';
+import { mark, plural, t } from '@/i18n';
 import { dayText } from '@/lobby/format';
 import { dateTimeText } from '@/lobby/moderation';
 
@@ -15,10 +15,6 @@ const STATUS: Record<Payment['status'], string> = {
   refunded: mark('refunded'),
   reversed: mark('reversed by the bank'),
 };
-
-export function rupees(paise: number): string {
-  return `₹${(paise / 100).toLocaleString(language() === 'en' ? 'en-IN' : locale(), { maximumFractionDigits: 2 })}`;
-}
 
 /** "Buy a month · ₹299", or for a plan that also ends on games, "Buy 45 games or a month · ₹149". */
 export function buyLabel(plan: PlanInfo, period: Period): string {

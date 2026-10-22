@@ -2,7 +2,9 @@ import type { Payment } from '@/api/endpoints';
 import { ApiError } from '@/api/errors';
 import { setLanguage } from '@/i18n';
 
-import { buyErrorText, buyLabel, keysText, paymentText, rupees, thanksText } from './format';
+import { rupees } from '@/billing/format';
+
+import { buyErrorText, buyLabel, keysText, paymentText, thanksText } from './format';
 import { CheckoutClosed } from './razorpay';
 
 const payment = (overrides: Partial<Payment> = {}): Payment => ({

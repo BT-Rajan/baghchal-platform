@@ -14,24 +14,24 @@ module.exports = defineConfig([
     },
   },
   {
-    // The apps' engine (Hermes) has only Collator, DateTimeFormat, NumberFormat and
-    // getCanonicalLocales of Intl; the rest crash a phone (tests/support/likeHermes.js).
+    // The apps' engine (Hermes) formats through each phone's own libraries, unlike the browser,
+    // and lacks most of Intl: both have crashed the app in other languages. Dates, times and
+    // amounts come from src/i18n/format.ts, plural forms from pluralForm in src/i18n.
     files: ['src/**'],
+    ignores: ['src/**/*.test.*'],
     rules: {
+      'no-restricted-globals': [
+        'error',
+        {
+          name: 'Intl',
+          message: 'Use src/i18n (format.ts, pluralForm): Intl differs or crashes on phones.',
+        },
+      ],
       'no-restricted-properties': [
         'error',
-        ...[
-          'PluralRules',
-          'RelativeTimeFormat',
-          'ListFormat',
-          'Locale',
-          'DisplayNames',
-          'Segmenter',
-          'supportedValuesOf',
-        ].map((property) => ({
-          object: 'Intl',
+        ...['toLocaleString', 'toLocaleDateString', 'toLocaleTimeString'].map((property) => ({
           property,
-          message: 'Not in the apps’ JavaScript engine (Hermes): it crashes on a phone.',
+          message: 'Use src/i18n/format.ts: platform formatting differs or crashes on phones.',
         })),
       ],
     },

@@ -1,6 +1,7 @@
 /** Words for plans, features, prices and grants. */
 import type { Feature, Grant, MyPlan, PaidPlan, Plan, PlanInfo } from '@/api/endpoints';
-import { language, locale, mark, plural, t } from '@/i18n';
+import { mark, plural, t } from '@/i18n';
+import { amountText } from '@/i18n/format';
 import { dayText } from '@/lobby/format';
 
 export const PLAN_NAMES: Record<Plan, string> = { free: mark('Free'), plus: 'Plus', pro: 'Pro' };
@@ -24,8 +25,9 @@ export function featureText(feature: Feature): string {
   return t(FEATURE_LABELS[feature]);
 }
 
-function rupees(paise: number): string {
-  return `₹${(paise / 100).toLocaleString(language() === 'en' ? 'en-IN' : locale(), { maximumFractionDigits: 2 })}`;
+/** "₹1,490" or "₹149.5". */
+export function rupees(paise: number): string {
+  return `₹${amountText(paise / 100)}`;
 }
 
 /** "45 games or a month", "A month or a year", or "Always" (Free). */

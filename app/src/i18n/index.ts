@@ -31,14 +31,6 @@ type Catalog = Record<string, string | Forms>;
 
 export const CATALOGS: Record<Exclude<Language, 'en'>, Catalog> = { ta, hi, ar };
 
-/** How dates and numbers are written in each language (Arabic with the digits used here). */
-const LOCALES: Record<Language, string> = {
-  en: 'en-GB',
-  ta: 'ta-IN',
-  hi: 'hi-IN',
-  ar: 'ar-u-nu-latn',
-};
-
 let current: Language = 'en';
 
 export function setLanguage(language: Language): void {
@@ -47,11 +39,6 @@ export function setLanguage(language: Language): void {
 
 export function language(): Language {
   return current;
-}
-
-/** The locale for `Intl` and `toLocale…String` in the current language. */
-export function locale(): string {
-  return LOCALES[current];
 }
 
 /** Whether the current language is written right to left. */

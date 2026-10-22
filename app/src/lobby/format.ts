@@ -2,7 +2,8 @@
 import type { GameSummary, Level, Category, Challenge, Side, TimeControl } from '@/api/endpoints';
 import { WEB_URL } from '@/config';
 import { ratingChangeText } from '@/game/describe';
-import { locale, mark, plural, t } from '@/i18n';
+import { mark, plural, t } from '@/i18n';
+import { dateText } from '@/i18n/format';
 
 /** The time controls on offer: minutes+increment, and the sand clock. */
 export const TIME_CONTROLS: readonly { label: TimeControl; category: Category }[] = [
@@ -128,18 +129,13 @@ export function challengeTerms(challenge: Challenge, myId: string): string {
 
 /** "18 Jan 2027", on the player's own calendar (their device's time zone). */
 export function dayText(iso: string): string {
-  return new Date(iso).toLocaleDateString(locale(), {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+  return dateText(new Date(iso));
 }
 
 /** "Joined March 2026". */
 export function joinedText(createdAt: string): string {
-  const date = new Date(createdAt);
   return t('Joined {date}', {
-    date: date.toLocaleDateString(locale(), { month: 'long', year: 'numeric' }),
+    date: dateText(new Date(createdAt), { month: 'long', day: false }),
   });
 }
 

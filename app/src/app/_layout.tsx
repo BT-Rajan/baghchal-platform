@@ -5,7 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
-import { AppState, Platform, StyleSheet, View } from 'react-native';
+import { AppState, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import type { Game } from '@/api/endpoints';
@@ -30,7 +30,7 @@ import { API_URL } from '@/config';
 import { openedFromScreen } from '@/game/onScreen';
 import { socketUrl } from '@/realtime/connection';
 import { RealtimeProvider } from '@/realtime/RealtimeProvider';
-import { colors } from '@/theme';
+import { colors, type } from '@/theme';
 
 // The splash screen (the icon on the brand colour) stays until we know whether someone is signed
 // in, so the app opens straight onto the right screen.
@@ -331,6 +331,10 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
       <Notice tone="error">
         {t('This screen ran into a problem. Trying again usually helps.')}
       </Notice>
+      {/* What went wrong, as it is, for a report: the cause otherwise stays on the phone. */}
+      <Text style={styles.cause} selectable>
+        {error.message}
+      </Text>
       <Button title={t('Try again')} onPress={() => void retry()} />
       <Button title={t('Go to Play')} variant="secondary" onPress={() => router.replace('/')} />
     </Screen>
@@ -339,6 +343,7 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 
 const styles = StyleSheet.create({
   app: { flex: 1 },
+  cause: { ...type.caption, color: colors.muted },
   center: {
     flex: 1,
     alignItems: 'center',
