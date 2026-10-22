@@ -232,7 +232,9 @@ async function signUp(browser, username) {
   await page.waitForURL(/\/make-it-yours/);
   await waitFor(() => verificationLink(username), `${username}'s email`);
   await page.goto(WEB);
-  await visible(page.getByRole('heading', { name: 'Play' })).first().waitFor();
+  await visible(page.getByRole('heading', { name: 'Play' }))
+    .first()
+    .waitFor();
   step(`${username} signed up, signed in at once, and was sent the optional email`);
   return page;
 }
@@ -273,8 +275,8 @@ async function main() {
     const alice = await signUp(browser, 'alice');
     const bob = await signUp(browser, 'bob');
 
-    await visible(alice.getByRole('button', { name: 'Challenge bob' })).click();
-    await visible(alice.getByRole('radio', { name: '15+10' })).click();
+    await alice.goto(`${WEB}/challenge/bob`);
+    await visible(alice.getByRole('radio', { name: '5+3' })).click();
     await visible(alice.getByRole('radio', { name: 'Casual' })).click();
     await visible(alice.getByRole('radio', { name: 'Goats' })).click();
     await visible(alice.getByRole('button', { name: 'Send challenge' })).click();
@@ -299,7 +301,7 @@ async function main() {
     step(`game over after ${game.ply} moves: ${game.result.winner} won (${game.result.reason})`);
 
     const [aliceSees, bobSees] = await Promise.all(
-      [alice, bob].map((page) => visible(page.getByText(/^You (won|lost)/)).textContent()),
+      [alice, bob].map((page) => visible(page.getByText(/^You (won|lost)[ :].*\.$/)).textContent()),
     );
     step(`alice sees "${aliceSees}"; bob sees "${bobSees}"`);
     if (!/^You lost/.test(aliceSees) || !/^You won/.test(bobSees)) {
