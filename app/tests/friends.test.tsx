@@ -37,9 +37,7 @@ describe('a profile', () => {
       },
     });
     expect(await screen.findByRole('button', { name: 'Challenge bob' })).toBeDisabled();
-    expect(
-      screen.getByText('bob is in a game. You can challenge them when it ends.'),
-    ).toBeOnTheScreen();
+    expect(screen.getByText('bob is in a game.')).toBeOnTheScreen();
   });
 
   test('an unknown player leads to the player search', async () => {
@@ -48,7 +46,7 @@ describe('a profile', () => {
     });
     expect(await screen.findByText('No such player.')).toBeOnTheScreen();
     await press('Find a player');
-    await waitFor(() => expect(app.getPathname()).toBe('/'));
+    await waitFor(() => expect(app.getPathname()).toBe('/friends'));
   });
 });
 
@@ -73,9 +71,9 @@ describe('friends', () => {
     expect(server.lastTo('DELETE /api/v1/friends/bob')).toBeDefined();
   });
 
-  test('answer a request on home; friends are listed to challenge', async () => {
+  test('answer a request in Friends; friends are listed to challenge', async () => {
     let lists: Friends = { ...NONE, incoming: [BOB] };
-    await open('/', {
+    await open('/friends', {
       'GET /api/v1/friends': () => ({ status: 200, body: lists }),
       'POST /api/v1/friends/bob': () => {
         lists = { ...NONE, friends: [{ ...BOB, online: true, playing: false }] };
@@ -84,16 +82,17 @@ describe('friends', () => {
     });
     expect(await screen.findByText('bob wants to be friends.')).toBeOnTheScreen();
     await press("Accept bob's friend request");
-    expect(await screen.findByRole('heading', { name: 'Friends' })).toBeOnTheScreen();
+    expect(await screen.findByRole('heading', { name: 'Your friends' })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Challenge bob' })).toBeEnabled();
     expect(screen.queryByText('bob wants to be friends.')).toBeNull();
   });
 
   test('decline a request; a refusal is shown', async () => {
-    const { server } = await open('/', {
+    const { server } = await open('/friends', {
       'GET /api/v1/friends': { status: 200, body: { ...NONE, incoming: [BOB] } },
       'DELETE /api/v1/friends/bob': error(503, 'unavailable', 'Try again later.'),
     });
+    await screen.findByText('bob wants to be friends.');
     await press("Decline bob's friend request");
     expect(await screen.findByText('Try again later.')).toBeOnTheScreen();
     expect(server.lastTo('DELETE /api/v1/friends/bob')).toBeDefined();
@@ -125,8 +124,8 @@ describe('friends', () => {
 
   test('news of a friend request arrives live', async () => {
     let lists: Friends = NONE;
-    await open('/', { 'GET /api/v1/friends': () => ({ status: 200, body: lists }) });
-    await screen.findByText('Ready for a game?');
+    await open('/friends', { 'GET /api/v1/friends': () => ({ status: 200, body: lists }) });
+    await screen.findByLabelText('Find a player');
     lists = { ...NONE, incoming: [BOB] };
     await act(() => {
       FakeSocket.latest().open();

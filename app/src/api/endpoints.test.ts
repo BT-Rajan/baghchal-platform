@@ -35,6 +35,8 @@ test('every endpoint calls the right method, path and body', async () => {
 
   const agreed = { terms_version: 't1', privacy_version: 'p1' };
   await api.register({ ...agreed, username: 'alice', email: 'a@example.com', password: 'p' });
+  await api.googleSignIn('idt', agreed);
+  await api.authProviders(signal);
   await api.verifyEmail('tok');
   await api.login('alice', 'pw');
   await api.logout();
@@ -84,8 +86,18 @@ test('every endpoint calls the right method, path and body', async () => {
     [
       'POST',
       `${V}/auth/register`,
-      { body: { ...agreed, username: 'alice', email: 'a@example.com', password: 'p' } },
+      {
+        body: {
+          ...agreed,
+          username: 'alice',
+          email: 'a@example.com',
+          password: 'p',
+          transport: 'bearer',
+        },
+      },
     ],
+    ['POST', `${V}/auth/google`, { body: { ...agreed, id_token: 'idt', transport: 'bearer' } }],
+    ['GET', `${V}/auth/providers`, { signal }],
     ['POST', `${V}/auth/verify-email`, { body: { token: 'tok', transport: 'bearer' } }],
     ['POST', `${V}/auth/login`, { body: { login: 'alice', password: 'pw', transport: 'bearer' } }],
     ['POST', `${V}/auth/logout`, undefined],

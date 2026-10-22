@@ -4,7 +4,7 @@ import { NavigationBar } from 'expo-navigation-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { AppState, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -15,14 +15,14 @@ import { t } from '@/i18n';
 import { InLanguage, LanguageRoot, useLanguage } from '@/i18n/LanguageRoot';
 import { shouldRetry } from '@/api/retry';
 import { rememberReturn, takeReturn } from '@/auth/returnTo';
-import { SessionProvider, useSession } from '@/auth/session';
+import { SessionProvider, useRememberedUsername, useSession } from '@/auth/session';
 import { Button } from '@/components/Button';
 import { AppBanners, BannersOnScreens } from '@/components/AppBanners';
 import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
 import { SnackbarHost } from '@/components/Snackbar';
 import { Loading } from '@/components/States';
-import { BrandSplash } from '@/components/brand/BrandSplash';
+import { BrandSplash, SPLASH_FADE_MS } from '@/components/brand/BrandSplash';
 import { navigationBarStyle } from '@/components/navigationBar';
 import { statusBarStyle } from '@/components/statusBar';
 import { WebTopBar } from '@/components/site/WebTopBar';
@@ -36,8 +36,13 @@ import { colors } from '@/theme';
 // in, so the app opens straight onto the right screen.
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 
-/** How long the apps' brand splash shows at least (none in tests, which start at once). */
-const SPLASH_MS = process.env.NODE_ENV === 'test' ? 0 : 1200;
+/**
+ * How long the apps' brand splash shows at least, and how long it takes to fade into the first
+ * screen (neither in tests, which start at once).
+ */
+const TESTING = process.env.NODE_ENV === 'test';
+const SPLASH_MS = TESTING ? 0 : 1200;
+const FADE_MS = TESTING ? 0 : SPLASH_FADE_MS;
 
 /** In the apps, every screen's bar is the brand's dark bar, as Android and iOS apps have. */
 const APP_BAR =
@@ -114,10 +119,11 @@ function openGame(game: Game) {
 function Routes() {
   useLanguage(); // the bars' titles below, in a new language
   const { state, session } = useSession();
+  const remembered = useRememberedUsername();
   const pathname = usePathname();
   const loading = state.status === 'loading';
-  // The apps open on the brand splash (the claw mark and the name) for a moment, then the
-  // first screen; the web goes straight to its page.
+  // The apps open on the brand splash (the claw mark and the name) for a moment, which then
+  // fades into the first screen, drawn underneath meanwhile; the web goes straight to its page.
   const app = Platform.OS !== 'web';
   const [splashTimeUp, setSplashTimeUp] = useState(!app || SPLASH_MS === 0);
   useEffect(() => {
@@ -125,7 +131,9 @@ function Routes() {
     const timer = setTimeout(() => setSplashTimeUp(true), SPLASH_MS);
     return () => clearTimeout(timer);
   }, [splashTimeUp]);
-  const splash = app && (loading || !splashTimeUp);
+  const holding = app && (loading || !splashTimeUp);
+  const [splashGone, setSplashGone] = useState(!app);
+  const hideSplash = useCallback(() => setSplashGone(true), []);
   useEffect(() => {
     if (!app && !loading) void SplashScreen.hideAsync().catch(() => {});
   }, [app, loading]);
@@ -133,6 +141,9 @@ function Routes() {
   // An account with changed terms to agree to sees only that until done.
   const agreeing = signedIn && state.user.consents_needed.length > 0;
   const playing = signedIn && !agreeing;
+  // Signed out in the apps: a device someone signed in on before opens sign-in with their
+  // username; one nobody has, the start screen.
+  const signedOutHome = app && remembered !== null ? '/sign-in' : '/welcome';
   // A signed-out person who opened a link (a friend's challenge, a tournament) is sent to the
   // welcome page: remember where they were going (not where they were when signing out)...
   const lastStatus = useRef(state.status);
@@ -164,45 +175,77 @@ function Routes() {
     });
     return () => subscription.remove();
   }, [unreachable, session]);
-  if (splash) {
-    // The system splash (the icon only) gives way to this one once it is drawn.
-    return <BrandSplash onShown={() => void SplashScreen.hideAsync().catch(() => {})} />;
-  }
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <Loading />
-      </View>
-    );
-  }
-  if (unreachable) {
-    return (
-      <View style={styles.app}>
-        {Platform.OS === 'web' && <WebTopBar playing={false} />}
-        <Screen title={t("Can't reach ClawPlay")}>
-          <Notice tone="error">{describeError(state.error)}</Notice>
-          <Button title={t('Try again')} onPress={() => void session.retry()} />
-        </Screen>
-      </View>
-    );
-  }
+  return (
+    <View style={styles.app}>
+      {loading ? (
+        // In the apps the splash covers the wait.
+        !app && (
+          <View style={styles.center}>
+            <Loading />
+          </View>
+        )
+      ) : unreachable ? (
+        <>
+          {Platform.OS === 'web' && <WebTopBar playing={false} />}
+          <Screen title={t("Can't reach ClawPlay")}>
+            <Notice tone="error">{describeError(state.error)}</Notice>
+            <Button title={t('Try again')} onPress={() => void session.retry()} />
+          </Screen>
+        </>
+      ) : (
+        <Screens playing={playing} agreeing={agreeing} signedIn={signedIn} home={signedOutHome} />
+      )}
+      {!splashGone && (
+        <BrandSplash
+          // The system splash (the icon only) gives way to this one once it is drawn.
+          onShown={() => void SplashScreen.hideAsync().catch(() => {})}
+          hiding={!holding}
+          onHidden={hideSplash}
+          fadeMs={FADE_MS}
+        />
+      )}
+    </View>
+  );
+}
+
+/** The app's screens, behind the guards that say who may see which. */
+function Screens({
+  playing,
+  agreeing,
+  signedIn,
+  home,
+}: {
+  playing: boolean;
+  agreeing: boolean;
+  signedIn: boolean;
+  /** Where someone signed out is sent. */
+  home: '/sign-in' | '/welcome';
+}) {
   // The forms that open over a screen (a challenge, a report, a link to send): a sheet on iOS;
   // on Android a screen with its app bar, whose back arrow closes it, as Android apps do.
   const sheet =
     Platform.OS === 'android' ? { headerShown: true } : ({ presentation: 'modal' } as const);
   return (
-    <View style={styles.app}>
+    <>
       {Platform.OS === 'web' && <WebTopBar playing={playing} />}
       {/* In the apps each screen shows these under its own header (Screen). */}
       {playing && Platform.OS === 'web' && <AppBanners />}
       <BannersOnScreens.Provider value={playing}>
         <Stack screenOptions={{ headerShown: false, ...APP_BAR }} screenLayout={ScreenBars}>
-          <Stack.Protected guard={playing} redirectTo={agreeing ? '/agree' : '/welcome'}>
+          <Stack.Protected guard={playing} redirectTo={agreeing ? '/agree' : home}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="player/[username]" options={{ headerShown: true, title: '' }} />
             <Stack.Screen name="challenge/[username]" options={sheet} />
             <Stack.Screen name="game/[id]" options={{ headerShown: true, title: t('Game') }} />
             <Stack.Screen name="settings" options={{ headerShown: true, title: t('Settings') }} />
+            {/* Titled by the screen (Screen's title goes in the bar). */}
+            <Stack.Screen name="settings/[section]" options={{ headerShown: true, title: '' }} />
+            <Stack.Screen
+              name="ways-to-play"
+              options={{ headerShown: true, title: t('Play now') }}
+            />
+            <Stack.Screen name="friends" options={{ headerShown: true, title: t('Friends') }} />
+            <Stack.Screen name="puzzle" options={{ headerShown: true, title: t('Daily puzzle') }} />
             <Stack.Screen
               name="notifications"
               options={{ headerShown: true, title: t('Notifications') }}
@@ -243,7 +286,7 @@ function Routes() {
               options={{ headerShown: true, title: t('Payments') }}
             />
           </Stack.Protected>
-          <Stack.Protected guard={agreeing} redirectTo="/welcome">
+          <Stack.Protected guard={agreeing} redirectTo={home}>
             <Stack.Screen name="agree" />
           </Stack.Protected>
           <Stack.Protected guard={!signedIn}>
@@ -276,7 +319,7 @@ function Routes() {
       </BannersOnScreens.Provider>
       {/* Over the screens: short messages that need no answer. */}
       <SnackbarHost />
-    </View>
+    </>
   );
 }
 

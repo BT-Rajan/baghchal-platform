@@ -20,9 +20,7 @@ export function SignOutButton() {
   return (
     <Confirm
       open={leaving}
-      question={t(
-        'Sign out and lose this guest account? Its games cannot be got back. Make an account first to keep them.',
-      )}
+      question={t('Sign out and lose this guest account and its games?')}
       confirmTitle={t('Sign out')}
       busy={signOut.isPending}
       onConfirm={() => signOut.mutate()}

@@ -15,9 +15,53 @@ export interface paths {
         put?: never;
         /**
          * Register
-         * @description Start sign-up. The account becomes usable once the emailed link is opened.
+         * @description Make an account and sign in at once. A link to confirm the address is emailed; the
+         *     account plays without it. An address or username in use: ``email_taken`` or
+         *     ``username_taken``.
          */
         post: operations["register_api_v1_auth_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sign In Providers
+         * @description Ways to sign in besides a password: whether Google is offered, and the public client ids
+         *     the apps ask Google for a token with.
+         */
+        get: operations["sign_in_providers_api_v1_auth_providers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/google": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Google Sign In
+         * @description Sign in with a Google ID token, making the account the first time (its address is
+         *     Google's, verified). An account with the same address is linked to the Google account.
+         */
+        post: operations["google_sign_in_api_v1_auth_google_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -844,6 +888,69 @@ export interface paths {
         put?: never;
         /** Claim Abandonment */
         post: operations["claim_abandonment_api_v1_games__game_id__claim_abandonment_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/games/{game_id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo
+         * @description Take my last move back. Against the computer it happens at once (with the computer's
+         *     reply, if it replied); against a person it asks them (``takeback_offer``). Casual games
+         *     only, after a move of mine, three times a game.
+         */
+        post: operations["undo_api_v1_games__game_id__undo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/games/{game_id}/undo/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept Undo
+         * @description Let my opponent take their last move back (and my reply, if I made one). The clocks
+         *     keep the time each side has; the turn goes back.
+         */
+        post: operations["accept_undo_api_v1_games__game_id__undo_accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/games/{game_id}/undo/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decline Undo
+         * @description Turn down my opponent's takeback request (moving on does the same).
+         */
+        post: operations["decline_undo_api_v1_games__game_id__undo_decline_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2071,6 +2178,11 @@ export interface components {
             created_at: string;
             /** Email Verified At */
             email_verified_at: string | null;
+            /**
+             * Google Linked
+             * @default false
+             */
+            google_linked: boolean;
         };
         /** ExportChallenge */
         ExportChallenge: {
@@ -2330,6 +2442,14 @@ export interface components {
             /** Draw Offer */
             draw_offer?: ("goat" | "tiger") | null;
             /**
+             * Undo
+             * @default none
+             * @enum {string}
+             */
+            undo: "none" | "now" | "ask";
+            /** Takeback Offer */
+            takeback_offer?: ("goat" | "tiger") | null;
+            /**
              * Server Time
              * Format: date-time
              */
@@ -2384,6 +2504,34 @@ export interface components {
              * Format: date-time
              */
             finished_at: string;
+        };
+        /** GoogleClientIdsOut */
+        GoogleClientIdsOut: {
+            /** Web */
+            web: string | null;
+            /** Android */
+            android: string | null;
+            /** Ios */
+            ios: string | null;
+        };
+        /**
+         * GoogleSignInIn
+         * @description Sign in with Google, making the account the first time. The agreement counts only when
+         *     an account is made.
+         */
+        GoogleSignInIn: {
+            /** Terms Version */
+            terms_version: string;
+            /** Privacy Version */
+            privacy_version: string;
+            /** Id Token */
+            id_token: string;
+            /**
+             * Transport
+             * @default cookie
+             * @enum {string}
+             */
+            transport: "cookie" | "bearer";
         };
         /** GrantIn */
         GrantIn: {
@@ -2523,6 +2671,8 @@ export interface components {
              * @enum {string}
              */
             role: "guest" | "player" | "moderator" | "admin";
+            /** Email Verified */
+            email_verified: boolean;
             /** Consents Needed */
             consents_needed: ("terms" | "privacy")[];
         };
@@ -2903,6 +3053,15 @@ export interface components {
              */
             friend: "none" | "friends" | "requested" | "incoming";
         };
+        /**
+         * ProvidersOut
+         * @description Ways to sign in besides a password, as configured on this server.
+         */
+        ProvidersOut: {
+            /** Google */
+            google: boolean;
+            google_client_ids: components["schemas"]["GoogleClientIdsOut"] | null;
+        };
         /** PuzzleOut */
         PuzzleOut: {
             /** Id */
@@ -2941,7 +3100,11 @@ export interface components {
             /** Reason */
             reason: string;
         };
-        /** RegisterIn */
+        /**
+         * RegisterIn
+         * @description Sign-up signs the player in at once; the address is confirmed later, by the emailed
+         *     link, and nothing waits for it.
+         */
         RegisterIn: {
             /** Terms Version */
             terms_version: string;
@@ -2956,6 +3119,12 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+            /**
+             * Transport
+             * @default cookie
+             * @enum {string}
+             */
+            transport: "cookie" | "bearer";
         };
         /** RelationOut */
         RelationOut: {
@@ -3322,12 +3491,65 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
-            202: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Accepted"];
+                    "application/json": components["schemas"]["SessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sign_in_providers_api_v1_auth_providers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProvidersOut"];
+                };
+            };
+        };
+    };
+    google_sign_in_api_v1_auth_google_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleSignInIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionOut"];
                 };
             };
             /** @description Validation Error */
@@ -4695,6 +4917,99 @@ export interface operations {
         };
     };
     claim_abandonment_api_v1_games__game_id__claim_abandonment_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    undo_api_v1_games__game_id__undo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_undo_api_v1_games__game_id__undo_accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decline_undo_api_v1_games__game_id__undo_decline_post: {
         parameters: {
             query?: never;
             header?: never;

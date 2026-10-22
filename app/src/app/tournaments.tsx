@@ -29,9 +29,7 @@ export default function Tournaments() {
   const plan = useMyPlan();
   return (
     <Screen align="top" refreshable>
-      <Hint>
-        {t('Casual Swiss tournaments for 3 to 32 friends; anyone with the link can join.')}
-      </Hint>
+      <Hint>{t('Casual, for 3 to 32 players. Anyone with the link can join.')}</Hint>
       {/* The ones I am in first; then hosting a new one. */}
       <MyTournaments />
       {plan.data !== undefined &&
@@ -90,7 +88,7 @@ function MyTournaments() {
       ) : mine.data === undefined ? (
         <Loading label={t('Loading your tournaments')} />
       ) : mine.data.length === 0 ? (
-        <Hint>{t('You are not in any tournament yet. Join one with a link from a friend.')}</Hint>
+        <Hint>{t('No tournaments yet. Join one by link, or host one.')}</Hint>
       ) : (
         mine.data.map((tour) => (
           <Card key={tour.code}>

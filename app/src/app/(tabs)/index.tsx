@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import type { Game } from '@/api/endpoints';
 import { useMe } from '@/auth/session';
@@ -32,8 +32,11 @@ import { colors, spacing, type } from '@/theme';
 const WIDE = 900;
 
 /**
- * Home: a game to continue, challenges, a way to start one, today's puzzle and my latest
- * results, beside the players online to challenge.
+ * Home: a game to continue and challenges first. In the apps, then just two big buttons: Play
+ * now (the play menu, app/ways-to-play.tsx, with every way to play) and Settings (and, for a
+ * guest, the way to an account). On the web,
+ * a way to start a game, the other ways to play, today's puzzle and my latest results, beside
+ * the players online to challenge.
  */
 export default function Play() {
   const me = useMe();
@@ -54,9 +57,10 @@ export default function Play() {
 
   const wide = width >= WIDE;
   const live = (games.data?.length ?? 0) > 0;
+  const app = Platform.OS !== 'web';
 
   const gamesAndChallenges = (
-    <View style={styles.column}>
+    <>
       {games.error !== null && (
         <ErrorState error={games.error} onRetry={() => void games.refetch()} />
       )}
@@ -95,18 +99,48 @@ export default function Play() {
           onAnswer={(a) => answer.mutate({ id: c.id, answer: a })}
         />
       ))}
+    </>
+  );
+  // One main action: a game on, or a challenge to answer, comes first when there is one.
+  const playVariant = live || incoming.length > 0 ? 'secondary' : 'primary';
+
+  if (app) {
+    const quiet = !live && incoming.length === 0 && outgoing.length === 0 && outcomes.length === 0;
+    return (
+      <Screen title={t('Play')} align={quiet ? 'center' : 'top'} refreshable>
+        {gamesAndChallenges}
+        <View style={styles.main}>
+          <Button
+            title={t('Play now')}
+            icon="play"
+            large
+            variant={playVariant}
+            onPress={() => router.push('/ways-to-play')}
+          />
+          <Button
+            title={t('Settings')}
+            icon="settings"
+            large
+            variant="secondary"
+            onPress={() => router.push('/settings')}
+          />
+        </View>
+        <GuestBanner />
+      </Screen>
+    );
+  }
+
+  const gamesAndThingsToDo = (
+    <View style={styles.column}>
+      {gamesAndChallenges}
       <FriendRequests />
       {/* Shown unless a game is on (also while my games load, or when they could not be). */}
       {!live && (
         <Card>
           <Text style={styles.cardTitle}>{t('Ready for a game?')}</Text>
-          <Hint>
-            {t('Quick or standard, rated or casual, with whoever is waiting or the computer.')}
-          </Hint>
-          {/* One main action: answering a challenge comes first when there is one. */}
           <Button
             title={t('Play now')}
-            variant={incoming.length > 0 ? 'secondary' : 'primary'}
+            variant={playVariant}
             onPress={() => router.push('/play')}
           />
         </Card>
@@ -121,15 +155,7 @@ export default function Play() {
   const playerList = (
     <View style={styles.column}>
       <FriendList myId={me.id} />
-      <PlayerSearch
-        nobodyElse={
-          <Hint>
-            {t(
-              'Nobody else is online right now. Play now finds you a game, with the computer if need be.',
-            )}
-          </Hint>
-        }
-      />
+      <PlayerSearch nobodyElse={<Hint>{t('Nobody else is online now.')}</Hint>} />
     </View>
   );
 
@@ -137,12 +163,12 @@ export default function Play() {
     <Screen title={t('Play')} align="top" wide={wide} refreshable>
       {wide ? (
         <View style={styles.row}>
-          <View style={styles.half}>{gamesAndChallenges}</View>
+          <View style={styles.half}>{gamesAndThingsToDo}</View>
           <View style={styles.half}>{playerList}</View>
         </View>
       ) : (
         <>
-          {gamesAndChallenges}
+          {gamesAndThingsToDo}
           {playerList}
         </>
       )}
@@ -151,8 +177,8 @@ export default function Play() {
 }
 
 /**
- * The app's other ways to play, where they are seen: challenges by link and tournaments (the
- * trainer is offered by today's puzzle, below).
+ * The web home's other ways to play: challenges by link and tournaments (the trainer is offered
+ * by today's puzzle, below). The apps have them in the play menu.
  */
 function MoreWaysToPlay({ guest }: { guest: boolean }) {
   return (
@@ -163,14 +189,14 @@ function MoreWaysToPlay({ guest }: { guest: boolean }) {
         <FeatureLink
           icon="link"
           title={t('Challenge a friend by link')}
-          text={t('Send a link; the game starts when your friend opens it.')}
+          text={t('Send a link to play.')}
           onPress={() => router.push('/invite')}
         />
       )}
       <FeatureLink
         icon="trophy"
         title={t('Tournaments')}
-        text={t('Swiss tournaments with friends: join one by link, or host your own.')}
+        text={t('Join by link, or host one.')}
         onPress={() => router.push('/tournaments')}
       />
     </>
@@ -181,19 +207,18 @@ function LiveGame({ game, myId }: { game: Game; myId: string }) {
   const opponent = game.goat.id === myId ? game.tiger : game.goat;
   return (
     <Card tone="accent">
-      <Text style={styles.cardTitle}>{t('Continue your game')}</Text>
-      <Text style={styles.live}>
-        {t('Your game against {name} is on.', { name: opponent.username })}
+      <Text style={styles.cardTitle}>
+        {t('Your game against {name}', { name: opponent.username })}
       </Text>
-      <Button title={t('Resume game')} onPress={() => router.push(`/game/${game.id}`)} />
+      <Button title={t('Resume')} onPress={() => router.push(`/game/${game.id}`)} />
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
   cardTitle: { ...type.heading, color: colors.text },
-  live: { ...type.body, color: colors.text },
   row: { flexDirection: 'row', gap: spacing.xl, alignItems: 'flex-start' },
   half: { flex: 1 },
   column: { gap: spacing.md },
+  main: { gap: spacing.md, marginTop: spacing.md },
 });

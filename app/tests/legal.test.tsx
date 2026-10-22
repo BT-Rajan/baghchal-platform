@@ -14,22 +14,24 @@ async function type(label: string, text: string) {
 describe('signing up', () => {
   test('the button accepts the terms, and says so', async () => {
     const { server } = await renderApp('/sign-up', {
-      routes: { 'POST /api/v1/auth/register': { status: 202, body: { status: 'accepted' } } },
+      routes: { 'POST /api/v1/auth/register': { status: 201, body: { user: ME, token: 'tok' } } },
     });
-    await screen.findByRole('button', { name: 'Accept and make my account', busy: false });
-    expect(screen.getByText(/^By pressing Accept you agree to our /)).toBeOnTheScreen();
+    await screen.findByRole('button', { name: 'Sign up', busy: false });
+    expect(screen.getByText(/^By continuing you agree to our /)).toBeOnTheScreen();
     expect(screen.queryByLabelText('Month of birth')).toBeNull();
     await type('Username', 'sita');
     await type('Email', 'sita@example.com');
     await type('Password', 'correct horse');
-    await press('Accept and make my account');
-    expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeOnTheScreen();
-    expect(server.lastTo('POST /api/v1/auth/register').body).toEqual({
-      ...AGREED,
-      username: 'sita',
-      email: 'sita@example.com',
-      password: 'correct horse',
-    });
+    await press('Sign up');
+    await waitFor(() =>
+      expect(server.lastTo('POST /api/v1/auth/register').body).toEqual({
+        ...AGREED,
+        username: 'sita',
+        email: 'sita@example.com',
+        password: 'correct horse',
+        transport: 'bearer',
+      }),
+    );
   });
 
   test('a sign-up waits for the versions, and says when they cannot be had', async () => {
@@ -115,7 +117,7 @@ describe('an account whose terms changed', () => {
     expect(await screen.findByText('Our terms or privacy policy have changed.')).toBeOnTheScreen();
     expect(app.getPathname()).toBe('/agree');
     expect(screen.getByRole('link', { name: 'Privacy policy' })).toBeOnTheScreen();
-    expect(screen.getByText(/^By pressing Accept you agree to our /)).toBeOnTheScreen();
+    expect(screen.getByText(/^By continuing you agree to our /)).toBeOnTheScreen();
     await screen.findByRole('button', { name: 'Accept', busy: false });
     await press('Accept');
     await waitFor(() => expect(app.getPathname()).toBe('/'));
@@ -138,7 +140,8 @@ describe('an account whose terms changed', () => {
   test('can sign out instead', async () => {
     const { app } = await asking({ ...ME, consents_needed: ['terms'] }, () => undefined);
     await fireEvent.press(await screen.findByRole('button', { name: 'Sign out' }));
-    await waitFor(() => expect(app.getPathname()).toBe('/welcome'));
+    // This device remembers alice: sign-in opens with her username.
+    await waitFor(() => expect(app.getPathname()).toBe('/sign-in'));
   });
 
   test('changed while playing: the refused request brings the agreement at once', async () => {

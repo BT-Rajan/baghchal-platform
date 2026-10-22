@@ -1,3 +1,5 @@
+// First: it mocks the device's secure store, which the app's layout reads as it loads.
+import { renderApp } from './support/app';
 import * as ReactNative from 'react-native';
 
 import { render } from '@testing-library/react-native';
@@ -5,7 +7,6 @@ import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { ErrorBoundary } from '@/app/_layout';
 
-import { renderApp } from './support/app';
 import { ME, error } from './support/fakeServer';
 import { FakeSocket } from './support/fakeSocket';
 import { game } from './support/games';
@@ -43,19 +44,14 @@ test('failed lists can be tried again', async () => {
 
 test('a quiet lobby says what to do', async () => {
   const { app } = await renderApp('/', { token: 'tok', routes: SIGNED_IN });
-  expect(await screen.findByText('Ready for a game?')).toBeOnTheScreen();
-  // Nobody online: Play now, or a friend by link (under More ways to play).
-  expect(
-    await screen.findByText(
-      'Nobody else is online right now. Play now finds you a game, with the computer if need be.',
-    ),
-  ).toBeOnTheScreen();
-  await fireEvent.press(await screen.findByRole('link', { name: 'Challenge a friend by link' }));
-  expect(app.getPathname()).toBe('/invite');
+  // Play now: every way to play, a friend by link among them.
+  await fireEvent.press(await screen.findByRole('button', { name: 'Play now' }));
+  await fireEvent.press(await screen.findByRole('link', { name: 'Challenge a friend' }));
+  await waitFor(() => expect(app.getPathname()).toBe('/invite'));
 });
 
 test('when I am the only one online, the list says so', async () => {
-  await renderApp('/', {
+  await renderApp('/friends', {
     token: 'tok',
     routes: {
       ...SIGNED_IN,
@@ -66,10 +62,11 @@ test('when I am the only one online, the list says so', async () => {
     },
   });
   expect(await screen.findByText('You')).toBeOnTheScreen();
-  expect(screen.getByText(/^Nobody else is online right now\./)).toBeOnTheScreen();
+  expect(screen.getByText('Nobody else is online now.')).toBeOnTheScreen();
 });
 
-test('on wide screens the lobby has two columns', async () => {
+test("on wide screens the web's lobby has two columns", async () => {
+  jest.replaceProperty(ReactNative.Platform, 'OS', 'web');
   jest.spyOn(ReactNative, 'useWindowDimensions').mockReturnValue({
     width: 1280,
     height: 800,

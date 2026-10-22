@@ -104,9 +104,7 @@ export function GameHistory({
         />
       )}
       {!preview && limited && (
-        <Upsell feature="full_history">
-          {t('Your history shows games from the last 30 days. Keep every game.')}
-        </Upsell>
+        <Upsell feature="full_history">{t('Games from the last 30 days. Keep every game.')}</Upsell>
       )}
       {!preview && (all.length > shown || history.hasNextPage) && (
         <Button

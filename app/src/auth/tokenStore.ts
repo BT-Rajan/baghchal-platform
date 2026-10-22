@@ -14,13 +14,23 @@ export interface TokenStore {
   clear(): Promise<void>;
 }
 
-const KEY = 'session-token';
+/** A short text kept in the Keychain / Keystore under `key`. */
+function secureItem(key: string): TokenStore {
+  return {
+    load: () => SecureStore.getItemAsync(key),
+    save: (value) => SecureStore.setItemAsync(key, value),
+    clear: () => SecureStore.deleteItemAsync(key),
+  };
+}
 
-export const secureTokenStore: TokenStore = {
-  load: () => SecureStore.getItemAsync(KEY),
-  save: (token) => SecureStore.setItemAsync(KEY, token),
-  clear: () => SecureStore.deleteItemAsync(KEY),
-};
+export const secureTokenStore = secureItem('session-token');
+
+/**
+ * The username last signed in (or up) on this device, so sign-in opens with it filled in. Kept
+ * after signing out (that is its point); forgotten with "Not you?" and when the account is
+ * deleted. Apps only: the web's front page is the same for everyone.
+ */
+export const secureUsernameStore = secureItem('last-username');
 
 export const cookieTokenStore: TokenStore = {
   load: async () => null,
@@ -34,4 +44,9 @@ export function transportFor(os: string = Platform.OS): Transport {
 
 export function tokenStoreFor(transport: Transport): TokenStore {
   return transport === 'cookie' ? cookieTokenStore : secureTokenStore;
+}
+
+/** Where the last username lives: nowhere on the web (see `secureUsernameStore`). */
+export function usernameStoreFor(transport: Transport): TokenStore {
+  return transport === 'cookie' ? cookieTokenStore : secureUsernameStore;
 }

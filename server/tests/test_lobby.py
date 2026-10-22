@@ -62,7 +62,7 @@ async def test_player_search(
     await players("al_ex")
     await players("alberto")
     await players("bob")
-    # Unverified sign-ups are not listed.
+    # Accounts not yet confirmed are listed too: they play.
     await app_client.post(
         "/api/v1/auth/register",
         json={**AGREE, "username": "alpha", "email": "alpha@example.com", "password": PASSWORD},
@@ -70,7 +70,7 @@ async def test_player_search(
 
     r = await me.http.get("/api/v1/players", params={"prefix": "AL"})
     assert r.status_code == 200
-    assert [p["username"] for p in r.json()] == ["al_ex", "alberto", "Alice"]
+    assert [p["username"] for p in r.json()] == ["al_ex", "alberto", "Alice", "alpha"]
     assert all(p["online"] is False for p in r.json())
 
     # "_" matches only itself, not any character.

@@ -46,16 +46,14 @@ export function AnalysisPanel({
     <>
       <SectionTitle>{t('Analysis')}</SectionTitle>
       {!allowed ? (
-        <Upsell feature="analysis">
-          {t('See the engine’s review of every move, and where the game turned.')}
-        </Upsell>
+        <Upsell feature="analysis">{t('The engine’s review of every move.')}</Upsell>
       ) : analysis.error !== null ? (
         <ErrorState error={analysis.error} onRetry={() => void analysis.refetch()} />
       ) : analysis.data === undefined ? (
         <Loading label={t('Loading the analysis')} />
       ) : analysis.data === null ? (
         <Card>
-          <Hint>{t('The engine reviews every move and shows where the game turned.')}</Hint>
+          <Hint>{t('The engine reviews every move.')}</Hint>
           <ErrorNotice error={analyse.error} />
           {/* Secondary: the screen's main action after a game is what to play next. */}
           <Button
@@ -89,7 +87,7 @@ function Review({
   return (
     <Card>
       {review === undefined ? (
-        <Hint>{t('Step through the moves to see what the engine thought of each.')}</Hint>
+        <Hint>{t('Step through the moves to see each review.')}</Hint>
       ) : (
         <>
           <Text style={[styles.verdict, { color: VERDICT_COLORS[review.verdict] }]}>

@@ -1,389 +1,127 @@
-import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
-import { Platform, StyleSheet, Text, View, type TextInputInstance } from 'react-native';
+import { Platform, View } from 'react-native';
 
-import { saveExport } from '@/auth/exportFile';
-import { useApi, useMe, useSession } from '@/auth/session';
-import { checkEmailChange, checkPasswordChange, checkPasswordGiven } from '@/auth/validation';
-import { Button } from '@/components/Button';
-import { Card, Hint, SectionTitle } from '@/components/Card';
+import { useMe } from '@/auth/session';
+import { myPlanText } from '@/billing/format';
+import { useMyPlan } from '@/billing/hooks';
+import { accountParts } from '@/components/AccountSettings';
+import { SectionTitle } from '@/components/Card';
 import { Disclosure } from '@/components/Disclosure';
 import { FeatureLink } from '@/components/FeatureLink';
 import { LanguagePicker } from '@/components/LanguagePicker';
 import { PlanCard } from '@/components/PlanCard';
-import { ErrorState, Loading } from '@/components/States';
-import { t } from '@/i18n';
-import { useBlock, useBlocks } from '@/lobby/hooks';
-import { useFormErrors } from '@/components/form';
-import { Notice } from '@/components/Notice';
 import { Screen } from '@/components/Screen';
-import { SuccessNotice } from '@/components/Snackbar';
 import { SignOutButton } from '@/components/SignOutButton';
-import { TextField } from '@/components/TextField';
-import { colors, spacing } from '@/theme';
-import { ErrorNotice } from '@/components/ErrorNotice';
+import { t } from '@/i18n';
 
 /**
- * Settings, all in one place: the board, sounds and language, the plan, moderation and payments
- * (for staff); the account (blocked players, and for members the email address, password, their
- * data and deleting the account), each folded shut until opened; signing out.
+ * Settings: the board, sounds and language, the plan, the account, the terms and signing out.
+ * In the apps a short list, each row its own screen (app/settings/[section].tsx); on the web
+ * one page, the account's parts folded shut until opened.
  */
 export default function SettingsScreen() {
-  const me = useMe();
-  const guest = me.role === 'guest';
-  const staff = me.role === 'moderator' || me.role === 'admin';
+  return Platform.OS === 'web' ? <SettingsPage /> : <SettingsMenu />;
+}
+
+function SettingsMenu() {
+  const mine = useMyPlan();
   return (
     <Screen align="top">
-      <SectionTitle>{t('Board, pieces, sounds and language')}</SectionTitle>
+      <AppearanceLink />
       <FeatureLink
-        icon="palette"
-        title={t('Board, pieces and sounds')}
-        text={t('How games look and sound, on every device you use.')}
-        onPress={() => router.push('/appearance')}
-      />
-      <LanguagePicker />
-      <PlanCard />
-      {staff && <SectionTitle>{t('Admin')}</SectionTitle>}
-      {staff && (
-        <FeatureLink
-          icon="shield"
-          title={t('Moderation')}
-          text={t("Reports, and the players' records.")}
-          onPress={() => router.push('/moderation')}
-        />
-      )}
-      {me.role === 'admin' && (
-        <FeatureLink
-          icon="shield"
-          title={t('Payments')}
-          text={t('The Razorpay keys plans are paid with. Needs a code we email you.')}
-          onPress={() => router.push('/admin/payments')}
-        />
-      )}
-      <SectionTitle>{t('Account')}</SectionTitle>
-      <View>
-        <BlockedPlayers />
-        {!guest && (
-          <>
-            <EmailSection />
-            <PasswordSection />
-            <DataSection />
-            <DeleteSection />
-          </>
-        )}
-      </View>
-      <SectionTitle>{t('Terms and privacy')}</SectionTitle>
-      <FeatureLink
-        icon="document"
-        title={t('Terms of service')}
-        text={t('The rules of using ClawPlay.')}
-        onPress={() => router.push('/terms')}
+        icon="globe"
+        title={t('Language')}
+        onPress={() => router.push('/settings/language')}
       />
       <FeatureLink
-        icon="document"
-        title={t('Privacy policy')}
-        text={t('What we keep about you, why, and for how long.')}
-        onPress={() => router.push('/privacy')}
+        icon="star"
+        title={t('Plan')}
+        {...(mine.data !== undefined && { text: myPlanText(mine.data) })}
+        onPress={() => router.push('/plans')}
       />
+      <FeatureLink
+        icon="me"
+        title={t('Account')}
+        onPress={() => router.push('/settings/account')}
+      />
+      <StaffLinks />
+      <LegalLinks />
       <SignOutButton />
     </Screen>
   );
 }
 
-function BlockedPlayers() {
-  const blocks = useBlocks();
-  const change = useBlock();
+function SettingsPage() {
+  const guest = useMe().role === 'guest';
   return (
-    <Disclosure title={t('Blocked players')}>
-      <ErrorNotice error={change.error} />
-      {blocks.error !== null ? (
-        <ErrorState error={blocks.error} onRetry={() => void blocks.refetch()} />
-      ) : blocks.data === undefined ? (
-        <Loading label={t('Loading blocked players')} />
-      ) : blocks.data.length === 0 ? (
-        <Hint>{t('You have not blocked anyone.')}</Hint>
-      ) : (
-        <Card>
-          {blocks.data.map((player) => (
-            <View key={player.id} style={styles.row}>
-              <Text style={styles.name}>{player.username}</Text>
-              <Button
-                title={t('Unblock {name}', { name: player.username })}
-                label={t('Unblock')}
-                variant="secondary"
-                compact
-                busy={change.isPending && change.variables.username === player.username}
-                onPress={() => change.mutate({ username: player.username, block: false })}
-              />
-            </View>
-          ))}
-        </Card>
+    <Screen align="top">
+      <SectionTitle>{t('Board, pieces, sounds and language')}</SectionTitle>
+      <AppearanceLink />
+      <LanguagePicker />
+      <PlanCard />
+      <StaffLinks />
+      <SectionTitle>{t('Account')}</SectionTitle>
+      <View>
+        {accountParts(guest).map(({ section, title, Part }) => (
+          <Disclosure key={section} title={t(title)}>
+            <Part />
+          </Disclosure>
+        ))}
+      </View>
+      <SectionTitle>{t('Terms and privacy')}</SectionTitle>
+      <LegalLinks />
+      <SignOutButton />
+    </Screen>
+  );
+}
+
+function AppearanceLink() {
+  return (
+    <FeatureLink
+      icon="palette"
+      title={t('Board, pieces and sounds')}
+      onPress={() => router.push('/appearance')}
+    />
+  );
+}
+
+/** Moderation and payments, for staff. */
+function StaffLinks() {
+  const role = useMe().role;
+  if (role !== 'moderator' && role !== 'admin') return null;
+  return (
+    <>
+      <SectionTitle>{t('Admin')}</SectionTitle>
+      <FeatureLink
+        icon="shield"
+        title={t('Moderation')}
+        onPress={() => router.push('/moderation')}
+      />
+      {role === 'admin' && (
+        <FeatureLink
+          icon="shield"
+          title={t('Payments')}
+          text={t('Razorpay keys. Needs an emailed code.')}
+          onPress={() => router.push('/admin/payments')}
+        />
       )}
-    </Disclosure>
+    </>
   );
 }
 
-const EMAIL_FIELDS = ['email', 'password'] as const;
-const EMAIL_CODES = { same_email: 'email', wrong_password: 'password' } as const;
-
-function EmailSection() {
-  const api = useApi();
-  const me = useMe();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const passwordField = useRef<TextInputInstance>(null);
-  const change = useMutation({
-    mutationFn: (to: string) => api.changeEmail(password, to),
-    onSuccess: () => setPassword(''),
-  });
-  const { fieldError, formMessage, accept } = useFormErrors(
-    EMAIL_FIELDS,
-    change.error,
-    EMAIL_CODES,
-  );
-  const submit = () => {
-    change.reset();
-    if (accept(checkEmailChange({ email, password }, me.email))) change.mutate(email.trim());
-  };
+function LegalLinks() {
   return (
-    <Disclosure title={t('Email address')}>
-      <Card>
-        <Text style={styles.text}>{t('Your email address is {email}.', { email: me.email })}</Text>
-        {change.isSuccess ? (
-          <Notice tone="success">
-            {t('We sent a link to {email}. Your address changes when you open it.', {
-              email: change.variables,
-            })}
-          </Notice>
-        ) : (
-          <>
-            {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
-            <TextField
-              label={t('New email address')}
-              value={email}
-              onChangeText={setEmail}
-              error={fieldError('email')}
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="email"
-              keyboardType="email-address"
-              textContentType="emailAddress"
-              returnKeyType="next"
-              submitBehavior="submit"
-              onSubmitEditing={() => passwordField.current?.focus()}
-            />
-            <TextField
-              ref={passwordField}
-              label={t('Your password (to change the email address)')}
-              value={password}
-              onChangeText={setPassword}
-              error={fieldError('password')}
-              secureTextEntry
-              autoComplete="current-password"
-              textContentType="password"
-              returnKeyType="go"
-              onSubmitEditing={submit}
-            />
-            <Button
-              title={t('Send a confirmation link')}
-              onPress={submit}
-              busy={change.isPending}
-            />
-          </>
-        )}
-      </Card>
-    </Disclosure>
+    <>
+      <FeatureLink
+        icon="document"
+        title={t('Terms of service')}
+        onPress={() => router.push('/terms')}
+      />
+      <FeatureLink
+        icon="document"
+        title={t('Privacy policy')}
+        onPress={() => router.push('/privacy')}
+      />
+    </>
   );
 }
-
-const PASSWORD_FIELDS = ['current', 'password', 'confirm'] as const;
-const PASSWORD_CODES = { wrong_password: 'current', weak_password: 'password' } as const;
-
-function PasswordSection() {
-  const api = useApi();
-  const me = useMe();
-  const [current, setCurrent] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const passwordField = useRef<TextInputInstance>(null);
-  const confirmField = useRef<TextInputInstance>(null);
-  const change = useMutation({
-    mutationFn: () => api.changePassword(current, password),
-    onSuccess: () => {
-      setCurrent('');
-      setPassword('');
-      setConfirm('');
-    },
-  });
-  const { fieldError, formMessage, accept } = useFormErrors(
-    PASSWORD_FIELDS,
-    change.error,
-    PASSWORD_CODES,
-  );
-  const submit = () => {
-    change.reset();
-    if (accept(checkPasswordChange({ current, password, confirm }, me.username))) {
-      change.mutate();
-    }
-  };
-  return (
-    <Disclosure title={t('Password')}>
-      <Card>
-        {change.isSuccess && (
-          <SuccessNotice>
-            {t('Your password has been changed. Your other devices have been signed out.')}
-          </SuccessNotice>
-        )}
-        {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
-        <TextField
-          label={t('Current password')}
-          value={current}
-          onChangeText={setCurrent}
-          error={fieldError('current')}
-          secureTextEntry
-          autoComplete="current-password"
-          textContentType="password"
-          returnKeyType="next"
-          submitBehavior="submit"
-          onSubmitEditing={() => passwordField.current?.focus()}
-        />
-        <TextField
-          ref={passwordField}
-          label={t('New password')}
-          value={password}
-          onChangeText={setPassword}
-          error={fieldError('password')}
-          secureTextEntry
-          autoComplete="new-password"
-          textContentType="newPassword"
-          returnKeyType="next"
-          submitBehavior="submit"
-          onSubmitEditing={() => confirmField.current?.focus()}
-        />
-        <TextField
-          ref={confirmField}
-          label={t('Repeat the new password')}
-          value={confirm}
-          onChangeText={setConfirm}
-          error={fieldError('confirm')}
-          secureTextEntry
-          autoComplete="new-password"
-          textContentType="newPassword"
-          returnKeyType="go"
-          onSubmitEditing={submit}
-        />
-        <Button title={t('Change password')} onPress={submit} busy={change.isPending} />
-      </Card>
-    </Disclosure>
-  );
-}
-
-function DataSection() {
-  const api = useApi();
-  const download = useMutation({
-    mutationFn: async () => saveExport(await api.exportData()),
-  });
-  return (
-    <Disclosure title={t('Your data')}>
-      <Card>
-        <Hint>
-          {t(
-            'A copy of everything we keep about you: your account, ratings, games with their moves, challenges and blocked players.',
-          )}
-        </Hint>
-        <ErrorNotice error={download.error} />
-        {/* In the apps the share sheet says where the file went (Android reports it shared
-            even when the sheet is just closed, so saying more here could be untrue). */}
-        {download.isSuccess && Platform.OS === 'web' && (
-          <SuccessNotice>{t('Your data has been downloaded.')}</SuccessNotice>
-        )}
-        <Button
-          title={t('Download my data')}
-          variant="secondary"
-          onPress={() => download.mutate()}
-          busy={download.isPending}
-        />
-      </Card>
-    </Disclosure>
-  );
-}
-
-const DELETE_FIELDS = ['password'] as const;
-const DELETE_CODES = { wrong_password: 'password' } as const;
-
-function DeleteSection() {
-  const api = useApi();
-  const { session } = useSession();
-  const [confirming, setConfirming] = useState(false);
-  const [password, setPassword] = useState('');
-  const remove = useMutation({
-    mutationFn: async () => {
-      await api.deleteAccount(password);
-      // The server has ended every session; the route guards then show the sign-in screen.
-      await session.forget();
-    },
-  });
-  const { fieldError, formMessage, accept } = useFormErrors(
-    DELETE_FIELDS,
-    remove.error,
-    DELETE_CODES,
-  );
-  const submit = () => {
-    remove.reset();
-    if (accept(checkPasswordGiven({ password }))) remove.mutate();
-  };
-  return (
-    <Disclosure title={t('Delete account')}>
-      <Card>
-        <Hint>
-          {t(
-            "Deleting your account removes your email address and password, takes you off the leaderboards and signs you out everywhere. Games you played stay in your opponents' history under an anonymous name. This cannot be undone.",
-          )}
-        </Hint>
-        {confirming ? (
-          <View style={styles.confirm}>
-            {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
-            <TextField
-              label={t('Your password (to delete your account)')}
-              value={password}
-              onChangeText={setPassword}
-              error={fieldError('password')}
-              secureTextEntry
-              autoComplete="current-password"
-              textContentType="password"
-              onSubmitEditing={submit}
-            />
-            <Button
-              title={t('Delete my account for good')}
-              onPress={submit}
-              busy={remove.isPending}
-            />
-            <Button
-              title={t('Keep my account')}
-              variant="secondary"
-              onPress={() => {
-                setConfirming(false);
-                setPassword('');
-                remove.reset();
-              }}
-            />
-          </View>
-        ) : (
-          <Button
-            title={t('Delete my account…')}
-            variant="secondary"
-            onPress={() => setConfirming(true)}
-          />
-        )}
-      </Card>
-    </Disclosure>
-  );
-}
-
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  name: { flex: 1, fontSize: 16, color: colors.text },
-  text: { fontSize: 15, color: colors.text },
-  confirm: { gap: spacing.sm },
-});

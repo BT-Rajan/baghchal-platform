@@ -48,7 +48,7 @@ export default function Notifications() {
       ) : notifications.data === undefined ? (
         <Loading label={t('Loading your notifications')} />
       ) : notifications.data.items.length === 0 ? (
-        <Hint>{t('Nothing yet. Challenges, friend requests and tournaments will show here.')}</Hint>
+        <Hint>{t('Nothing yet.')}</Hint>
       ) : (
         <Card>
           {notifications.data.items.map((n, i) => {

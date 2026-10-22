@@ -2,7 +2,6 @@ import { useMutation } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 
-import { peekReturn } from '@/auth/returnTo';
 import { useSession } from '@/auth/session';
 import { isLinkToken } from '@/auth/validation';
 import { Button } from '@/components/Button';
@@ -12,21 +11,17 @@ import { Screen } from '@/components/Screen';
 import { Loading } from '@/components/States';
 import { t } from '@/i18n';
 
-/** Opened from the link in the sign-up email: `/verify-email?token=…`. */
+/**
+ * Opened from the optional link that confirms an account's email address,
+ * `/verify-email?token=…`, signed in or not: it confirms the address and signs that account in.
+ */
 export default function VerifyEmail() {
   const { token } = useLocalSearchParams<{ token?: string }>();
-  const { session } = useSession();
+  const { session, state } = useSession();
   const router = useRouter();
   const verify = useMutation({
     mutationFn: async (linkToken: string) => {
-      const goingOn = peekReturn() !== null;
       await session.start(await session.api.verifyEmail(linkToken));
-      return goingOn;
-    },
-    // A new account's first stop: an optional board, pieces and friends. Someone who came from
-    // a friend's link goes on to it instead (see the route guards in _layout).
-    onSuccess: (goingOn) => {
-      if (!goingOn) router.replace('/make-it-yours');
     },
   });
   // The token is single-use: send it once, even when effects run twice in development.
@@ -40,7 +35,16 @@ export default function VerifyEmail() {
     }
   }, [valid, token, verify]);
 
+  if (verify.isSuccess) {
+    return (
+      <Screen title={t('Email confirmed')} brand>
+        <Button title={t('Play')} large onPress={() => router.replace('/')} />
+      </Screen>
+    );
+  }
   if (!valid || verify.isError) {
+    // Signed in, a new link is sent from settings; signed out, sign in to get there.
+    const signedIn = state.status === 'signedIn';
     return (
       <Screen title={t('Confirm your email')} brand>
         {valid ? (
@@ -48,8 +52,11 @@ export default function VerifyEmail() {
         ) : (
           <Notice tone="error">{t('This link is invalid or has expired.')}</Notice>
         )}
-        {/* Signing in to an unconfirmed account offers to send the link again. */}
-        <Button title={t('Sign in to get a new link')} onPress={() => router.replace('/sign-in')} />
+        <Button
+          title={signedIn ? t('Open settings') : t('Sign in')}
+          large
+          onPress={() => router.replace(signedIn ? '/settings' : '/sign-in')}
+        />
       </Screen>
     );
   }

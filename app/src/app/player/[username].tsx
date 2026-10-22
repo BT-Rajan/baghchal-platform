@@ -1,5 +1,7 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 
+import { Platform } from 'react-native';
+
 import { isApiError } from '@/api/errors';
 import { useMe } from '@/auth/session';
 import { Button } from '@/components/Button';
@@ -20,11 +22,11 @@ export default function Player() {
       {isApiError(profile.error, 'player_not_found') ? (
         <>
           <Notice tone="error">{t('No such player.')}</Notice>
-          {/* The player search is on the home screen. */}
+          {/* The player search: on the web's home, in the apps' Friends. */}
           <Button
             title={t('Find a player')}
             variant="secondary"
-            onPress={() => router.navigate('/')}
+            onPress={() => router.navigate(Platform.OS === 'web' ? '/' : '/friends')}
           />
         </>
       ) : profile.error !== null ? (

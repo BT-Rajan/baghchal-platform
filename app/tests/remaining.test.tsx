@@ -125,7 +125,7 @@ describe('rematch', () => {
     await screen.findByText('You lost: the tigers captured five goats.');
     await press('Rematch bob');
     // The answer comes here, so the chat after the game stays open.
-    expect(await screen.findByText('Rematch sent. Waiting for bob to answer…')).toBeOnTheScreen();
+    expect(await screen.findByText('Rematch sent. Waiting for bob…')).toBeOnTheScreen();
     expect(app.getPathname()).toBe('/game/g1');
     expect(server.lastTo('POST /api/v1/challenges').body).toEqual({
       opponent: 'bob',

@@ -184,25 +184,25 @@ async def test_an_address_taken_before_confirming(
     assert (await alice.http.get(ME)).json()["email"] == "alice@example.com"
 
 
-async def test_an_abandoned_sign_up_does_not_hold_the_address(
+async def test_an_unconfirmed_account_holds_its_address(
     app: FastAPI,
     players: PlayerFactory,
     mailer: MemoryMailer,
     client: httpx.AsyncClient,
     clock: Clock,
 ) -> None:
+    """Accounts play before they are confirmed, so another player cannot take the address."""
     alice = await players("alice")
     await client.post(
         "/api/v1/auth/register",
         json={**AGREE, "username": "ghost", "email": "new@example.org", "password": PASSWORD},
     )
-    clock.advance(hours=23)
+    clock.advance(days=3)
     r = await alice.http.post(EMAIL_CHANGE, json={"password": PASSWORD, "email": "new@example.org"})
-    token = last_token(mailer)
-    assert mailer.outbox[-1].subject == "Confirm your new ClawPlay email address"
-    clock.advance(hours=2)  # the sign-up has now expired; the change link has not
-    r = await alice.http.post(EMAIL_CONFIRM, json={"token": token})
-    assert r.status_code == 200, r.text
+    assert r.status_code == 202
+    assert mailer.outbox[-1].subject == "You already have a ClawPlay account"
+    assert mailer.outbox[-1].to == "new@example.org"
+    assert (await alice.http.get(ME)).json()["email"] == "alice@example.com"
 
 
 async def test_email_change_links_expire(

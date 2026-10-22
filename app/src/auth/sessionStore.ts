@@ -6,6 +6,9 @@
  * are cleared, and the route guards send the user back to sign-in. Whenever it says the terms
  * changed and must be accepted first (`403 consents_needed`), the user is asked again, so the
  * route guards show the agreement at once.
+ *
+ * It also keeps the username last signed in (or up) on this device, which outlives signing out
+ * so the apps open sign-in with it filled in (see `usernameStore`).
  */
 import type { QueryClient } from '@tanstack/react-query';
 
@@ -27,6 +30,8 @@ export interface SessionStoreOptions {
   baseUrl: string;
   transport: Transport;
   tokenStore: TokenStore;
+  /** Where the last username is kept (none: nothing is remembered). */
+  usernameStore?: TokenStore;
   queryClient: QueryClient;
   fetch?: typeof fetch;
 }
@@ -36,6 +41,7 @@ export class SessionStore {
   readonly transport: Transport;
   private state: SessionState = { status: 'loading' };
   private currentToken: string | null = null;
+  private remembered: string | null = null;
   /** Changes with every session, so answers that arrive late for an old one are ignored. */
   private epoch = 0;
   private restoring: Promise<void> | null = null;
@@ -65,6 +71,12 @@ export class SessionStore {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   };
+
+  /**
+   * The username last signed in (or up) on this device, once the session has been restored;
+   * null if none (or a guest's only).
+   */
+  rememberedUsername = (): string | null => this.remembered;
 
   /** The session token (apps only), for the WebSocket handshake. */
   token(): string | null {
@@ -101,6 +113,16 @@ export class SessionStore {
     await this.start(await this.api.login(login.trim(), password));
   }
 
+  /** Make an account: the server signs it in at once (its email is confirmed later, if ever). */
+  async signUp(details: SignUpDetails): Promise<void> {
+    await this.start(await this.api.register(details));
+  }
+
+  /** Sign in (or up) with a Google ID token, accepting the agreement by pressing the button. */
+  async signInWithGoogle(idToken: string, agreement: Agreement): Promise<void> {
+    await this.start(await this.api.googleSignIn(idToken, agreement));
+  }
+
   /** Play at once without signing up: a guest account, which can be made a real one later. */
   async playAsGuest(agreement: Agreement): Promise<void> {
     await this.start(await this.api.playAsGuest(agreement));
@@ -132,17 +154,29 @@ export class SessionStore {
     await this.options.tokenStore.clear();
   }
 
+  /** "Not you?": this device no longer offers the last username. */
+  async forgetUsername(): Promise<void> {
+    this.remembered = null;
+    this.notify();
+    await this.options.usernameStore?.clear();
+  }
+
+  /** The account was deleted: forget its session, and its username on this device. */
+  async accountDeleted(): Promise<void> {
+    await this.forget();
+    await this.forgetUsername();
+  }
+
   private async check(): Promise<void> {
     const epoch = this.epoch;
     const stale = () => this.epoch !== epoch;
-    let saved: string | null;
-    try {
-      saved = await this.options.tokenStore.load();
-    } catch (error) {
-      console.warn('Could not read the saved session', error);
-      saved = null;
-    }
+    const [saved, remembered] = await Promise.all([
+      read(this.options.tokenStore, 'session'),
+      read(this.options.usernameStore, 'username'),
+    ]);
     if (stale()) return;
+    // Known before the state says "signed out", so the first screen is the right one.
+    this.remembered = remembered;
     if (this.transport === 'bearer' && saved === null) {
       this.set({ status: 'signedOut' });
       return;
@@ -161,6 +195,33 @@ export class SessionStore {
 
   private set(state: SessionState): void {
     this.state = state;
+    // Any account but a guest's (which has no password to sign in with) is remembered.
+    if (state.status === 'signedIn' && state.user.role !== 'guest') {
+      const { username } = state.user;
+      if (username !== this.remembered) {
+        this.remembered = username;
+        this.options.usernameStore?.save(username).catch((error: unknown) => {
+          console.warn('Could not remember the username', error);
+        });
+      }
+    }
+    this.notify();
+  }
+
+  private notify(): void {
     for (const listener of this.listeners) listener();
+  }
+}
+
+/** What a sign-up sends: the account form's details (the endpoint adds the transport). */
+export type SignUpDetails = Parameters<Api['register']>[0];
+
+/** A saved text, or null when there is none or it cannot be read. */
+async function read(store: TokenStore | undefined, what: string): Promise<string | null> {
+  try {
+    return (await store?.load()) ?? null;
+  } catch (error) {
+    console.warn(`Could not read the saved ${what}`, error);
+    return null;
   }
 }

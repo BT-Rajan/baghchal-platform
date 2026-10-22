@@ -62,9 +62,7 @@ export function LookNotices({ choice, upsell = true }: { choice: LookChoice; ups
   return (
     <>
       {upsell && !themes && (
-        <Upsell feature="themes">
-          {t('More boards, pieces and sound packs, and a badge by your name.')}
-        </Upsell>
+        <Upsell feature="themes">{t('More boards, pieces and sounds, and a badge.')}</Upsell>
       )}
       <ErrorNotice error={chooseError} />
     </>

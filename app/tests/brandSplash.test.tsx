@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
-import { BrandSplash } from '@/components/brand/BrandSplash';
+import { BrandSplash, SPLASH_FADE_MS } from '@/components/brand/BrandSplash';
 
 test('the opening screen shows the claw mark, the name and what the game is', async () => {
   const shown = jest.fn();
@@ -14,4 +14,25 @@ test('the opening screen shows the claw mark, the name and what the game is', as
     nativeEvent: { layout: { width: 400, height: 800, x: 0, y: 0 } },
   });
   expect(shown).toHaveBeenCalled();
+});
+
+test('it fades away over the first screen, then says so', async () => {
+  jest.useFakeTimers();
+  const hidden = jest.fn();
+  const { rerender } = await render(<BrandSplash onHidden={hidden} />);
+  expect(hidden).not.toHaveBeenCalled();
+  await rerender(<BrandSplash hiding onHidden={hidden} />);
+  // While it fades, touches reach the screen underneath.
+  expect(
+    screen.getByTestId('brand-splash', { includeHiddenElements: true }).props.pointerEvents,
+  ).toBe('none');
+  await act(() => jest.advanceTimersByTime(SPLASH_FADE_MS));
+  expect(hidden).toHaveBeenCalledTimes(1);
+  jest.useRealTimers();
+});
+
+test('without a fade it goes at once', async () => {
+  const hidden = jest.fn();
+  await render(<BrandSplash hiding fadeMs={0} onHidden={hidden} />);
+  expect(hidden).toHaveBeenCalledTimes(1);
 });

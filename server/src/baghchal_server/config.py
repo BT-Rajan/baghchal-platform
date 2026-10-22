@@ -8,7 +8,7 @@ import re
 from datetime import timedelta
 from typing import Literal
 
-from pydantic import Field, SecretStr, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LEGAL_DETAILS = (
@@ -25,6 +25,22 @@ LEGAL_DETAILS = (
 """Settings the privacy policy and terms quote (see legal/texts)."""
 
 _FINGERPRINT = re.compile(r"[0-9A-F]{2}(?::[0-9A-F]{2}){31}")
+
+
+class GoogleClientIds(BaseModel):
+    """The OAuth client ids made for ClawPlay in Google Cloud, one per kind of app. They are
+    public (the apps carry them); an empty one is not used."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    web: str = ""
+    android: str = ""
+    ios: str = ""
+
+    @property
+    def audiences(self) -> frozenset[str]:
+        """The ids a Google ID token may be issued to."""
+        return frozenset(i for i in (self.web, self.android, self.ios) if i)
 
 
 class Settings(BaseSettings):
@@ -122,6 +138,12 @@ class Settings(BaseSettings):
     ``BAGHCHAL_ANDROID_CERT_SHA256='["FA:C6:…:9C"]'``. Served in
     ``/.well-known/assetlinks.json``, so links to this site open in the app; empty, they open
     in the browser. See docs/operations.md, "Links that open the Android app"."""
+
+    google_client_ids: GoogleClientIds = GoogleClientIds()
+    """Sign in with Google: the OAuth client ids, e.g.
+    ``BAGHCHAL_GOOGLE_CLIENT_IDS='{"web": "…apps.googleusercontent.com", "android": "…"}'``.
+    All empty (the default), the Google button is not offered. See docs/operations.md, "Sign
+    in with Google"."""
 
     @field_validator("android_cert_sha256")
     @classmethod

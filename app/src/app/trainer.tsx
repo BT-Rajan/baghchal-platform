@@ -36,11 +36,7 @@ export default function TrainerScreen() {
         <Loading label={t('Loading your plan')} />
       ) : has(plan.data, 'trainer') ? (
         <>
-          <Hint>
-            {t(
-              'Each position has one move clearly better than the rest. Openings come while goats are still being placed; endgames once all are on the board.',
-            )}
-          </Hint>
+          <Hint>{t('Find the one best move.')}</Hint>
           <Segmented
             label={t('Puzzles')}
             options={KINDS.map((k) => ({ ...k, label: t(k.label) }))}
@@ -54,11 +50,7 @@ export default function TrainerScreen() {
           />
         </>
       ) : (
-        <Upsell feature="trainer">
-          {t(
-            'Train with opening and endgame puzzles from real games, each with one best move to find.',
-          )}
-        </Upsell>
+        <Upsell feature="trainer">{t('Opening and endgame puzzles from real games.')}</Upsell>
       )}
     </Screen>
   );

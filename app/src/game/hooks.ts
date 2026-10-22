@@ -70,12 +70,19 @@ export function useMove(id: string) {
   });
 }
 
+/** The actions whose answer can have fewer moves than the board showed. */
+const TAKES_BACK: GameAction[] = ['undo', 'undo/accept'];
+
 export function useGameAction(id: string) {
   const api = useApi();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (action: GameAction) => api.gameAction(id, action),
-    onSuccess: (game) => void applyGame(queryClient, game),
+    onSuccess: (game, action) => {
+      // A takeback goes back to fewer moves: the server's answer is still the truth.
+      if (TAKES_BACK.includes(action)) queryClient.setQueryData(queryKeys.game(id), game);
+      void applyGame(queryClient, game);
+    },
     onError: useRefreshOnConflict(id),
   });
 }

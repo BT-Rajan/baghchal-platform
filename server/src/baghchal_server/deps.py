@@ -23,6 +23,7 @@ from baghchal_server.realtime.presence import Presence
 from baghchal_server.security import PasswordHasher
 
 if TYPE_CHECKING:
+    from baghchal_server.accounts.google import GoogleKeys
     from baghchal_server.fair_play.worker import FairPlayChecker
     from baghchal_server.games.computer import ComputerPlayers
     from baghchal_server.payments.keys import Gateways
@@ -45,6 +46,8 @@ class AppState:
     fair_play: "FairPlayChecker"
     gateways: "Gateways"
     """Razorpay, for the keys an admin entered (see ``payments.keys``)."""
+    google_keys: "GoogleKeys"
+    """Google's signing keys, for Sign in with Google."""
 
 
 def get_state(request: Request) -> AppState:

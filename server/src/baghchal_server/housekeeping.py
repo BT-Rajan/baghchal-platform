@@ -31,8 +31,6 @@ if TYPE_CHECKING:
 log = structlog.get_logger(__name__)
 
 INTERVAL_SECONDS: Final = 3600.0
-UNCONFIRMED: Final = timedelta(days=7)
-"""Sign-ups never confirmed."""
 LINKS: Final = timedelta(days=7)
 """Email links, after they expire or are used."""
 FAIR_PLAY: Final = timedelta(days=365)
@@ -81,12 +79,6 @@ async def tidy(
             db,
             delete(EmailToken).where(
                 (EmailToken.expires_at < now - LINKS) | (EmailToken.used_at < now - LINKS)
-            ),
-        ),
-        "unconfirmed_sign_ups": await _delete(
-            db,
-            delete(User).where(
-                User.email_verified_at.is_(None), User.created_at < now - UNCONFIRMED
             ),
         ),
         "fair_play_figures": await _delete(

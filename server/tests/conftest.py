@@ -21,6 +21,7 @@ from httpx_ws import AsyncWebSocketSession, aconnect_ws
 from httpx_ws.transport import ASGIWebSocketTransport
 from sqlalchemy import text
 
+from baghchal_server.accounts.google import GoogleKeys
 from baghchal_server.app import create_app
 from baghchal_server.config import Settings
 from baghchal_server.deps import AppState
@@ -105,9 +106,23 @@ def gateway() -> Gateway | None:
     return None
 
 
+async def _no_google() -> tuple[dict[str, object], int]:
+    raise httpx.ConnectError("tests do not reach Google")
+
+
+@pytest.fixture
+def google_keys() -> GoogleKeys:
+    """Google's keys; a test module that signs in with Google provides its own."""
+    return GoogleKeys(fetch=_no_google)
+
+
 @pytest.fixture
 async def app(
-    settings: Settings, mailer: MemoryMailer, clock: Clock, gateway: Gateway | None
+    settings: Settings,
+    mailer: MemoryMailer,
+    clock: Clock,
+    gateway: Gateway | None,
+    google_keys: GoogleKeys,
 ) -> AsyncIterator[FastAPI]:
     app = create_app(
         settings,
@@ -115,6 +130,7 @@ async def app(
         limiter=MemoryRateLimiter(),
         clock=clock,
         make_gateway=None if gateway is None else lambda _id, _secret: gateway,
+        google_keys=google_keys,
     )
     async with app.router.lifespan_context(app):
         yield app
@@ -187,12 +203,13 @@ async def sign_up(
     email: str = "alice@example.com",
     password: str = PASSWORD,
 ) -> httpx.Response:
-    """Register and verify an account; returns the verify response (which signs in)."""
+    """Register (which signs in) and confirm the address; returns the confirmation response
+    (which signs in too)."""
     r = await client.post(
         "/api/v1/auth/register",
         json={**AGREE, "username": username, "email": email, "password": password},
     )
-    assert r.status_code == 202, r.text
+    assert r.status_code == 201, r.text
     r = await client.post("/api/v1/auth/verify-email", json={"token": last_token(mailer)})
     assert r.status_code == 200, r.text
     return r
@@ -245,13 +262,10 @@ async def players(app: FastAPI, mailer: MemoryMailer) -> AsyncIterator[PlayerFac
                 "username": username,
                 "email": f"{username}@example.com",
                 "password": PASSWORD,
+                "transport": "bearer",
             },
         )
-        assert r.status_code == 202, r.text
-        r = await http.post(
-            "/api/v1/auth/verify-email", json={"token": last_token(mailer), "transport": "bearer"}
-        )
-        assert r.status_code == 200, r.text
+        assert r.status_code == 201, r.text
         body = r.json()
         http.headers["authorization"] = f"Bearer {body['token']}"
         return Player(body["user"]["id"], username, http)

@@ -14,10 +14,7 @@ export function GuestBanner() {
   return (
     <View style={styles.box}>
       <Text style={styles.text}>
-        {t(
-          'You are playing as {name}. Make a free account to keep your games, play rated games and challenge friends.',
-          { name: me.username },
-        )}
+        {t('Playing as {name}. Make a free account to keep your games.', { name: me.username })}
       </Text>
       <Button
         title={t('Make a free account')}

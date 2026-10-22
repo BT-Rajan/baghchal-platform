@@ -24,7 +24,7 @@ export default function DeleteAccount() {
         </Text>
         <Text style={styles.step}>{t('2. Open Me, then Settings.')}</Text>
         <Text style={styles.step}>
-          {t('3. Choose Delete account and confirm with your password.')}
+          {t('3. Choose Account, then Delete account, and confirm with your password.')}
         </Text>
       </Card>
       {signedIn ? (
@@ -38,14 +38,12 @@ export default function DeleteAccount() {
       )}
       <Hint>
         {t(
-          'Your email address, password and chat messages are deleted at once, and your username is replaced with an anonymous one. Guest accounts are deleted when you sign out.',
+          'Your email, password and chats go at once; your username becomes anonymous. Guest accounts go when you sign out.',
         )}
       </Hint>
       <SectionTitle>{t('Cannot sign in?')}</SectionTitle>
       <Hint>
-        {t(
-          'Write to us from the email address on your account, at the contact address in the privacy policy, and we will delete it for you.',
-        )}
+        {t("Email us from your account's address (see the privacy policy) and we will delete it.")}
       </Hint>
       <TextLink href="/privacy">{t('Privacy policy: what we keep, and for how long')}</TextLink>
     </Screen>

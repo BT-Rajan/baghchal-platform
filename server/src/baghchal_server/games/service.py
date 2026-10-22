@@ -62,6 +62,7 @@ from baghchal_server.games.schemas import (
     ResultOut,
     SideName,
     SideRatingOut,
+    UndoOption,
 )
 from baghchal_server.lobby.models import Challenge
 from baghchal_server.lobby.schemas import PlayerOut
@@ -493,7 +494,10 @@ def _remember(game_id: uuid.UUID, engine_game: EngineGame) -> None:
         _cache.popitem(last=False)
 
 
-async def describe(db: AsyncSession, game: Game, now: datetime) -> GameOut:
+async def describe(
+    db: AsyncSession, game: Game, now: datetime, viewer: uuid.UUID | None = None
+) -> GameOut:
+    """The game as ``viewer`` sees it (``undo`` is theirs; none for anyone else)."""
     names = dict(
         (
             await db.execute(
@@ -505,6 +509,7 @@ async def describe(db: AsyncSession, game: Game, now: datetime) -> GameOut:
     engine_game = await _engine_game(db, game)
     goat_ms, tiger_ms = clocks_at(game, now)
     active = game.status == GameStatus.ACTIVE
+    tournament = await _tournament_code(db, game.id)
     return GameOut(
         id=game.id,
         goat=PlayerOut(
@@ -534,10 +539,12 @@ async def describe(db: AsyncSession, game: Game, now: datetime) -> GameOut:
         ),
         match=await _describe_match(db, game, names),
         computer=game.bot_level,
-        tournament=await _tournament_code(db, game.id),
+        tournament=tournament,
         positions=[] if active else _positions(engine_game),
         deadline_at=game.deadline_at,
         draw_offer=game.draw_offer if active else None,
+        undo=undo_option(game, viewer, in_tournament=tournament is not None),
+        takeback_offer=game.takeback_offer if active else None,
         server_time=now,
         created_at=game.created_at,
         finished_at=game.finished_at,
@@ -650,7 +657,7 @@ async def _describe_match(
 # ── Moves ─────────────────────────────────────────────────────────────────
 
 
-async def play(  # noqa: PLR0913 - the move, who plays it when, and their network
+async def play(  # noqa: PLR0913, PLR0915 - the move, who plays it when, and their network
     db: AsyncSession,
     game_id: uuid.UUID,
     user_id: uuid.UUID,
@@ -658,12 +665,15 @@ async def play(  # noqa: PLR0913 - the move, who plays it when, and their networ
     now: datetime,
     *,
     presence: Presence,
+    position: str | None = None,
 ) -> Game:
+    """Play a move. ``position``: the board the move was chosen for (the computer's), so a
+    move worked out before a takeback is never played on the board after it."""
     game = await get_game(db, game_id)
     side = _side_of(game, user_id)
     if game.status != GameStatus.ACTIVE:
         raise AppError(409, "game_over", "This game is over.")
-    if data.ply != game.ply:
+    if data.ply != game.ply or (position is not None and position != game.position):
         raise AppError(409, "stale_position", "The game has moved on; refresh and try again.")
     if side != side_to_move(game):
         raise AppError(409, "not_your_turn", "It is not your turn.")
@@ -703,6 +713,7 @@ async def play(  # noqa: PLR0913 - the move, who plays it when, and their networ
         }
         # Playing on declines the opponent's offer, even one made since this move was read.
         values["draw_offer"] = case((Game.draw_offer == _other(side), None), else_=Game.draw_offer)
+        values["takeback_offer"] = None  # and lets a takeback request lapse
         if outcome is None:
             next_id = game.tiger_id if side == "goat" else game.goat_id
             left = getattr(game, f"{_other(side)}_lag_left_ms")
@@ -730,7 +741,12 @@ async def play(  # noqa: PLR0913 - the move, who plays it when, and their networ
         await db.flush()
         result = await db.execute(
             update(Game)
-            .where(Game.id == game.id, Game.ply == game.ply, Game.status == GameStatus.ACTIVE)
+            .where(
+                Game.id == game.id,
+                Game.ply == game.ply,
+                Game.position == game.position,
+                Game.status == GameStatus.ACTIVE,
+            )
             .values(**values)
         )
         if result.rowcount != 1:  # type: ignore[attr-defined]
@@ -781,6 +797,7 @@ async def _finish(  # noqa: PLR0913 - how the game ended, and who caused an abor
             finished_at=now,
             aborted_by=aborted_by,
             draw_offer=None,
+            takeback_offer=None,
         )
     )
     if result.rowcount != 1:  # type: ignore[attr-defined]
@@ -949,3 +966,167 @@ async def due_games(db: AsyncSession, now: datetime) -> Sequence[uuid.UUID]:
             .limit(SWEEP_BATCH)
         )
     ).all()
+
+
+# ── Taking moves back ─────────────────────────────────────────────────────
+
+
+UNDO_LIMIT: Final = 3
+"""Moves each player may take back (or ask to) in one game."""
+
+
+def _has_moved(game: Game, side: SideName) -> bool:
+    return game.ply >= (1 if side == "goat" else 2)
+
+
+def undo_option(game: Game, viewer: uuid.UUID | None, *, in_tournament: bool) -> UndoOption:
+    """What ``viewer`` may do about their last move: ``now`` (against the computer), ``ask``
+    (against a person) or ``none``."""
+    if (
+        viewer not in (game.goat_id, game.tiger_id)
+        or game.status != GameStatus.ACTIVE
+        or game.rated
+        or in_tournament
+    ):
+        return "none"
+    side: SideName = "goat" if viewer == game.goat_id else "tiger"
+    if (
+        not _has_moved(game, side)
+        or getattr(game, f"{side}_undos") >= UNDO_LIMIT
+        or game.takeback_offer is not None
+    ):
+        return "none"
+    return "now" if game.bot_level is not None else "ask"
+
+
+async def _check_undo(db: AsyncSession, game: Game, side: SideName) -> None:
+    """Refuse a takeback this side may not have (whoever asks for it)."""
+    if game.status != GameStatus.ACTIVE:
+        raise AppError(409, "game_over", "This game is over.")
+    if await _tournament_code(db, game.id) is not None:
+        raise AppError(409, "no_undo", "Moves cannot be taken back in tournament games.")
+    if game.rated:
+        raise AppError(409, "no_undo", "Moves cannot be taken back in rated games.")
+    if not _has_moved(game, side):
+        raise AppError(409, "no_undo", "You have no move to take back.")
+
+
+def _undo_target(game: Game, side: SideName) -> int:
+    """The ply to go back to: before ``side``'s last move (and the reply that came after)."""
+    return game.ply - 2 if side_to_move(game) == side else game.ply - 1
+
+
+async def _take_back(  # noqa: PLR0913 - which game, to where, and what else changes with it
+    db: AsyncSession,
+    game: Game,
+    target: int,
+    now: datetime,
+    *,
+    offer: SideName | None = None,
+    counted: SideName | None = None,
+) -> bool:
+    """Go back to ``target`` plies (caller commits); False if the game changed meanwhile.
+    Clocks keep the time each side has left now; the turn goes back. ``offer``: the open
+    request this answers. ``counted``: the side whose undo this uses."""
+    moves = (await move_list(db, game))[:target]
+    engine_game = EngineGame.replay(parse_move(m) for m in moves)
+    goat_ms, tiger_ms = clocks_at(game, now)
+    mover_ms = goat_ms if target % 2 == 0 else tiger_ms
+    values: dict[str, object] = {
+        "ply": target,
+        "position": format_position(engine_game.position),
+        "goat_ms": goat_ms,
+        "tiger_ms": tiger_ms,
+        "turn_started_at": now,
+        "lag_ms": 0,
+        "deadline_at": _deadline(target, now, mover_ms, 0),
+        "draw_offer": None,
+        "takeback_offer": None,
+    }
+    if counted is not None:
+        values[f"{counted}_undos"] = getattr(Game, f"{counted}_undos") + 1
+    conditions = [Game.id == game.id, Game.ply == game.ply, Game.status == GameStatus.ACTIVE]
+    if offer is not None:
+        conditions.append(Game.takeback_offer == offer)
+    if counted is not None:
+        conditions.append(getattr(Game, f"{counted}_undos") < UNDO_LIMIT)
+    result = await db.execute(update(Game).where(*conditions).values(**values))
+    if result.rowcount != 1:  # type: ignore[attr-defined]
+        await db.rollback()
+        return False
+    await db.execute(delete(GameMove).where(GameMove.game_id == game.id, GameMove.ply >= target))
+    _cache.pop(game.id, None)
+    return True
+
+
+async def undo(db: AsyncSession, game_id: uuid.UUID, user_id: uuid.UUID, now: datetime) -> Game:
+    """Against the computer: take my last move back at once (and the computer's reply, if it
+    has replied). Against a person: ask them to let me (``accept_undo``)."""
+    stale = AppError(409, "stale_position", "The game is changing quickly; try again.")
+    game = await get_game(db, game_id)
+    side = _side_of(game, user_id)
+    await _check_undo(db, game, side)
+    if getattr(game, f"{side}_undos") >= UNDO_LIMIT:
+        raise AppError(
+            409,
+            "undo_limit",
+            "You can take back {limit} moves a game, and you have.",
+            limit=UNDO_LIMIT,
+        )
+    if game.takeback_offer is not None:
+        raise AppError(409, "takeback_pending", "A takeback request is waiting for an answer.")
+    if game.bot_level is not None:
+        if not await _take_back(db, game, _undo_target(game, side), now, counted=side):
+            raise stale
+    else:
+        asked = await db.execute(
+            update(Game)
+            .where(
+                Game.id == game.id,
+                Game.ply == game.ply,
+                Game.status == GameStatus.ACTIVE,
+                Game.takeback_offer.is_(None),
+                getattr(Game, f"{side}_undos") < UNDO_LIMIT,
+            )
+            .values(takeback_offer=side, **{f"{side}_undos": getattr(Game, f"{side}_undos") + 1})
+        )
+        if asked.rowcount != 1:  # type: ignore[attr-defined]
+            await db.rollback()
+            raise stale
+    await db.commit()
+    return await get_game(db, game_id)
+
+
+async def accept_undo(
+    db: AsyncSession, game_id: uuid.UUID, user_id: uuid.UUID, now: datetime
+) -> Game:
+    """Let my opponent take their last move back (and my reply, if I made one)."""
+    game = await get_game(db, game_id)
+    asker = _other(_side_of(game, user_id))
+    if game.status != GameStatus.ACTIVE or game.takeback_offer != asker:
+        raise AppError(409, "no_takeback_offer", "There is no takeback request to answer.")
+    await _check_undo(db, game, asker)
+    if not await _take_back(db, game, _undo_target(game, asker), now, offer=asker):
+        raise AppError(409, "stale_position", "The game is changing quickly; try again.")
+    await db.commit()
+    return await get_game(db, game_id)
+
+
+async def decline_undo(db: AsyncSession, game_id: uuid.UUID, user_id: uuid.UUID) -> Game:
+    """Turn down my opponent's takeback request; play goes on (moving does the same)."""
+    game = await get_game(db, game_id)
+    side = _side_of(game, user_id)
+    declined = await db.execute(
+        update(Game)
+        .where(
+            Game.id == game.id,
+            Game.status == GameStatus.ACTIVE,
+            Game.takeback_offer == _other(side),
+        )
+        .values(takeback_offer=None)
+    )
+    if declined.rowcount != 1:  # type: ignore[attr-defined]
+        await db.rollback()
+        raise AppError(409, "no_takeback_offer", "There is no takeback request to answer.")
+    await db.commit()
+    return await get_game(db, game_id)

@@ -28,7 +28,7 @@ describe('plans', () => {
       'GET /api/v1/blocks': { status: 200, body: [] },
     });
     expect(await screen.findByText('You are on the Free plan.')).toBeOnTheScreen();
-    await press('See plans');
+    await fireEvent.press(screen.getByRole('link', { name: 'Plan' }));
     await waitFor(() => expect(app.getPathname()).toBe('/plans'));
     expect(await screen.findByRole('heading', { name: 'Plus' })).toBeOnTheScreen();
     // In the apps, what each plan includes, not what it costs (the website sells them).
@@ -64,7 +64,7 @@ describe('plans', () => {
   test('Hard asks for Plus, and the history says how far back it goes', async () => {
     const { app } = await open('/play');
     await fireEvent.press(await screen.findByRole('radio', { name: 'Hard' }));
-    expect(screen.getByText('Play the Hard computer, the strongest opponent.')).toBeOnTheScreen();
+    expect(screen.getByText('Play the Hard computer.')).toBeOnTheScreen();
     expect(await screen.findByLabelText('ClawPlay Plus')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Play the computer' })).toBeDisabled();
     await press('Get ClawPlay Plus');
@@ -86,7 +86,7 @@ describe('plans', () => {
       },
     });
     expect(await screen.findByText('No finished games yet.')).toBeOnTheScreen();
-    expect(screen.queryByText(/^Your history shows games from the last 30 days/)).toBeNull();
+    expect(screen.queryByText(/^Games from the last 30 days/)).toBeNull();
     await open('/me', {
       'GET /api/v1/players/alice': {
         status: 200,
@@ -94,7 +94,7 @@ describe('plans', () => {
       },
     });
     expect(
-      await screen.findByText('Your history shows games from the last 30 days. Keep every game.'),
+      await screen.findByText('Games from the last 30 days. Keep every game.'),
     ).toBeOnTheScreen();
   });
 });

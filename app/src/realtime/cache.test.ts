@@ -29,7 +29,13 @@ describe('isNewer', () => {
 
   test('a higher ply wins', () => {
     expect(isNewer(game({ ply: 5 }), base)).toBe(true);
-    expect(isNewer(game({ ply: 3, server_time: '2027-01-01T00:00:00Z' }), base)).toBe(false);
+    expect(isNewer(game({ ply: 5, server_time: '2025-01-01T00:00:00Z' }), base)).toBe(true);
+  });
+
+  test('a lower ply wins only when sent later (a takeback took moves back)', () => {
+    expect(isNewer(game({ ply: 2, server_time: '2026-01-01T12:00:05Z' }), base)).toBe(true);
+    expect(isNewer(game({ ply: 3, server_time: '2026-01-01T11:59:59Z' }), base)).toBe(false);
+    expect(isNewer(game({ ply: 3, server_time: '2026-01-01T12:00:00Z' }), base)).toBe(false);
   });
 
   test('at the same ply, finished beats active (resigning adds no move)', () => {

@@ -106,6 +106,41 @@ app signing key's fingerprint (Play Console → Test and release → App integri
 key's too if APKs signed with it are installed directly. To read any APK's:
 `keytool -printcert -jarfile app-release.apk` (or `apksigner verify --print-certs`).
 
+## Sign in with Google
+
+Off until client ids are set. With them, `GET /api/v1/auth/providers` says Google is on (the
+apps then show the button) and `POST /api/v1/auth/google` takes the ID token the app got from
+Google. The server checks the token's signature against Google's keys (fetched from
+`https://www.googleapis.com/oauth2/v3/certs` and cached as long as Google allows, so the API
+needs outbound https to `www.googleapis.com`), its issuer, that it was issued to one of the
+client ids, that it has not expired, and that Google verified the address. The first time, an
+account with that address is linked to the Google account, or a new one is made (a username
+from the address; a password can be set later with "Forgot password").
+
+In the [Google Cloud console](https://console.cloud.google.com/), one project for ClawPlay:
+
+1. **APIs & Services → OAuth consent screen**: user type External; app name ClawPlay, support
+   email, the website's domain, and links to `/privacy` and `/terms`. Scopes: `openid`,
+   `email`, `profile` only (no review needed). Publish it (out of Testing) for everyone to sign
+   in.
+2. **APIs & Services → Credentials → Create credentials → OAuth client ID**, once per kind of
+   app:
+   - **Web application**: authorised JavaScript origin `https://<domain>` (and
+     `http://localhost:8081` for development). The Android app asks Google for tokens issued
+     to this id too.
+   - **Android**: package name `com.clawplay.app` and the SHA-1 of each signing key (as for
+     [the Android links](#links-that-open-the-android-app): debug, upload and Play app-signing
+     keys; `keytool -printcert -jarfile app-release.apk`).
+   - **iOS** (when there is an iOS app): its bundle id.
+3. Set the ids on the server, as one JSON object (empty or missing ones are not used):
+   `BAGHCHAL_GOOGLE_CLIENT_IDS='{"web": "123-abc.apps.googleusercontent.com", "android":
+   "123-def.apps.googleusercontent.com", "ios": ""}'` (with Docker, `GOOGLE_WEB_CLIENT_ID`,
+   `GOOGLE_ANDROID_CLIENT_ID` and `GOOGLE_IOS_CLIENT_ID` in `deploy/.env`). The apps take the
+   same ids at build time from `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` and
+   `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, or else from `/auth/providers`.
+
+The ids are public (every app carries them); there is no client secret to keep.
+
 ## Upgrading
 
 ```bash
@@ -183,8 +218,7 @@ it to the internet). Prometheus finds the replicas through Docker's DNS.
 | `baghchal_housekeeping_deleted_total{kind}` | Data deleted on the privacy policy's schedule (below) |
 
 **Housekeeping**: once an hour each replica deletes what the privacy policy says is no longer
-kept: expired sessions; email links a week past use or expiry; sign-ups never confirmed after
-7 days; fair-play figures and checks after a year; closed reports and the
+kept: expired sessions; email links a week past use or expiry; fair-play figures and checks after a year; closed reports and the
 moderation log after 3 years; payment records after 8 years. The periods are in
 `housekeeping.py` and tested against the policy; change both together.
 

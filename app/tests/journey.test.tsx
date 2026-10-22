@@ -1,58 +1,49 @@
-import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import { renderApp } from './support/app';
-import { AGREED, error } from './support/fakeServer';
+import { SessionProvider } from '@/auth/session';
+import { ResendConfirmation } from '@/components/ResendConfirmation';
 
-async function press(name: string | RegExp) {
-  await fireEvent.press(screen.getByRole('button', { name }));
+import { error, fakeServer, type Route } from './support/fakeServer';
+import { memoryTokenStore } from './support/memoryTokenStore';
+
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn(async () => null),
+  setItemAsync: jest.fn(async () => {}),
+  deleteItemAsync: jest.fn(async () => {}),
+}));
+
+async function show(resend: Route) {
+  const server = fakeServer({ 'POST /api/v1/auth/verify-email/resend': resend });
+  const queryClient = new QueryClient();
+  await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionProvider
+        baseUrl="http://localhost:8000"
+        queryClient={queryClient}
+        tokenStore={memoryTokenStore()}
+        fetch={server.fetch}
+      >
+        <ResendConfirmation email=" alice@example.com " />
+      </SessionProvider>
+    </QueryClientProvider>,
+  );
+  return server;
 }
 
-async function type(label: string, text: string) {
-  await fireEvent.changeText(screen.getByLabelText(label), text);
-}
-
-describe('a confirmation email that went missing', () => {
-  test('can be sent again from the sign-up confirmation, which leads to sign in', async () => {
-    const { server, app } = await renderApp('/sign-up', {
-      routes: {
-        'POST /api/v1/auth/register': { status: 202, body: { status: 'accepted' } },
-        'POST /api/v1/auth/verify-email/resend': { status: 202, body: { status: 'accepted' } },
-      },
-    });
-    await screen.findByRole('button', { name: 'Accept and make my account', busy: false });
-    await type('Username', 'alice');
-    await type('Email', 'alice@example.com');
-    await type('Password', 'correct horse');
-    await press('Accept and make my account');
-    expect(await screen.findByText(/Open the link in it to start playing\.$/)).toBeOnTheScreen();
-    await fireEvent.press(await screen.findByRole('button', { name: 'Send the link again' }));
-    expect(server.lastTo('POST /api/v1/auth/register').body).toMatchObject(AGREED);
-    expect(await screen.findByText(/^We sent a new link to alice@example\.com/)).toBeOnTheScreen();
+describe('a confirmation link that went missing', () => {
+  test('can be sent again', async () => {
+    const server = await show({ status: 202, body: { status: 'accepted' } });
+    await fireEvent.press(screen.getByRole('button', { name: 'Send the link again' }));
+    expect(await screen.findByText('Link sent to alice@example.com.')).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/auth/verify-email/resend').body).toEqual({
       email: 'alice@example.com',
     });
-    await press('Back to sign in');
-    await waitFor(() => expect(app.getPathname()).toBe('/sign-in'));
   });
 
-  test('can be sent again from sign in, with the email address', async () => {
-    const { server } = await renderApp('/sign-in', {
-      routes: {
-        'POST /api/v1/auth/login': error(403, 'email_not_verified', 'Please verify first.'),
-        'POST /api/v1/auth/verify-email/resend': error(429, 'rate_limited', 'Slow down.'),
-      },
-    });
-    await screen.findByRole('heading', { name: 'Sign in' });
-    await type('Username or email', 'alice');
-    await type('Password', 'correct horse');
-    await press('Sign in');
-    expect(await screen.findByText(/^Did the email not come\?/)).toBeOnTheScreen();
-    await type('Username or email', 'alice@example.com');
-    await press('Sign in');
-    await fireEvent.press(await screen.findByRole('button', { name: 'Send the link again' }));
+  test('a refusal is shown', async () => {
+    await show(error(429, 'rate_limited', 'Slow down.'));
+    await fireEvent.press(screen.getByRole('button', { name: 'Send the link again' }));
     expect(await screen.findByText('Slow down.')).toBeOnTheScreen();
-    expect(server.lastTo('POST /api/v1/auth/verify-email/resend').body).toEqual({
-      email: 'alice@example.com',
-    });
   });
 });

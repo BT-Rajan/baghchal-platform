@@ -49,23 +49,27 @@ async def _settle(state: AppState, db: DB, game_id: uuid.UUID) -> None:
 async def my_active_games(user: CurrentUser, state: State, db: DB) -> list[GameOut]:
     """Your live games, to resume after a reconnect."""
     now = state.clock()
-    return [await service.describe(db, g, now) for g in await service.active_games(db, user.id)]
+    return [
+        await service.describe(db, g, now, user.id) for g in await service.active_games(db, user.id)
+    ]
 
 
 @router.get("/games/{game_id}")
 async def get_game(game_id: uuid.UUID, user: CurrentUser, state: State, db: DB) -> GameOut:
+    me = user.id  # read first: a rollback (a game settled meanwhile) expires ``user``
     await _settle(state, db, game_id)
-    return await service.describe(db, await service.get_game(db, game_id), state.clock())
+    return await service.describe(db, await service.get_game(db, game_id), state.clock(), me)
 
 
 @router.post("/games/{game_id}/moves")
 async def play(
     game_id: uuid.UUID, data: MoveIn, user: CurrentUser, state: State, db: DB
 ) -> GameOut:
-    await enforce_limit(state, MOVES_PER_USER, str(user.id))
+    me = user.id
+    await enforce_limit(state, MOVES_PER_USER, str(me))
     await _settle(state, db, game_id)
-    game = await service.play(db, game_id, user.id, data, state.clock(), presence=state.presence)
-    out = await notify(state, db, game)
+    game = await service.play(db, game_id, me, data, state.clock(), presence=state.presence)
+    out = await notify(state, db, game, me)
     if game.bot_level is not None and game.status == GameStatus.ACTIVE:
         state.computer.schedule(state, game_id)  # its reply
     return out
@@ -100,24 +104,25 @@ async def play_the_computer(
     data: ComputerGameIn, user: CurrentUser, state: State, db: DB
 ) -> GameOut:
     """Start a casual game against the computer. If it plays goats, it moves first."""
-    await enforce_limit(state, COMPUTER_GAMES_PER_USER, str(user.id))
+    me = user.id
+    await enforce_limit(state, COMPUTER_GAMES_PER_USER, str(me))
     now = state.clock()
     level = Level(data.level)
     if level == Level.HARD:
-        await billing.require(db, user.id, now, Feature.COMPUTER_HARD, "The Hard computer")
+        await billing.require(db, me, now, Feature.COMPUTER_HARD, "The Hard computer")
     computer = await computer_players.account(db, level, now)
     tc = TIME_CONTROLS[data.time_control]
     game = await service.start_computer_game(
         db,
         now,
-        player_id=user.id,
+        player_id=me,
         computer_id=computer.id,
         level=level.value,
         side=data.side,
         initial_seconds=tc.initial_seconds,
         increment_seconds=tc.increment_seconds,
     )
-    out = await notify(state, db, game)
+    out = await notify(state, db, game, me)
     state.computer.schedule(state, game.id)  # moves first when it has the goats
     return out
 
@@ -138,33 +143,67 @@ async def analyse_game(game_id: uuid.UUID, user: CurrentUser, state: State, db: 
 
 @router.post("/games/{game_id}/resign")
 async def resign(game_id: uuid.UUID, user: CurrentUser, state: State, db: DB) -> GameOut:
+    me = user.id
     await _settle(state, db, game_id)
-    return await notify(state, db, await service.resign(db, game_id, user.id, state.clock()))
+    return await notify(state, db, await service.resign(db, game_id, me, state.clock()), me)
 
 
 @router.post("/games/{game_id}/abort")
 async def abort(game_id: uuid.UUID, user: CurrentUser, state: State, db: DB) -> GameOut:
+    me = user.id
     await _settle(state, db, game_id)
-    return await notify(state, db, await service.abort(db, game_id, user.id, state.clock()))
+    return await notify(state, db, await service.abort(db, game_id, me, state.clock()), me)
 
 
 @router.post("/games/{game_id}/draw")
 async def offer_draw(game_id: uuid.UUID, user: CurrentUser, state: State, db: DB) -> GameOut:
     """Offer a draw, or accept the opponent's open offer (the game ends drawn). Not against the
     computer, and not before both sides have moved."""
+    me = user.id
     await _settle(state, db, game_id)
-    return await notify(state, db, await service.offer_draw(db, game_id, user.id, state.clock()))
+    return await notify(state, db, await service.offer_draw(db, game_id, me, state.clock()), me)
 
 
 @router.post("/games/{game_id}/draw/decline")
 async def decline_draw(game_id: uuid.UUID, user: CurrentUser, state: State, db: DB) -> GameOut:
     """Turn down the opponent's draw offer (moving on does the same)."""
+    me = user.id
     await _settle(state, db, game_id)
-    return await notify(state, db, await service.decline_draw(db, game_id, user.id))
+    return await notify(state, db, await service.decline_draw(db, game_id, me), me)
 
 
 @router.post("/games/{game_id}/claim-abandonment")
 async def claim_abandonment(game_id: uuid.UUID, user: CurrentUser, state: State, db: DB) -> GameOut:
+    me = user.id
     await _settle(state, db, game_id)
-    game = await service.claim_abandonment(db, state.presence, game_id, user.id, state.clock())
-    return await notify(state, db, game)
+    game = await service.claim_abandonment(db, state.presence, game_id, me, state.clock())
+    return await notify(state, db, game, me)
+
+
+@router.post("/games/{game_id}/undo")
+async def undo(game_id: uuid.UUID, user: CurrentUser, state: State, db: DB) -> GameOut:
+    """Take my last move back. Against the computer it happens at once (with the computer's
+    reply, if it replied); against a person it asks them (``takeback_offer``). Casual games
+    only, after a move of mine, three times a game."""
+    me = user.id
+    await _settle(state, db, game_id)
+    game = await service.undo(db, game_id, me, state.clock())
+    return await notify(state, db, game, me)
+
+
+@router.post("/games/{game_id}/undo/accept")
+async def accept_undo(game_id: uuid.UUID, user: CurrentUser, state: State, db: DB) -> GameOut:
+    """Let my opponent take their last move back (and my reply, if I made one). The clocks
+    keep the time each side has; the turn goes back."""
+    me = user.id
+    await _settle(state, db, game_id)
+    game = await service.accept_undo(db, game_id, me, state.clock())
+    return await notify(state, db, game, me)
+
+
+@router.post("/games/{game_id}/undo/decline")
+async def decline_undo(game_id: uuid.UUID, user: CurrentUser, state: State, db: DB) -> GameOut:
+    """Turn down my opponent's takeback request (moving on does the same)."""
+    me = user.id
+    await _settle(state, db, game_id)
+    return await notify(state, db, await service.decline_undo(db, game_id, me), me)

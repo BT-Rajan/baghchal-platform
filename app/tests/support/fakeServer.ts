@@ -91,6 +91,7 @@ export const ME = {
   email: 'alice@example.com',
   created_at: '2026-01-01T12:00:00Z',
   role: 'player' as const,
+  email_verified: true,
   consents_needed: [] as ('terms' | 'privacy')[],
 };
 

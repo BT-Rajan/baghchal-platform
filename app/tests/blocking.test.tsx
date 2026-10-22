@@ -28,7 +28,7 @@ describe("blocking from a player's page", () => {
     const { server } = await signedIn('/player/bob', { 'GET /api/v1/players/bob': profile(false) });
     await screen.findByRole('button', { name: 'Block bob' });
     await press('Block bob');
-    expect(screen.getByText(/^Block bob\? Neither of you/)).toBeOnTheScreen();
+    expect(screen.getByText(/^Block bob\? You won't challenge/)).toBeOnTheScreen();
     await press('Cancel');
     expect(screen.queryByText(/^Block bob\?/)).toBeNull();
 
@@ -36,7 +36,7 @@ describe("blocking from a player's page", () => {
     await press('Block bob');
     server.on('GET /api/v1/players/bob', profile(true));
     await press('Yes, block bob');
-    expect(await screen.findByText(/^You have blocked bob\./)).toBeOnTheScreen();
+    expect(await screen.findByText(/^You blocked bob\./)).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Challenge bob' })).toBeNull();
     expect(server.lastTo('PUT /api/v1/blocks/bob')).toBeDefined();
 
@@ -62,7 +62,7 @@ describe("blocking from a player's page", () => {
 
 describe('the list of blocked players', () => {
   test('lists them and unblocks', async () => {
-    const { server } = await signedIn('/settings', {
+    const { server } = await signedIn('/settings/blocked', {
       'GET /api/v1/players/alice': MY_PROFILE,
       'GET /api/v1/blocks': { status: 200, body: [BOB_PLAYER] },
       'DELETE /api/v1/blocks/bob': () => {
@@ -70,18 +70,16 @@ describe('the list of blocked players', () => {
         return { status: 204 };
       },
     });
-    await press('Blocked players');
     expect(await screen.findByText('bob')).toBeOnTheScreen();
     await press('Unblock bob');
     expect(await screen.findByText('You have not blocked anyone.')).toBeOnTheScreen();
   });
 
   test('a failed unblock and a failed list are reported', async () => {
-    const { server } = await signedIn('/settings', {
+    const { server } = await signedIn('/settings/blocked', {
       'GET /api/v1/players/alice': MY_PROFILE,
       'GET /api/v1/blocks': error(400, 'bad_request', 'The list is down.'),
     });
-    await fireEvent.press(await screen.findByRole('button', { name: 'Blocked players' }));
     expect(await screen.findByText('The list is down.')).toBeOnTheScreen();
     server.on('GET /api/v1/blocks', { status: 200, body: [BOB_PLAYER] });
     server.on('DELETE /api/v1/blocks/bob', error(503, 'unavailable', 'Try again later.'));

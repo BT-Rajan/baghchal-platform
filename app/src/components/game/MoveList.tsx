@@ -21,7 +21,7 @@ export function MoveList({
   current?: number;
   onShow?: (ply: number) => void;
 }) {
-  if (moves.length === 0) return <Hint>{t('No moves yet. Goats move first.')}</Hint>;
+  if (moves.length === 0) return <Hint>{t('No moves yet.')}</Hint>;
   const move = (text: string | undefined, ply: number) => {
     if (text === undefined) return null;
     if (onShow === undefined) return <Text style={styles.move}>{text}</Text>;

@@ -8,8 +8,10 @@ import httpx
 import pytest
 from fastapi import FastAPI
 from pydantic import ValidationError
+from sqlalchemy import update
 
 from baghchal_server.accounts import routes as account_routes
+from baghchal_server.accounts.models import User
 from baghchal_server.app import create_app
 from baghchal_server.config import LEGAL_DETAILS, Settings
 from baghchal_server.mail import MemoryMailer
@@ -120,7 +122,10 @@ async def test_one_address_can_sign_in_many_people(
         "/api/v1/auth/register",
         json={**AGREE, "username": "dan", "email": "dan@example.com", "password": PASSWORD},
     )
-    assert r.status_code == 202  # dan never confirms his address
+    assert r.status_code == 201
+    async with app.state.ctx.sessions() as db:  # dan's account is disabled
+        await db.execute(update(User).where(User.username_key == "dan").values(is_active=False))
+        await db.commit()
 
     def client_from(ip: str) -> httpx.AsyncClient:
         transport = httpx.ASGITransport(app=app, client=(ip, 1234))

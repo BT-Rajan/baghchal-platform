@@ -14,6 +14,7 @@ from fastapi import FastAPI
 from redis.asyncio import BlockingConnectionPool, Redis
 from starlette.middleware.cors import CORSMiddleware
 
+from baghchal_server.accounts.google import GoogleKeys
 from baghchal_server.accounts.routes import router as accounts_router
 from baghchal_server.achievements.routes import router as achievements_router
 from baghchal_server.app_links import router as app_links_router
@@ -103,13 +104,14 @@ def configure_error_tracking(settings: Settings) -> None:
     )
 
 
-def create_app(
+def create_app(  # noqa: PLR0913 - what tests replace
     settings: Settings | None = None,
     *,
     mailer: Mailer | None = None,
     limiter: RateLimiter | None = None,
     clock: Callable[[], datetime] | None = None,
     make_gateway: MakeGateway | None = None,
+    google_keys: GoogleKeys | None = None,
 ) -> FastAPI:
     settings = settings or Settings()
     configure_logging(settings)
@@ -148,6 +150,7 @@ def create_app(
             computer=ComputerPlayers(settings.computer_workers),
             fair_play=FairPlayChecker(settings.fair_play_workers),
             gateways=Gateways(make_gateway) if make_gateway else Gateways(),
+            google_keys=google_keys or GoogleKeys(),
         )
         loops = [
             (settings.game_sweeper, run_sweeper),

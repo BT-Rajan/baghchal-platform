@@ -44,10 +44,8 @@ export default function ResetPassword() {
   if (reset.isSuccess) {
     return (
       <Screen title={t('Password changed')} brand>
-        <Notice tone="success">
-          {t('Your password has been changed and you have been signed out everywhere.')}
-        </Notice>
-        <Button title={t('Sign in')} onPress={() => router.replace('/sign-in')} />
+        <Notice tone="success">{t('Signed out everywhere. Sign in with the new one.')}</Notice>
+        <Button title={t('Sign in')} large onPress={() => router.replace('/sign-in')} />
       </Screen>
     );
   }
@@ -84,7 +82,7 @@ export default function ResetPassword() {
         returnKeyType="go"
         onSubmitEditing={submit}
       />
-      <Button title={t('Change password')} onPress={submit} busy={reset.isPending} />
+      <Button title={t('Change password')} large onPress={submit} busy={reset.isPending} />
       {reset.error !== null && (
         <TextLink href="/forgot-password">{t('Request a new link')}</TextLink>
       )}

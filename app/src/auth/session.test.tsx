@@ -6,7 +6,7 @@ import { Text } from 'react-native';
 import { ME, fakeServer } from '../../tests/support/fakeServer';
 import { memoryTokenStore } from '../../tests/support/memoryTokenStore';
 
-import { SessionProvider, useApi, useMe, useSession } from './session';
+import { SessionProvider, useApi, useMe, useRememberedUsername, useSession } from './session';
 
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(async () => null),
@@ -95,4 +95,20 @@ test('useMe gives the signed-in user, and refuses otherwise', async () => {
   }
   await render(<Name />, { wrapper });
   expect(await screen.findByText('alice')).toBeOnTheScreen();
+});
+
+test('useRememberedUsername gives the username last signed in here', async () => {
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <SessionProvider
+      baseUrl="https://api.example"
+      queryClient={new QueryClient()}
+      transport="bearer"
+      tokenStore={memoryTokenStore()}
+      usernameStore={memoryTokenStore('alice')}
+    >
+      {children}
+    </SessionProvider>
+  );
+  const { result } = await renderHook(() => useRememberedUsername(), { wrapper });
+  await waitFor(() => expect(result.current).toBe('alice'));
 });

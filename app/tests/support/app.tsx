@@ -47,17 +47,31 @@ export const QUIET_LOBBY: Record<string, Route> = {
   'GET /api/v1/plans': { status: 200, body: PLANS },
   // And on the free board, pieces and sounds.
   'GET /api/v1/me/appearance': { status: 200, body: FREE_APPEARANCE },
+  // Google sign-in is not set up unless a test says so.
+  'GET /api/v1/auth/providers': { status: 200, body: { google: false, google_client_ids: null } },
   // Payments are off unless a test turns them on.
   'GET /api/v1/me/payments': { status: 200, body: { enabled: false, payments: [] } },
 };
 
 export const savedToken = () => mockSecure.get('session-token') ?? null;
+/** The username this device remembers from the last sign-in (apps only). */
+export const savedUsername = () => mockSecure.get('last-username') ?? null;
 
 export async function renderApp(
   url: string,
-  { routes = {}, token = null }: { routes?: Record<string, Route>; token?: string | null } = {},
+  {
+    routes = {},
+    token = null,
+    username = null,
+  }: {
+    routes?: Record<string, Route>;
+    token?: string | null;
+    /** Someone signed in on this device before, with this username. */
+    username?: string | null;
+  } = {},
 ) {
   mockSecure.clear();
+  if (username !== null) mockSecure.set('last-username', username);
   serverClock.reset();
   // Each test starts afresh: nowhere remembered to go back to after signing in.
   forgetReturn();

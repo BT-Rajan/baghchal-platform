@@ -24,25 +24,27 @@ test('in the apps, aborting asks over the button, stays open while busy and afte
   const onAction = jest.fn();
   await render(actions(null, null, onAction));
   await fireEvent.press(screen.getByRole('button', { name: 'Abort game' }));
-  expect(screen.getByRole('alertdialog', { name: /^Abort the game\?/ })).toBeOnTheScreen();
+  expect(
+    screen.getByRole('alertdialog', { name: 'Abort? It counts toward your 3 a day.' }),
+  ).toBeOnTheScreen();
   // The button that asked is still drawn behind the dialog.
   expect(
     screen.getByRole('button', { name: 'Abort game', includeHiddenElements: true }),
   ).toBeTruthy();
 
-  await fireEvent.press(screen.getByRole('button', { name: 'Yes, abort' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Abort' }));
   expect(onAction).toHaveBeenCalledWith('abort');
   // Not closed by answering: busy while the server is asked...
   await screen.rerender(actions('abort', null, onAction));
   expect(screen.getByRole('alertdialog')).toBeOnTheScreen();
-  expect(screen.getByRole('button', { name: 'Yes, abort' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Abort' })).toBeDisabled();
   // ...and showing why, when it fails.
   await screen.rerender(actions(null, REFUSED, onAction));
   expect(screen.getByRole('alertdialog')).toBeOnTheScreen();
   expect(screen.getByText('You have aborted 3 games today.')).toBeOnTheScreen();
 
   // Trying again, and it goes through: the dialog closes.
-  await fireEvent.press(screen.getByRole('button', { name: 'Yes, abort' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Abort' }));
   await screen.rerender(actions('abort', null, onAction));
   expect(screen.queryByText('You have aborted 3 games today.')).toBeNull();
   await screen.rerender(actions(null, null, onAction));
@@ -61,7 +63,7 @@ test('resigning asks over the panel, which stays; Keep playing closes it', async
     />,
   );
   await fireEvent.press(screen.getByRole('button', { name: 'Resign' }));
-  expect(screen.getByRole('alertdialog', { name: 'Resign this game?' })).toBeOnTheScreen();
+  expect(screen.getByRole('alertdialog', { name: 'Resign?' })).toBeOnTheScreen();
   expect(
     screen.getByRole('button', { name: 'Offer a draw', includeHiddenElements: true }),
   ).toBeTruthy();

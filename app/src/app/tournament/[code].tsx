@@ -115,7 +115,7 @@ function Details({ tournament: tour }: { tournament: Tournament }) {
       {tour.status === 'running' && mine.length > 0 && (
         <>
           <SectionTitle>{t('Your game, round {round}', { round: tour.round })}</SectionTitle>
-          <Hint>{t('Start a game when your opponent is online; it opens for both of you.')}</Hint>
+          <Hint>{t('Start when your opponent is online.')}</Hint>
           {asked !== undefined && (
             <Notice tone="info">
               {t('We asked {name} to play. The game opens when they accept.', { name: asked })}
@@ -187,9 +187,7 @@ function Details({ tournament: tour }: { tournament: Tournament }) {
       {host && tour.status === 'running' && (
         <Confirm
           open={ending}
-          question={t(
-            'End the tournament now? Games not yet played are not played, and the standings stay as they are.',
-          )}
+          question={t('End the tournament now? Unplayed games are dropped.')}
           confirmTitle={t('End the tournament')}
           busy={action.isPending}
           error={action.error}
@@ -219,11 +217,7 @@ function NoShows({ tournament: tour }: { tournament: Tournament }) {
   return (
     <>
       <SectionTitle>{t('Games not played yet')}</SectionTitle>
-      <Hint>
-        {t(
-          'If a player does not turn up, give the game to the other: a point for them, and the round can go on.',
-        )}
-      </Hint>
+      <Hint>{t('A player did not turn up? Give the game to the other.')}</Hint>
       {/* While asking, a failure shows in the question. */}
       {giving === null && <ErrorNotice error={award.error} />}
       {waiting.map((p) => {
@@ -232,13 +226,10 @@ function NoShows({ tournament: tour }: { tournament: Tournament }) {
           <Confirm
             key={p.id}
             open={winner !== null}
-            question={t(
-              'Give this game to {winner}? {loser} gets no point, and it is not played.',
-              {
-                winner: (winner === 'goat' ? p.goat : p.tiger).username,
-                loser: (winner === 'goat' ? p.tiger : p.goat).username,
-              },
-            )}
+            question={t('Give this game to {winner}? {loser} gets no point.', {
+              winner: (winner === 'goat' ? p.goat : p.tiger).username,
+              loser: (winner === 'goat' ? p.tiger : p.goat).username,
+            })}
             confirmTitle={t('Give the game')}
             busy={award.isPending}
             error={award.error}

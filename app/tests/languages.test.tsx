@@ -42,21 +42,21 @@ afterEach(() => {
 });
 
 test('the language is chosen in Settings and kept with the appearance', async () => {
-  const { server, app } = await open('/settings');
+  const { server, app } = await open('/settings/language');
   expect(await screen.findByRole('radio', { name: 'As this device (English)' })).toBeChecked();
   await fireEvent.press(screen.getByRole('radio', { name: 'தமிழ்' }));
   await waitFor(() => expect(server.lastTo(`PATCH ${URL}`).body).toEqual({ language: 'ta' }));
   await waitFor(() => expect(screen.getByRole('radio', { name: 'தமிழ்' })).toBeChecked());
   expect(screen.getByText(inLanguage('ta', 'Language'))).toBeOnTheScreen();
   // Only the screen is drawn again, in its place: the app does not start over.
-  expect(app.getPathname()).toBe('/settings');
+  expect(app.getPathname()).toBe('/settings/language');
   // From now on the server answers in Tamil too.
   await waitFor(() => expect(server.requests.at(-1)?.headers['Accept-Language']).toBe('ta'));
 });
 
 test("the device's language is used until one is chosen", async () => {
   mockDeviceTags = ['fr-FR', 'hi-IN'];
-  const { server } = await open('/settings');
+  const { server } = await open('/settings/language');
   expect(
     await screen.findByRole('radio', {
       name: inLanguage('hi', 'As this device ({language})').replace('{language}', 'हिन्दी'),
@@ -67,7 +67,7 @@ test("the device's language is used until one is chosen", async () => {
 
 test('Arabic turns the layout around, from the next start in the apps', async () => {
   const forceRTL = jest.spyOn(I18nManager, 'forceRTL');
-  await open('/settings', { ...FREE_APPEARANCE, language: 'ar' });
+  await open('/settings/language', { ...FREE_APPEARANCE, language: 'ar' });
   await waitFor(() => expect(forceRTL).toHaveBeenLastCalledWith(true));
   expect(
     await screen.findByText(

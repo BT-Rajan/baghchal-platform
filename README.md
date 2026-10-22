@@ -149,13 +149,15 @@ and the Caddyfile.
 |---|---|---|
 | POST | `/api/v1/auth/guest` | Play at once without signing up: a guest account, signed in (`transport`, `terms_version`, `privacy_version`) |
 | POST | `/api/v1/me/claim` | A guest makes a real account (`username`, `email`, `password`, and the agreement as for sign-up), keeping their games; the email works once its link is opened |
-| POST | `/api/v1/auth/register` | Start sign-up (`username`, `email`, `password`, `terms_version`, `privacy_version`); emails a confirmation link (always 202) |
+| POST | `/api/v1/auth/register` | Sign up and sign in at once (`username`, `email`, `password`, `terms_version`, `privacy_version`, `transport`): 201 with the session, as for sign-in. A confirmation link is emailed; nothing waits for it. An address or username in use: 409 `email_taken` / `username_taken` |
+| GET | `/api/v1/auth/providers` | Ways to sign in besides a password: `google` (on or off) and its public client ids (`web`, `android`, `ios`) |
+| POST | `/api/v1/auth/google` | Sign in with a Google ID token (`id_token`, `transport`, and the agreement as for sign-up), making the account the first time; an account with the same verified address is linked |
 | GET | `/api/v1/legal`, `/api/v1/legal/{terms\|privacy}` | The current versions; a document's text (Markdown) |
 | POST | `/api/v1/me/consents` | Accept the current versions; `GET /me` says which changed since (`consents_needed`) |
-| POST | `/api/v1/auth/verify-email` | Confirm the address and sign in |
+| POST | `/api/v1/auth/verify-email` | Confirm the address and sign in (optional: accounts play without it) |
 | POST | `/api/v1/auth/login` | Sign in with username or email |
 | POST | `/api/v1/auth/logout` | End this session |
-| POST | `/api/v1/auth/password-reset` | Email a reset link (always 202) |
+| POST | `/api/v1/auth/password-reset` | Email a reset link, to any account, confirmed or not (always 202) |
 | POST | `/api/v1/auth/password-reset/confirm` | Set a new password; signs out everywhere |
 | GET | `/api/v1/me` | The signed-in account |
 | POST | `/api/v1/me/password` | Change the password (needs the current one); signs out other devices |
@@ -188,6 +190,7 @@ and the Caddyfile.
 | POST | `/api/v1/games/{id}/moves` | Play `{"ply": n, "move": "a1-b2"}` (`ply` = moves you have seen) |
 | POST | `/api/v1/games/{id}/resign`, `/abort`, `/claim-abandonment` | End the game (see [rules](docs/rules.md#live-play-platform-rules)) |
 | POST | `/api/v1/games/{id}/draw`, `/draw/decline` | Offer a draw, or accept the opponent's (the game ends drawn, half a point each); decline it. Once both sides have moved, not against the computer; the game's `draw_offer` shows an open offer |
+| POST | `/api/v1/games/{id}/undo`, `/undo/accept`, `/undo/decline` | Take my last move back: at once against the computer (with its reply, if it replied); against a person it asks them (`takeback_offer`), who accepts (my move goes, and their reply if they made one; clocks keep their time) or declines (moving does too). Casual games only, not rated or tournament ones; after a move of mine; one request at a time; 3 a game. The game's `undo` (`none`, `now`, `ask`) says what the viewing player may do |
 | GET, POST | `/api/v1/games/{id}/chat` | The game's chat (whether it is open, and what was said); write a message (`text`, up to 200 characters). Only between two adults with accounts and messages on, during the game and 5 minutes after; blocked words are masked; kept 30 days |
 | GET | `/api/v1/mod/games/{id}/chat` | Moderators: a game's chat, for checking a report |
 | GET, POST | `/api/v1/games/{id}/analysis` | Plus and Pro: a finished game's analysis; `POST` works it out if nobody has yet (counts against today's allowance) |

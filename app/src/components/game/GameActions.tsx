@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Game, GameAction } from '@/api/endpoints';
 import type { Piece } from '@/game/bfen';
 import { isComputer, other, playerOf } from '@/game/describe';
 import { t } from '@/i18n';
 import { AWAY_REFRESH_MS, PRESENCE_REFRESH_MS, useProfile } from '@/lobby/hooks';
-import { colors, spacing, type } from '@/theme';
+import { colors, radius, spacing, type } from '@/theme';
 
 import { Button } from '../Button';
 import { Card } from '../Card';
 import { Confirm } from '../Confirm';
+import { focusRing } from '../focus';
+import { Icon, type IconName } from '../Icon';
+import { pressedLook, ripple } from '../press';
 import { useNow } from '../useNow';
 
 export interface GameActionsProps {
@@ -26,10 +29,12 @@ export interface GameActionsProps {
 export const CLAIM_WAIT_MS = 60_000;
 
 /**
- * Abort (before both sides have moved, except in the second game of a match; asking first when
- * it counts toward the daily limit), resign (with a confirmation), offer a draw or answer one
- * (not against the computer), and claim the win once the opponent has been offline for a minute
- * on their turn. The server decides whether each succeeds.
+ * The game's controls, as one row of labelled icon buttons: abort (before both sides have
+ * moved, except in the second game of a match; asking first when it counts toward the daily
+ * limit) or resign (asking first), offer a draw (not against the computer), and undo (in
+ * casual games only: at once against the computer, as a takeback request to a person). Above
+ * them, a draw or takeback my opponent offers me, and the win to claim once they have been
+ * offline for a minute on their turn. The server decides whether each succeeds.
  */
 export function GameActions({ game, me, onAction, pending, error }: GameActionsProps) {
   const [confirming, setConfirming] = useState<'abort' | 'resign' | null>(null);
@@ -46,10 +51,11 @@ export function GameActions({ game, me, onAction, pending, error }: GameActionsP
     else setFailed(true);
   }
   const opponent = playerOf(game, other(me));
+  const computer = isComputer(game, other(me));
   const opening = game.ply < 2;
   const waitingOnOpponent = !opening && game.side_to_move !== me;
   // The computer never leaves, so there is nobody to watch for.
-  const watching = waitingOnOpponent && !isComputer(game, other(me));
+  const watching = waitingOnOpponent && !computer;
   const [awaySince, setAwaySince] = useState<number | null>(null);
   // Check more often once they seem to have gone, so the claim is offered promptly.
   const presence = useProfile(
@@ -70,115 +76,129 @@ export function GameActions({ game, me, onAction, pending, error }: GameActionsP
   const now = useNow();
   const claimIn = awaySince === null ? null : Math.max(0, awaySince + CLAIM_WAIT_MS - now);
 
-  const ask = (action: 'abort' | 'resign') => ({
-    open: confirming === action,
-    busy: pending === action,
-    error: confirming === action && failed ? error : undefined,
-    onConfirm: () => {
-      setFailed(false);
-      setAsked({ action, started: false });
-      onAction(action);
-    },
-    onCancel: () => {
-      setFailed(false);
-      setConfirming(null);
-    },
-  });
-  if (opening && game.match?.game !== 2) {
-    // Leaving the computer harms nobody, so it does not count (the server agrees).
-    const counts = !isComputer(game, other(me));
-    return (
-      <Confirm
-        question={t('Abort the game? Aborting counts toward the limit of 3 a day.')}
-        confirmTitle={t('Yes, abort')}
-        cancelTitle={t('Keep playing')}
-        {...ask('abort')}
-      >
-        <Button
-          title={t('Abort game')}
-          variant="secondary"
-          busy={pending === 'abort'}
-          onPress={() => (counts ? setConfirming('abort') : onAction('abort'))}
-        />
-      </Confirm>
-    );
-  }
+  // Abort while it is still the opening (game 2 of a match cannot be aborted: resign instead).
+  const abortable = opening && game.match?.game !== 2;
+  // Leaving the computer harms nobody, so aborting it does not count (the server agrees).
+  const abortCounts = !computer;
   // Draws: once both have moved, between people. An offer stands until answered or moved past.
-  // Not before both sides moved (the server refuses: game 2 of a match cannot be aborted).
-  const drawable = !isComputer(game, other(me)) && !opening;
+  const drawable = !computer && !opening;
   const offeredToMe = drawable && game.draw_offer === other(me);
   const iOffered = drawable && game.draw_offer === me;
+  // Undo: the server says how ('none' in rated and tournament games, and while a takeback
+  // request is open); only after a move of mine. An open request is answered or awaited here.
+  const undo = game.undo;
+  const iMoved = game.ply >= (me === 'goat' ? 1 : 2);
+  const takebackToMe = game.takeback_offer === other(me);
+  const iAskedTakeback = game.takeback_offer === me;
+  const busy = pending !== null;
+
+  const question =
+    confirming === 'abort'
+      ? {
+          question: t('Abort? It counts toward your 3 a day.'),
+          confirmTitle: t('Abort'),
+        }
+      : { question: t('Resign?'), confirmTitle: t('Resign') };
+
   return (
     <Confirm
-      question={t('Resign this game?')}
-      confirmTitle={t('Yes, resign')}
+      open={confirming !== null}
+      {...question}
       cancelTitle={t('Keep playing')}
-      {...ask('resign')}
+      busy={confirming !== null && pending === confirming}
+      error={confirming !== null && failed ? error : undefined}
+      onConfirm={() => {
+        if (confirming === null) return;
+        setFailed(false);
+        setAsked({ action: confirming, started: false });
+        onAction(confirming);
+      }}
+      onCancel={() => {
+        setFailed(false);
+        setConfirming(null);
+      }}
     >
-      <View style={styles.confirm}>
+      <View style={styles.actions}>
         {offeredToMe && (
           // An offer to answer, not an action to confirm: it stays in the panel, beside the board.
-          <Card tone="accent">
-            <Text style={styles.offer}>
-              {t('{name} offers a draw.', { name: opponent.username })}
-            </Text>
-            <View style={styles.row}>
-              <View style={styles.cell}>
-                <Button
-                  title={t('Accept the draw')}
-                  busy={pending === 'draw'}
-                  disabled={pending === 'draw/decline'}
-                  onPress={() => onAction('draw')}
-                />
-              </View>
-              <View style={styles.cell}>
-                <Button
-                  title={t('Decline')}
-                  variant="secondary"
-                  busy={pending === 'draw/decline'}
-                  disabled={pending === 'draw'}
-                  onPress={() => onAction('draw/decline')}
-                />
-              </View>
-            </View>
-          </Card>
+          <Offer
+            text={t('{name} offers a draw.', { name: opponent.username })}
+            acceptTitle={t('Accept the draw')}
+            accept="draw"
+            decline="draw/decline"
+            pending={pending}
+            onAction={onAction}
+          />
+        )}
+        {takebackToMe && (
+          <Offer
+            text={t('{name} asks to take back a move', { name: opponent.username })}
+            acceptTitle={t('Accept the takeback')}
+            accept="undo/accept"
+            decline="undo/decline"
+            pending={pending}
+            onAction={onAction}
+          />
         )}
         {claimIn !== null && claimIn > 0 && (
           <Text style={styles.away} aria-live="polite">
-            {t(
-              '{name} seems to have left. If they are not back in {seconds} s, you can claim the win.',
-              { name: opponent.username, seconds: Math.ceil(claimIn / 1000) },
-            )}
+            {t('{name} is away. Claim the win in {seconds} s.', {
+              name: opponent.username,
+              seconds: Math.ceil(claimIn / 1000),
+            })}
           </Text>
         )}
+        {claimIn === 0 && (
+          <Button
+            title={t('Claim the win')}
+            busy={pending === 'claim-abandonment'}
+            onPress={() => onAction('claim-abandonment')}
+          />
+        )}
         <View style={styles.row}>
-          <View style={styles.cell}>
-            <Button
+          {abortable ? (
+            <Control
+              icon="close"
+              title={t('Abort game')}
+              label={t('Abort')}
+              busy={pending === 'abort'}
+              disabled={busy}
+              onPress={() => (abortCounts ? setConfirming('abort') : onAction('abort'))}
+            />
+          ) : (
+            <Control
+              icon="flag"
               title={t('Resign')}
-              variant="secondary"
               busy={pending === 'resign'}
+              disabled={busy}
               onPress={() => setConfirming('resign')}
             />
-          </View>
-          {drawable && !offeredToMe && (
-            <View style={styles.cell}>
-              <Button
-                title={iOffered ? t('Draw offered') : t('Offer a draw')}
-                variant="secondary"
-                busy={pending === 'draw'}
-                disabled={iOffered}
-                onPress={() => onAction('draw')}
-              />
-            </View>
           )}
-          {claimIn === 0 && (
-            <View style={styles.cell}>
-              <Button
-                title={t('Claim the win')}
-                busy={pending === 'claim-abandonment'}
-                onPress={() => onAction('claim-abandonment')}
-              />
-            </View>
+          {drawable && !offeredToMe && (
+            <Control
+              icon="draw"
+              title={iOffered ? t('Draw offered') : t('Offer a draw')}
+              label={iOffered ? t('Offered') : t('Draw')}
+              busy={pending === 'draw'}
+              disabled={iOffered || busy}
+              onPress={() => onAction('draw')}
+            />
+          )}
+          {(undo !== 'none' || iAskedTakeback) && (
+            <Control
+              icon="undo"
+              title={
+                iAskedTakeback
+                  ? t('Takeback requested')
+                  : undo === 'now'
+                    ? t('Take back your move')
+                    : t('Ask to take back your move')
+              }
+              label={iAskedTakeback ? t('Requested') : t('Undo')}
+              busy={pending === 'undo'}
+              disabled={!iMoved || iAskedTakeback || takebackToMe || busy}
+              onPress={() => onAction('undo')}
+            />
           )}
         </View>
       </View>
@@ -186,10 +206,117 @@ export function GameActions({ game, me, onAction, pending, error }: GameActionsP
   );
 }
 
+/** My opponent's draw or takeback offer, answered here. */
+function Offer({
+  text,
+  acceptTitle,
+  accept,
+  decline,
+  pending,
+  onAction,
+}: {
+  text: string;
+  acceptTitle: string;
+  accept: GameAction;
+  decline: GameAction;
+  pending: GameAction | null;
+  onAction: (action: GameAction) => void;
+}) {
+  return (
+    <Card tone="accent">
+      <Text style={styles.offer}>{text}</Text>
+      <View style={styles.row}>
+        <View style={styles.cell}>
+          <Button
+            title={acceptTitle}
+            label={t('Accept')}
+            busy={pending === accept}
+            disabled={pending === decline}
+            onPress={() => onAction(accept)}
+          />
+        </View>
+        <View style={styles.cell}>
+          <Button
+            title={t('Decline')}
+            variant="secondary"
+            busy={pending === decline}
+            disabled={pending === accept}
+            onPress={() => onAction(decline)}
+          />
+        </View>
+      </View>
+    </Card>
+  );
+}
+
+/** One of the game's controls: an icon over a one-word label, at least 56 tall (over Android's 48). */
+function Control({
+  icon,
+  title,
+  label = title,
+  onPress,
+  busy = false,
+  disabled = false,
+}: {
+  icon: IconName;
+  /** The accessible name. */
+  title: string;
+  label?: string;
+  onPress: () => void;
+  busy?: boolean;
+  disabled?: boolean;
+}) {
+  const inactive = busy || disabled;
+  return (
+    <Pressable
+      role="button"
+      aria-label={title}
+      aria-busy={busy}
+      aria-disabled={inactive}
+      disabled={inactive}
+      onPress={onPress}
+      {...ripple()}
+      style={(state) => [
+        styles.control,
+        pressedLook(state.pressed, styles.pressed),
+        inactive && styles.dim,
+        focusRing(state),
+      ]}
+    >
+      {busy ? (
+        <ActivityIndicator color={colors.text} />
+      ) : (
+        <Icon name={icon} color={colors.text} size={24} />
+      )}
+      <Text style={styles.label} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  confirm: { gap: spacing.sm },
+  actions: { gap: spacing.sm },
   away: { ...type.body, color: colors.text },
   offer: { ...type.body, fontWeight: '600', color: colors.text },
   row: { flexDirection: 'row', gap: spacing.sm },
   cell: { flex: 1 },
+  control: {
+    flex: 1,
+    minHeight: 56,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
+    gap: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    // Keeps Android's ripple inside the rounded corners.
+    overflow: 'hidden',
+  },
+  label: { ...type.action, color: colors.text },
+  pressed: { transform: [{ scale: 0.98 }], opacity: 0.85 },
+  dim: { opacity: 0.55 },
 });

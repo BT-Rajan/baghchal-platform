@@ -13,12 +13,16 @@ test('gameLayout', () => {
 const NONE = { top: 0, bottom: 0, left: 0, right: 0 };
 const browser = { header: 64, insets: NONE };
 
-test('boardSize keeps both clocks on screen', () => {
+test('boardSize keeps both clocks, and the main buttons, on screen', () => {
+  // A phone held upright: the board takes 80% of the width, leaving room below.
   expect(boardSize('stacked', 390, 844, { header: 103, insets: { ...NONE, bottom: 34 } })).toBe(
-    390,
+    312,
   );
-  // Room for the header, the page's padding, two player bars and the letters under the board.
-  expect(boardSize('stacked', 390, 500, browser)).toBe(500 - 64 - 48 - 148 - 18);
+  // Room for the header, the page's padding, two player bars, the letters under the board and
+  // the panel's main buttons.
+  expect(boardSize('stacked', 390, 600, browser)).toBe(600 - 64 - 48 - 148 - 18 - 120);
+  // A tablet held upright uses its whole width, as far as the height allows.
+  expect(boardSize('stacked', 820, 1280, browser)).toBe(820);
   expect(boardSize('side', 1280, 800, browser)).toBe(800 - 64 - 48 - 148 - 18);
   expect(boardSize('side', 1920, 1200, browser)).toBe(640);
   expect(boardSize('stacked', 320, 300, browser)).toBe(200); // never unusably small

@@ -12,6 +12,7 @@ const DATA = {
     email: 'alice@example.com',
     created_at: '2026-01-01T12:00:00Z',
     email_verified_at: '2026-01-01T12:01:00Z',
+    google_linked: false,
   },
   consents: [],
   ratings: [],

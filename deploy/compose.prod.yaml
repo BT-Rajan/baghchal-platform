@@ -26,6 +26,8 @@ x-api-env: &api-env
   BAGHCHAL_BLOCKED_USERNAME_WORDS: ${BLOCKED_USERNAME_WORDS:-[]}
   # The Android app's signing key(s): its links open in the app (docs/operations.md).
   BAGHCHAL_ANDROID_CERT_SHA256: ${ANDROID_CERT_SHA256:-[]}
+  # Sign in with Google: the OAuth client ids (docs/operations.md); empty, it is off.
+  BAGHCHAL_GOOGLE_CLIENT_IDS: '{"web": "${GOOGLE_WEB_CLIENT_ID:-}", "android": "${GOOGLE_ANDROID_CLIENT_ID:-}", "ios": "${GOOGLE_IOS_CLIENT_ID:-}"}'
   BAGHCHAL_OPERATOR_NAME: ${OPERATOR_NAME:?set OPERATOR_NAME}
   BAGHCHAL_OPERATOR_ADDRESS: ${OPERATOR_ADDRESS:?set OPERATOR_ADDRESS}
   BAGHCHAL_CONTACT_EMAIL: ${CONTACT_EMAIL:?set CONTACT_EMAIL}

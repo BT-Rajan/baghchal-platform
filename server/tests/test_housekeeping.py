@@ -56,12 +56,12 @@ async def test_everything_past_its_time_goes(
     alice_id = uuid.UUID(alice.id)
     state = _state(app)
     start = clock()
-    # A sign-up never confirmed; a player whose confirmation link was used.
+    # A sign-up never confirmed: it stays (accounts play without confirming).
     r = await app_client.post(
         "/api/v1/auth/register",
         json={**AGREE, "username": "ghost", "email": "ghost@example.com", "password": PASSWORD},
     )
-    assert r.status_code == 202
+    assert r.status_code == 201
     await players("bob")
     game = (await alice.http.post("/api/v1/games/computer", json={"level": "easy"})).json()
     await alice.http.post(f"/api/v1/games/{game['id']}/resign")
@@ -116,11 +116,11 @@ async def test_everything_past_its_time_goes(
         )
         await db.commit()
 
-    clock.advance(days=8)
+    clock.advance(days=8, hours=1)
     done = await _tidy(app)
-    assert done["unconfirmed_sign_ups"] == 1
+    assert "unconfirmed_sign_ups" not in done
     assert "accounts_without_parent" not in done  # no age rules any more
-    assert done["email_links"] >= 2  # the confirmations used 8 days ago
+    assert done["email_links"] >= 2  # the confirmation links, expired a week ago
 
     clock.advance(days=30)  # the sessions from sign-up expire
     assert (await _tidy(app))["sessions"] >= 1
@@ -173,7 +173,6 @@ async def test_the_loop_runs_and_survives_errors(
 
 
 def test_the_periods_match_the_policy() -> None:
-    assert timedelta(days=7) == housekeeping.UNCONFIRMED
     assert timedelta(days=7) == housekeeping.LINKS
     assert timedelta(days=365) == housekeeping.FAIR_PLAY
     assert timedelta(days=3 * 365) == housekeeping.MODERATION

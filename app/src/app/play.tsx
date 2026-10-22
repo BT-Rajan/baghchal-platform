@@ -38,21 +38,27 @@ function translated<T extends string>(options: readonly { value: T; label: strin
 }
 
 /**
- * Start a game now: with whoever wants the same game, or against the computer. (The other ways
- * to play are on the home screen.)
+ * Start a game now: with whoever wants the same game, or against the computer; `vs` (from the
+ * apps' play menu, app/ways-to-play.tsx) shows just one of them. (The other ways to play are
+ * in that menu, and on the web's home screen.)
  */
 export default function PlayNow() {
   const [timeControl, setTimeControl] = useState<TimeControl>('5+3');
+  const vs = useLocalSearchParams<{ vs?: string }>().vs;
+  const only = vs === 'person' || vs === 'computer' ? vs : null;
+  const title =
+    only === 'person' ? t('Quick game') : only === 'computer' ? t('Play the computer') : undefined;
   return (
-    <Screen align="top">
+    <Screen {...(title !== undefined && { title })} align="top">
       <TimeControlPicker value={timeControl} onChange={setTimeControl} />
-      <FindOpponent timeControl={timeControl} />
-      <PlayComputer timeControl={timeControl} />
+      {only !== 'computer' && <FindOpponent timeControl={timeControl} alone={only !== null} />}
+      {only !== 'person' && <PlayComputer timeControl={timeControl} alone={only !== null} />}
     </Screen>
   );
 }
 
-function FindOpponent({ timeControl }: { timeControl: TimeControl }) {
+/** `alone`: the only part on the screen, which is named after it. */
+function FindOpponent({ timeControl, alone }: { timeControl: TimeControl; alone: boolean }) {
   const api = useApi();
   const now = useServerNow();
   const openStarted = useOpenStartedGame();
@@ -130,7 +136,7 @@ function FindOpponent({ timeControl }: { timeControl: TimeControl }) {
 
   return (
     <>
-      <SectionTitle>{t('Play someone')}</SectionTitle>
+      {!alone && <SectionTitle>{t('Play someone')}</SectionTitle>}
       <Card>
         {!guest && (
           <Segmented
@@ -140,9 +146,7 @@ function FindOpponent({ timeControl }: { timeControl: TimeControl }) {
             onChange={setMode}
           />
         )}
-        {mode === 'rated' && (
-          <Hint>{t('A rated match is two games: you each play goats once and tigers once.')}</Hint>
-        )}
+        {mode === 'rated' && <Hint>{t('Rated: two games, one on each side.')}</Hint>}
         <ErrorNotice
           error={seek.error}
           onCasual={() => {
@@ -170,9 +174,7 @@ function FindOpponent({ timeControl }: { timeControl: TimeControl }) {
         ) : (
           <>
             {lapsed && (
-              <Notice tone="info">
-                {t('Nobody came along yet. Try again, or play the computer.')}
-              </Notice>
+              <Notice tone="info">{t('Nobody yet. Try again, or play the computer.')}</Notice>
             )}
             {known && <Text style={styles.muted}>{waitingText(others)}</Text>}
             <Button
@@ -180,7 +182,7 @@ function FindOpponent({ timeControl }: { timeControl: TimeControl }) {
               onPress={() => look(mode === 'rated')}
               busy={seek.isPending}
             />
-            <Hint>{t('We look only while this screen is open, and stop if you leave it.')}</Hint>
+            <Hint>{t('We look while this screen is open.')}</Hint>
           </>
         )}
       </Card>
@@ -188,7 +190,7 @@ function FindOpponent({ timeControl }: { timeControl: TimeControl }) {
   );
 }
 
-function PlayComputer({ timeControl }: { timeControl: TimeControl }) {
+function PlayComputer({ timeControl, alone }: { timeControl: TimeControl; alone: boolean }) {
   const [level, setLevel] = useState<Level>('medium');
   const [side, setSide] = useState<Side>('random');
   const mine = useMyPlan();
@@ -196,7 +198,7 @@ function PlayComputer({ timeControl }: { timeControl: TimeControl }) {
   const start = usePlayComputer();
   return (
     <>
-      <SectionTitle>{t('Play the computer')}</SectionTitle>
+      {!alone && <SectionTitle>{t('Play the computer')}</SectionTitle>}
       <Card>
         <View style={styles.fields}>
           <Segmented
@@ -212,21 +214,13 @@ function PlayComputer({ timeControl }: { timeControl: TimeControl }) {
             onChange={setSide}
           />
         </View>
-        <Hint>
-          {t(
-            'Casual: games against the computer never change your rating. Easy gives you tips as you play.',
-          )}
-        </Hint>
+        <Hint>{t('Never rated. Easy gives you tips.')}</Hint>
         <ErrorNotice error={start.error} />
-        {locked && (
-          <Upsell feature="computer_hard">
-            {t('Play the Hard computer, the strongest opponent.')}
-          </Upsell>
-        )}
-        {/* Secondary: finding a person is the screen's main action. */}
+        {locked && <Upsell feature="computer_hard">{t('Play the Hard computer.')}</Upsell>}
+        {/* Secondary beside finding a person, the screen's main action. */}
         <Button
           title={t('Play the computer')}
-          variant="secondary"
+          variant={alone ? 'primary' : 'secondary'}
           onPress={() => start.mutate({ level, side, time_control: timeControl })}
           busy={start.isPending}
           disabled={locked}

@@ -1,5 +1,4 @@
-import { router } from 'expo-router';
-import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { Share } from 'react-native';
 
 import { renderApp } from './support/app';
@@ -37,16 +36,16 @@ async function press(name: string | RegExp) {
 const STARTED = { status: 200, body: game({ server_time: new Date().toISOString() }) };
 
 describe('challenges by link', () => {
-  test('make one from home, share it, cancel it', async () => {
+  test('make one from the play menu, share it, cancel it', async () => {
     const mine = link({ challenger: ALICE, side: 'goat', time_control: '2+1' });
-    const { app, server } = await open('/', {
+    const { app, server } = await open('/ways-to-play', {
       'POST /api/v1/challenges': { status: 201, body: mine },
       'POST /api/v1/challenges/c1/cancel': {
         status: 200,
         body: { ...mine, status: 'cancelled' },
       },
     });
-    await fireEvent.press(await screen.findByRole('link', { name: 'Challenge a friend by link' }));
+    await fireEvent.press(await screen.findByRole('link', { name: 'Challenge a friend' }));
     expect(
       await screen.findByRole('heading', { name: 'Challenge a friend by link' }),
     ).toBeOnTheScreen();
@@ -76,7 +75,7 @@ describe('challenges by link', () => {
     share.mockRestore();
     expect(screen.getByText(/^Expires in (23 h 59 min|24 h)$/)).toBeOnTheScreen();
     await press('Cancel the challenge by link');
-    await waitFor(() => expect(app.getPathname()).toBe('/'));
+    await waitFor(() => expect(app.getPathname()).toBe('/ways-to-play'));
     expect(server.lastTo('POST /api/v1/challenges/c1/cancel')).toBeDefined();
   });
 
@@ -200,11 +199,7 @@ describe('a signed-out friend opens a challenge link', () => {
   async function arrive(routes: Record<string, Route> = {}) {
     const rendered = await renderApp('/c/abc123', { routes: { ...LINK_ROUTES, ...routes } });
     await waitFor(() => expect(rendered.app.getPathname()).toBe('/welcome'));
-    expect(
-      screen.getByText(
-        'Play now as a guest, or sign in, and we will take you to the link you opened.',
-      ),
-    ).toBeOnTheScreen();
+    expect(screen.getByText('Get in, and your link opens.')).toBeOnTheScreen();
     return rendered;
   }
 
@@ -212,11 +207,11 @@ describe('a signed-out friend opens a challenge link', () => {
     const { app, server } = await arrive({
       'POST /api/v1/auth/guest': { status: 200, body: { user: GUEST, token: 'guest-tok' } },
     });
-    await press('Play now, no sign-up');
-    await screen.findByRole('button', { name: 'Accept and play', busy: false });
+    await fireEvent.press(screen.getByRole('link', { name: 'Play as a guest' }));
+    await screen.findByRole('button', { name: 'Play', busy: false });
     // Not the first game against the computer: that line is not shown.
-    expect(screen.queryByText(/^You'll play the goats/)).toBeNull();
-    await press('Accept and play');
+    expect(screen.queryByText(/^You play the goats/)).toBeNull();
+    await press('Play');
     await waitFor(() => expect(app.getPathname()).toBe('/c/abc123'));
     expect(await screen.findByText('bob challenges you')).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/auth/guest').body).toEqual({
@@ -230,7 +225,7 @@ describe('a signed-out friend opens a challenge link', () => {
     const { app } = await arrive({
       'POST /api/v1/auth/login': { status: 200, body: { user: ME, token: 'tok' } },
     });
-    await press('Sign in');
+    await fireEvent.press(screen.getByRole('link', { name: 'I have an account' }));
     await fireEvent.changeText(await screen.findByLabelText('Username or email'), 'alice');
     await fireEvent.changeText(screen.getByLabelText('Password'), 'correct horse battery');
     await press('Sign in');
@@ -238,12 +233,20 @@ describe('a signed-out friend opens a challenge link', () => {
     expect(await screen.findByText('bob challenges you')).toBeOnTheScreen();
   });
 
-  test('makes an account, confirms the email, and goes on to the challenge', async () => {
+  async function signUp() {
+    await fireEvent.press(screen.getByRole('button', { name: 'Sign up' }));
+    await screen.findByRole('button', { name: 'Sign up', busy: false });
+    await fireEvent.changeText(screen.getByLabelText('Username'), 'alice');
+    await fireEvent.changeText(screen.getByLabelText('Email'), 'alice@example.com');
+    await fireEvent.changeText(screen.getByLabelText('Password'), 'correct horse');
+    await press('Sign up');
+  }
+
+  test('makes an account and goes on to the challenge', async () => {
     const { app } = await arrive({
-      'POST /api/v1/auth/verify-email': { status: 200, body: { user: ME, token: 'fresh' } },
+      'POST /api/v1/auth/register': { status: 201, body: { user: ME, token: 'fresh' } },
     });
-    // The link in the confirmation email.
-    await act(() => router.push(`/verify-email?token=${'a'.repeat(43)}`));
+    await signUp();
     await waitFor(() => expect(app.getPathname()).toBe('/c/abc123'));
     expect(await screen.findByText('bob challenges you')).toBeOnTheScreen();
   });
@@ -251,15 +254,12 @@ describe('a signed-out friend opens a challenge link', () => {
   test('without a link, a new account goes to make it theirs', async () => {
     const { app } = await renderApp('/welcome', {
       routes: {
-        'POST /api/v1/auth/verify-email': { status: 200, body: { user: ME, token: 'fresh' } },
+        'POST /api/v1/auth/register': { status: 201, body: { user: ME, token: 'fresh' } },
       },
     });
-    expect(
-      screen.queryByText(
-        'Play now as a guest, or sign in, and we will take you to the link you opened.',
-      ),
-    ).toBeNull();
-    await act(() => router.push(`/verify-email?token=${'a'.repeat(43)}`));
+    await screen.findByRole('button', { name: 'Sign up' });
+    expect(screen.queryByText('Get in, and your link opens.')).toBeNull();
+    await signUp();
     await waitFor(() => expect(app.getPathname()).toBe('/make-it-yours'));
   });
 });
