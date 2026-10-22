@@ -60,6 +60,11 @@ jobs:
           esac
       - run: npm ci
       - run: npm run guardrails
+      # The bundle must not use Intl that the phone's engine lacks (it would crash there only).
+      - name: Check the JavaScript against Hermes
+        run: |
+          npx expo export --platform android --no-bytecode --output-dir "$RUNNER_TEMP/bundle"
+          node scripts/check-hermes-bundle.mjs "$RUNNER_TEMP/bundle"
       - run: npx expo prebuild --platform android --no-install --clean
       # 64-bit and 32-bit ARM: the phones of the last decade.
       - name: Build the APK

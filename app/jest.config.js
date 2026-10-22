@@ -23,6 +23,8 @@ module.exports = {
   // Screen tests render the whole app; the first run after a cache clear (as in CI) is slow.
   testTimeout: 20_000,
   moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
+  // Only the Intl the apps' engine has (tests/support/likeHermes.js).
+  setupFiles: ['<rootDir>/tests/support/likeHermes.js'],
   collectCoverageFrom: ['src/**/*.{js,ts,tsx}', '!src/**/*.d.ts', '!src/**/*.test.{ts,tsx}'],
   coverageThreshold: Object.fromEntries(
     FULLY_COVERED.filter((path) => fs.existsSync(path)).map((path) => [

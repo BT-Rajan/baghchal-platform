@@ -24,7 +24,9 @@ export const LANGUAGE_NAMES: Record<Language, string> = {
   ar: 'العربية',
 };
 
-type Forms = Partial<Record<Intl.LDMLPluralRule, string>>;
+/** CLDR's plural forms; a language uses some of them. */
+export type PluralForm = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
+type Forms = Partial<Record<PluralForm, string>>;
 type Catalog = Record<string, string | Forms>;
 
 export const CATALOGS: Record<Exclude<Language, 'en'>, Catalog> = { ta, hi, ar };
@@ -115,6 +117,34 @@ export function plural(
   if (found === undefined || typeof found === 'string') {
     return fill(found ?? (count === 1 ? one : other), values);
   }
-  const form = new Intl.PluralRules(LOCALES[current]).select(count);
+  const form = pluralForm(current, count);
   return fill(found[form] ?? found.other ?? other, values);
+}
+
+/**
+ * The plural form of `count` in `language`, by CLDR's rules for our languages. Written out
+ * because the apps' JavaScript engine (Hermes) has no `Intl.PluralRules`: calling it there
+ * crashes the app (tests remove it too, as on a phone; catalogs.test.ts checks these rules
+ * against CLDR's own).
+ */
+export function pluralForm(language: Language, count: number): PluralForm {
+  const n = Math.abs(count);
+  const whole = Number.isInteger(n);
+  switch (language) {
+    case 'en':
+    case 'ta':
+      return n === 1 ? 'one' : 'other';
+    case 'hi':
+      return n <= 1 ? 'one' : 'other'; // 0 and 1 (and fractions below 1) are 'one'
+    case 'ar': {
+      if (!whole) return 'other';
+      const last2 = n % 100;
+      if (n === 0) return 'zero';
+      if (n === 1) return 'one';
+      if (n === 2) return 'two';
+      if (last2 >= 3 && last2 <= 10) return 'few';
+      if (last2 >= 11 && last2 <= 99) return 'many';
+      return 'other';
+    }
+  }
 }
