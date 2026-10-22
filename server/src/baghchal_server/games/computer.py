@@ -205,7 +205,7 @@ class ComputerPlayers:
             if mover != service.computer_account(level):
                 return False
             moves = await service.move_list(db, game)
-            ply = game.ply
+            ply, position = game.ply, game.position
             remaining_ms = min(service.clocks_at(game, state.clock()))
         started = time.monotonic()
         move = await self._search(moves, level)
@@ -223,8 +223,17 @@ class ComputerPlayers:
                     MoveIn(ply=ply, move=move),
                     state.clock(),
                     presence=state.presence,
+                    position=position,
                 )
-            except AppError:  # the player resigned or ran out of time meanwhile
+            except AppError:
+                # The player resigned or ran out of time meanwhile, or took a move back (and
+                # may have played again, so it is the computer's turn on another board).
+                game = await service.get_game(db, game_id)
+                if game.status == GameStatus.ACTIVE and (game.ply, game.position) != (
+                    ply,
+                    position,
+                ):
+                    return await self.play_turn(state, game_id)
                 return False
             await notify(state, db, played)
         return True

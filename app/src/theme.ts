@@ -179,6 +179,12 @@ export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
 /** `board`: the board's corners (and what is laid over it); `dialog`: the apps' own dialogs. */
 export const radius = { sm: 6, md: 10, lg: 16, board: 12, dialog: 28, pill: 999 } as const;
 
+/**
+ * Buttons' heights: `regular` (iOS, the web), `android` (Android's own 40, its touch area 48),
+ * `compact` (inside list rows) and `large` (a screen's main actions on a phone).
+ */
+export const control = { compact: 44, regular: 50, android: 40, large: 56 } as const;
+
 /** The big headings' weight: extra bold, but bold on Android, whose headlines are never Black. */
 function headlineWeight(): '700' | '800' {
   return Platform.OS === 'android' ? '700' : '800';
@@ -204,6 +210,8 @@ export const type = {
   /** Android's button, dialog-answer and navigation text: medium weight, as its own are. */
   action: { fontSize: 14, lineHeight: 20, fontWeight: '500' },
   caption: { fontSize: 13, lineHeight: 18, fontWeight: '400' },
+  /** A large button's text: a main action on a phone (Button `large`). */
+  bigAction: { fontSize: 18, lineHeight: 24, fontWeight: '600' },
   /** Android's navigation bar labels. */
   nav: { fontSize: 12, lineHeight: 16, fontWeight: '500' },
   /** A count on a badge. */

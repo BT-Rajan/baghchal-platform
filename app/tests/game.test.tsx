@@ -40,7 +40,7 @@ describe('the board', () => {
     expect(screen.getByLabelText('Goats clock 5:00')).toBeOnTheScreen();
     expect(screen.getByLabelText('Tigers clock 5:00')).toBeOnTheScreen();
     expect(screen.getByLabelText('Goats to place: 20 · Goats captured: 0 of 5')).toBeOnTheScreen();
-    expect(screen.getByText('No moves yet. Goats move first.')).toBeOnTheScreen();
+    expect(screen.getByText('No moves yet.')).toBeOnTheScreen();
   });
 
   test('placing a goat sends the move and shows the answer', async () => {
@@ -194,7 +194,7 @@ describe('clocks', () => {
       game({ deadline_at: new Date(Date.now() + 25_000).toISOString(), server_time: now() });
     await openGame(opening(), { 'GET /api/v1/games/g1': () => ({ status: 200, body: opening() }) });
     expect(
-      await screen.findByText(/^Your move · \d+ s to make a first move, or the game is aborted$/),
+      await screen.findByText(/^Your move · \d+ s to move, or it is aborted$/),
     ).toBeOnTheScreen();
   });
 });
@@ -215,10 +215,8 @@ describe('ending a game', () => {
     expect(screen.queryByRole('button', { name: 'Resign' })).toBeNull();
     await press('Abort game');
     // It counts toward the daily limit, so it asks first.
-    expect(
-      screen.getByText('Abort the game? Aborting counts toward the limit of 3 a day.'),
-    ).toBeOnTheScreen();
-    await press('Yes, abort');
+    expect(screen.getByText('Abort? It counts toward your 3 a day.')).toBeOnTheScreen();
+    await press('Abort');
     expect(await screen.findByText('Game aborted: no result.')).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/games/g1/abort')).toBeDefined();
     await press('Back to Play');
@@ -241,13 +239,13 @@ describe('ending a game', () => {
     await screen.findByText('Your move');
     expect(screen.queryByRole('button', { name: 'Abort game' })).toBeNull();
     await press('Resign');
-    expect(screen.getByText('Resign this game?')).toBeOnTheScreen();
+    expect(screen.getByText('Resign?')).toBeOnTheScreen();
     await press('Keep playing');
-    expect(screen.queryByText('Resign this game?')).toBeNull();
+    expect(screen.queryByText('Resign?')).toBeNull();
     expect(server.requests.filter((r) => r.method === 'POST')).toHaveLength(0);
 
     await press('Resign');
-    await press('Yes, resign');
+    await press('Resign');
     expect(await screen.findByText('You lost by resignation.')).toBeOnTheScreen();
   });
 
@@ -276,9 +274,7 @@ describe('ending a game', () => {
       },
     });
     // First a countdown, then the button: the opponent must stay away for a whole minute.
-    expect(
-      await screen.findByText(/^bob seems to have left\. If they are not back in (59|60) s/),
-    ).toBeOnTheScreen();
+    expect(await screen.findByText(/^bob is away\. Claim the win in (59|60) s/)).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Claim the win' })).toBeNull();
     await aMinuteLater();
     await press('Claim the win');
@@ -287,14 +283,14 @@ describe('ending a game', () => {
 
   test('the countdown stops when the turn changes', async () => {
     await openGame(waiting(), { 'GET /api/v1/players/bob': profile(false) });
-    await screen.findByText(/^bob seems to have left/);
+    await screen.findByText(/^bob is away/);
     const mine = game({ ply: 7, side_to_move: 'goat', server_time: now() });
     await act(() => {
       FakeSocket.latest().open();
       FakeSocket.latest().receive({ type: 'game', game: mine });
     });
     expect(await screen.findByText('Your move')).toBeOnTheScreen();
-    expect(screen.queryByText(/^bob seems to have left/)).toBeNull();
+    expect(screen.queryByText(/^bob is away/)).toBeNull();
   });
 
   test('a claim the server turns down is reported', async () => {
@@ -302,7 +298,7 @@ describe('ending a game', () => {
       'GET /api/v1/players/bob': profile(false),
       'POST /api/v1/games/g1/claim-abandonment': error(409, 'cannot_claim', 'Wait 60 seconds.'),
     });
-    await screen.findByText(/^bob seems to have left/);
+    await screen.findByText(/^bob is away/);
     await aMinuteLater();
     await press('Claim the win');
     expect(await screen.findByText('Wait 60 seconds.')).toBeOnTheScreen();
@@ -367,9 +363,7 @@ describe('matches and results', () => {
     await openGame(opening(), {
       'GET /api/v1/games/g2': () => ({ status: 200, body: opening() }),
     });
-    expect(
-      await screen.findByText(/^Your move · \d+ s to make a first move, or it counts as a loss$/),
-    ).toBeOnTheScreen();
+    expect(await screen.findByText(/^Your move · \d+ s to move, or you lose$/)).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Abort game' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Resign' })).toBeOnTheScreen();
   });
@@ -417,15 +411,14 @@ describe('leaving a live game', () => {
 
     await act(() => router.back());
     // Nobody has moved yet: leaving means an abort, which counts.
-    const question =
-      'Leave the game? If you do not make your first move it is aborted, which counts toward the limit of 3 a day.';
+    const question = 'Leave? Without a first move, the game is aborted (counts toward 3 a day).';
     expect(await screen.findByText(question)).toBeOnTheScreen();
     await press('Keep playing');
     expect(screen.queryByText(question)).toBeNull();
     expect(app.getPathname()).toBe('/game/g1');
 
     await act(() => router.back());
-    await fireEvent.press(await screen.findByRole('button', { name: 'Leave the game' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Leave' }));
     await waitFor(() => expect(app.getPathname()).toBe('/'));
   });
 });

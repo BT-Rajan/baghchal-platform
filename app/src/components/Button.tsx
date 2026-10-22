@@ -1,6 +1,6 @@
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spaced, spacing, type } from '@/theme';
+import { colors, control, radius, spaced, spacing, type } from '@/theme';
 
 import { focusRing } from './focus';
 import { pressedLook, ripple } from './press';
@@ -13,6 +13,11 @@ export interface ButtonProps {
   label?: string;
   /** Smaller, for buttons inside list rows. */
   compact?: boolean;
+  /**
+   * Bigger, for a screen's main actions on a phone. In the apps a primary button is large
+   * unless it is compact or this says otherwise.
+   */
+  large?: boolean;
   /** An icon before the text. */
   icon?: IconName;
   onPress: () => void;
@@ -30,6 +35,7 @@ export function Button({
   title,
   label = title,
   compact = false,
+  large,
   icon,
   onPress,
   busy = false,
@@ -38,6 +44,7 @@ export function Button({
 }: ButtonProps) {
   const inactive = busy || disabled;
   const android = Platform.OS === 'android';
+  const big = large ?? (Platform.OS !== 'web' && variant === 'primary' && !compact);
   return (
     <Pressable
       role="button"
@@ -53,6 +60,7 @@ export function Button({
         styles.button,
         android && styles.android,
         compact && (android ? styles.androidCompact : styles.compact),
+        big && styles.large,
         styles[variant],
         pressedLook(state.pressed, styles.pressed),
         inactive && styles.dim,
@@ -71,6 +79,7 @@ export function Button({
                 styles.text,
                 compact && styles.compactText,
                 android && [styles.androidText, { letterSpacing: spaced(0.1) }],
+                big && styles.largeText,
                 { color: TEXT[variant] },
               ]}
             >
@@ -93,7 +102,7 @@ const TEXT = {
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 50,
+    minHeight: control.regular,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -102,7 +111,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   // 44 points: the smallest comfortable touch target.
-  compact: { minHeight: 44, paddingHorizontal: spacing.md },
+  compact: { minHeight: control.compact, paddingHorizontal: spacing.md },
   content: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   primary: { backgroundColor: colors.accent },
   secondary: { borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
@@ -114,7 +123,10 @@ const styles = StyleSheet.create({
   text: { ...type.body, fontWeight: '700' },
   compactText: { fontSize: type.small.fontSize },
   // Android: a full pill, 40 tall, medium-weight text, as its own buttons are.
-  android: { minHeight: 40, borderRadius: radius.pill, paddingHorizontal: spacing.lg },
+  android: { minHeight: control.android, borderRadius: radius.pill, paddingHorizontal: spacing.lg },
   androidCompact: { paddingHorizontal: spacing.md },
   androidText: { ...type.action },
+  // A main action on a phone: taller, with bigger text (after Android's, so it wins).
+  large: { minHeight: control.large, paddingHorizontal: spacing.xl },
+  largeText: { ...type.bigAction },
 });

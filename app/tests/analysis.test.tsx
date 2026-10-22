@@ -49,9 +49,7 @@ async function press(name: string | RegExp) {
 describe('game analysis', () => {
   test('Free players see what Plus adds', async () => {
     const { app, server } = await open();
-    expect(
-      await screen.findByText('See the engine’s review of every move, and where the game turned.'),
-    ).toBeOnTheScreen();
+    expect(await screen.findByText('The engine’s review of every move.')).toBeOnTheScreen();
     expect(server.requests.some((r) => r.path === URL)).toBe(false);
     await press('Get ClawPlay Plus');
     await waitFor(() => expect(app.getPathname()).toBe('/plans'));
@@ -79,9 +77,7 @@ describe('game analysis', () => {
     await press('Final position');
 
     await press('Start position');
-    expect(
-      screen.getByText('Step through the moves to see what the engine thought of each.'),
-    ).toBeOnTheScreen();
+    expect(screen.getByText('Step through the moves to see each review.')).toBeOnTheScreen();
     await press('Next mistake');
     expect(screen.getByText('Blunder')).toBeOnTheScreen();
     expect(

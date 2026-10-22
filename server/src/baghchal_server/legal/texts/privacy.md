@@ -13,6 +13,7 @@ Grievance Officer: [[grievance_officer]], [[grievance_email]].
 **Your account**
 
 - Username, email address, and your password, which we store only as a strong one-way hash (Argon2id). We use these to create your account, sign you in, and send emails you need (confirming your address, resetting your password, notices about your account).
+- If you sign in with Google: your Google account's identifier and the email address Google gives us (Google tells us it is verified). We receive nothing else from Google, and Google learns only that you signed in to ClawPlay.
 - Which versions of these terms and this policy you accepted, and when.
 - Your session: a random sign-in token, which we store only as a hash, with when it was created and last used.
 
@@ -70,7 +71,6 @@ Our servers are in [[hosting_location]]. Our email and hosting providers may pro
 
 - **Your account and games**: while your account exists.
 - **When you delete your account**: your email address, password, sessions, links, blocks and chat messages are deleted at once. Your username is replaced with an anonymous one; games you played stay in your opponents' history under that anonymous name, without anything that identifies you.
-- **Sign-ups never confirmed**: deleted after 7 days.
 - **Guest accounts** (playing without signing up): deleted like an account when you sign out, or once their session expires, 30 days after you started playing.
 - **Sessions**: deleted when they expire, 30 days after you sign in.
 - **Email links** (confirmations, password resets): deleted 7 days after they expire or are used.

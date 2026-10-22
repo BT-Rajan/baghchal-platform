@@ -27,7 +27,17 @@ export type IconName =
   | 'chat'
   | 'document'
   | 'eye'
-  | 'eye-off';
+  | 'eye-off'
+  | 'undo'
+  | 'draw'
+  | 'close'
+  | 'globe'
+  | 'mail'
+  | 'lock'
+  | 'star'
+  | 'download'
+  | 'trash'
+  | 'block';
 
 /**
  * Whether the screen is laid out right to left, which is the way arrows must point. In the apps
@@ -168,9 +178,59 @@ export function Icon({
         </>
       )}
       {name === 'eye-off' && <Line x1={3} y1={3} x2={21} y2={21} {...stroke} />}
+      {name === 'undo' && <Path d="M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3" {...stroke} />}
+      {name === 'draw' && (
+        <>
+          <Line x1={5} y1={9} x2={19} y2={9} {...stroke} />
+          <Line x1={5} y1={15} x2={19} y2={15} {...stroke} />
+        </>
+      )}
+      {name === 'close' && (
+        <>
+          <Line x1={6} y1={6} x2={18} y2={18} {...stroke} />
+          <Line x1={18} y1={6} x2={6} y2={18} {...stroke} />
+        </>
+      )}
       {name === 'chat' && <Path d="M4 5h16v11H9l-5 4z" {...stroke} />}
       {name === 'bell' && (
         <Path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0" {...stroke} />
+      )}
+      {name === 'globe' && (
+        <>
+          <Circle cx={12} cy={12} r={9} {...stroke} />
+          <Path
+            d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z"
+            {...stroke}
+          />
+        </>
+      )}
+      {name === 'mail' && (
+        <>
+          <Rect x={3} y={5} width={18} height={14} rx={2} {...stroke} />
+          <Polyline points="3 7 12 13 21 7" {...stroke} />
+        </>
+      )}
+      {name === 'lock' && (
+        <>
+          <Rect x={5} y={11} width={14} height={10} rx={2} {...stroke} />
+          <Path d="M8 11V7a4 4 0 0 1 8 0v4" {...stroke} />
+        </>
+      )}
+      {name === 'star' && (
+        <Path
+          d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z"
+          {...stroke}
+        />
+      )}
+      {name === 'download' && <Path d="M12 4v11M7 10l5 5 5-5M5 20h14" {...stroke} />}
+      {name === 'trash' && (
+        <Path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6M14 11v6" {...stroke} />
+      )}
+      {name === 'block' && (
+        <>
+          <Circle cx={12} cy={12} r={9} {...stroke} />
+          <Line x1={5.6} y1={5.6} x2={18.4} y2={18.4} {...stroke} />
+        </>
       )}
       {name === 'shield' && (
         <Path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z" {...stroke} />

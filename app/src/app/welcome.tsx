@@ -21,9 +21,11 @@ import { Coin } from '@/components/game/Coin';
 import { AgreementLine } from '@/components/AgreementLine';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { focusRing } from '@/components/focus';
+import { GoogleButton } from '@/components/GoogleButton';
 import { Notice } from '@/components/Notice';
 import { pressedLook, ripple } from '@/components/press';
 import { SiteFooter } from '@/components/site/SiteFooter';
+import { TextLink } from '@/components/TextLink';
 import { useStartAsGuest } from '@/components/useStartAsGuest';
 import type { Piece } from '@/game/bfen';
 import { mark, t } from '@/i18n';
@@ -36,47 +38,48 @@ const STEPS: readonly { piece: Piece; title: string; text: string }[] = [
   {
     piece: 'goat',
     title: mark('20 goats, 4 tigers'),
-    text: mark('The tigers start in the corners. The goats come onto the board one at a time.'),
+    text: mark('Tigers start in the corners; goats come in one by one.'),
   },
   {
     piece: 'tiger',
     title: mark('Tigers hunt'),
-    text: mark('A tiger captures by jumping over a goat. Five captures and the tigers win.'),
+    text: mark('A tiger jumps a goat to capture it. Five wins.'),
   },
   {
     piece: 'goat',
     title: mark('Goats trap'),
-    text: mark('Hem the tigers in until none can move, and the goats win.'),
+    text: mark('Leave no tiger a move, and the goats win.'),
   },
 ];
 
 const FEATURES: readonly { title: string; text: string }[] = [
   {
     title: mark('Live games'),
-    text: mark('Quick or standard games with players online, rated or casual.'),
+    text: mark('Play people online, rated or casual.'),
   },
-  { title: mark('The computer'), text: mark('Three levels, from a gentle start to a real fight.') },
+  { title: mark('The computer'), text: mark('Three levels, gentle to fierce.') },
   {
     title: mark('Friends'),
-    text: mark('Send a friend a link to a game, or run a small tournament.'),
+    text: mark('Send a link, or run a tournament.'),
   },
   {
     title: mark('Get better'),
-    text: mark('The computer reviews your games; puzzles sharpen your openings.'),
+    text: mark('Game reviews and daily puzzles.'),
   },
 ];
 
 /**
- * The front door: what ClawPlay is, and a first game without signing up (`/start`). The web
- * has a landing page; the phone apps open on a start screen, as apps do.
+ * The front door. The web has a landing page (a first game without signing up); the phone apps
+ * open on a start screen, as apps do.
  */
 export default function Welcome() {
   return Platform.OS === 'web' ? <LandingPage /> : <StartScreen />;
 }
 
 /**
- * The apps' first screen: the board, and the ways in. It fits a phone, and scrolls where it
- * does not (a small screen, large text), so the buttons are never cut off.
+ * The apps' first screen, for a device nobody has signed in on yet (one that has goes straight
+ * to sign-in, see the route guards in _layout): two big ways to make an account, and small ones
+ * to sign in or play as a guest. It scrolls where it does not fit (large text).
  */
 function StartScreen() {
   return (
@@ -86,25 +89,26 @@ function StartScreen() {
         <View style={styles.startBoard} aria-hidden>
           <BoardPreview theme="wood" pieces="classic" />
         </View>
-        <View style={styles.startWords}>
-          <Text role="heading" style={[styles.startHeadline, joinedLetters()]}>
-            {t('Tigers hunt.\nGoats trap.')}
-          </Text>
-          <Text style={styles.lede}>{t('Bagh Chal, the strategy game of the Himalayas.')}</Text>
-        </View>
+        <Text role="heading" style={[styles.startHeadline, joinedLetters()]}>
+          {t('Tigers hunt.\nGoats trap.')}
+        </Text>
         <View style={styles.actions}>
           <GoingOn />
           <Button
-            title={t('Play now, no sign-up')}
+            title={t('Sign up')}
             variant="bright"
-            onPress={() => router.push('/start')}
-          />
-          <Button title={t('Sign in')} variant="light" onPress={() => router.push('/sign-in')} />
-          <Button
-            title={t('Make a free account')}
-            variant="light"
+            large
             onPress={() => router.push('/sign-up')}
           />
+          <GoogleButton title={t('Sign up with Google')} onDark />
+          <View style={styles.links}>
+            <TextLink href="/sign-in" onDark>
+              {t('I have an account')}
+            </TextLink>
+            <TextLink href="/start" onDark>
+              {t('Play as a guest')}
+            </TextLink>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -114,11 +118,7 @@ function StartScreen() {
 /** Someone sent here from a friend's link: they get there once they are in. */
 function GoingOn() {
   if (peekReturn() === null) return null;
-  return (
-    <Notice tone="info">
-      {t('Play now as a guest, or sign in, and we will take you to the link you opened.')}
-    </Notice>
-  );
+  return <Notice tone="info">{t('Get in, and your link opens.')}</Notice>;
 }
 
 /**
@@ -264,9 +264,7 @@ function LandingPage() {
                 {t('Tigers hunt.\nGoats trap.')}
               </Text>
               <Text style={styles.lede}>
-                {t(
-                  'Bagh Chal, the strategy game of the Himalayas, played live. Four tigers against twenty goats: which side will you take?',
-                )}
+                {t('Bagh Chal: four tigers against twenty goats. Pick a side.')}
               </Text>
               <GoingOn />
               <View style={styles.choice}>
@@ -275,7 +273,7 @@ function LandingPage() {
                   <SideChoice
                     piece="goat"
                     title={t('Play the goats')}
-                    text={t('Trap all four tigers. Goats move first: a good place to start.')}
+                    text={t('Trap the tigers. Goats move first.')}
                     main
                     busy={choosing === 'goat' || (waiting && choosing === null)}
                     onPress={() => start('goat')}
@@ -283,20 +281,16 @@ function LandingPage() {
                   <SideChoice
                     piece="tiger"
                     title={t('Play the tigers')}
-                    text={t('Hunt the goats: capture five to win.')}
+                    text={t('Capture five goats to win.')}
                     main={false}
                     busy={choosing === 'tiger' || (waiting && choosing === null)}
                     onPress={() => start('tiger')}
                   />
                 </View>
                 <ErrorNotice error={play.error} />
-                <AgreementLine agreement={agreement} playing />
+                <AgreementLine agreement={agreement} />
               </View>
-              <Text style={styles.small}>
-                {t(
-                  'No sign-up: you play the computer, which gives tips as you go. Make a free account later to keep your games and play rated games.',
-                )}
-              </Text>
+              <Text style={styles.small}>{t('No sign-up: play the computer, with tips.')}</Text>
             </View>
             <View style={[styles.boardBox, wide && styles.half]}>
               <DemoBoard />
@@ -375,8 +369,7 @@ const styles = StyleSheet.create({
     maxWidth: 520,
     alignSelf: 'center',
   },
-  startBoard: { width: '100%', maxWidth: 360, aspectRatio: 1, alignSelf: 'center', flexShrink: 1 },
-  startWords: { gap: spacing.sm },
+  startBoard: { width: '100%', maxWidth: 280, aspectRatio: 1, alignSelf: 'center', flexShrink: 1 },
   startHeadline: { ...type.display, color: colors.brandCream },
   page: { flexGrow: 1, backgroundColor: colors.background },
   inner: { width: '100%', maxWidth: 1100, alignSelf: 'center', gap: spacing.lg },
@@ -393,7 +386,7 @@ const styles = StyleSheet.create({
   headline: { ...type.display, color: colors.brandCream, marginTop: spacing.md },
   lede: { ...type.body, color: colors.brandCream, opacity: 0.85, maxWidth: 520 },
   actions: { gap: spacing.sm },
-  actionsWide: { flexDirection: 'row', flexWrap: 'wrap' },
+  links: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   small: { ...type.caption, color: colors.brandCream, opacity: 0.75 },
   boardBox: { alignItems: 'center' },
   board: { width: '100%', maxWidth: 440, aspectRatio: 1 },

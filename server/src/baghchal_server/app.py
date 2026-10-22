@@ -43,6 +43,7 @@ from baghchal_server.legal import models as _legal_models  # noqa: F401  (regist
 from baghchal_server.legal.routes import router as legal_router
 from baghchal_server.lobby import models as _lobby_models  # noqa: F401  (registers tables)
 from baghchal_server.lobby.routes import router as lobby_router
+from baghchal_server.accounts.google import GoogleKeys
 from baghchal_server.mail import Mailer, make_mailer
 from baghchal_server.metrics import CountingMailer, Metrics
 from baghchal_server.middleware import BodyLimit, CrossSiteGuard, RequestContext, SecurityHeaders
@@ -110,6 +111,7 @@ def create_app(
     limiter: RateLimiter | None = None,
     clock: Callable[[], datetime] | None = None,
     make_gateway: MakeGateway | None = None,
+    google_keys: GoogleKeys | None = None,
 ) -> FastAPI:
     settings = settings or Settings()
     configure_logging(settings)
@@ -148,6 +150,7 @@ def create_app(
             computer=ComputerPlayers(settings.computer_workers),
             fair_play=FairPlayChecker(settings.fair_play_workers),
             gateways=Gateways(make_gateway) if make_gateway else Gateways(),
+            google_keys=google_keys or GoogleKeys(),
         )
         loops = [
             (settings.game_sweeper, run_sweeper),

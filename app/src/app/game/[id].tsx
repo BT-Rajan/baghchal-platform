@@ -206,8 +206,8 @@ export default function GameScreen() {
       {layout === 'short' && opponentBar}
       {layout === 'short' && myBar}
       <Status game={game} mine={mine} />
-      {/* Right after the status (above the chat on a phone): a draw offered to me, the win
-          to claim, and my resign and draw buttons. */}
+      {/* Right after the status, in view under the board on a phone: an offer to answer, the
+          win to claim, and my controls (resign or abort, draw, undo). */}
       {mine !== null && game.status === 'active' && (
         <GameActions
           game={game}
@@ -233,18 +233,15 @@ export default function GameScreen() {
           />
         </View>
       )}
+      <MatchCard game={game} />
       {droppedPremove !== null && (
         <Notice tone="info">
-          {t('Your premove {move} is no longer possible: make your move.', {
-            move: droppedPremove,
-          })}
+          {t('Premove {move} is no longer possible.', { move: droppedPremove })}
         </Notice>
       )}
       {waitingPremove !== null && (
         <View style={styles.premove}>
-          <Text style={styles.premoveText}>
-            {t('Premove: {move}, played when it is your turn', { move: waitingPremove })}
-          </Text>
+          <Text style={styles.premoveText}>{t('Premove: {move}', { move: waitingPremove })}</Text>
           <Button
             title={t('Cancel the premove')}
             label={t('Cancel')}
@@ -328,12 +325,10 @@ export default function GameScreen() {
             game.match?.game !== 2 &&
             mine !== null &&
             !isComputer(game, other(mine))
-              ? t(
-                  'Leave the game? If you do not make your first move it is aborted, which counts toward the limit of 3 a day.',
-                )
-              : t('Leave the game? It goes on without you, and your clock keeps running.')
+              ? t('Leave? Without a first move, the game is aborted (counts toward 3 a day).')
+              : t('Leave? The game and your clock go on.')
           }
-          confirmTitle={t('Leave the game')}
+          confirmTitle={t('Leave')}
           cancelTitle={t('Keep playing')}
           onConfirm={() => setMayLeave(true)}
           onCancel={() => setLeaving(null)}
@@ -430,9 +425,7 @@ function Rematch({ game, mine }: { game: Game; mine: Piece }) {
   const outcome = sent === undefined ? undefined : outcomes.find((c) => c.id === sent.id);
   if (waiting) {
     return (
-      <Notice tone="info">
-        {t('Rematch sent. Waiting for {name} to answer…', { name: opponent })}
-      </Notice>
+      <Notice tone="info">{t('Rematch sent. Waiting for {name}…', { name: opponent })}</Notice>
     );
   }
   return (
@@ -441,7 +434,7 @@ function Rematch({ game, mine }: { game: Game; mine: Piece }) {
       <ErrorNotice error={create.error} />
       <Button
         title={t('Rematch {name}', { name: opponent })}
-        label={t('Rematch (casual, sides swapped)')}
+        label={t('Rematch')}
         busy={create.isPending}
         onPress={() =>
           create.mutate({ opponent, time_control: timeControl, rated: false, side: other(mine) })
@@ -550,7 +543,7 @@ function PlayAgain({ game, mine }: { game: Game; mine: Piece }) {
       <ErrorNotice error={start.error} />
       <Button
         title={t('Play the computer again')}
-        label={t('Play again (sides swapped)')}
+        label={t('Play again')}
         busy={start.isPending}
         onPress={() =>
           start.mutate({
@@ -567,7 +560,6 @@ function PlayAgain({ game, mine }: { game: Game; mine: Piece }) {
 function Status({ game, mine }: { game: Game; mine: Piece | null }) {
   const now = useServerNow();
   const result = resultText(game, mine);
-  const match = matchSummary(game);
   const firstMove = firstMoveSecondsLeft(game, now);
   const turn = turnText(game, mine);
   const last = lastMoveText(game, mine);
@@ -586,31 +578,31 @@ function Status({ game, mine }: { game: Game; mine: Piece | null }) {
           {firstMove === null
             ? turn
             : game.match?.game === 2
-              ? t('{turn} · {seconds} s to make a first move, or it counts as a loss', {
-                  turn,
-                  seconds: firstMove,
-                })
-              : t('{turn} · {seconds} s to make a first move, or the game is aborted', {
-                  turn,
-                  seconds: firstMove,
-                })}
+              ? t('{turn} · {seconds} s to move, or you lose', { turn, seconds: firstMove })
+              : t('{turn} · {seconds} s to move, or it is aborted', { turn, seconds: firstMove })}
         </Text>
       )}
-      {match !== null && (
-        <Card>
-          <Text style={styles.matchTitle}>{match.title}</Text>
-          {match.score !== '' && <Text style={styles.matchScore}>{match.score}</Text>}
-          {/* Game 1 leads on to game 2 with its countdown (NextGame). */}
-          {match.otherGameId !== null && game.match?.game === 2 && (
-            <Button
-              title={t('Back to game 1')}
-              variant="secondary"
-              onPress={() => router.replace(`/game/${match.otherGameId}`)}
-            />
-          )}
-        </Card>
-      )}
     </>
+  );
+}
+
+/** A match's score, below the game's controls so they stay in view. */
+function MatchCard({ game }: { game: Game }) {
+  const match = matchSummary(game);
+  if (match === null) return null;
+  return (
+    <Card>
+      <Text style={styles.matchTitle}>{match.title}</Text>
+      {match.score !== '' && <Text style={styles.matchScore}>{match.score}</Text>}
+      {/* Game 1 leads on to game 2 with its countdown (NextGame). */}
+      {match.otherGameId !== null && game.match?.game === 2 && (
+        <Button
+          title={t('Back to game 1')}
+          variant="secondary"
+          onPress={() => router.replace(`/game/${match.otherGameId}`)}
+        />
+      )}
+    </Card>
   );
 }
 

@@ -23,12 +23,7 @@ export default function Claim() {
   if (claim.isSuccess) {
     return (
       <Screen title={t('Welcome, {name}!', { name: claim.variables.username })}>
-        <Notice tone="success">
-          {t(
-            'Your account is ready and your games are kept. We sent a link to {email}: open it to confirm your email address.',
-            { email: claim.variables.email },
-          )}
-        </Notice>
+        <Notice tone="success">{t('Your account is ready. Your games are kept.')}</Notice>
         <Button title={t('Make it yours')} onPress={() => router.replace('/make-it-yours')} />
         <Button
           title={t('Back to playing')}
@@ -41,12 +36,8 @@ export default function Claim() {
 
   return (
     <Screen title={t('Make a free account')}>
-      <Hint>
-        {t(
-          'Keep your games, play rated games and climb the leaderboard, challenge friends, and sign in on any device.',
-        )}
-      </Hint>
-      <AccountForm action={claim} submitTitle={t('Accept and make my account')} />
+      <Hint>{t('Keep your games and play rated games.')}</Hint>
+      <AccountForm action={claim} submitTitle={t('Make my account')} />
     </Screen>
   );
 }

@@ -8,6 +8,7 @@ from baghchal_server.games.models import EndReason, GameStatus
 from baghchal_server.lobby.schemas import PlayerOut, TimeControlLabel
 
 SideName = Literal["goat", "tiger"]
+UndoOption = Literal["none", "now", "ask"]
 
 
 class ResultOut(BaseModel):
@@ -85,6 +86,12 @@ class GameOut(BaseModel):
     deadline_at: datetime | None
     draw_offer: SideName | None = None
     """The side whose draw offer is open (the other side may accept or decline it)."""
+    undo: UndoOption = "none"
+    """For the player viewing: whether they may take their last move back now. ``now``
+    against the computer (POST /games/{id}/undo takes it back at once), ``ask`` against a
+    person (it asks them). Only in casual games, not rated or tournament ones."""
+    takeback_offer: SideName | None = None
+    """The side asking to take its last move back (the other side may accept or decline)."""
     server_time: datetime
     created_at: datetime
     finished_at: datetime | None

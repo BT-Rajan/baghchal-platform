@@ -9,7 +9,7 @@ import { Card, SectionTitle } from './Card';
 import { PlayerRow } from './PlayerRow';
 import { ErrorNotice } from './ErrorNotice';
 
-/** Friend requests waiting for my answer, on the home screen. */
+/** Friend requests waiting for my answer (the web's home, the apps' Friends screen). */
 export function FriendRequests() {
   const friends = useFriends();
   const change = useFriendship();
@@ -58,7 +58,7 @@ export function FriendList({ myId }: { myId: string }) {
   if (list.length === 0) return null;
   return (
     <>
-      <SectionTitle>{t('Friends')}</SectionTitle>
+      <SectionTitle>{t('Your friends')}</SectionTitle>
       <Card>
         {list.map((player) => (
           <PlayerRow key={player.id} player={player} isMe={player.id === myId} />

@@ -39,15 +39,11 @@ export function ChatPanel({ game, mine }: { game: Game; mine: Piece }) {
     <View style={styles.panel}>
       <SectionTitle>{t('Chat')}</SectionTitle>
       {data.closed_because === 'messages_off' ? (
-        <Hint>
-          {t('Chat is off because one of you has turned messages off in Board, pieces and sounds.')}
-        </Hint>
+        <Hint>{t('Chat is off: one of you turned it off in Board, pieces and sounds.')}</Hint>
       ) : (
         <>
           {data.messages.length === 0 ? (
-            <Hint>
-              {t('Say hello. Be kind: messages are kept 30 days so reports can be checked.')}
-            </Hint>
+            <Hint>{t('Say hello. Messages are kept 30 days.')}</Hint>
           ) : (
             <Card>
               {data.messages.map((m, i) => (

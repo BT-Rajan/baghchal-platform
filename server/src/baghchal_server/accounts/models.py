@@ -20,6 +20,10 @@ class User(Base):
     email_key: Mapped[str] = mapped_column(String(254), unique=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     email_verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    """When the player confirmed the address (or Google vouched for it). Accounts play from the
+    moment they sign up; confirming is not required."""
+    google_subject: Mapped[str | None] = mapped_column(String(255), unique=True)
+    """The Google account (its ``sub``) that signs in to this account, once used."""
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     role: Mapped[str] = mapped_column(String(16), default="player", server_default="player")
     """``player`` or ``moderator``. Granted only from the command line, never through the API."""

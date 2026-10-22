@@ -13,20 +13,23 @@ const BOB = { ...ME, id: '00000000-0000-4000-8000-000000000002', username: 'bob'
 function setup({
   transport = 'bearer' as Transport,
   saved = null as string | null,
+  username = null as string | null,
   routes = {} as Parameters<typeof fakeServer>[0],
 } = {}) {
   const server = fakeServer(routes);
   const tokens = memoryTokenStore(saved);
+  const usernames = memoryTokenStore(username);
   const queryClient = new QueryClient();
   const clear = jest.spyOn(queryClient, 'clear');
   const store = new SessionStore({
     baseUrl: 'https://api.example',
     transport,
     tokenStore: tokens,
+    usernameStore: usernames,
     queryClient,
     fetch: server.fetch,
   });
-  return { server, tokens, store, clear };
+  return { server, tokens, usernames, store, clear };
 }
 
 describe('restore', () => {
@@ -354,4 +357,116 @@ test('listeners hear every change until they unsubscribe', async () => {
   unsubscribe();
   await store.forget();
   expect(listener).toHaveBeenCalledTimes(1);
+});
+
+describe('the username last signed in here', () => {
+  const GUEST = { ...ME, username: 'guest-1', role: 'guest' as const };
+
+  test('is read with the session, before the state says signed out', async () => {
+    const { store } = setup({ username: 'alice' });
+    expect(store.rememberedUsername()).toBeNull();
+    await store.restore();
+    expect(store.getState()).toEqual({ status: 'signedOut' });
+    expect(store.rememberedUsername()).toBe('alice');
+  });
+
+  test('is kept on signing in, and after signing out', async () => {
+    const { store, usernames } = setup({
+      routes: {
+        'POST /api/v1/auth/login': { status: 200, body: { user: BOB, token: 'bob' } },
+        'POST /api/v1/auth/logout': { status: 204 },
+      },
+    });
+    await store.restore();
+    await store.signIn('bob', 'pw');
+    expect(store.rememberedUsername()).toBe('bob');
+    expect(usernames.current()).toBe('bob');
+    await store.signOut();
+    expect(store.rememberedUsername()).toBe('bob');
+    expect(usernames.current()).toBe('bob');
+  });
+
+  test("a guest's is not kept (it has no password to sign in with)", async () => {
+    const { store, usernames } = setup({ username: 'alice' });
+    await store.restore();
+    await store.start({ user: GUEST, token: 'g' });
+    expect(store.rememberedUsername()).toBe('alice');
+    expect(usernames.save).not.toHaveBeenCalled();
+  });
+
+  test('"Not you?" forgets it, and so does deleting the account', async () => {
+    const { store, usernames, tokens } = setup({ username: 'alice' });
+    await store.restore();
+    await store.forgetUsername();
+    expect(store.rememberedUsername()).toBeNull();
+    expect(usernames.current()).toBeNull();
+    await store.start({ user: ME, token: 'tok' });
+    expect(usernames.current()).toBe('alice');
+    await store.accountDeleted();
+    expect(store.getState()).toEqual({ status: 'signedOut' });
+    expect(tokens.current()).toBeNull();
+    expect(usernames.current()).toBeNull();
+  });
+
+  test('one that cannot be read or saved is not remembered', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const { store, usernames } = setup({ username: 'alice' });
+    (usernames.load as jest.Mock).mockRejectedValueOnce(new Error('keychain locked'));
+    (usernames.save as jest.Mock).mockRejectedValueOnce(new Error('keychain locked'));
+    await store.restore();
+    expect(store.rememberedUsername()).toBeNull();
+    await store.start({ user: ME, token: 'tok' });
+    await waitFor(() => expect(warn).toHaveBeenCalledTimes(2));
+    warn.mockRestore();
+  });
+
+  test('without a store nothing is remembered', async () => {
+    const store = new SessionStore({
+      baseUrl: 'https://api.example',
+      transport: 'cookie',
+      tokenStore: memoryTokenStore(),
+      queryClient: new QueryClient(),
+      fetch: fakeServer({ 'GET /api/v1/me': error(401, 'not_authenticated') }).fetch,
+    });
+    await store.restore();
+    await store.forgetUsername();
+    expect(store.rememberedUsername()).toBeNull();
+  });
+});
+
+describe('signing up', () => {
+  const DETAILS = {
+    username: 'alice',
+    email: 'alice@example.com',
+    password: 'correct horse',
+    terms_version: '2026-10-20',
+    privacy_version: '2026-10-20',
+  };
+
+  test('signs the new account in at once', async () => {
+    const { store, tokens } = setup({
+      routes: { 'POST /api/v1/auth/register': { status: 201, body: { user: ME, token: 'new' } } },
+    });
+    await store.signUp(DETAILS);
+    expect(store.getState()).toEqual({ status: 'signedIn', user: ME });
+    expect(tokens.current()).toBe('new');
+    expect(store.rememberedUsername()).toBe('alice');
+  });
+
+  test('with Google, sends the ID token and the agreement', async () => {
+    const { store, server } = setup({
+      routes: { 'POST /api/v1/auth/google': { status: 200, body: { user: ME, token: 'g' } } },
+    });
+    await store.signInWithGoogle('id-token', {
+      terms_version: '2026-10-20',
+      privacy_version: '2026-10-20',
+    });
+    expect(server.last().body).toEqual({
+      id_token: 'id-token',
+      terms_version: '2026-10-20',
+      privacy_version: '2026-10-20',
+      transport: 'bearer',
+    });
+    expect(store.getState()).toEqual({ status: 'signedIn', user: ME });
+  });
 });

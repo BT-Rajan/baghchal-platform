@@ -1,43 +1,37 @@
 import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 
-import { useApi } from '@/auth/session';
+import { peekReturn } from '@/auth/returnTo';
+import { useSession } from '@/auth/session';
 import { AccountForm, type AccountDetails } from '@/components/AccountForm';
-import { Button } from '@/components/Button';
-import { Notice } from '@/components/Notice';
+import { GoogleButton } from '@/components/GoogleButton';
 import { Screen } from '@/components/Screen';
-import { ResendConfirmation } from '@/components/ResendConfirmation';
 import { TextLink } from '@/components/TextLink';
 import { t } from '@/i18n';
 
+/**
+ * Make an account: signed in at once (the email is confirmed later, from its link, if ever),
+ * then a new account's first stop, an optional board, pieces and friends. Someone who came from
+ * a friend's link goes on to it instead (see the route guards in _layout).
+ */
 export default function SignUp() {
-  const api = useApi();
+  const { session } = useSession();
   const register = useMutation({
-    mutationFn: (details: AccountDetails) => api.register(details),
+    mutationFn: async (details: AccountDetails) => {
+      const goingOn = peekReturn() !== null;
+      await session.signUp(details);
+      if (goingOn) return;
+      // Once the screens for signed-in players are in place, or their guard would send it back.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      router.push('/make-it-yours');
+    },
   });
 
-  if (register.isSuccess) {
-    return (
-      <Screen title={t('Check your email')} brand>
-        <Notice tone="success">
-          {t('We sent an email to {email}. Open the link in it to start playing.', {
-            email: register.variables.email,
-          })}
-        </Notice>
-        <ResendConfirmation email={register.variables.email} main />
-        <Button
-          title={t('Back to sign in')}
-          variant="secondary"
-          onPress={() => router.replace('/sign-in')}
-        />
-      </Screen>
-    );
-  }
-
   return (
-    <Screen title={t('Make a free account')} brand>
-      <AccountForm action={register} submitTitle={t('Accept and make my account')} />
-      <TextLink href="/sign-in">{t('Already have an account? Sign in')}</TextLink>
+    <Screen title={t('Sign up')} brand>
+      <GoogleButton title={t('Sign up with Google')} />
+      <AccountForm action={register} submitTitle={t('Sign up')} />
+      <TextLink href="/sign-in">{t('I have an account')}</TextLink>
     </Screen>
   );
 }

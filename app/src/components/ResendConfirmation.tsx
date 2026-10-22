@@ -8,20 +8,15 @@ import { ErrorNotice } from './ErrorNotice';
 import { Notice } from './Notice';
 
 /**
- * For a sign-up whose confirmation email went missing: send the link again. `main` where it is
- * the screen's next step (after signing up), secondary beside signing in.
+ * Send the link that confirms an email address again, where an unconfirmed address matters
+ * (the settings' email section). Confirming is optional: nothing waits for it.
  */
-export function ResendConfirmation({ email, main = false }: { email: string; main?: boolean }) {
+export function ResendConfirmation({ email }: { email: string }) {
   const api = useApi();
   const resend = useMutation({ mutationFn: () => api.resendVerification(email.trim()) });
   if (resend.isSuccess) {
     return (
-      <Notice tone="success">
-        {t(
-          'We sent a new link to {email}. If it is not there in a few minutes, look in your spam folder.',
-          { email: email.trim() },
-        )}
-      </Notice>
+      <Notice tone="success">{t('Link sent to {email}.', { email: email.trim() })}</Notice>
     );
   }
   return (
@@ -29,7 +24,7 @@ export function ResendConfirmation({ email, main = false }: { email: string; mai
       <ErrorNotice error={resend.error} />
       <Button
         title={t('Send the link again')}
-        variant={main ? 'primary' : 'secondary'}
+        variant="secondary"
         busy={resend.isPending}
         onPress={() => resend.mutate()}
       />

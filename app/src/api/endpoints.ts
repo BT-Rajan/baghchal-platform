@@ -82,8 +82,20 @@ export type Chat = S['ChatOut'];
 export type ChatMessage = S['ChatMessageOut'];
 
 export type ChallengeAnswer = 'accept' | 'decline' | 'cancel';
-/** What a player can do to a game besides moving; `draw` offers a draw or accepts one. */
-export type GameAction = 'resign' | 'abort' | 'claim-abandonment' | 'draw' | 'draw/decline';
+/**
+ * What a player can do to a game besides moving; `draw` offers a draw or accepts one. `undo`
+ * takes my last move back at once against the computer, or asks a person for a takeback,
+ * which they answer with `undo/accept` or `undo/decline`.
+ */
+export type GameAction =
+  | 'resign'
+  | 'abort'
+  | 'claim-abandonment'
+  | 'draw'
+  | 'draw/decline'
+  | 'undo'
+  | 'undo/accept'
+  | 'undo/decline';
 
 const V1 = '/api/v1';
 const seg = encodeURIComponent;

@@ -28,16 +28,17 @@ const CODE_FIELDS = {
 
 /**
  * The one form for a new account's username, email and password, with the agreement every
- * account gives (`AgreementLine`): checked here, then sent with `action` (signing up, or a guest
- * making their account) when its button, which says it accepts, is pressed. Its errors show by
- * the field they are about; what follows a success is the caller's.
+ * account gives (`AgreementLine`): checked here, then sent with `action` (signing up, which
+ * signs in at once, or a guest making their account) when its button is pressed. Its errors
+ * show by the field they are about (the username's rules among them); what follows a success
+ * is the caller's. One line of help: the password's length.
  */
 export function AccountForm({
   action,
   submitTitle,
 }: {
   action: UseMutationResult<unknown, Error, AccountDetails>;
-  /** "Accept and …": pressing it accepts the agreement. */
+  /** Pressing it accepts the agreement (the line above it says so). */
   submitTitle: string;
 }) {
   const [username, setUsername] = useState('');
@@ -74,10 +75,6 @@ export function AccountForm({
         submitBehavior="submit"
         onSubmitEditing={() => emailField.current?.focus()}
       />
-      {/* The rules, before a mistake; the same words are the error when one is made. */}
-      {fieldError('username') === undefined && (
-        <Hint>{t('3–20 letters, digits, _ or -, starting with a letter or digit.')}</Hint>
-      )}
       <TextField
         ref={emailField}
         label={t('Email')}
@@ -118,6 +115,7 @@ export function AccountForm({
       <AgreementLine agreement={agreement} />
       <Button
         title={submitTitle}
+        large
         onPress={submit}
         busy={action.isPending || agreement.versions.isPending}
       />

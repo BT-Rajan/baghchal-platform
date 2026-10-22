@@ -16,10 +16,11 @@ import { ErrorNotice } from './ErrorNotice';
 
 /**
  * Today's puzzle, from the trainer, for everyone: one move to find, then the answer and a new
- * puzzle tomorrow (the answered board folds away, to keep the home screen short). Pro players
- * go on to the trainer; others see what it adds.
+ * puzzle tomorrow. Pro players go on to the trainer; others see what it adds. On the web's home
+ * the answered board folds away, to keep the page short; `alone` is its own screen (the apps'),
+ * named after it, with a bigger board that stays.
  */
-export function DailyPuzzle() {
+export function DailyPuzzle({ alone = false }: { alone?: boolean }) {
   const daily = useDailyPuzzle();
   const answer = useAnswerPuzzle();
   const result = daily.data?.answer ?? null;
@@ -30,7 +31,7 @@ export function DailyPuzzle() {
       answered={result !== null}
       best={result?.best}
       busy={answer.isPending}
-      maxWidth={280}
+      maxWidth={alone ? 360 : 280}
       onRetry={() => void daily.refetch()}
       onMove={(move) =>
         answer.mutate({ id: daily.data.puzzle.id, move }, { onSuccess: () => void daily.refetch() })
@@ -39,7 +40,7 @@ export function DailyPuzzle() {
   );
   return (
     <>
-      <SectionTitle>{t('Daily puzzle')}</SectionTitle>
+      {!alone && <SectionTitle>{t('Daily puzzle')}</SectionTitle>}
       {daily.error !== null ? (
         <ErrorState error={daily.error} onRetry={() => void daily.refetch()} />
       ) : daily.data === undefined ? (
@@ -48,7 +49,7 @@ export function DailyPuzzle() {
         <Card>
           {streak !== null && <Text style={styles.streak}>{streak}</Text>}
           {/* Just answered, the board stays to show the best move; later it folds away. */}
-          {result === null || answer.isSuccess ? (
+          {result === null || answer.isSuccess || alone ? (
             board
           ) : (
             <Disclosure title={t("Today's position")}>{board}</Disclosure>

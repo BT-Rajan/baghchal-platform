@@ -30,9 +30,37 @@ class Agreement(Strict):
 
 
 class RegisterIn(Agreement):
+    """Sign-up signs the player in at once; the address is confirmed later, by the emailed
+    link, and nothing waits for it."""
+
     username: Username
     email: Email
     password: Password
+    transport: Transport = "cookie"
+
+
+class GoogleSignInIn(Agreement):
+    """Sign in with Google, making the account the first time. The agreement counts only when
+    an account is made."""
+
+    id_token: Annotated[str, StringConstraints(min_length=1, max_length=4096, strict=True)]
+    """The Google ID token the app got from Google for one of the client ids in
+    ``GET /auth/providers``."""
+    transport: Transport = "cookie"
+
+
+class GoogleClientIdsOut(BaseModel):
+    web: str | None
+    android: str | None
+    ios: str | None
+
+
+class ProvidersOut(BaseModel):
+    """Ways to sign in besides a password, as configured on this server."""
+
+    google: bool
+    google_client_ids: GoogleClientIdsOut | None
+    """The public OAuth client ids for each kind of app; None when Google is off."""
 
 
 class ClaimIn(Agreement):
@@ -127,6 +155,8 @@ class ExportAccount(BaseModel):
     email: str
     created_at: datetime
     email_verified_at: datetime | None
+    google_linked: bool = False
+    """Whether a Google account signs in to this one (which Google account is not shown)."""
 
 
 class ExportRating(BaseModel):

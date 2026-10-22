@@ -28,9 +28,7 @@ export default function ForgotPassword() {
     return (
       <Screen title={t('Check your email')} brand>
         <Notice tone="success">
-          {t('If {email} belongs to an account, we sent it a link to choose a new password.', {
-            email: email.trim(),
-          })}
+          {t('If {email} has an account, a link is on its way.', { email: email.trim() })}
         </Notice>
         <TextLink href="/sign-in">{t('Back to sign in')}</TextLink>
       </Screen>
@@ -52,7 +50,7 @@ export default function ForgotPassword() {
         textContentType="emailAddress"
         onSubmitEditing={submit}
       />
-      <Button title={t('Email me a link')} onPress={submit} busy={request.isPending} />
+      <Button title={t('Email me a link')} large onPress={submit} busy={request.isPending} />
       <TextLink href="/sign-in">{t('Back to sign in')}</TextLink>
     </Screen>
   );

@@ -123,7 +123,7 @@ describe('after a game', () => {
     });
     await screen.findByText('You lost: the tigers captured five goats.');
     await press('Rematch bob');
-    expect(await screen.findByText('Rematch sent. Waiting for bob to answer…')).toBeOnTheScreen();
+    expect(await screen.findByText('Rematch sent. Waiting for bob…')).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/challenges')).toBeDefined();
   });
 });

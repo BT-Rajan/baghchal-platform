@@ -4,7 +4,7 @@ from typing import Final
 
 from fastapi import APIRouter, BackgroundTasks, Request, Response, status
 
-from baghchal_server.accounts import lifecycle, service
+from baghchal_server.accounts import google, lifecycle, service
 from baghchal_server.accounts.models import User
 from baghchal_server.accounts.schemas import (
     Accepted,
@@ -14,12 +14,15 @@ from baghchal_server.accounts.schemas import (
     EmailChangedOut,
     EmailChangeIn,
     ExportOut,
+    GoogleClientIdsOut,
+    GoogleSignInIn,
     GuestIn,
     LoginIn,
     MeOut,
     PasswordChangeIn,
     PasswordResetConfirmIn,
     PasswordResetRequestIn,
+    ProvidersOut,
     RegisterIn,
     ResendVerificationIn,
     SessionOut,
@@ -51,6 +54,11 @@ router = APIRouter(prefix="/api/v1")
 # mobile carrier). Guessing is held back by the per-account limits, the per-address mail limit
 # and the cost of argon2id; the per-IP limits stop one address from doing too much of anything.
 REGISTER_PER_IP: Final = Limit("register-ip", 60, 3600)
+# Sign-up says when an address or name is taken; only those answers count here.
+REGISTER_REFUSALS_PER_IP: Final = Limit("register-refused-ip", 30, 3600)
+GOOGLE_PER_IP: Final = Limit("google-ip", 300, 900)
+# Only tokens that fail the checks count, as for failed sign-ins.
+GOOGLE_FAILURES_PER_IP: Final = Limit("google-fail-ip", 50, 900)
 GUESTS_PER_IP: Final = Limit("guest-ip", 30, 3600)
 MAIL_PER_ADDRESS: Final = Limit("mail-address", 3, 3600)
 LOGIN_PER_IP: Final = Limit("login-ip", 300, 900)
@@ -108,16 +116,76 @@ async def _session_response(  # noqa: PLR0913 - the session and how to hand it o
     return SessionOut(user=me)
 
 
-@router.post("/auth/register", status_code=status.HTTP_202_ACCEPTED)
-async def register(
-    data: RegisterIn, request: Request, tasks: BackgroundTasks, state: State, db: DB
-) -> Accepted:
-    """Start sign-up. The account becomes usable once the emailed link is opened."""
-    await enforce_limit(state, REGISTER_PER_IP, client_ip(request))
+@router.post("/auth/register", status_code=status.HTTP_201_CREATED)
+async def register(  # noqa: PLR0913, PLR0917 - FastAPI dependencies
+    data: RegisterIn,
+    request: Request,
+    response: Response,
+    tasks: BackgroundTasks,
+    state: State,
+    db: DB,
+) -> SessionOut:
+    """Make an account and sign in at once. A link to confirm the address is emailed; the
+    account plays without it. An address or username in use: ``email_taken`` or
+    ``username_taken``."""
+    ip = client_ip(request)
+    await enforce_limit(state, REGISTER_PER_IP, ip)
     await enforce_limit(state, MAIL_PER_ADDRESS, service.email_key(data.email))
-    mail = await service.register(db, state.hasher, state.settings, state.clock(), data)
+    # As for sign-in: refusals ("taken") count up front, so nobody can test many addresses.
+    counted_at = time.time()
+    await enforce_limit(state, REGISTER_REFUSALS_PER_IP, ip)
+    try:
+        user, token, mail = await service.register(
+            db, state.hasher, state.settings, state.clock(), data
+        )
+    except AppError as error:
+        if error.code not in {"email_taken", "username_taken"}:
+            await state.limiter.undo(REGISTER_REFUSALS_PER_IP, ip, counted_at)
+        raise
+    await state.limiter.undo(REGISTER_REFUSALS_PER_IP, ip, counted_at)
     _send(tasks, state, mail)
-    return Accepted()
+    return await _session_response(response, state, db, user, token, transport=data.transport)
+
+
+@router.get("/auth/providers")
+async def sign_in_providers(state: State) -> ProvidersOut:
+    """Ways to sign in besides a password: whether Google is offered, and the public client ids
+    the apps ask Google for a token with."""
+    ids = state.settings.google_client_ids
+    if not ids.audiences:
+        return ProvidersOut(google=False, google_client_ids=None)
+    return ProvidersOut(
+        google=True,
+        google_client_ids=GoogleClientIdsOut(
+            web=ids.web or None, android=ids.android or None, ios=ids.ios or None
+        ),
+    )
+
+
+@router.post("/auth/google")
+async def google_sign_in(
+    data: GoogleSignInIn, request: Request, response: Response, state: State, db: DB
+) -> SessionOut:
+    """Sign in with a Google ID token, making the account the first time (its address is
+    Google's, verified). An account with the same address is linked to the Google account."""
+    audiences = state.settings.google_client_ids.audiences
+    if not audiences:
+        raise AppError(404, "google_off", "Sign in with Google is not available here.")
+    ip = client_ip(request)
+    counted_at = time.time()
+    await enforce_limit(state, GOOGLE_FAILURES_PER_IP, ip)
+    try:
+        await enforce_limit(state, GOOGLE_PER_IP, ip)
+        identity = await google.verify(state.google_keys, data.id_token, audiences, state.clock())
+        user, token = await service.google_sign_in(
+            db, state.hasher, state.settings, state.clock(), identity, data
+        )
+    except AppError as error:
+        if error.code not in {"invalid_google_token", "google_email_unverified"}:
+            await state.limiter.undo(GOOGLE_FAILURES_PER_IP, ip, counted_at)
+        raise
+    await state.limiter.undo(GOOGLE_FAILURES_PER_IP, ip, counted_at)
+    return await _session_response(response, state, db, user, token, transport=data.transport)
 
 
 @router.post("/auth/guest")

@@ -11,7 +11,8 @@ import { pressedLook, ripple } from './press';
 import { Icon, type IconName } from './Icon';
 
 /**
- * A way into one of the app's features: an icon, what it is, one line on what it does. A
+ * A way into one of the app's features: an icon, what it is, and (where the name is not
+ * enough) one short line on what it does; a row in the apps' drill-down menus too. A
  * feature the player's plan lacks carries that plan's badge (named by the server's plans, as
  * the Upsell does); its page shows the Upsell itself.
  */
@@ -24,7 +25,7 @@ export function FeatureLink({
 }: {
   icon: IconName;
   title: string;
-  text: string;
+  text?: string;
   /** The paid feature it needs, if any. */
   feature?: Feature;
   onPress: () => void;
@@ -49,7 +50,7 @@ export function FeatureLink({
           <Text style={styles.title}>{title}</Text>
           {plan !== null && <BadgePill badge={plan} />}
         </View>
-        <Text style={styles.text}>{text}</Text>
+        {text !== undefined && <Text style={styles.text}>{text}</Text>}
       </View>
       <Icon name="chevron" color={colors.muted} size={18} />
     </Pressable>

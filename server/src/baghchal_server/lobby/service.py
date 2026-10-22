@@ -47,11 +47,10 @@ _RESULT: Final = {
 
 
 def _playable(now: datetime) -> ColumnElement[bool]:
-    """Condition for a user who can be found and challenged: verified, not deleted, not
-    suspended."""
+    """Condition for a user who can be found and challenged: not deleted, not suspended.
+    Whether they confirmed their address does not matter."""
     return and_(
         in_good_standing(now),
-        User.email_verified_at.is_not(None),
         User.role != BOT_ROLE,  # the computer is played from its own menu, not challenged
     )
 

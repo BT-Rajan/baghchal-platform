@@ -91,6 +91,12 @@ class Game(Base):
     goat_offer_ply: Mapped[int | None] = mapped_column(Integer)
     tiger_offer_ply: Mapped[int | None] = mapped_column(Integer)
     """When each side last offered a draw, so offers cannot be repeated move after move."""
+    takeback_offer: Mapped[str | None] = mapped_column(String(8))
+    """The side asking to take its last move back; it lapses when either side moves."""
+    goat_undos: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    tiger_undos: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    """Moves each side has taken back from the computer, or asked a person to let it take back
+    (``UNDO_LIMIT`` a game)."""
     bot_level: Mapped[str | None] = mapped_column(String(8))
     """For a game against the computer: its level (``easy``, ``medium``, ``hard``)."""
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)

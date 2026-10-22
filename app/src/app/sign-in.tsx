@@ -2,13 +2,12 @@ import { useMutation } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import type { TextInputInstance } from 'react-native';
 
-import { useSession } from '@/auth/session';
-import { isApiError } from '@/api/errors';
-import { checkSignIn, emailProblem } from '@/auth/validation';
+import { useRememberedUsername, useSession } from '@/auth/session';
+import { checkSignIn } from '@/auth/validation';
 import { Button } from '@/components/Button';
 import { useFormErrors } from '@/components/form';
+import { GoogleButton } from '@/components/GoogleButton';
 import { Notice } from '@/components/Notice';
-import { ResendConfirmation } from '@/components/ResendConfirmation';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { TextLink } from '@/components/TextLink';
@@ -16,9 +15,14 @@ import { t } from '@/i18n';
 
 const FIELDS = ['login', 'password'] as const;
 
+/**
+ * Sign in. On a device someone signed in on before, their username is filled in and the
+ * password is the field to type in; "Not you?" forgets it and goes back to the start.
+ */
 export default function SignIn() {
   const { session } = useSession();
-  const [login, setLogin] = useState('');
+  const remembered = useRememberedUsername();
+  const [login, setLogin] = useState(remembered ?? '');
   const [password, setPassword] = useState('');
   const passwordField = useRef<TextInputInstance>(null);
   // Signing in swaps this screen for the signed-in ones (see the route guards in _layout).
@@ -30,19 +34,14 @@ export default function SignIn() {
     if (accept(checkSignIn({ login, password }))) signIn.mutate();
   };
 
+  const notYou = () => {
+    setLogin('');
+    void session.forgetUsername();
+  };
+
   return (
     <Screen title={t('Sign in')} brand>
       {formMessage !== null && <Notice tone="error">{formMessage}</Notice>}
-      {isApiError(signIn.error, 'email_not_verified') &&
-        (emailProblem(login.trim()) === undefined ? (
-          <ResendConfirmation email={login} />
-        ) : (
-          <Notice tone="info">
-            {t(
-              'Did the email not come? Sign in with your email address instead of your username, and we can send the link again.',
-            )}
-          </Notice>
-        ))}
       <TextField
         label={t('Username or email')}
         value={login}
@@ -56,6 +55,11 @@ export default function SignIn() {
         submitBehavior="submit"
         onSubmitEditing={() => passwordField.current?.focus()}
       />
+      {remembered !== null && (
+        <TextLink href="/welcome" onPress={notYou}>
+          {t('Not you?')}
+        </TextLink>
+      )}
       <TextField
         ref={passwordField}
         label={t('Password')}
@@ -66,12 +70,14 @@ export default function SignIn() {
         autoComplete="current-password"
         textContentType="password"
         returnKeyType="go"
+        autoFocus={remembered !== null}
         onSubmitEditing={submit}
       />
-      <Button title={t('Sign in')} onPress={submit} busy={signIn.isPending} />
-      <TextLink href="/forgot-password">{t('Forgot your password?')}</TextLink>
-      <TextLink href="/sign-up">{t('New here? Make a free account')}</TextLink>
-      <TextLink href="/start">{t('Play now, no sign-up')}</TextLink>
+      <Button title={t('Sign in')} large onPress={submit} busy={signIn.isPending} />
+      <TextLink href="/forgot-password">{t('Forgot password?')}</TextLink>
+      <GoogleButton title={t('Sign in with Google')} />
+      <TextLink href="/sign-up">{t('New here? Sign up')}</TextLink>
+      <TextLink href="/start">{t('Play as a guest')}</TextLink>
     </Screen>
   );
 }

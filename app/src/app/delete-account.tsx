@@ -24,7 +24,7 @@ export default function DeleteAccount() {
         </Text>
         <Text style={styles.step}>{t('2. Open Me, then Settings.')}</Text>
         <Text style={styles.step}>
-          {t('3. Choose Delete account and confirm with your password.')}
+          {t('3. Choose Account, then Delete account, and confirm with your password.')}
         </Text>
       </Card>
       {signedIn ? (

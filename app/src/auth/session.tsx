@@ -12,7 +12,7 @@ import type { Transport } from '@/api/client';
 import type { Api, Me } from '@/api/endpoints';
 
 import { SessionStore, type SessionState } from './sessionStore';
-import { tokenStoreFor, transportFor, type TokenStore } from './tokenStore';
+import { tokenStoreFor, transportFor, usernameStoreFor, type TokenStore } from './tokenStore';
 
 const SessionContext = createContext<SessionStore | null>(null);
 
@@ -21,6 +21,7 @@ export interface SessionProviderProps {
   queryClient: QueryClient;
   transport?: Transport;
   tokenStore?: TokenStore;
+  usernameStore?: TokenStore;
   fetch?: typeof fetch;
   children: ReactNode;
 }
@@ -34,6 +35,7 @@ export function SessionProvider({ children, ...options }: SessionProviderProps) 
       queryClient: options.queryClient,
       transport,
       tokenStore: options.tokenStore ?? tokenStoreFor(transport),
+      usernameStore: options.usernameStore ?? usernameStoreFor(transport),
       ...(options.fetch && { fetch: options.fetch }),
     });
   });
@@ -54,6 +56,16 @@ export function useSession(): { state: SessionState; session: SessionStore } {
   const session = useSessionStore();
   const state = useSyncExternalStore(session.subscribe, session.getState, session.getState);
   return { state, session };
+}
+
+/** The username last signed in on this device (apps only), or null. */
+export function useRememberedUsername(): string | null {
+  const session = useSessionStore();
+  return useSyncExternalStore(
+    session.subscribe,
+    session.rememberedUsername,
+    session.rememberedUsername,
+  );
 }
 
 export function useApi(): Api {

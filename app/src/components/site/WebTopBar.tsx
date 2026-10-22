@@ -16,10 +16,13 @@ const PLACES: readonly { href: Href; label: string; match: (path: string) => boo
   {
     href: '/',
     label: mark('Play'),
-    match: (p) => p === '/' || p.startsWith('/game') || p === '/play',
+    match: (p) =>
+      p === '/' ||
+      p.startsWith('/game') ||
+      ['/play', '/ways-to-play', '/friends', '/puzzle'].includes(p),
   },
   { href: '/leaderboard', label: mark('Leaderboard'), match: (p) => p === '/leaderboard' },
-  { href: '/me', label: mark('Me'), match: (p) => p === '/me' || p === '/settings' },
+  { href: '/me', label: mark('Me'), match: (p) => p === '/me' || p.startsWith('/settings') },
 ];
 
 /**

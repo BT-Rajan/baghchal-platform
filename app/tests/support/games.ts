@@ -26,6 +26,8 @@ export function game(overrides: Partial<Game> = {}): Game {
     computer: null,
     positions: [],
     deadline_at: null,
+    undo: 'none',
+    takeback_offer: null,
     server_time: '2026-01-01T12:00:00Z',
     created_at: '2026-01-01T12:00:00Z',
     finished_at: null,

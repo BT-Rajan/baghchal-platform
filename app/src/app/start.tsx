@@ -8,7 +8,7 @@ import { Screen } from '@/components/Screen';
 import { TextLink } from '@/components/TextLink';
 import { useStartAsGuest } from '@/components/useStartAsGuest';
 
-/** Play at once as a guest: nothing to type, only the agreement to accept (the apps' way in). */
+/** Play at once as a guest: nothing to type, only the agreement to accept. */
 export default function Start() {
   const { agreement, play, start, waiting } = useStartAsGuest();
 
@@ -17,15 +17,11 @@ export default function Start() {
 
   return (
     <Screen title={t('Play as a guest')} brand>
-      {firstGame && (
-        <Hint>
-          {t("You'll play the goats against the Easy computer, which gives tips as you play.")}
-        </Hint>
-      )}
+      {firstGame && <Hint>{t('You play the goats against the Easy computer.')}</Hint>}
       <ErrorNotice error={play.error} />
       <AgreementLine agreement={agreement} />
-      <Button title={t('Accept and play')} onPress={() => start('goat')} busy={waiting} />
-      <TextLink href="/sign-in">{t('Already have an account? Sign in')}</TextLink>
+      <Button title={t('Play')} large onPress={() => start('goat')} busy={waiting} />
+      <TextLink href="/sign-in">{t('I have an account')}</TextLink>
     </Screen>
   );
 }

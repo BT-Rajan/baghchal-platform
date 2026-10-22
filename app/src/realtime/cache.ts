@@ -8,15 +8,18 @@ import { serverClock } from '@/game/serverClock';
 import type { ServerMessage } from './protocol';
 
 /**
- * Whether `next` is a newer state of the same game than `current`. A higher ply is newer. At
- * the same ply (resigning, timing out and aborting do not add a move), a finished game beats an
+ * Whether `next` is a newer state of the same game than `current`. A higher ply is newer. A
+ * lower ply (a takeback took moves back) is newer only when the server sent it later. At the
+ * same ply (resigning, timing out and aborting do not add a move), a finished game beats an
  * active one, and otherwise the later `server_time` wins.
  */
 export function isNewer(next: Game, current: Game | undefined): boolean {
   if (current === undefined) return true;
-  if (next.ply !== current.ply) return next.ply > current.ply;
+  const later = Date.parse(next.server_time) > Date.parse(current.server_time);
+  if (next.ply > current.ply) return true;
+  if (next.ply < current.ply) return later;
   if (next.status !== current.status) return next.status === 'finished';
-  return Date.parse(next.server_time) > Date.parse(current.server_time);
+  return later;
 }
 
 function without(list: Challenge[], id: string): Challenge[] {
