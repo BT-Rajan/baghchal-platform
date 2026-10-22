@@ -15,9 +15,7 @@ export function ResendConfirmation({ email }: { email: string }) {
   const api = useApi();
   const resend = useMutation({ mutationFn: () => api.resendVerification(email.trim()) });
   if (resend.isSuccess) {
-    return (
-      <Notice tone="success">{t('Link sent to {email}.', { email: email.trim() })}</Notice>
-    );
+    return <Notice tone="success">{t('Link sent to {email}.', { email: email.trim() })}</Notice>;
   }
   return (
     <>

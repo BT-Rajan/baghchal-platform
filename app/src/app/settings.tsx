@@ -39,7 +39,11 @@ function SettingsMenu() {
         {...(mine.data !== undefined && { text: myPlanText(mine.data) })}
         onPress={() => router.push('/plans')}
       />
-      <FeatureLink icon="me" title={t('Account')} onPress={() => router.push('/settings/account')} />
+      <FeatureLink
+        icon="me"
+        title={t('Account')}
+        onPress={() => router.push('/settings/account')}
+      />
       <StaffLinks />
       <LegalLinks />
       <SignOutButton />
@@ -88,7 +92,11 @@ function StaffLinks() {
   return (
     <>
       <SectionTitle>{t('Admin')}</SectionTitle>
-      <FeatureLink icon="shield" title={t('Moderation')} onPress={() => router.push('/moderation')} />
+      <FeatureLink
+        icon="shield"
+        title={t('Moderation')}
+        onPress={() => router.push('/moderation')}
+      />
       {role === 'admin' && (
         <FeatureLink
           icon="shield"

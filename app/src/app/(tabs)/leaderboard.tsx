@@ -50,9 +50,7 @@ export default function Leaderboard() {
       ) : board.data.length === 0 ? (
         <Card>
           <Hint>
-            {t(
-              'Nobody is listed yet. Players appear after a few more rated games, once they have played one in the last 30 days.',
-            )}
+            {t('Nobody yet. Players show after a few rated games, if one was in the last 30 days.')}
           </Hint>
           <Button
             title={t('Play a rated game')}
@@ -94,13 +92,13 @@ function MyStanding({ category, label }: { category: Category; label: string }) 
   if (profile.data === undefined) return null;
   const text =
     rating === undefined
-      ? t('You have no {category} rating yet: play a rated game to get one.', {
+      ? t('No {category} rating yet. Play a rated game.', {
           category: label.toLowerCase(),
         })
       : rating.rank !== null
         ? t('You are #{rank}, rated {rating}.', { rank: rating.rank, rating: rating.rating })
         : t(
-            'You are rated {rating}. You will be listed after a few more rated games, as long as you have played one in the last 30 days.',
+            'You are rated {rating}. You show after a few more rated games, if one was in the last 30 days.',
             { rating: rating.rating },
           );
   return (

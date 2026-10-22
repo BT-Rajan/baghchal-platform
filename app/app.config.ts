@@ -90,7 +90,7 @@ const withPlainHttp: ConfigPlugin = (expo) =>
 const config: ExpoConfig = {
   name: 'ClawPlay',
   slug: 'clawplay',
-  scheme: 'clawplay',
+  scheme: ['clawplay', 'com.clawplay.app'], // the second is Google sign-in's redirect
   description: 'Bagh Chal, the tiger-and-goat game of Nepal, played live.',
   icon: './assets/icon.png',
   version: '0.1.0',

@@ -123,7 +123,7 @@ def invalid_google_token() -> AppError:
 def _decode(token: str) -> tuple[dict[str, Any], dict[str, Any], bytes, bytes]:
     """The header, the claims, the signature and the signed bytes of a JWT."""
     parts = token.split(".")
-    if len(parts) != 3:  # noqa: PLR2004 - header, claims, signature
+    if len(parts) != 3:
         raise invalid_google_token()
     try:
         header, claims = json.loads(_b64(parts[0])), json.loads(_b64(parts[1]))

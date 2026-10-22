@@ -44,9 +44,7 @@ export default function ResetPassword() {
   if (reset.isSuccess) {
     return (
       <Screen title={t('Password changed')} brand>
-        <Notice tone="success">
-          {t('Signed out everywhere. Sign in with the new one.')}
-        </Notice>
+        <Notice tone="success">{t('Signed out everywhere. Sign in with the new one.')}</Notice>
         <Button title={t('Sign in')} large onPress={() => router.replace('/sign-in')} />
       </Screen>
     );

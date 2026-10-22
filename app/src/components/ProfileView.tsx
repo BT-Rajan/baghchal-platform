@@ -75,9 +75,7 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
         })}
       </View>
       {Object.values(profile.ratings).some((r) => r?.provisional) && (
-        <Hint>
-          {t('A provisional rating is still settling: it moves faster over the first games.')}
-        </Hint>
+        <Hint>{t('Provisional ratings move faster over the first games.')}</Hint>
       )}
       {/* Guests have no friends; their names start with "guest-". */}
       {!isMe && !profile.blocked && !guestViewer && !profile.username.startsWith('guest-') && (
@@ -94,10 +92,10 @@ export function ProfileView({ profile, isMe }: { profile: Profile; isMe: boolean
           {!canChallenge(profile) && (
             <Hint>
               {profile.playing
-                ? t('{name} is in a game. You can challenge them when it ends.', {
+                ? t('{name} is in a game.', {
                     name: profile.username,
                   })
-                : t('{name} is offline. You can challenge them when they are online.', {
+                : t('{name} is offline.', {
                     name: profile.username,
                   })}
             </Hint>
@@ -134,7 +132,7 @@ function BlockControl({ username, blocked }: { username: string; blocked: boolea
       {blocked ? (
         <>
           <Text style={styles.muted}>
-            {t('You have blocked {name}. Neither of you can challenge the other.', {
+            {t('You blocked {name}.', {
               name: username,
             })}
           </Text>
@@ -148,10 +146,7 @@ function BlockControl({ username, blocked }: { username: string; blocked: boolea
       ) : (
         <Confirm
           open={confirming}
-          question={t(
-            'Block {name}? Neither of you will be able to challenge the other, and you will not see each other in the lobby.',
-            { name: username },
-          )}
+          question={t("Block {name}? You won't challenge or see each other.", { name: username })}
           confirmTitle={t('Yes, block {name}', { name: username })}
           busy={change.isPending}
           error={change.error}

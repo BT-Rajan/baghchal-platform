@@ -37,9 +37,7 @@ describe('a profile', () => {
       },
     });
     expect(await screen.findByRole('button', { name: 'Challenge bob' })).toBeDisabled();
-    expect(
-      screen.getByText('bob is in a game. You can challenge them when it ends.'),
-    ).toBeOnTheScreen();
+    expect(screen.getByText('bob is in a game.')).toBeOnTheScreen();
   });
 
   test('an unknown player leads to the player search', async () => {

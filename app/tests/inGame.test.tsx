@@ -152,9 +152,7 @@ describe('chat', () => {
     await openGame(game({ ...UNDER_WAY, server_time: now() }), {
       [CHAT]: { status: 200, body: { open: false, closed_because: 'messages_off', messages: [] } },
     });
-    expect(
-      await screen.findByText('Chat is off: one of you turned it off in Board, pieces and sounds.'),
-    ).toBeOnTheScreen();
+    expect(await screen.findByText('Chat is off: one of you turned it off.')).toBeOnTheScreen();
   });
 });
 

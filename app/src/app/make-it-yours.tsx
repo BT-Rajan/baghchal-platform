@@ -18,11 +18,7 @@ export default function MakeItYours() {
   const play = () => router.replace('/');
   return (
     <Screen align="top" wide>
-      <Hint>
-        {t(
-          'Your account is ready. A few quick choices, all optional: you can change them any time.',
-        )}
-      </Hint>
+      <Hint>{t('Your account is ready. A few optional choices.')}</Hint>
       <Button title={t('Skip, start playing')} variant="secondary" onPress={play} />
       {ready !== null ? (
         <>
@@ -37,11 +33,7 @@ export default function MakeItYours() {
       )}
 
       <Disclosure title={t('Find friends')}>
-        <Hint>
-          {t(
-            'Search for a friend by username and open their profile to add them, or send a friend a challenge by link if they are not on ClawPlay yet.',
-          )}
-        </Hint>
+        <Hint>{t('Find a friend by username, or send them a challenge link.')}</Hint>
         <Button
           title={t('Challenge a friend by link')}
           variant="secondary"

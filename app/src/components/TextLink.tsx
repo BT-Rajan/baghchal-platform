@@ -24,13 +24,13 @@ export function TextLink({
   const tone = onDark && styles.onDark;
   if (Platform.OS === 'web') {
     return (
-      <Link href={href} onPress={onPress} style={[styles.link, tone]}>
+      <Link href={href} {...(onPress !== undefined && { onPress })} style={[styles.link, tone]}>
         {children}
       </Link>
     );
   }
   return (
-    <Link href={href} onPress={onPress} asChild>
+    <Link href={href} {...(onPress !== undefined && { onPress })} asChild>
       <Pressable role="link" aria-label={children} {...ripple()} style={styles.button}>
         <Text style={[styles.text, tone]}>{children}</Text>
       </Pressable>

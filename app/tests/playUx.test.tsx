@@ -118,7 +118,7 @@ describe('leaderboard', () => {
     expect(server.requests.some((r) => r.path === '/api/v1/leaderboards/rapid')).toBe(true);
     expect(
       screen.getByText(
-        'Nobody is listed yet. Players appear after a few more rated games, once they have played one in the last 30 days.',
+        'Nobody yet. Players show after a few rated games, if one was in the last 30 days.',
       ),
     ).toBeOnTheScreen();
   });

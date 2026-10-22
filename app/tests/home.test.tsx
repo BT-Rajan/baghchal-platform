@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { Platform } from 'react-native';
 
 import type { GameSummary } from '@/api/endpoints';
 
@@ -9,8 +10,19 @@ import { PLANS } from './support/plans';
 
 const DAILY_URL = '/api/v1/trainer/daily';
 
-function home(routes: Record<string, Route> = {}) {
-  return renderApp('/', {
+/** The web's home, which keeps everything on the page. */
+function webHome(routes: Record<string, Route> = {}) {
+  jest.replaceProperty(Platform, 'OS', 'web');
+  return home(routes);
+}
+
+/** Today's puzzle on its own screen (the apps' play menu). */
+const puzzle = (routes: Record<string, Route> = {}) => home(routes, '/puzzle');
+
+afterEach(() => jest.restoreAllMocks());
+
+function home(routes: Record<string, Route> = {}, url = '/') {
+  return renderApp(url, {
     token: 'tok',
     routes: { 'GET /api/v1/me': { status: 200, body: ME }, ...routes },
   });
@@ -33,7 +45,7 @@ const summary = (i: number, outcome: GameSummary['outcome']): GameSummary => ({
 describe('home', () => {
   test("solve today's puzzle; the trainer is what Pro adds", async () => {
     let answered = false;
-    const { server } = await home({
+    const { server } = await puzzle({
       [`GET ${DAILY_URL}`]: () => ({
         status: 200,
         body: answered ? { ...DAILY, answer: { move: 'a2', correct: false, best: 'c3' } } : DAILY,
@@ -59,8 +71,8 @@ describe('home', () => {
     expect(screen.getByRole('button', { name: 'More puzzles in the trainer' })).toBeOnTheScreen();
   });
 
-  test('a puzzle answered earlier folds away; it can be looked at again', async () => {
-    await home({
+  test("on the web's home a puzzle answered earlier folds away; it can be looked at again", async () => {
+    await webHome({
       [`GET ${DAILY_URL}`]: {
         status: 200,
         body: { ...DAILY, answer: { move: 'a2', correct: false, best: 'c3' } },
@@ -86,7 +98,7 @@ describe('home', () => {
       features: PLANS[2]!.features,
       grants: [],
     };
-    const { app } = await home({
+    const { app } = await puzzle({
       'GET /api/v1/me/plan': { status: 200, body: pro },
       [`GET ${DAILY_URL}`]: () =>
         fail ? error(400, 'bad', 'Puzzles are down.') : { status: 200, body: DAILY },
@@ -100,8 +112,8 @@ describe('home', () => {
     await waitFor(() => expect(app.getPathname()).toBe('/trainer'));
   });
 
-  test('my latest results, and the way to the rest', async () => {
-    const { app } = await home({
+  test("the web's home: my latest results, and the way to the rest", async () => {
+    const { app } = await webHome({
       'GET /api/v1/players/alice/games': {
         status: 200,
         body: [summary(0, 'won'), summary(1, 'lost'), summary(2, 'aborted'), summary(3, 'won')],
@@ -113,37 +125,70 @@ describe('home', () => {
     await waitFor(() => expect(app.getPathname()).toBe('/me'));
   });
 
-  test('a live game comes first, to continue', async () => {
+  test('in the apps, home is two big buttons: Play now and Settings', async () => {
+    const { app } = await home();
+    expect(await screen.findByRole('button', { name: 'Play now' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Settings' })).toBeOnTheScreen();
+    expect(screen.queryByText('Daily puzzle')).toBeNull();
+    expect(screen.queryByText('Online now')).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'Settings' }));
+    await waitFor(() => expect(app.getPathname()).toBe('/settings'));
+  });
+
+  test('a live game comes first, to resume', async () => {
     await home({
       'GET /api/v1/games': {
         status: 200,
         body: [game({ server_time: new Date().toISOString() })],
       },
     });
-    expect(await screen.findByText('Continue your game')).toBeOnTheScreen();
-    expect(screen.queryByText('Ready for a game?')).toBeNull();
+    expect(await screen.findByText('Your game against bob')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Resume' })).toBeOnTheScreen();
   });
 
-  test('more ways to play, with the plan a locked one needs; a streak to keep', async () => {
-    const { app } = await home({
-      [`GET ${DAILY_URL}`]: { status: 200, body: { ...DAILY, streak: 3 } },
-    });
-    expect(await screen.findByText('Daily streak: 3 days')).toBeOnTheScreen();
-    // The trainer is offered by today's puzzle, not a second time beside it.
-    expect(screen.queryByRole('link', { name: 'Trainer' })).toBeNull();
+  test('Play now opens every way to play, with the plan a locked one needs', async () => {
+    const { app } = await home();
+    await fireEvent.press(await screen.findByRole('button', { name: 'Play now' }));
+    await waitFor(() => expect(app.getPathname()).toBe('/ways-to-play'));
+    for (const row of ['Quick game', 'Play the computer', 'Challenge a friend', 'Friends']) {
+      expect(await screen.findByRole('link', { name: row })).toBeOnTheScreen();
+    }
+    expect(await screen.findByRole('link', { name: 'Trainer' })).toHaveTextContent(/PRO/);
     expect(screen.getByRole('link', { name: 'Tournaments' })).not.toHaveTextContent(/PRO/);
     await fireEvent.press(screen.getByRole('link', { name: 'Tournaments' }));
     await waitFor(() => expect(app.getPathname()).toBe('/tournaments'));
   });
 
+  test('a quick game, or the computer, each on its own', async () => {
+    const { app } = await home({}, '/ways-to-play');
+    await fireEvent.press(await screen.findByRole('link', { name: 'Play the computer' }));
+    await waitFor(() => expect(app.getPathname()).toBe('/play'));
+    expect(await screen.findByRole('button', { name: 'Play the computer' })).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Find an opponent' })).toBeNull();
+  });
+
+  test('the streak to keep, on the puzzle screen', async () => {
+    await puzzle({ [`GET ${DAILY_URL}`]: { status: 200, body: { ...DAILY, streak: 3 } } });
+    expect(await screen.findByText('Daily streak: 3 days')).toBeOnTheScreen();
+  });
+
   test('guests are not offered challenges', async () => {
-    await home({
-      'GET /api/v1/me': { status: 200, body: { ...ME, username: 'guest-3fa9c1', role: 'guest' } },
-    });
+    await home(
+      {
+        'GET /api/v1/me': {
+          status: 200,
+          body: { ...ME, username: 'guest-3fa9c1', role: 'guest' },
+        },
+      },
+      '/ways-to-play',
+    );
     expect(await screen.findByRole('link', { name: 'Tournaments' })).toBeOnTheScreen();
-    expect(screen.queryByRole('link', { name: 'Challenge a friend by link' })).toBeNull();
-    expect(
-      await screen.findByText(/^Nobody else is online right now\. Play now finds you/),
-    ).toBeOnTheScreen();
+    expect(screen.queryByRole('link', { name: 'Challenge a friend' })).toBeNull();
+  });
+
+  test('friends and players to find, from the menu', async () => {
+    await home({}, '/friends');
+    expect(await screen.findByText('Nobody else is online now.')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Find a player')).toBeOnTheScreen();
   });
 });

@@ -107,13 +107,10 @@ function Sounds({ choice }: { choice: LookChoice }) {
       {!themes && (
         <Upsell feature="themes">
           {wanted !== null
-            ? t(
-                'Use {name} and the other sound packs, with more boards and pieces and a badge by your name.',
-                {
-                  name: t(SOUNDS[wanted].name),
-                },
-              )
-            : t('More boards, pieces and sound packs, and a badge by your name.')}
+            ? t('Use {name}, more boards and pieces, and a badge.', {
+                name: t(SOUNDS[wanted].name),
+              })
+            : t('More boards, pieces and sounds, and a badge.')}
         </Upsell>
       )}
       {soundSupported() && (

@@ -3,15 +3,13 @@
  * are public (they name the app to Google): the build's EXPO_PUBLIC_GOOGLE_*_CLIENT_ID first,
  * else what the server's `GET /auth/providers` says.
  */
-import type { Api } from '@/api/endpoints';
+import type { AuthProviders } from '@/api/endpoints';
 
 export interface GoogleClientIds {
   web?: string | null | undefined;
   android?: string | null | undefined;
   ios?: string | null | undefined;
 }
-
-export type AuthProviders = Awaited<ReturnType<Api['authProviders']>>;
 
 /** The build's own ids (read by name, so the bundler can put them in). */
 export function builtInClientIds(): GoogleClientIds {

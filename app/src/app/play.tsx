@@ -49,7 +49,7 @@ export default function PlayNow() {
   const title =
     only === 'person' ? t('Quick game') : only === 'computer' ? t('Play the computer') : undefined;
   return (
-    <Screen title={title} align="top">
+    <Screen {...(title !== undefined && { title })} align="top">
       <TimeControlPicker value={timeControl} onChange={setTimeControl} />
       {only !== 'computer' && <FindOpponent timeControl={timeControl} alone={only !== null} />}
       {only !== 'person' && <PlayComputer timeControl={timeControl} alone={only !== null} />}
@@ -146,9 +146,7 @@ function FindOpponent({ timeControl, alone }: { timeControl: TimeControl; alone:
             onChange={setMode}
           />
         )}
-        {mode === 'rated' && (
-          <Hint>{t('Rated: two games, one on each side.')}</Hint>
-        )}
+        {mode === 'rated' && <Hint>{t('Rated: two games, one on each side.')}</Hint>}
         <ErrorNotice
           error={seek.error}
           onCasual={() => {
@@ -176,9 +174,7 @@ function FindOpponent({ timeControl, alone }: { timeControl: TimeControl; alone:
         ) : (
           <>
             {lapsed && (
-              <Notice tone="info">
-                {t('Nobody yet. Try again, or play the computer.')}
-              </Notice>
+              <Notice tone="info">{t('Nobody yet. Try again, or play the computer.')}</Notice>
             )}
             {known && <Text style={styles.muted}>{waitingText(others)}</Text>}
             <Button
@@ -220,11 +216,7 @@ function PlayComputer({ timeControl, alone }: { timeControl: TimeControl; alone:
         </View>
         <Hint>{t('Never rated. Easy gives you tips.')}</Hint>
         <ErrorNotice error={start.error} />
-        {locked && (
-          <Upsell feature="computer_hard">
-            {t('Play the Hard computer.')}
-          </Upsell>
-        )}
+        {locked && <Upsell feature="computer_hard">{t('Play the Hard computer.')}</Upsell>}
         {/* Secondary beside finding a person, the screen's main action. */}
         <Button
           title={t('Play the computer')}

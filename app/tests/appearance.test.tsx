@@ -35,7 +35,7 @@ describe('board, pieces and sounds', () => {
     await fireEvent.press(await screen.findByRole('link', { name: 'Board, pieces and sounds' }));
     await waitFor(() => expect(app.getPathname()).toBe('/appearance'));
     expect(
-      await screen.findByText('More boards, pieces and sound packs, and a badge by your name.'),
+      await screen.findByText('More boards, pieces and sounds, and a badge.'),
     ).toBeOnTheScreen();
     expect(radio('Wood')).toBeChecked();
     expect(screen.queryByRole('radio', { name: 'Badge' })).toBeNull();

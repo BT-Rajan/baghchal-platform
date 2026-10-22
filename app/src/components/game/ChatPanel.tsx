@@ -39,7 +39,7 @@ export function ChatPanel({ game, mine }: { game: Game; mine: Piece }) {
     <View style={styles.panel}>
       <SectionTitle>{t('Chat')}</SectionTitle>
       {data.closed_because === 'messages_off' ? (
-        <Hint>{t('Chat is off: one of you turned it off in Board, pieces and sounds.')}</Hint>
+        <Hint>{t('Chat is off: one of you turned it off.')}</Hint>
       ) : (
         <>
           {data.messages.length === 0 ? (

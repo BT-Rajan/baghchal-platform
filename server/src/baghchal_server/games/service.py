@@ -544,7 +544,7 @@ async def describe(
         deadline_at=game.deadline_at,
         draw_offer=game.draw_offer if active else None,
         undo=undo_option(game, viewer, in_tournament=tournament is not None),
-        takeback_offer=game.takeback_offer if active else None,  # type: ignore[arg-type]
+        takeback_offer=game.takeback_offer if active else None,
         server_time=now,
         created_at=game.created_at,
         finished_at=game.finished_at,
@@ -657,7 +657,7 @@ async def _describe_match(
 # ── Moves ─────────────────────────────────────────────────────────────────
 
 
-async def play(  # noqa: PLR0913 - the move, who plays it when, and their network
+async def play(  # noqa: PLR0913, PLR0915 - the move, who plays it when, and their network
     db: AsyncSession,
     game_id: uuid.UUID,
     user_id: uuid.UUID,
@@ -1003,10 +1003,10 @@ async def _check_undo(db: AsyncSession, game: Game, side: SideName) -> None:
     """Refuse a takeback this side may not have (whoever asks for it)."""
     if game.status != GameStatus.ACTIVE:
         raise AppError(409, "game_over", "This game is over.")
-    if game.rated:
-        raise AppError(409, "no_undo", "Moves cannot be taken back in rated games.")
     if await _tournament_code(db, game.id) is not None:
         raise AppError(409, "no_undo", "Moves cannot be taken back in tournament games.")
+    if game.rated:
+        raise AppError(409, "no_undo", "Moves cannot be taken back in rated games.")
     if not _has_moved(game, side):
         raise AppError(409, "no_undo", "You have no move to take back.")
 
@@ -1088,9 +1088,7 @@ async def undo(db: AsyncSession, game_id: uuid.UUID, user_id: uuid.UUID, now: da
                 Game.takeback_offer.is_(None),
                 getattr(Game, f"{side}_undos") < UNDO_LIMIT,
             )
-            .values(
-                takeback_offer=side, **{f"{side}_undos": getattr(Game, f"{side}_undos") + 1}
-            )
+            .values(takeback_offer=side, **{f"{side}_undos": getattr(Game, f"{side}_undos") + 1})
         )
         if asked.rowcount != 1:  # type: ignore[attr-defined]
             await db.rollback()

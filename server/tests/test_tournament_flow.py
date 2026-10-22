@@ -65,8 +65,10 @@ async def test_the_next_round_is_paired_when_the_last_game_ends(
         for me, them in ((p["goat"], p["tiger"]), (p["tiger"], p["goat"])):
             notes = await _notes(people[me["username"]])
             assert ("tournament_round", them["username"]) in notes
-            item = (await people[me["username"]].http.get("/api/v1/notifications")).json()
-            assert item["items"][0]["tournament"] == {"code": code, "name": "Friday cup"}
+            items = (await people[me["username"]].http.get("/api/v1/notifications")).json()
+            # Notifications made at the same instant (the clock stands still) come in any order.
+            (item,) = [i for i in items["items"] if i["kind"] == "tournament_round"]
+            assert item["tournament"] == {"code": code, "name": "Friday cup"}
 
 
 async def test_a_tournament_game_names_its_tournament(app: FastAPI, players: PlayerFactory) -> None:

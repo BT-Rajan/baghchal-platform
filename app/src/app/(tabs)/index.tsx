@@ -136,7 +136,11 @@ export default function Play() {
       {!live && (
         <Card>
           <Text style={styles.cardTitle}>{t('Ready for a game?')}</Text>
-          <Button title={t('Play now')} variant={playVariant} onPress={() => router.push('/play')} />
+          <Button
+            title={t('Play now')}
+            variant={playVariant}
+            onPress={() => router.push('/play')}
+          />
         </Card>
       )}
       <MoreWaysToPlay guest={me.role === 'guest'} />

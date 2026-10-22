@@ -1,7 +1,9 @@
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { AccessibilityInfo, Platform } from 'react-native';
 
-import { renderApp, savedToken } from './support/app';
+import { mockGoogle } from '../__mocks__/expo-auth-session/providers/google';
+
+import { renderApp, savedToken, savedUsername } from './support/app';
 import { AGREED, LEGAL, ME, error, type Route } from './support/fakeServer';
 import { game } from './support/games';
 
@@ -36,20 +38,22 @@ describe('the apps’ start screen', () => {
     expect(await screen.findByText(/^Tigers hunt\./)).toBeOnTheScreen();
     // An app's start screen, not the web's landing page.
     expect(screen.queryByRole('radio', { name: 'Play your way' })).toBeNull();
-    await press('Play now, no sign-up');
+    await fireEvent.press(screen.getByRole('link', { name: 'Play as a guest' }));
     await screen.findByRole('heading', { name: 'Play as a guest' });
     // What the first game is, said before it starts.
-    expect(screen.getByText(/^You'll play the goats against the Easy computer/)).toBeOnTheScreen();
+    expect(screen.getByText('You play the goats against the Easy computer.')).toBeOnTheScreen();
     // Nothing to type: only the agreement, accepted by the one button.
-    expect(screen.getByText(/confirm you are 13 or older/)).toBeOnTheScreen();
-    await screen.findByRole('button', { name: 'Accept and play', busy: false });
-    await press('Accept and play');
+    expect(screen.getByText(/are 13 or older/)).toBeOnTheScreen();
+    await screen.findByRole('button', { name: 'Play', busy: false });
+    await press('Play');
     await waitFor(() => expect(app.getPathname()).toBe('/game/g1'));
     expect(server.lastTo('POST /api/v1/auth/guest').body).toEqual({
       ...AGREED,
       transport: 'bearer',
     });
     expect(savedToken()).toBe('guest-tok');
+    // A guest has no password to sign in with: nothing is remembered for sign-in.
+    expect(savedUsername()).toBeNull();
     // The Easy computer, with the goats, who move first: the coach says what to do.
     expect(server.lastTo('POST /api/v1/games/computer').body).toEqual({
       level: 'easy',
@@ -63,8 +67,8 @@ describe('the apps’ start screen', () => {
     await renderApp('/start', {
       routes: { 'POST /api/v1/auth/guest': error(429, 'rate_limited', 'Slow down.') },
     });
-    await screen.findByRole('button', { name: 'Accept and play', busy: false });
-    await press('Accept and play');
+    await screen.findByRole('button', { name: 'Play', busy: false });
+    await press('Play');
     expect(await screen.findByText('Slow down.')).toBeOnTheScreen();
   });
 
@@ -77,23 +81,120 @@ describe('the apps’ start screen', () => {
       },
     });
     expect(await screen.findByText('Try again soon.')).toBeOnTheScreen();
-    await press('Accept and play');
+    await press('Play');
     expect(server.requests.filter((r) => r.path === '/api/v1/auth/guest')).toHaveLength(0);
     // They can be asked for again.
     fail = false;
     await press('Try again');
     await waitFor(() => expect(screen.queryByText('Try again soon.')).toBeNull());
-    expect(screen.getByRole('button', { name: 'Accept and play', busy: false })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Play', busy: false })).toBeEnabled();
   });
 
-  test('leads to sign in and sign up', async () => {
-    const { app } = await renderApp('/welcome');
-    await fireEvent.press(await screen.findByRole('button', { name: 'Sign in' }));
-    await waitFor(() => expect(app.getPathname()).toBe('/sign-in'));
-    await renderApp('/welcome').then(async ({ app: again }) => {
-      await fireEvent.press(await screen.findByRole('button', { name: 'Make a free account' }));
-      await waitFor(() => expect(again.getPathname()).toBe('/sign-up'));
+  test('has two big buttons, and small links to sign in and to play as a guest', async () => {
+    await renderApp('/welcome', {
+      routes: {
+        'GET /api/v1/auth/providers': {
+          status: 200,
+          body: { google: true, google_client_ids: { web: 'w', android: 'a', ios: 'i' } },
+        },
+      },
     });
+    expect(await screen.findByRole('button', { name: 'Sign up with Google' })).toBeOnTheScreen();
+    // Exactly two buttons: Sign up, and Sign up with Google.
+    expect(screen.getAllByRole('button')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Sign up' })).toBeOnTheScreen();
+    expect(screen.getByRole('link', { name: 'I have an account' })).toBeOnTheScreen();
+    expect(screen.getByRole('link', { name: 'Play as a guest' })).toBeOnTheScreen();
+  });
+
+  test('shows no Google button where Google sign-in is not set up', async () => {
+    await renderApp('/welcome');
+    expect(await screen.findByRole('button', { name: 'Sign up' })).toBeOnTheScreen();
+    await waitFor(() => expect(screen.getAllByRole('button')).toHaveLength(1));
+    expect(screen.queryByRole('button', { name: 'Sign up with Google' })).toBeNull();
+  });
+
+  test('a server that cannot say is the same: no Google button', async () => {
+    await renderApp('/welcome', {
+      routes: { 'GET /api/v1/auth/providers': error(503, 'unavailable', 'Down.') },
+    });
+    expect(await screen.findByRole('button', { name: 'Sign up' })).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Sign up with Google' })).toBeNull();
+    expect(screen.queryByText('Down.')).toBeNull();
+  });
+
+  test('leads to sign up and sign in', async () => {
+    const { app } = await renderApp('/welcome');
+    await press('Sign up');
+    await waitFor(() => expect(app.getPathname()).toBe('/sign-up'));
+    await renderApp('/welcome').then(async ({ app: again }) => {
+      await fireEvent.press(await screen.findByRole('link', { name: 'I have an account' }));
+      await waitFor(() => expect(again.getPathname()).toBe('/sign-in'));
+    });
+  });
+});
+
+describe('Google sign-in', () => {
+  const GOOGLE_ON = {
+    'GET /api/v1/auth/providers': {
+      status: 200,
+      body: { google: true, google_client_ids: { web: 'w', android: 'a', ios: 'ios-client' } },
+    },
+  };
+
+  test('one press signs up with Google, accepting the terms', async () => {
+    const { server } = await renderApp('/welcome', {
+      routes: {
+        ...GOOGLE_ON,
+        'POST /api/v1/auth/google': { status: 200, body: { user: ME, token: 'g-tok' } },
+      },
+    });
+    await screen.findByRole('button', { name: 'Sign up with Google', busy: false });
+    // This platform's client (iOS in tests), from the server.
+    expect(mockGoogle.config).toHaveBeenLastCalledWith(
+      expect.objectContaining({ iosClientId: 'ios-client' }),
+    );
+    expect(screen.getByText(/^By continuing you agree/)).toBeOnTheScreen();
+    await press('Sign up with Google');
+    expect(await screen.findByRole('heading', { name: 'Play' })).toBeOnTheScreen();
+    expect(server.lastTo('POST /api/v1/auth/google').body).toEqual({
+      id_token: 'google-id-token',
+      ...AGREED,
+      transport: 'bearer',
+    });
+    expect(savedToken()).toBe('g-tok');
+    expect(savedUsername()).toBe('alice');
+  });
+
+  test("the build's own client id is used without asking the server", async () => {
+    process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID = 'built-in';
+    try {
+      const { server } = await renderApp('/sign-in');
+      expect(await screen.findByRole('button', { name: 'Sign in with Google' })).toBeOnTheScreen();
+      expect(mockGoogle.config).toHaveBeenLastCalledWith(
+        expect.objectContaining({ iosClientId: 'built-in' }),
+      );
+      expect(server.requests.filter((r) => r.path.endsWith('/auth/providers'))).toHaveLength(0);
+    } finally {
+      delete process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+    }
+  });
+
+  test('a refusal, or Google failing, is shown', async () => {
+    const { server } = await renderApp('/sign-up', {
+      routes: {
+        ...GOOGLE_ON,
+        'POST /api/v1/auth/google': error(401, 'invalid_google_token', 'Google said no.'),
+      },
+    });
+    await screen.findByRole('button', { name: 'Sign up with Google', busy: false });
+    await press('Sign up with Google');
+    expect(await screen.findByText('Google said no.')).toBeOnTheScreen();
+    mockGoogle.nextAnswer = { type: 'error', params: {} };
+    await press('Sign up with Google');
+    expect(await screen.findByText("Google sign-in didn't work. Try again.")).toBeOnTheScreen();
+    expect(server.requests.filter((r) => r.path.endsWith('/auth/google'))).toHaveLength(1);
+    mockGoogle.nextAnswer = { type: 'success', params: { id_token: 'google-id-token' } };
   });
 });
 
@@ -108,7 +209,7 @@ describe('a guest', () => {
   test('is offered an account in the lobby', async () => {
     const { app } = await asGuest('/');
     expect(
-      await screen.findByText(/^You are playing as guest-3fa9c1\. Make a free account/),
+      await screen.findByText(/^Playing as guest-3fa9c1\. Make a free account/),
     ).toBeOnTheScreen();
     await press('Make a free account');
     await waitFor(() => expect(app.getPathname()).toBe('/claim'));
@@ -129,7 +230,7 @@ describe('a guest', () => {
     await fireEvent.changeText(screen.getByLabelText('Username'), 'Sita');
     await fireEvent.changeText(screen.getByLabelText('Email'), ' sita@example.com ');
     await fireEvent.changeText(screen.getByLabelText('Password'), 'correct horse');
-    await press('Accept and make my account');
+    await press('Make my account');
     expect(await screen.findByText(/^Your account is ready/)).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/me/claim').body).toEqual({
       terms_version: AGREED.terms_version,
@@ -142,20 +243,20 @@ describe('a guest', () => {
     expect(screen.getByRole('button', { name: 'Make it yours' })).toBeOnTheScreen();
     await press('Back to playing');
     await waitFor(() => expect(app.getPathname()).toBe('/'));
-    expect(screen.queryByText(/^You are playing as/)).toBeNull();
+    expect(screen.queryByText(/^Playing as/)).toBeNull();
   });
 
   test('sees why a claim fails, by the field', async () => {
     await asGuest('/claim', {
       'POST /api/v1/me/claim': error(409, 'username_taken', 'That username is taken.'),
     });
-    await screen.findByRole('button', { name: 'Accept and make my account', busy: false });
-    await press('Accept and make my account');
+    await screen.findByRole('button', { name: 'Make my account', busy: false });
+    await press('Make my account');
     expect(screen.getByText('Choose a username.', { exact: false })).toBeDefined();
     await fireEvent.changeText(screen.getByLabelText('Username'), 'bob');
     await fireEvent.changeText(screen.getByLabelText('Email'), 'b@example.com');
     await fireEvent.changeText(screen.getByLabelText('Password'), 'correct horse');
-    await press('Accept and make my account');
+    await press('Make my account');
     expect(await screen.findByText('That username is taken.')).toBeOnTheScreen();
   });
 
@@ -170,14 +271,14 @@ describe('a guest', () => {
     });
     expect(await screen.findByRole('button', { name: 'Sign out' })).toBeOnTheScreen();
     // The way to keep the account is on the home screen and the profile, not here too.
-    expect(screen.queryByText(/^You are playing as/)).toBeNull();
+    expect(screen.queryByText(/^Playing as/)).toBeNull();
     expect(screen.queryByText(/guest-3fa9c1@guest\.invalid/)).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Email address' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Moderation' })).toBeNull();
     // Signing out loses the account: asked first.
     await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
     expect(
-      screen.getByText(/^Sign out and lose this guest account\? Its games cannot be got back\./),
+      screen.getByText(/^Sign out and lose this guest account and its games\?/),
     ).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeOnTheScreen();
@@ -232,7 +333,7 @@ describe('the web’s landing page', () => {
     expect(screen.getByText('The computer')).toBeOnTheScreen();
     expect(screen.getByText('site footer')).toBeOnTheScreen();
     // No separate page to accept the terms: the line under the choice says playing accepts.
-    expect(screen.getByText(/^By playing you agree to our/)).toBeOnTheScreen();
+    expect(screen.getByText(/^By continuing you agree to our/)).toBeOnTheScreen();
     await press('Play the tigers');
     await waitFor(() => expect(app.getPathname()).toBe('/game/g1'));
     expect(server.lastTo('POST /api/v1/auth/guest').body).toEqual({

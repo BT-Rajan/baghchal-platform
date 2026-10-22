@@ -181,9 +181,7 @@ test('Plus bought on Pro waits for Pro to end', async () => {
       body: { ...PAID, starts: '2027-01-01T12:00:00Z', until: '2027-01-31T12:00:00Z' },
     },
   });
-  expect(
-    await screen.findByText('Starts when your Pro ends, so none of it is spent underneath it.'),
-  ).toBeOnTheScreen();
+  expect(await screen.findByText('Starts when your Pro ends.')).toBeOnTheScreen();
   expect(screen.getAllByText(/^Starts when your Pro ends/)).toHaveLength(1); // only on Plus
   await fireEvent.press(screen.getByRole('button', { name: 'Buy ClawPlay Plus for a month' }));
   await waitFor(() => expect(opened).toHaveLength(1));

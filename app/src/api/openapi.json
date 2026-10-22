@@ -8,7 +8,7 @@
     "/api/v1/auth/register": {
       "post": {
         "summary": "Register",
-        "description": "Start sign-up. The account becomes usable once the emailed link is opened.",
+        "description": "Make an account and sign in at once. A link to confirm the address is emailed; the\naccount plays without it. An address or username in use: ``email_taken`` or\n``username_taken``.",
         "operationId": "register_api_v1_auth_register_post",
         "requestBody": {
           "content": {
@@ -21,12 +21,70 @@
           "required": true
         },
         "responses": {
-          "202": {
+          "201": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Accepted"
+                  "$ref": "#/components/schemas/SessionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/providers": {
+      "get": {
+        "summary": "Sign In Providers",
+        "description": "Ways to sign in besides a password: whether Google is offered, and the public client ids\nthe apps ask Google for a token with.",
+        "operationId": "sign_in_providers_api_v1_auth_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProvidersOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/google": {
+      "post": {
+        "summary": "Google Sign In",
+        "description": "Sign in with a Google ID token, making the account the first time (its address is\nGoogle's, verified). An account with the same address is linked to the Google account.",
+        "operationId": "google_sign_in_api_v1_auth_google_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleSignInIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionOut"
                 }
               }
             }
@@ -1714,6 +1772,129 @@
       "post": {
         "summary": "Claim Abandonment",
         "operationId": "claim_abandonment_api_v1_games__game_id__claim_abandonment_post",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/undo": {
+      "post": {
+        "summary": "Undo",
+        "description": "Take my last move back. Against the computer it happens at once (with the computer's\nreply, if it replied); against a person it asks them (``takeback_offer``). Casual games\nonly, after a move of mine, three times a game.",
+        "operationId": "undo_api_v1_games__game_id__undo_post",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/undo/accept": {
+      "post": {
+        "summary": "Accept Undo",
+        "description": "Let my opponent take their last move back (and my reply, if I made one). The clocks\nkeep the time each side has; the turn goes back.",
+        "operationId": "accept_undo_api_v1_games__game_id__undo_accept_post",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/{game_id}/undo/decline": {
+      "post": {
+        "summary": "Decline Undo",
+        "description": "Turn down my opponent's takeback request (moving on does the same).",
+        "operationId": "decline_undo_api_v1_games__game_id__undo_decline_post",
         "parameters": [
           {
             "name": "game_id",
@@ -4561,6 +4742,11 @@
               }
             ],
             "title": "Email Verified At"
+          },
+          "google_linked": {
+            "type": "boolean",
+            "title": "Google Linked",
+            "default": false
           }
         },
         "type": "object",
@@ -5241,6 +5427,31 @@
             ],
             "title": "Draw Offer"
           },
+          "undo": {
+            "type": "string",
+            "enum": [
+              "none",
+              "now",
+              "ask"
+            ],
+            "title": "Undo",
+            "default": "none"
+          },
+          "takeback_offer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "goat",
+                  "tiger"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Takeback Offer"
+          },
           "server_time": {
             "type": "string",
             "format": "date-time",
@@ -5390,6 +5601,90 @@
         ],
         "title": "GameSummaryOut",
         "description": "A finished game, from one player's side, for their game history."
+      },
+      "GoogleClientIdsOut": {
+        "properties": {
+          "web": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Web"
+          },
+          "android": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Android"
+          },
+          "ios": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ios"
+          }
+        },
+        "type": "object",
+        "required": [
+          "web",
+          "android",
+          "ios"
+        ],
+        "title": "GoogleClientIdsOut"
+      },
+      "GoogleSignInIn": {
+        "properties": {
+          "terms_version": {
+            "type": "string",
+            "maxLength": 16,
+            "minLength": 1,
+            "title": "Terms Version"
+          },
+          "privacy_version": {
+            "type": "string",
+            "maxLength": 16,
+            "minLength": 1,
+            "title": "Privacy Version"
+          },
+          "id_token": {
+            "type": "string",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Id Token"
+          },
+          "transport": {
+            "type": "string",
+            "enum": [
+              "cookie",
+              "bearer"
+            ],
+            "title": "Transport",
+            "default": "cookie"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "terms_version",
+          "privacy_version",
+          "id_token"
+        ],
+        "title": "GoogleSignInIn",
+        "description": "Sign in with Google, making the account the first time. The agreement counts only when\nan account is made."
       },
       "GrantIn": {
         "properties": {
@@ -6858,6 +7153,31 @@
         ],
         "title": "ProfileOut"
       },
+      "ProvidersOut": {
+        "properties": {
+          "google": {
+            "type": "boolean",
+            "title": "Google"
+          },
+          "google_client_ids": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoogleClientIdsOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "google",
+          "google_client_ids"
+        ],
+        "title": "ProvidersOut",
+        "description": "Ways to sign in besides a password, as configured on this server."
+      },
       "PuzzleOut": {
         "properties": {
           "id": {
@@ -6999,6 +7319,15 @@
             "maxLength": 128,
             "minLength": 10,
             "title": "Password"
+          },
+          "transport": {
+            "type": "string",
+            "enum": [
+              "cookie",
+              "bearer"
+            ],
+            "title": "Transport",
+            "default": "cookie"
           }
         },
         "additionalProperties": false,
@@ -7010,7 +7339,8 @@
           "email",
           "password"
         ],
-        "title": "RegisterIn"
+        "title": "RegisterIn",
+        "description": "Sign-up signs the player in at once; the address is confirmed later, by the emailed\nlink, and nothing waits for it."
       },
       "RelationOut": {
         "properties": {

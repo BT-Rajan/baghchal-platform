@@ -28,7 +28,7 @@ describe("blocking from a player's page", () => {
     const { server } = await signedIn('/player/bob', { 'GET /api/v1/players/bob': profile(false) });
     await screen.findByRole('button', { name: 'Block bob' });
     await press('Block bob');
-    expect(screen.getByText(/^Block bob\? Neither of you/)).toBeOnTheScreen();
+    expect(screen.getByText(/^Block bob\? You won't challenge/)).toBeOnTheScreen();
     await press('Cancel');
     expect(screen.queryByText(/^Block bob\?/)).toBeNull();
 
@@ -36,7 +36,7 @@ describe("blocking from a player's page", () => {
     await press('Block bob');
     server.on('GET /api/v1/players/bob', profile(true));
     await press('Yes, block bob');
-    expect(await screen.findByText(/^You have blocked bob\./)).toBeOnTheScreen();
+    expect(await screen.findByText(/^You blocked bob\./)).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Challenge bob' })).toBeNull();
     expect(server.lastTo('PUT /api/v1/blocks/bob')).toBeDefined();
 

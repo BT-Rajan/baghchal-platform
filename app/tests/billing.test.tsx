@@ -86,7 +86,7 @@ describe('plans', () => {
       },
     });
     expect(await screen.findByText('No finished games yet.')).toBeOnTheScreen();
-    expect(screen.queryByText(/^Your history shows games from the last 30 days/)).toBeNull();
+    expect(screen.queryByText(/^Games from the last 30 days/)).toBeNull();
     await open('/me', {
       'GET /api/v1/players/alice': {
         status: 200,
@@ -94,7 +94,7 @@ describe('plans', () => {
       },
     });
     expect(
-      await screen.findByText('Your history shows games from the last 30 days. Keep every game.'),
+      await screen.findByText('Games from the last 30 days. Keep every game.'),
     ).toBeOnTheScreen();
   });
 });

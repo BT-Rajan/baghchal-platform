@@ -52,7 +52,7 @@ export default function Plans() {
           <Notice tone="info">{myPlanText(mine.data)}</Notice>
           <Hint>
             {t(
-              'Everyone plays live games, rated matches and quick pairing for free. Ratings can never be bought: paid plans add extras, not advantages.',
+              'Playing, rated games included, is free. Plans add extras; ratings are never for sale.',
             )}
           </Hint>
           <View style={styles.grid}>
@@ -92,9 +92,7 @@ export default function Plans() {
                 ? [
                     t('Plans are paid in advance and never renew by themselves.'),
                     t('Buying again adds on.'),
-                    t(
-                      'A better plan starts at once, and what you had left of another follows it. A plan bought while you have a better one starts when that one ends.',
-                    ),
+                    t('A better plan starts at once; a lesser one waits for it to end.'),
                   ]
                 : []),
             ].map((line) => (
@@ -178,7 +176,7 @@ function PlanColumn({
         {priced && saving !== null && <Text style={styles.saving}>{saving}</Text>}
         {onBuy !== null && cheaper && (
           <Hint>
-            {t('Starts when your {plan} ends, so none of it is spent underneath it.', {
+            {t('Starts when your {plan} ends.', {
               plan: planName(mine.plan),
             })}
           </Hint>

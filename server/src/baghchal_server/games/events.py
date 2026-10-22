@@ -21,10 +21,14 @@ async def notify(
     not on game 1's screen is taken to it."""
     out = await service.describe(db, game, state.clock())
     in_tournament = out.tournament is not None
+    # Worked out now: what follows may commit, and the game's attributes then expire.
+    undo = {
+        uid: service.undo_option(game, uid, in_tournament=in_tournament)
+        for uid in {game.goat_id, game.tiger_id, viewer}
+    }
 
     def seen_by(user_id: uuid.UUID | None) -> GameOut:
-        undo = service.undo_option(game, user_id, in_tournament=in_tournament)
-        return out if undo == out.undo else out.model_copy(update={"undo": undo})
+        return out if undo[user_id] == out.undo else out.model_copy(update={"undo": undo[user_id]})
 
     for user_id in (game.goat_id, game.tiger_id):
         await state.hub.send(user_id, GameEvent(game=seen_by(user_id)).model_dump_json())

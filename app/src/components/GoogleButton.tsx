@@ -4,6 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
+import { ApiError } from '@/api/errors';
 import { builtInClientIds, googleClientId } from '@/auth/google';
 import { useSession } from '@/auth/session';
 import { t } from '@/i18n';
@@ -80,7 +81,9 @@ function GoogleSignIn({
     if (idToken) mutate(idToken);
   }, [response, mutate]);
   const failed =
-    response?.type === 'error' ? new Error(t("Google sign-in didn't work. Try again.")) : null;
+    response?.type === 'error'
+      ? new ApiError(0, 'google_failed', t("Google sign-in didn't work. Try again."))
+      : null;
   return (
     <>
       <ErrorNotice error={signIn.error ?? failed} />

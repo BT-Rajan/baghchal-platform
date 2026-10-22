@@ -435,9 +435,7 @@ describe('leaderboard', () => {
 
     await fireEvent.press(screen.getByRole('radio', { name: 'Standard' }));
     expect(await screen.findByText(/Nobody is listed yet/)).toBeOnTheScreen();
-    expect(
-      screen.getByText('You have no standard rating yet: play a rated game to get one.'),
-    ).toBeOnTheScreen();
+    expect(screen.getByText('No standard rating yet. Play a rated game.')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Play a rated game' })).toBeOnTheScreen();
   });
 

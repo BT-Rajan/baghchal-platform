@@ -2,7 +2,7 @@ import { builtInClientIds, clientIdFor, googleClientId } from './google';
 
 const SERVER_IDS = { web: 'web-srv', android: 'android-srv', ios: 'ios-srv' };
 
-test("each platform uses its own client, and a blank one counts as none", () => {
+test('each platform uses its own client, and a blank one counts as none', () => {
   const ids = { web: 'w', android: ' a ', ios: '' };
   expect(clientIdFor('web', ids)).toBe('w');
   expect(clientIdFor('android', ids)).toBe('a');
@@ -12,9 +12,15 @@ test("each platform uses its own client, and a blank one counts as none", () => 
 });
 
 test("the build's ids come first, then the server's when it says Google is on", () => {
-  expect(googleClientId('android', { android: 'own' }, { google: true, google_client_ids: SERVER_IDS })).toBe('own');
-  expect(googleClientId('android', {}, { google: true, google_client_ids: SERVER_IDS })).toBe('android-srv');
-  expect(googleClientId('android', {}, { google: false, google_client_ids: SERVER_IDS })).toBeNull();
+  expect(
+    googleClientId('android', { android: 'own' }, { google: true, google_client_ids: SERVER_IDS }),
+  ).toBe('own');
+  expect(googleClientId('android', {}, { google: true, google_client_ids: SERVER_IDS })).toBe(
+    'android-srv',
+  );
+  expect(
+    googleClientId('android', {}, { google: false, google_client_ids: SERVER_IDS }),
+  ).toBeNull();
   expect(googleClientId('android', {}, { google: true, google_client_ids: null })).toBeNull();
   expect(googleClientId('ios', {}, undefined)).toBeNull();
 });

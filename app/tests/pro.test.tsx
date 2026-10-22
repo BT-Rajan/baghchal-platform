@@ -96,9 +96,7 @@ describe('tournaments', () => {
       'GET /api/v1/tournaments/cup1': { status: 200, body: tournament({ players: [ALICE] }) },
     });
     expect(
-      await screen.findByText(
-        'You are not in any tournament yet. Join one with a link from a friend.',
-      ),
+      await screen.findByText('No tournaments yet. Join one by link, or host one.'),
     ).toBeOnTheScreen();
     // A name to start from, mine; a name is needed.
     expect(screen.getByLabelText('Name')).toHaveDisplayValue("alice's tournament");

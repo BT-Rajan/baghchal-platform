@@ -51,24 +51,25 @@ describe('Enter goes to the next field', () => {
     expect(screen.getByLabelText('Repeat the new password').props.returnKeyType).toBe('go');
   });
 
-  test("changing the account's email address and password", async () => {
+  test("changing the account's email address", async () => {
     const focused = focusing();
-    await renderApp('/settings', {
+    await renderApp('/settings/email', {
       token: 'tok',
       routes: { 'GET /api/v1/me': { status: 200, body: ME } },
     });
-    await fireEvent.press(
-      await screen.findByRole('button', { name: 'Email address', expanded: false }),
-    );
-    await fireEvent(screen.getByLabelText('New email address'), 'submitEditing');
-    await fireEvent.press(screen.getByRole('button', { name: 'Password', expanded: false }));
-    await fireEvent(screen.getByLabelText('Current password'), 'submitEditing');
+    await fireEvent(await screen.findByLabelText('New email address'), 'submitEditing');
+    expect(focused()).toEqual(['Your password']);
+  });
+
+  test("changing the account's password", async () => {
+    const focused = focusing();
+    await renderApp('/settings/password', {
+      token: 'tok',
+      routes: { 'GET /api/v1/me': { status: 200, body: ME } },
+    });
+    await fireEvent(await screen.findByLabelText('Current password'), 'submitEditing');
     await fireEvent(screen.getByLabelText('New password'), 'submitEditing');
-    expect(focused()).toEqual([
-      'Your password (to change the email address)',
-      'New password',
-      'Repeat the new password',
-    ]);
+    expect(focused()).toEqual(['New password', 'Repeat the new password']);
     expect(screen.getByLabelText('Repeat the new password').props.returnKeyType).toBe('go');
   });
 });

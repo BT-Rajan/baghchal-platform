@@ -48,11 +48,7 @@ export default function WaysToPlay() {
         title={t('Tournaments')}
         onPress={() => router.push('/tournaments')}
       />
-      <FeatureLink
-        icon="puzzle"
-        title={t('Daily puzzle')}
-        onPress={() => router.push('/puzzle')}
-      />
+      <FeatureLink icon="puzzle" title={t('Daily puzzle')} onPress={() => router.push('/puzzle')} />
       <FeatureLink
         icon="puzzle"
         title={t('Trainer')}

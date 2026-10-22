@@ -299,7 +299,7 @@ async def _free_username(db: AsyncSession, settings: Settings, email: str) -> st
     raise AppError(503, "try_again", "Please try again.")
 
 
-async def google_sign_in(  # noqa: PLR0913 - who Google says it is, and what they agreed to
+async def google_sign_in(  # noqa: PLR0913, PLR0917 - who Google says it is, and what they agreed
     db: AsyncSession,
     hasher: PasswordHasher,
     settings: Settings,

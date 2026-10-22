@@ -72,7 +72,7 @@ export function ChallengeForm({ opponent }: { opponent?: string }) {
       {byLink && (
         <Hint>
           {t(
-            'Make a link to a casual game and send it to a friend. Whoever opens it first plays you, as long as you are online. The link is open for a day.',
+            'A casual game: whoever opens the link first plays you, while you are online. Open for a day.',
           )}
         </Hint>
       )}
@@ -93,7 +93,7 @@ export function ChallengeForm({ opponent }: { opponent?: string }) {
         />
       )}
       {mode === 'rated' ? (
-        <Hint>{t('A rated match is two games: you each play goats once and tigers once.')}</Hint>
+        <Hint>{t('Rated: two games, one on each side.')}</Hint>
       ) : (
         <Segmented
           label={t('You play')}
@@ -119,9 +119,7 @@ function MadeLink({ title, challenge }: { title: string; challenge: Challenge })
   return (
     <Screen title={title}>
       <Hint>
-        {t(
-          'Send this link to a friend. The game starts when they open it while you are online; it is also under Your challenges on Play.',
-        )}
+        {t('Send it to a friend. The game starts when they open it while you are online.')}
       </Hint>
       <ErrorNotice error={answer.error} />
       <ChallengeCard

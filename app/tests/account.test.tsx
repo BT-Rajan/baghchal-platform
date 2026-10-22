@@ -1,19 +1,26 @@
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
-import { Share } from 'react-native';
+import { Platform, Share } from 'react-native';
 
-import { renderApp } from './support/app';
+import { renderApp, savedUsername } from './support/app';
 import { LINK_TOKEN, ME, error, type Route } from './support/fakeServer';
 
 const SIGNED_IN = { 'GET /api/v1/me': { status: 200, body: ME } };
 
-/** Settings, with one section of the account opened (they start shut). */
+afterEach(() => jest.restoreAllMocks());
+
+const SECTIONS: Record<string, string> = {
+  'Email address': 'email',
+  Password: 'password',
+  'Your data': 'data',
+  'Delete account': 'delete',
+};
+
+/** One part of the account, on its own screen (in the apps; the web folds them into one page). */
 async function account(section: string, routes: Record<string, Route> = {}) {
-  const rendered = await renderApp('/settings', {
+  return renderApp(`/settings/${SECTIONS[section]!}`, {
     token: 'tok',
     routes: { ...SIGNED_IN, ...routes },
   });
-  await fireEvent.press(await screen.findByRole('button', { name: section, expanded: false }));
-  return rendered;
 }
 
 async function press(name: string | RegExp) {
@@ -38,8 +45,33 @@ test('the Me tab leads to the settings', async () => {
   });
   await screen.findByRole('button', { name: 'Settings' });
   await press('Settings');
-  expect(await screen.findByRole('button', { name: 'Email address' })).toBeOnTheScreen();
+  expect(await screen.findByRole('link', { name: 'Account' })).toBeOnTheScreen();
   expect(app.getPathname()).toBe('/settings');
+});
+
+test('in the apps, settings are a short list, each row its own screen', async () => {
+  const { app } = await renderApp('/settings', { token: 'tok', routes: SIGNED_IN });
+  for (const row of ['Board, pieces and sounds', 'Language', 'Plan', 'Terms of service']) {
+    expect(await screen.findByRole('link', { name: row })).toBeOnTheScreen();
+  }
+  expect(screen.queryByRole('button', { name: 'Email address' })).toBeNull();
+  await fireEvent.press(screen.getByRole('link', { name: 'Account' }));
+  await waitFor(() => expect(app.getPathname()).toBe('/settings/account'));
+  for (const row of ['Email address', 'Password', 'Blocked players', 'Your data']) {
+    expect(await screen.findByRole('link', { name: row })).toBeOnTheScreen();
+  }
+  await fireEvent.press(screen.getByRole('link', { name: 'Delete account' }));
+  await waitFor(() => expect(app.getPathname()).toBe('/settings/delete'));
+  expect(await screen.findByRole('button', { name: 'Delete my account…' })).toBeOnTheScreen();
+});
+
+test('on the web, settings are one page, the account folded shut', async () => {
+  jest.replaceProperty(Platform, 'OS', 'web');
+  await renderApp('/settings', { token: 'tok', routes: SIGNED_IN });
+  await fireEvent.press(
+    await screen.findByRole('button', { name: 'Email address', expanded: false }),
+  );
+  expect(await screen.findByText('Your email address is alice@example.com.')).toBeOnTheScreen();
 });
 
 describe('changing the email address', () => {
@@ -49,12 +81,10 @@ describe('changing the email address', () => {
     });
     await screen.findByText('Your email address is alice@example.com.');
     await type('New email address', ' new@example.org ');
-    await type('Your password (to change the email address)', 'secret');
+    await type('Your password', 'secret');
     await press('Send a confirmation link');
     expect(
-      await screen.findByText(
-        'We sent a link to new@example.org. Your address changes when you open it.',
-      ),
+      await screen.findByText('Link sent to new@example.org. Open it to change your address.'),
     ).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/me/email').body).toEqual({
       password: 'secret',
@@ -74,7 +104,7 @@ describe('changing the email address', () => {
     expect(server.requests.some((r) => r.path === '/api/v1/me/email')).toBe(false);
 
     await type('New email address', 'new@example.org');
-    await type('Your password (to change the email address)', 'wrong');
+    await type('Your password', 'wrong');
     await press('Send a confirmation link');
     expect(await screen.findByText('That is not your current password.')).toBeOnTheScreen();
   });
@@ -88,9 +118,7 @@ describe('changing the password', () => {
     await type('Repeat the new password', 'a brand new one');
     await press('Change password');
     expect(
-      await screen.findByText(
-        'Your password has been changed. Your other devices have been signed out.',
-      ),
+      await screen.findByText('Password changed. Your other devices are signed out.'),
     ).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/me/password').body).toEqual({
       current_password: 'old password',
@@ -153,14 +181,16 @@ describe('deleting the account', () => {
     });
     await press('Delete my account…');
     await press('Keep my account');
-    expect(screen.queryByLabelText('Your password (to delete your account)')).toBeNull();
+    expect(screen.queryByLabelText('Your password')).toBeNull();
 
     await press('Delete my account…');
     await press('Delete my account for good');
     expect(screen.getByText('Enter your password.')).toBeOnTheScreen();
-    await type('Your password (to delete your account)', 'secret');
+    await type('Your password', 'secret');
     await press('Delete my account for good');
-    expect(await screen.findByRole('button', { name: 'Play now, no sign-up' })).toBeOnTheScreen();
+    // The account is gone: this device forgets its username too, and shows the start screen.
+    expect(await screen.findByRole('button', { name: 'Sign up' })).toBeOnTheScreen();
+    expect(savedUsername()).toBeNull();
     expect(server.lastTo('POST /api/v1/me/delete').body).toEqual({ password: 'secret' });
   });
 
@@ -173,7 +203,7 @@ describe('deleting the account', () => {
       ),
     });
     await press('Delete my account…');
-    await type('Your password (to delete your account)', 'secret');
+    await type('Your password', 'secret');
     await press('Delete my account for good');
     expect(
       await screen.findByText('Finish or resign your live game before deleting your account.'),

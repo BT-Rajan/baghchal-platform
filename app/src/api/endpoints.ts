@@ -14,6 +14,8 @@ export type Challenge = S['ChallengeOut'];
 export type ChallengeList = S['ChallengeList'];
 export type ChallengeRequest = S['ChallengeIn'];
 export type Game = S['GameOut'];
+export type UndoOption = S['GameOut']['undo'];
+export type AuthProviders = S['ProvidersOut'];
 export type LeaderboardEntry = S['LeaderboardEntry'];
 export type Friends = S['FriendsOut'];
 export type FriendRelation = S['RelationOut']['relation'];
@@ -103,8 +105,16 @@ const seg = encodeURIComponent;
 export function createApi(client: Client, transport: Transport) {
   return {
     // Accounts
-    register: (body: S['RegisterIn']) =>
-      client.post<S['Accepted']>(`${V1}/auth/register`, { body }),
+    /** Makes the account and signs in at once; the confirmation email goes out meanwhile. */
+    register: (body: Omit<S['RegisterIn'], 'transport'>) =>
+      client.post<Session>(`${V1}/auth/register`, { body: { ...body, transport } }),
+    /** Signs in with a Google ID token, making the account the first time. */
+    googleSignIn: (idToken: string, agreement: Agreement) =>
+      client.post<Session>(`${V1}/auth/google`, {
+        body: { ...agreement, id_token: idToken, transport },
+      }),
+    authProviders: (signal?: AbortSignal) =>
+      client.get<AuthProviders>(`${V1}/auth/providers`, { signal }),
     verifyEmail: (token: string) =>
       client.post<Session>(`${V1}/auth/verify-email`, { body: { token, transport } }),
     playAsGuest: (agreement: Agreement) =>

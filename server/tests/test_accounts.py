@@ -4,7 +4,7 @@ import httpx
 import pytest
 from argon2 import PasswordHasher as Argon2
 from fastapi import FastAPI
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from baghchal_server.accounts.models import EmailToken, Session, User
@@ -35,22 +35,12 @@ async def _users(app: FastAPI) -> list[User]:
 # ── Registration ──────────────────────────────────────────────────────────
 
 
-async def test_sign_up_flow(client: httpx.AsyncClient, mailer: MemoryMailer) -> None:
+async def test_sign_up_signs_in_at_once(client: httpx.AsyncClient, mailer: MemoryMailer) -> None:
     r = await client.post(
         REGISTER,
         json={**AGREE, "username": "Alice", "email": "Alice@Example.com", "password": PASSWORD},
     )
-    assert r.status_code == 202
-    assert r.json() == {"status": "accepted"}
-    assert mailer.outbox[-1].to == "Alice@example.com"  # domain normalised
-    assert "/verify-email?token=" in mailer.outbox[-1].body
-
-    r = await client.post(LOGIN, json={"login": "alice", "password": PASSWORD})
-    assert r.status_code == 403
-    assert r.json()["error"]["code"] == "email_not_verified"
-
-    r = await client.post(VERIFY, json={"token": last_token(mailer)})
-    assert r.status_code == 200
+    assert r.status_code == 201, r.text
     body = r.json()
     assert body["user"]["username"] == "Alice"
     assert body["token"] is None
@@ -58,10 +48,43 @@ async def test_sign_up_flow(client: httpx.AsyncClient, mailer: MemoryMailer) -> 
     assert "HttpOnly" in cookie
     assert "SameSite=lax" in cookie
     assert "Path=/" in cookie
-
+    # The confirmation email still goes out, but nothing waits for it.
+    assert mailer.outbox[-1].to == "Alice@example.com"  # domain normalised
+    assert "/verify-email?token=" in mailer.outbox[-1].body
     r = await client.get(ME)
     assert r.status_code == 200
     assert r.json()["email"] == "Alice@example.com"
+    r = await client.post("/api/v1/games/computer", json={"level": "easy"})
+    assert r.status_code == 201, r.text  # unconfirmed accounts play
+
+    # Signing in again works before the address is confirmed.
+    await client.post(LOGOUT)
+    r = await client.post(LOGIN, json={"login": "alice", "password": PASSWORD})
+    assert r.status_code == 200, r.text
+
+    r = await client.post(VERIFY, json={"token": last_token(mailer)})
+    assert r.status_code == 200
+
+
+async def test_sign_up_with_a_bearer_token(
+    app_client: httpx.AsyncClient, mailer: MemoryMailer
+) -> None:
+    r = await app_client.post(
+        REGISTER,
+        json={
+            **AGREE,
+            "username": "alice",
+            "email": "a@example.com",
+            "password": PASSWORD,
+            "transport": "bearer",
+        },
+    )
+    assert r.status_code == 201, r.text
+    assert "set-cookie" not in r.headers
+    token = r.json()["token"]
+    r = await app_client.get(ME, headers={"authorization": f"Bearer {token}"})
+    assert (r.status_code, r.json()["username"]) == (200, "alice")
+    assert len(mailer.outbox) == 1
 
 
 @pytest.mark.parametrize(
@@ -153,84 +176,68 @@ async def test_usernames_are_unique_ignoring_case(
     assert r.json()["error"]["code"] == "username_taken"
 
 
-async def test_registering_a_known_email_does_not_reveal_it(
+async def test_an_email_in_use_is_refused(
     client: httpx.AsyncClient, mailer: MemoryMailer, app: FastAPI
 ) -> None:
     await sign_up(client, mailer)
+    sent = len(mailer.outbox)
     r = await client.post(
         REGISTER,
         json={**AGREE, "username": "bob", "email": "ALICE@example.com", "password": PASSWORD},
     )
-    assert r.status_code == 202
-    assert r.json() == {"status": "accepted"}
-    assert mailer.outbox[-1].subject == "You already have a ClawPlay account"
+    assert r.status_code == 409
+    assert r.json()["error"] == {
+        "code": "email_taken",
+        "message": "That email is already in use. Sign in instead.",
+    } | {k: v for k, v in r.json()["error"].items() if k not in {"code", "message"}}
+    assert len(mailer.outbox) == sent
     assert [u.username for u in await _users(app)] == ["alice"]
 
 
-async def test_re_registering_unverified_email_resends_a_fresh_link(
-    client: httpx.AsyncClient, mailer: MemoryMailer
+async def test_an_unconfirmed_address_is_in_use_too(
+    client: httpx.AsyncClient, app: FastAPI, clock: Clock
 ) -> None:
-    payload = {**AGREE, "username": "alice", "email": "alice@example.com", "password": PASSWORD}
-    await client.post(REGISTER, json=payload)
-    first = last_token(mailer)
-    await client.post(REGISTER, json=payload)
-    second = last_token(mailer)
-    assert first != second
-    assert (await client.post(VERIFY, json={"token": first})).status_code == 400
-    assert (await client.post(VERIFY, json={"token": second})).status_code == 200
-
-
-async def test_nobody_can_sign_up_ahead_of_an_address_owner(
-    client: httpx.AsyncClient, mailer: MemoryMailer, app: FastAPI
-) -> None:
-    """Someone signs up with another person's address first; that person then signs up and
-    opens the link: the account is theirs, with their username and password."""
+    """An account plays before it is confirmed, so its address and name stay taken, even
+    long after; the address's owner can reset the password instead."""
     await client.post(
         REGISTER,
-        json={
-            **AGREE,
-            "username": "mallory1",
-            "email": "v@example.com",
-            "password": "mallory pw 1",
-        },
+        json={**AGREE, "username": "mallory1", "email": "v@example.com", "password": "mallory pw"},
     )
-    await client.post(
+    clock.advance(days=30)
+    r = await client.post(
         REGISTER,
         json={**AGREE, "username": "victim", "email": "v@example.com", "password": PASSWORD},
     )
-    r = await client.post(VERIFY, json={"token": last_token(mailer)})
-    assert (r.status_code, r.json()["user"]["username"]) == (200, "victim")
-    login = "/api/v1/auth/login"
-    assert (
-        await client.post(login, json={"login": "v@example.com", "password": PASSWORD})
-    ).status_code == 200
-    r = await client.post(login, json={"login": "v@example.com", "password": "mallory pw 1"})
-    assert r.status_code == 401
-    assert [u.username for u in await _users(app)] == ["victim"]
-
-
-async def test_unverified_registrations_expire(
-    client: httpx.AsyncClient, mailer: MemoryMailer, clock: Clock, app: FastAPI
-) -> None:
-    await client.post(
-        REGISTER,
-        json={**AGREE, "username": "alice", "email": "first@example.com", "password": PASSWORD},
-    )
-    stale = last_token(mailer)
-    clock.advance(hours=25)
+    assert (r.status_code, r.json()["error"]["code"]) == (409, "email_taken")
     r = await client.post(
         REGISTER,
-        json={**AGREE, "username": "alice", "email": "second@example.com", "password": PASSWORD},
+        json={**AGREE, "username": "Mallory1", "email": "x@example.com", "password": PASSWORD},
     )
-    assert r.status_code == 202
-    assert [u.email for u in await _users(app)] == ["second@example.com"]
-    assert (await client.post(VERIFY, json={"token": stale})).status_code == 400
+    assert (r.status_code, r.json()["error"]["code"]) == (409, "username_taken")
+    assert [u.username for u in await _users(app)] == ["mallory1"]
+
+
+async def test_taken_answers_are_rate_limited(client: httpx.AsyncClient) -> None:
+    await client.post(
+        REGISTER,
+        json={**AGREE, "username": "alice", "email": "a@example.com", "password": PASSWORD},
+    )
+    codes = []
+    for i in range(31):
+        r = await client.post(
+            REGISTER,
+            json={**AGREE, "username": "alice", "email": f"u{i}@example.com", "password": PASSWORD},
+        )
+        codes.append(r.status_code)
+    assert codes[:30] == [409] * 30
+    assert codes[30] == 429
 
 
 async def test_registration_race_is_handled(
     client: httpx.AsyncClient, app: FastAPI, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Two sign-ups for one name at once: the loser gets username_taken, not a crash."""
+    """Two sign-ups for one name or address at once: the loser is told it is taken, not a
+    crash."""
     await client.post(
         REGISTER,
         json={**AGREE, "username": "alice", "email": "first@example.com", "password": PASSWORD},
@@ -258,7 +265,7 @@ async def test_registration_race_is_handled(
         REGISTER,
         json={**AGREE, "username": "carol", "email": "first@example.com", "password": PASSWORD},
     )
-    assert r.status_code == 202  # same email raced: answer as usual, send nothing
+    assert (r.status_code, r.json()["error"]["code"]) == (409, "email_taken")
 
 
 # ── Verification tokens ───────────────────────────────────────────────────
@@ -382,11 +389,11 @@ async def test_session_last_used_is_updated_sparingly(
     clock.advance(minutes=1)
     await client.get(ME)
     async with _db(app) as db:
-        assert (await db.scalar(select(Session.last_used_at))) == start
+        assert (await db.scalar(select(func.max(Session.last_used_at)))) == start
     clock.advance(minutes=10)
     await client.get(ME)
     async with _db(app) as db:
-        assert (await db.scalar(select(Session.last_used_at))) == clock.now
+        assert (await db.scalar(select(func.max(Session.last_used_at)))) == clock.now
 
 
 async def test_disabled_accounts_are_locked_out(
@@ -459,6 +466,24 @@ async def test_password_reset(
     assert r.status_code == 400
 
 
+async def test_password_reset_works_before_the_address_is_confirmed(
+    client: httpx.AsyncClient, mailer: MemoryMailer, app: FastAPI
+) -> None:
+    await client.post(
+        REGISTER,
+        json={**AGREE, "username": "alice", "email": "a@example.com", "password": PASSWORD},
+    )
+    r = await client.post(RESET, json={"email": "a@example.com"})
+    assert r.status_code == 202
+    assert mailer.outbox[-1].subject == "Reset your ClawPlay password"
+    r = await client.post(
+        RESET_CONFIRM, json={"token": last_token(mailer), "password": "a brand new passphrase"}
+    )
+    assert r.status_code == 204
+    async with _db(app) as db:
+        assert await db.scalar(select(User.email_verified_at)) is not None  # proved it
+
+
 async def test_password_reset_for_unknown_email_looks_the_same(
     client: httpx.AsyncClient, mailer: MemoryMailer
 ) -> None:
@@ -529,7 +554,7 @@ async def test_a_lost_confirmation_link_can_be_sent_again(
     client: httpx.AsyncClient, mailer: MemoryMailer
 ) -> None:
     body = {**AGREE, "username": "zed", "email": "zed@example.com", "password": PASSWORD}
-    assert (await client.post("/api/v1/auth/register", json=body)).status_code == 202
+    assert (await client.post("/api/v1/auth/register", json=body)).status_code == 201
     resend = "/api/v1/auth/verify-email/resend"
     r = await client.post(resend, json={"email": "ZED@example.com"})
     assert r.status_code == 202

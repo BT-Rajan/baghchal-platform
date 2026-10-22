@@ -3,7 +3,7 @@ import { AppState } from 'react-native';
 
 import { peekReturn } from '@/auth/returnTo';
 
-import { renderApp, savedToken } from './support/app';
+import { renderApp, savedToken, savedUsername } from './support/app';
 import { AGREED, LINK_TOKEN, ME, error } from './support/fakeServer';
 import { FakeSocket } from './support/fakeSocket';
 
@@ -23,10 +23,35 @@ async function type(label: string, text: string) {
   await fireEvent.changeText(screen.getByLabelText(label), text);
 }
 
-test('someone signed out is sent to the welcome page', async () => {
+test('someone signed out on a new device is sent to the start screen', async () => {
   const { app } = await renderApp('/');
-  expect(await screen.findByRole('button', { name: 'Play now, no sign-up' })).toBeOnTheScreen();
+  expect(await screen.findByRole('button', { name: 'Sign up' })).toBeOnTheScreen();
   expect(app.getPathname()).toBe('/welcome');
+});
+
+describe('a device someone signed in on before', () => {
+  test('opens sign-in with their username, ready for the password', async () => {
+    const { app } = await renderApp('/', { username: 'alice' });
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeOnTheScreen();
+    expect(app.getPathname()).toBe('/sign-in');
+    expect(screen.getByLabelText('Username or email').props.value).toBe('alice');
+    expect(screen.getByLabelText('Password').props.autoFocus).toBe(true);
+  });
+
+  test('"Not you?" forgets the username and shows the start screen', async () => {
+    const { app } = await renderApp('/', { username: 'alice' });
+    await fireEvent.press(await screen.findByRole('link', { name: 'Not you?' }));
+    await waitFor(() => expect(app.getPathname()).toBe('/welcome'));
+    expect(await screen.findByRole('button', { name: 'Sign up' })).toBeOnTheScreen();
+    expect(savedUsername()).toBeNull();
+  });
+
+  test('a new device has no "Not you?"', async () => {
+    await renderApp('/sign-in');
+    await screen.findByRole('heading', { name: 'Sign in' });
+    expect(screen.queryByRole('link', { name: 'Not you?' })).toBeNull();
+    expect(screen.getByLabelText('Username or email').props.value).toBe('');
+  });
 });
 
 test('a saved session opens the signed-in home', async () => {
@@ -41,12 +66,12 @@ describe('sign in', () => {
     await press('Sign in');
     expect(screen.getByText('Enter your username or email.')).toBeOnTheScreen();
     expect(screen.getByText('Enter your password.')).toBeOnTheScreen();
-    expect(server.requests).toHaveLength(0);
+    expect(server.requests.filter((r) => r.path.endsWith('/auth/login'))).toHaveLength(0);
   });
 
   test('offers a game without signing up', async () => {
     const { app } = await renderApp('/sign-in');
-    await fireEvent.press(await screen.findByRole('link', { name: 'Play now, no sign-up' }));
+    await fireEvent.press(await screen.findByRole('link', { name: 'Play as a guest' }));
     await waitFor(() => expect(app.getPathname()).toBe('/start'));
   });
 
@@ -67,7 +92,7 @@ describe('sign in', () => {
     expect(await screen.findByText('Wrong username, email or password.')).toBeOnTheScreen();
   });
 
-  test('signs in, keeps the token, and opens home; signing out returns', async () => {
+  test('signs in, keeps the token, and opens home; signing out returns to sign-in', async () => {
     const { server, app } = await renderApp('/sign-in', {
       routes: {
         'POST /api/v1/auth/login': { status: 200, body: { user: ME, token: 'new-token' } },
@@ -85,11 +110,15 @@ describe('sign in', () => {
       transport: 'bearer',
     });
     expect(savedToken()).toBe('new-token');
+    expect(savedUsername()).toBe('alice');
 
     await signOut();
-    expect(await screen.findByRole('button', { name: 'Play now, no sign-up' })).toBeOnTheScreen();
-    expect(app.getPathname()).toBe('/welcome');
+    // The username stays on this device: sign-in opens with it.
+    expect(await screen.findByRole('link', { name: 'Not you?' })).toBeOnTheScreen();
+    expect(app.getPathname()).toBe('/sign-in');
+    expect(screen.getByLabelText('Username or email').props.value).toBe('alice');
     expect(savedToken()).toBeNull();
+    expect(savedUsername()).toBe('alice');
     // Where they signed out (Settings) is not somewhere to go back to on signing in again.
     expect(peekReturn()).toBeNull();
   });
@@ -97,11 +126,11 @@ describe('sign in', () => {
 
 describe('sign up', () => {
   async function fill(username: string, email: string, password: string) {
-    await screen.findByRole('heading', { name: 'Make a free account' });
+    await screen.findByRole('heading', { name: 'Sign up' });
     await type('Username', username);
     await type('Email', email);
     await type('Password', password);
-    await press('Accept and make my account');
+    await press('Sign up');
   }
 
   test('checks the form before asking the server', async () => {
@@ -110,7 +139,7 @@ describe('sign up', () => {
     expect(screen.getByText(/3–20 letters/)).toBeOnTheScreen();
     expect(screen.getByText('Enter a valid email address.')).toBeOnTheScreen();
     expect(screen.getByText('Use at least 10 characters.')).toBeOnTheScreen();
-    expect(server.requests.map((r) => r.path)).toEqual(['/api/v1/legal']);
+    expect(server.requests.filter((r) => r.path.endsWith('/auth/register'))).toHaveLength(0);
   });
 
   test('puts a taken username on the username field', async () => {
@@ -123,18 +152,27 @@ describe('sign up', () => {
     expect(await screen.findByText('That username is taken.')).toBeOnTheScreen();
   });
 
-  test('asks the new player to check their email', async () => {
-    const { server } = await renderApp('/sign-up', {
-      routes: { 'POST /api/v1/auth/register': { status: 202, body: { status: 'accepted' } } },
+  test('signs the new player in at once: no email to wait for', async () => {
+    const { server, app } = await renderApp('/sign-up', {
+      routes: {
+        'POST /api/v1/auth/register': { status: 201, body: { user: ME, token: 'new-token' } },
+        'GET /api/v1/me': { status: 200, body: ME },
+      },
     });
     await fill('alice', ' alice@example.com ', 'correct horse');
-    expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeOnTheScreen();
+    // A new account's first stop: an optional board, pieces and friends.
+    expect(await screen.findByText('Find friends')).toBeOnTheScreen();
+    expect(app.getPathname()).toBe('/make-it-yours');
+    expect(screen.queryByText('Check your email')).toBeNull();
     expect(server.lastTo('POST /api/v1/auth/register').body).toEqual({
       ...AGREED,
       username: 'alice',
       email: 'alice@example.com',
       password: 'correct horse',
+      transport: 'bearer',
     });
+    expect(savedToken()).toBe('new-token');
+    expect(savedUsername()).toBe('alice');
   });
 
   test('reports a server it cannot reach', async () => {
@@ -159,7 +197,7 @@ test('forgot password sends a link', async () => {
   expect(screen.getByText('Enter your email address.')).toBeOnTheScreen();
   await type('Email', 'alice@example.com');
   await press('Email me a link');
-  expect(await screen.findByText(/we sent it a link/)).toBeOnTheScreen();
+  expect(await screen.findByText(/a link is on its way/)).toBeOnTheScreen();
   expect(server.last().body).toEqual({ email: 'alice@example.com' });
 });
 
@@ -168,11 +206,13 @@ describe('verify email', () => {
     const { server, app } = await renderApp(`/verify-email?token=${LINK_TOKEN}`, {
       routes: {
         'POST /api/v1/auth/verify-email': { status: 200, body: { user: ME, token: 'fresh' } },
+        'GET /api/v1/me': { status: 200, body: ME },
       },
     });
-    // A new account's first stop: an optional board, pieces and friends.
-    expect(await screen.findByText('Find friends')).toBeOnTheScreen();
-    expect(app.getPathname()).toBe('/make-it-yours');
+    expect(await screen.findByRole('heading', { name: 'Email confirmed' })).toBeOnTheScreen();
+    await press('Play');
+    expect(await screen.findByRole('heading', { name: 'Play' })).toBeOnTheScreen();
+    expect(app.getPathname()).toBe('/');
     const verifications = server.requests.filter((r) => r.path === '/api/v1/auth/verify-email');
     expect(verifications).toEqual([
       expect.objectContaining({ body: { token: LINK_TOKEN, transport: 'bearer' } }),
@@ -197,9 +237,9 @@ describe('verify email', () => {
       },
     });
     expect(await screen.findByText('This link is invalid or has expired.')).toBeOnTheScreen();
-    // The way forward: signing in to an unconfirmed account offers to send the link again.
+    // The way forward: sign in, and send a new link from settings.
     expect(screen.queryByText('Sign up again')).toBeNull();
-    await press('Sign in to get a new link');
+    await press('Sign in');
     await waitFor(() => expect(app.getPathname()).toBe('/sign-in'));
   });
 });
@@ -311,6 +351,6 @@ test('signing in opens the live connection; signing out closes it', async () => 
   expect(FakeSocket.all).toHaveLength(1);
   expect(FakeSocket.latest().url).toBe('ws://localhost:8000/api/v1/ws');
   await signOut();
-  await screen.findByRole('button', { name: 'Play now, no sign-up' });
+  await screen.findByRole('heading', { name: 'Sign in' });
   expect(FakeSocket.latest().closed).toBe(true);
 });

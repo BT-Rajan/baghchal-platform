@@ -41,7 +41,9 @@ export function AgreementLine({
         <ErrorState error={versions.error} onRetry={() => void versions.refetch()} />
       )}
       <Text style={[styles.small, onDark && styles.onDark]}>
-        {t('By continuing you agree to our terms and privacy policy, and are 13 or older (under 18, with a parent’s permission).')}
+        {t(
+          'By continuing you agree to our terms and privacy policy, and are 13 or older (under 18, with a parent’s permission).',
+        )}
       </Text>
       {/* The two texts, each a finger-sized link of its own under the sentence. */}
       <View style={styles.links}>

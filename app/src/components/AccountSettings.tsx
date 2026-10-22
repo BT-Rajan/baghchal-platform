@@ -311,8 +311,20 @@ export const ACCOUNT_PARTS: readonly {
   members: boolean;
   Part: () => ReactNode;
 }[] = [
-  { section: 'email', title: mark('Email address'), icon: 'mail', members: true, Part: EmailChange },
-  { section: 'password', title: mark('Password'), icon: 'lock', members: true, Part: PasswordChange },
+  {
+    section: 'email',
+    title: mark('Email address'),
+    icon: 'mail',
+    members: true,
+    Part: EmailChange,
+  },
+  {
+    section: 'password',
+    title: mark('Password'),
+    icon: 'lock',
+    members: true,
+    Part: PasswordChange,
+  },
   {
     section: 'blocked',
     title: mark('Blocked players'),

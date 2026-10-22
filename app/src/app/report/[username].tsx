@@ -46,10 +46,8 @@ export default function ReportForm() {
   return (
     <Screen title={t('Report {name}', { name: username })}>
       <ErrorNotice error={send.error} />
-      <Hint>{t('Reports go to the moderators. The player is not told who reported them.')}</Hint>
-      {game !== undefined && (
-        <Hint>{t('The report includes this game, so moderators can replay it.')}</Hint>
-      )}
+      <Hint>{t('Only moderators see reports, and never say who sent one.')}</Hint>
+      {game !== undefined && <Hint>{t('Moderators can replay this game.')}</Hint>}
       <Segmented
         label={t('What happened?')}
         options={REPORT_REASONS.map(({ value, label }) => ({ value, label: t(label) }))}

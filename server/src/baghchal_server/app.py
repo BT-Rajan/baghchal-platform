@@ -14,6 +14,7 @@ from fastapi import FastAPI
 from redis.asyncio import BlockingConnectionPool, Redis
 from starlette.middleware.cors import CORSMiddleware
 
+from baghchal_server.accounts.google import GoogleKeys
 from baghchal_server.accounts.routes import router as accounts_router
 from baghchal_server.achievements.routes import router as achievements_router
 from baghchal_server.app_links import router as app_links_router
@@ -43,7 +44,6 @@ from baghchal_server.legal import models as _legal_models  # noqa: F401  (regist
 from baghchal_server.legal.routes import router as legal_router
 from baghchal_server.lobby import models as _lobby_models  # noqa: F401  (registers tables)
 from baghchal_server.lobby.routes import router as lobby_router
-from baghchal_server.accounts.google import GoogleKeys
 from baghchal_server.mail import Mailer, make_mailer
 from baghchal_server.metrics import CountingMailer, Metrics
 from baghchal_server.middleware import BodyLimit, CrossSiteGuard, RequestContext, SecurityHeaders
@@ -104,7 +104,7 @@ def configure_error_tracking(settings: Settings) -> None:
     )
 
 
-def create_app(
+def create_app(  # noqa: PLR0913 - what tests replace
     settings: Settings | None = None,
     *,
     mailer: Mailer | None = None,
