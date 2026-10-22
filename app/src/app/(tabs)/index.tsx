@@ -8,35 +8,37 @@ import { Card, Hint, SectionTitle } from '@/components/Card';
 import { ChallengeCard } from '@/components/ChallengeCard';
 import { ChallengeOutcome } from '@/components/ChallengeOutcome';
 import { DailyPuzzle } from '@/components/DailyPuzzle';
+import { DemoBoard } from '@/components/game/DemoBoard';
 import { ErrorNotice } from '@/components/ErrorNotice';
-import { FeatureLink } from '@/components/FeatureLink';
 import { FriendList, FriendRequests } from '@/components/Friends';
 import { GameHistory } from '@/components/GameHistory';
 import { GuestBanner } from '@/components/GuestBanner';
 import { SuccessNotice } from '@/components/Snackbar';
 import { PlayerSearch } from '@/components/PlayerSearch';
+import { PlayModes } from '@/components/PlayModes';
 import { Screen } from '@/components/Screen';
 import { ErrorState } from '@/components/States';
 import { useServerNow } from '@/components/useNow';
 import { t } from '@/i18n';
-import { isOpen } from '@/lobby/format';
+import { CATEGORIES, isOpen } from '@/lobby/format';
 import {
   useActiveGames,
   useAnswerChallenge,
   useChallengeOutcomes,
   useChallenges,
+  useProfile,
 } from '@/lobby/hooks';
-import { colors, spacing, type } from '@/theme';
+import { colors, joinedLetters, radius, shadow, spacing, type } from '@/theme';
 
-/** Two columns (my games and things to do | players) from this width. */
+/** The board beside the hero, and two columns below (my day | players), from this width. */
 const WIDE = 900;
 
 /**
  * Home: a game to continue and challenges first. In the apps, then just two big buttons: Play
  * now (the play menu, app/ways-to-play.tsx, with every way to play) and Settings (and, for a
- * guest, the way to an account). On the web,
- * a way to start a game, the other ways to play, today's puzzle and my latest results, beside
- * the players online to challenge.
+ * guest, the way to an account). On the web, a game's home page: a hero with the main action,
+ * every way to play as tiles, then today's puzzle and my latest results beside the players
+ * online to challenge.
  */
 export default function Play() {
   const me = useMe();
@@ -59,14 +61,8 @@ export default function Play() {
   const live = (games.data?.length ?? 0) > 0;
   const app = Platform.OS !== 'web';
 
-  const gamesAndChallenges = (
+  const challengeList = (
     <>
-      {games.error !== null && (
-        <ErrorState error={games.error} onRetry={() => void games.refetch()} />
-      )}
-      {games.data?.map((game) => (
-        <LiveGame key={game.id} game={game} myId={me.id} />
-      ))}
       <ErrorNotice error={answer.error} />
       {challenges.error !== null && (
         <ErrorState error={challenges.error} onRetry={() => void challenges.refetch()} />
@@ -101,6 +97,18 @@ export default function Play() {
       ))}
     </>
   );
+
+  const gamesAndChallenges = (
+    <>
+      {games.error !== null && (
+        <ErrorState error={games.error} onRetry={() => void games.refetch()} />
+      )}
+      {games.data?.map((game) => (
+        <LiveGame key={game.id} game={game} myId={me.id} />
+      ))}
+      {challengeList}
+    </>
+  );
   // One main action: a game on, or a challenge to answer, comes first when there is one.
   const playVariant = live || incoming.length > 0 ? 'secondary' : 'primary';
 
@@ -130,76 +138,118 @@ export default function Play() {
     );
   }
 
-  const gamesAndThingsToDo = (
-    <View style={styles.column}>
-      {gamesAndChallenges}
-      <FriendRequests />
-      {/* Shown unless a game is on (also while my games load, or when they could not be). */}
-      {!live && (
-        <Card>
-          <Text style={styles.cardTitle}>{t('Ready for a game?')}</Text>
-          <Button
-            title={t('Play now')}
-            variant={playVariant}
-            onPress={() => router.push('/play')}
-          />
-        </Card>
-      )}
-      <MoreWaysToPlay guest={me.role === 'guest'} />
-      <DailyPuzzle />
-      <GameHistory username={me.username} preview />
-      <GuestBanner />
-    </View>
-  );
-
-  const playerList = (
-    <View style={styles.column}>
-      <FriendList myId={me.id} />
-      <PlayerSearch nobodyElse={<Hint>{t('Nobody else is online now.')}</Hint>} />
-    </View>
-  );
-
+  // The web: a hero with the main action (a game on is resumed from it), the ways to play as
+  // tiles, then the day's puzzle and my results beside the people to play.
   return (
-    <Screen title={t('Play')} align="top" wide={wide} refreshable>
-      {wide ? (
-        <View style={styles.row}>
-          <View style={styles.half}>{gamesAndThingsToDo}</View>
-          <View style={styles.half}>{playerList}</View>
-        </View>
-      ) : (
-        <>
-          {gamesAndThingsToDo}
-          {playerList}
-        </>
+    <Screen align="top" wide refreshable>
+      <Hero
+        live={games.data?.[0]}
+        myId={me.id}
+        guest={me.role === 'guest'}
+        username={me.username}
+        wide={wide}
+        quiet={incoming.length > 0}
+      />
+      {games.error !== null && (
+        <ErrorState error={games.error} onRetry={() => void games.refetch()} />
       )}
+      {challengeList}
+      <FriendRequests />
+      <SectionTitle>{t('Ways to play')}</SectionTitle>
+      <View style={styles.tiles}>
+        <PlayModes tiles />
+      </View>
+      <View style={wide ? styles.row : styles.column}>
+        <View style={[styles.column, wide && styles.main2]}>
+          <DailyPuzzle />
+          <GameHistory username={me.username} preview />
+          <GuestBanner />
+        </View>
+        <View style={[styles.column, wide && styles.side]}>
+          <FriendList myId={me.id} />
+          <PlayerSearch nobodyElse={<Hint>{t('Nobody else is online now.')}</Hint>} />
+        </View>
+      </View>
     </Screen>
   );
 }
 
 /**
- * The web home's other ways to play: challenges by link and tournaments (the trainer is offered
- * by today's puzzle, below). The apps have them in the play menu.
+ * The top of the web's home, on the brand's colour: a greeting with my ratings, the one main
+ * action (my game on, or Play now) and, on a wide screen, the board playing by itself.
  */
-function MoreWaysToPlay({ guest }: { guest: boolean }) {
+function Hero({
+  live,
+  myId,
+  guest,
+  username,
+  wide,
+  quiet,
+}: {
+  live: Game | undefined;
+  myId: string;
+  guest: boolean;
+  username: string;
+  wide: boolean;
+  /** A challenge waits for an answer: it is the main action, not Play now. */
+  quiet: boolean;
+}) {
+  const profile = useProfile(username, !guest);
+  const ratings = CATEGORIES.flatMap(({ value, label }) => {
+    const rating = profile.data?.ratings[value];
+    return rating !== undefined && rating.games > 0
+      ? [{ value, label: t(label), rating: rating.rating }]
+      : [];
+  });
+  const opponent = live === undefined ? null : live.goat.id === myId ? live.tiger : live.goat;
   return (
-    <>
-      <SectionTitle>{t('More ways to play')}</SectionTitle>
-      {/* Challenges need an account. */}
-      {!guest && (
-        <FeatureLink
-          icon="link"
-          title={t('Challenge a friend by link')}
-          text={t('Send a link to play.')}
-          onPress={() => router.push('/invite')}
-        />
+    <View style={[styles.hero, wide && styles.heroWide]}>
+      <View style={[styles.pitch, wide && styles.pitchWide]}>
+        <Text role="heading" style={[styles.greeting, joinedLetters()]}>
+          {guest ? t('Ready to play?') : t('Welcome back, {name}', { name: username })}
+        </Text>
+        {ratings.length > 0 && (
+          <View style={styles.ratings}>
+            {ratings.map((r) => (
+              <View key={r.value} style={styles.rating}>
+                <Text style={styles.ratingLabel}>{r.label}</Text>
+                <Text style={styles.ratingValue}>{r.rating}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+        {opponent !== null && live !== undefined ? (
+          <>
+            <Text style={styles.lede}>
+              {t('Your game against {name}', { name: opponent.username })}
+            </Text>
+            <Button
+              title={t('Resume')}
+              icon="play"
+              variant="bright"
+              large
+              onPress={() => router.push(`/game/${live.id}`)}
+            />
+          </>
+        ) : (
+          <>
+            <Text style={styles.lede}>{t('Tigers hunt. Goats trap. Your move.')}</Text>
+            <Button
+              title={t('Play now')}
+              icon="play"
+              variant={quiet ? 'light' : 'bright'}
+              large
+              onPress={() => router.push('/play')}
+            />
+          </>
+        )}
+      </View>
+      {wide && (
+        <View style={styles.heroBoard}>
+          <DemoBoard />
+        </View>
       )}
-      <FeatureLink
-        icon="trophy"
-        title={t('Tournaments')}
-        text={t('Join by link, or host one.')}
-        onPress={() => router.push('/tournaments')}
-      />
-    </>
+    </View>
   );
 }
 
@@ -218,7 +268,34 @@ function LiveGame({ game, myId }: { game: Game; myId: string }) {
 const styles = StyleSheet.create({
   cardTitle: { ...type.heading, color: colors.text },
   row: { flexDirection: 'row', gap: spacing.xl, alignItems: 'flex-start' },
-  half: { flex: 1 },
+  main2: { flex: 2 },
+  side: { flex: 1 },
   column: { gap: spacing.md },
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  hero: {
+    backgroundColor: colors.brandInk,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    gap: spacing.lg,
+    overflow: 'hidden',
+    ...shadow,
+  },
+  heroWide: { flexDirection: 'row', alignItems: 'center', padding: spacing.xl },
+  pitch: { flex: 1, gap: spacing.md },
+  // Beside the board the button keeps its own width; on a phone it spans the card.
+  pitchWide: { alignItems: 'flex-start' },
+  heroBoard: { flex: 1, alignItems: 'center', maxWidth: 380 },
+  greeting: { ...type.display, color: colors.brandCream },
+  lede: { ...type.body, color: colors.brandCream, opacity: 0.85 },
+  ratings: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  rating: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.brandDeep,
+  },
+  ratingLabel: { ...type.caption, color: colors.brandCream, opacity: 0.75 },
+  ratingValue: { ...type.title, color: colors.brandLight },
   main: { gap: spacing.md, marginTop: spacing.md },
 });

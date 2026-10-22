@@ -232,9 +232,7 @@ async function signUp(browser, username) {
   await page.waitForURL(/\/make-it-yours/);
   await waitFor(() => verificationLink(username), `${username}'s email`);
   await page.goto(WEB);
-  await visible(page.getByRole('heading', { name: 'Play' }))
-    .first()
-    .waitFor();
+  await visible(page.getByRole('heading', { name: `Welcome back, ${username}` })).waitFor();
   step(`${username} signed up, signed in at once, and was sent the optional email`);
   return page;
 }
