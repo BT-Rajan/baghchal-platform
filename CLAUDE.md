@@ -53,6 +53,17 @@
   icons in a screen; add a token or an icon to the shared set instead. A screen with a header bar
   does not repeat its title.
 
+## The apps' JavaScript is not the browser's
+
+Android and iOS run the app on Hermes, which lacks parts of what browsers and Node have and
+formats through each phone's own libraries, so a call can pass every test and the web yet crash a
+phone. The app uses no `Intl` and no `toLocale…String`: dates, times and amounts come from
+`app/src/i18n/format.ts` (month names in the catalogs), plural forms from `pluralForm`. Lint
+forbids the rest in `src`, the tests run with only Hermes's Intl (`tests/support/likeHermes.js`),
+`tests/everyScreen.test.tsx` opens every screen in every language as on Android, and the APK
+build checks the bundle (`scripts/check-hermes-bundle.mjs`). A new screen goes into that sweep;
+check any newer JavaScript feature against Hermes before using it.
+
 ## CI is off
 
 The project does not use the CI workflow (`.github/workflows/ci.yml`): never start it, and do

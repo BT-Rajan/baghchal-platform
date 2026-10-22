@@ -1,6 +1,7 @@
 /** Wording for reports and moderation. */
 import type { FairPlayFigures, ModPlayer, Report, ReportReason } from '@/api/endpoints';
-import { locale, mark, plural, t } from '@/i18n';
+import { mark, plural, t } from '@/i18n';
+import { dateText, timeText } from '@/i18n/format';
 
 const REASONS: Record<ReportReason, string> = {
   cheating: mark('Cheating'),
@@ -37,18 +38,10 @@ export function reportTitle(report: Pick<Report, 'reporter' | 'target'>): string
 /** "8 January 2026, 12:00 UTC" */
 export function dateTimeText(iso: string): string {
   const date = new Date(iso);
-  const day = date.toLocaleDateString(locale(), {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
+  return t('{date}, {time} UTC', {
+    date: dateText(date, { month: 'long', utc: true }),
+    time: timeText(date, { utc: true }),
   });
-  const time = date.toLocaleTimeString(locale(), {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'UTC',
-  });
-  return t('{date}, {time} UTC', { date: day, time });
 }
 
 /** Whether a player's suspension is still running at `now`. */

@@ -89,6 +89,7 @@ test('a crashed screen offers to try again', async () => {
   jest.spyOn(console, 'error').mockImplementation(() => {});
   await render(<ErrorBoundary error={new Error('boom')} retry={retry} />);
   expect(screen.getByRole('heading', { name: 'Something went wrong' })).toBeOnTheScreen();
+  expect(screen.getByText('boom')).toBeOnTheScreen(); // the cause, for a report
   await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
   expect(retry).toHaveBeenCalled();
   expect(screen.getByRole('button', { name: 'Go to Play' })).toBeOnTheScreen();
