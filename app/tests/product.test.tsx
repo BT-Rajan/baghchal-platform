@@ -30,8 +30,11 @@ describe('play now', () => {
     const { app } = await signedIn('/');
     await screen.findByRole('button', { name: 'Play now' });
     await press('Play now');
+    await fireEvent.press(await screen.findByRole('link', { name: 'Quick game' }));
     expect(await screen.findByRole('button', { name: 'Find an opponent' })).toBeOnTheScreen();
     expect(app.getPathname()).toBe('/play');
+    // Just the quick game: the computer is its own row in the menu.
+    expect(screen.queryByRole('button', { name: 'Play the computer' })).toBeNull();
   });
 
   test('someone is waiting: the game opens at once', async () => {
@@ -47,7 +50,7 @@ describe('play now', () => {
     await fireEvent.press(await screen.findByRole('radio', { name: 'Sand clock' }));
     expect(screen.getByText(/^Sand clock: one minute each\./)).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('radio', { name: 'Rated' }));
-    expect(screen.getByText(/^A rated match is two games/)).toBeOnTheScreen();
+    expect(screen.getByText(/^Rated: two games/)).toBeOnTheScreen();
     expect(await screen.findByText('1 player is waiting.')).toBeOnTheScreen();
     await press('Find an opponent');
     await waitFor(() => expect(app.getPathname()).toBe('/game/g1'));
@@ -89,7 +92,7 @@ describe('play now', () => {
     await screen.findByRole('button', { name: 'Find an opponent' });
     await press('Find an opponent');
     expect(
-      await screen.findByText('Nobody came along yet. Try again, or play the computer.'),
+      await screen.findByText('Nobody yet. Try again, or play the computer.'),
     ).toBeOnTheScreen();
     expires = inSeconds(120);
     await press('Keep looking');

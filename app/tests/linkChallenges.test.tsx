@@ -36,16 +36,16 @@ async function press(name: string | RegExp) {
 const STARTED = { status: 200, body: game({ server_time: new Date().toISOString() }) };
 
 describe('challenges by link', () => {
-  test('make one from home, share it, cancel it', async () => {
+  test('make one from the play menu, share it, cancel it', async () => {
     const mine = link({ challenger: ALICE, side: 'goat', time_control: '2+1' });
-    const { app, server } = await open('/', {
+    const { app, server } = await open('/ways-to-play', {
       'POST /api/v1/challenges': { status: 201, body: mine },
       'POST /api/v1/challenges/c1/cancel': {
         status: 200,
         body: { ...mine, status: 'cancelled' },
       },
     });
-    await fireEvent.press(await screen.findByRole('link', { name: 'Challenge a friend by link' }));
+    await fireEvent.press(await screen.findByRole('link', { name: 'Challenge a friend' }));
     expect(
       await screen.findByRole('heading', { name: 'Challenge a friend by link' }),
     ).toBeOnTheScreen();
@@ -75,7 +75,7 @@ describe('challenges by link', () => {
     share.mockRestore();
     expect(screen.getByText(/^Expires in (23 h 59 min|24 h)$/)).toBeOnTheScreen();
     await press('Cancel the challenge by link');
-    await waitFor(() => expect(app.getPathname()).toBe('/'));
+    await waitFor(() => expect(app.getPathname()).toBe('/ways-to-play'));
     expect(server.lastTo('POST /api/v1/challenges/c1/cancel')).toBeDefined();
   });
 

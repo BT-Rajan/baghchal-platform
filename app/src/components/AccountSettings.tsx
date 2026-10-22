@@ -12,6 +12,7 @@ import { colors, spacing, type } from '@/theme';
 import { Button } from './Button';
 import { Card, Hint } from './Card';
 import { ErrorNotice } from './ErrorNotice';
+import { ResendConfirmation } from './ResendConfirmation';
 import { useFormErrors } from './form';
 import type { IconName } from './Icon';
 import { Notice } from './Notice';
@@ -82,6 +83,7 @@ export function EmailChange() {
   return (
     <Card>
       <Text style={styles.text}>{t('Your email address is {email}.', { email: me.email })}</Text>
+      {!me.email_verified && !change.isSuccess && <ResendConfirmation email={me.email} />}
       {change.isSuccess ? (
         <Notice tone="success">
           {t('Link sent to {email}. Open it to change your address.', {
@@ -238,7 +240,7 @@ export function DeleteAccount() {
     mutationFn: async () => {
       await api.deleteAccount(password);
       // The server has ended every session; the route guards then show the sign-in screen.
-      await session.forget();
+      await session.accountDeleted();
     },
   });
   const { fieldError, formMessage, accept } = useFormErrors(

@@ -208,9 +208,7 @@ describe('tournaments', () => {
     });
     expect(await screen.findByText('Games not played yet')).toBeOnTheScreen();
     await press('Give the game to carol');
-    expect(
-      screen.getByText('Give this game to carol? alice gets no point, and it is not played.'),
-    ).toBeOnTheScreen();
+    expect(screen.getByText('Give this game to carol? alice gets no point.')).toBeOnTheScreen();
     await press('Cancel');
     await press('Give the game to carol');
     await press('Give the game');
@@ -284,13 +282,13 @@ describe('the trainer', () => {
   test('needs Pro', async () => {
     await open('/trainer', {}, null);
     expect(
-      await screen.findByText(/^Train with opening and endgame puzzles from real games/),
+      await screen.findByText(/^Opening and endgame puzzles from real games/),
     ).toBeOnTheScreen();
   });
 
   test('find the best move, or be shown it', async () => {
     let answers = 0;
-    const { server } = await open('/', {
+    const { server } = await open('/puzzle', {
       'GET /api/v1/seeks': { status: 200, body: [] },
       'GET /api/v1/trainer': (request) =>
         request.query.kind === 'endgame'

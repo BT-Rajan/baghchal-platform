@@ -238,6 +238,14 @@ function Screens({
             <Stack.Screen name="challenge/[username]" options={sheet} />
             <Stack.Screen name="game/[id]" options={{ headerShown: true, title: t('Game') }} />
             <Stack.Screen name="settings" options={{ headerShown: true, title: t('Settings') }} />
+            {/* Titled by the screen (Screen's title goes in the bar). */}
+            <Stack.Screen name="settings/[section]" options={{ headerShown: true, title: '' }} />
+            <Stack.Screen
+              name="ways-to-play"
+              options={{ headerShown: true, title: t('Play now') }}
+            />
+            <Stack.Screen name="friends" options={{ headerShown: true, title: t('Friends') }} />
+            <Stack.Screen name="puzzle" options={{ headerShown: true, title: t('Daily puzzle') }} />
             <Stack.Screen
               name="notifications"
               options={{ headerShown: true, title: t('Notifications') }}

@@ -153,7 +153,9 @@ describe('home', () => {
     for (const row of ['Quick game', 'Play the computer', 'Challenge a friend', 'Friends']) {
       expect(await screen.findByRole('link', { name: row })).toBeOnTheScreen();
     }
-    expect(await screen.findByRole('link', { name: 'Trainer' })).toHaveTextContent(/PRO/);
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: 'Trainer' })).toHaveTextContent(/PRO/),
+    );
     expect(screen.getByRole('link', { name: 'Tournaments' })).not.toHaveTextContent(/PRO/);
     await fireEvent.press(screen.getByRole('link', { name: 'Tournaments' }));
     await waitFor(() => expect(app.getPathname()).toBe('/tournaments'));

@@ -78,7 +78,7 @@ describe('reporting a player', () => {
     await screen.findByRole('button', { name: 'Report bob' });
     await press('Report bob');
     expect(await screen.findByRole('heading', { name: 'Report bob' })).toBeOnTheScreen();
-    expect(screen.getByText(/The player is not told who reported them/)).toBeOnTheScreen();
+    expect(screen.getByText(/the player is not told it was you/)).toBeOnTheScreen();
     // No reason is suggested; it is sent once one is picked.
     expect(screen.getByRole('radio', { name: 'Cheating' })).not.toBeChecked();
     expect(screen.getByRole('button', { name: 'Send report' })).toBeDisabled();
@@ -109,8 +109,8 @@ describe('reporting a player', () => {
     });
     await screen.findByRole('button', { name: 'Report bob' });
     await press('Report bob');
-    expect(await screen.findByText(/The report includes this game/)).toBeOnTheScreen();
-    expect(screen.getByText(/The player is not told who reported them/)).toBeOnTheScreen();
+    expect(await screen.findByText(/^Moderators can replay this game/)).toBeOnTheScreen();
+    expect(screen.getByText(/the player is not told it was you/)).toBeOnTheScreen();
     expect(app.getPathname()).toBe('/report/bob');
     await fireEvent.press(screen.getByRole('radio', { name: 'Cheating' }));
     await press('Send report');

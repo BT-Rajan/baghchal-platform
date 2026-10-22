@@ -33,7 +33,8 @@ const WIDE = 900;
 
 /**
  * Home: a game to continue and challenges first. In the apps, then just two big buttons: Play
- * now (the play menu, app/ways-to-play.tsx, with every way to play) and Settings. On the web,
+ * now (the play menu, app/ways-to-play.tsx, with every way to play) and Settings (and, for a
+ * guest, the way to an account). On the web,
  * a way to start a game, the other ways to play, today's puzzle and my latest results, beside
  * the players online to challenge.
  */
@@ -124,6 +125,7 @@ export default function Play() {
             onPress={() => router.push('/settings')}
           />
         </View>
+        <GuestBanner />
       </Screen>
     );
   }

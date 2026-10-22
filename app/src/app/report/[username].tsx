@@ -46,7 +46,7 @@ export default function ReportForm() {
   return (
     <Screen title={t('Report {name}', { name: username })}>
       <ErrorNotice error={send.error} />
-      <Hint>{t('Only moderators see reports, and never say who sent one.')}</Hint>
+      <Hint>{t('Moderators read it; the player is not told it was you.')}</Hint>
       {game !== undefined && <Hint>{t('Moderators can replay this game.')}</Hint>}
       <Segmented
         label={t('What happened?')}

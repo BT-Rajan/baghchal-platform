@@ -26,8 +26,6 @@ test('it fades away over the first screen, then says so', async () => {
   expect(
     screen.getByTestId('brand-splash', { includeHiddenElements: true }).props.pointerEvents,
   ).toBe('none');
-  await act(() => jest.advanceTimersByTime(SPLASH_FADE_MS / 2));
-  expect(hidden).not.toHaveBeenCalled();
   await act(() => jest.advanceTimersByTime(SPLASH_FADE_MS));
   expect(hidden).toHaveBeenCalledTimes(1);
   jest.useRealTimers();

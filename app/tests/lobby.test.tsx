@@ -15,9 +15,12 @@ const inSeconds = (s: number) => new Date(Date.now() + s * 1000).toISOString();
 /** A challenge made just now, by the test's clock, that expires in `s` seconds. */
 const fresh = (s: number) => ({ created_at: inSeconds(0), expires_at: inSeconds(s) });
 
-function lobby(routes: Record<string, Route> = {}) {
-  return renderApp('/', { token: 'tok', routes: { ...SIGNED_IN, ...routes } });
+function lobby(routes: Record<string, Route> = {}, url = '/') {
+  return renderApp(url, { token: 'tok', routes: { ...SIGNED_IN, ...routes } });
 }
+
+/** Players to find and challenge (in the apps, Friends, from the play menu). */
+const players = (routes: Record<string, Route> = {}) => lobby(routes, '/friends');
 
 async function press(name: string | RegExp) {
   await fireEvent.press(screen.getByRole('button', { name }));
@@ -34,7 +37,7 @@ const ONLINE: Route = {
 
 describe('players', () => {
   test('lists who is online; only free players can be challenged', async () => {
-    await lobby({ 'GET /api/v1/players/online': ONLINE });
+    await players({ 'GET /api/v1/players/online': ONLINE });
     expect(await screen.findByText('bob')).toBeOnTheScreen();
     expect(screen.getByText('You')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Challenge alice' })).toBeNull();
@@ -44,31 +47,27 @@ describe('players', () => {
   });
 
   test('a guest sees who is online, with no Challenge buttons (that needs an account)', async () => {
-    await renderApp('/', {
-      token: 'tok',
-      routes: {
-        'GET /api/v1/me': { status: 200, body: { ...ME, username: 'guest-3fa9c1', role: 'guest' } },
-        'GET /api/v1/players/online': ONLINE,
-      },
+    await players({
+      'GET /api/v1/me': { status: 200, body: { ...ME, username: 'guest-3fa9c1', role: 'guest' } },
+      'GET /api/v1/players/online': ONLINE,
     });
     expect(await screen.findByText('bob')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Challenge bob' })).toBeNull();
-    expect(screen.queryByRole('link', { name: 'Challenge a friend by link' })).toBeNull();
   });
 
   test('says when nobody is online', async () => {
-    await lobby();
-    expect(await screen.findByText(/^Nobody else is online right now\./)).toBeOnTheScreen();
+    await players();
+    expect(await screen.findByText('Nobody else is online now.')).toBeOnTheScreen();
   });
 
   test('searches by username prefix', async () => {
-    const { server } = await lobby({
+    const { server } = await players({
       'GET /api/v1/players': (request) => ({
         status: 200,
         body: request.query.prefix === 'da' ? [{ ...DAVE, online: false, playing: false }] : [],
       }),
     });
-    await screen.findByText(/^Nobody else is online right now\./);
+    await screen.findByText('Nobody else is online now.');
     await fireEvent.changeText(screen.getByLabelText('Find a player'), ' da');
     expect(await screen.findByText('dave')).toBeOnTheScreen();
     expect(screen.getByText('Players starting with “da”')).toBeOnTheScreen();
@@ -83,7 +82,7 @@ describe('players', () => {
   });
 
   test('shows a failed player list', async () => {
-    await lobby({ 'GET /api/v1/players/online': error(503, 'unavailable', 'Try later.') });
+    await players({ 'GET /api/v1/players/online': error(503, 'unavailable', 'Try later.') });
     expect(await screen.findByText('Try later.', {}, { timeout: 5000 })).toBeOnTheScreen();
   });
 });
@@ -198,7 +197,7 @@ describe('challenges', () => {
         body: { incoming: [challenge({ ...fresh(-1) })], outgoing: [] },
       },
     });
-    await screen.findByText('Online now');
+    await screen.findByRole('button', { name: 'Play now' });
     await waitFor(() => expect(screen.queryByText('bob challenges you')).toBeNull());
   });
 
@@ -211,7 +210,7 @@ describe('challenges', () => {
 describe('live events', () => {
   test('a challenge arrives, and the game it starts opens by itself', async () => {
     const { app } = await lobby({ 'GET /api/v1/games/g1': { status: 200, body: game() } });
-    await screen.findByText('Online now');
+    await screen.findByRole('button', { name: 'Play now' });
     const socket = FakeSocket.latest();
     await act(() => {
       socket.open();
@@ -230,8 +229,8 @@ describe('live events', () => {
       'GET /api/v1/games': { status: 200, body: [live] },
       'GET /api/v1/games/g1': { status: 200, body: live },
     });
-    expect(await screen.findByText('Your game against bob is on.')).toBeOnTheScreen();
-    await press('Resume game');
+    expect(await screen.findByText('Your game against bob')).toBeOnTheScreen();
+    await press('Resume');
     expect(await screen.findByText('Your move')).toBeOnTheScreen();
     expect(app.getPathname()).toBe('/game/g1');
   });
@@ -239,7 +238,7 @@ describe('live events', () => {
 
 describe('challenge form', () => {
   test('sends a casual challenge with the chosen side, then lists it', async () => {
-    const { server, app } = await lobby({
+    const { server, app } = await players({
       'GET /api/v1/players/online': ONLINE,
       'GET /api/v1/challenges': { status: 200, body: { incoming: [], outgoing: [] } },
       'POST /api/v1/challenges': {
@@ -284,7 +283,7 @@ describe('challenge form', () => {
     });
     await screen.findByRole('heading', { name: 'Challenge bob' });
     await fireEvent.press(screen.getByRole('radio', { name: 'Rated' }));
-    expect(screen.getByText(/rated match is two games/)).toBeOnTheScreen();
+    expect(screen.getByText(/^Rated: two games/)).toBeOnTheScreen();
     await press('Send challenge');
     expect(await screen.findByText('bob is not online.')).toBeOnTheScreen();
     expect(server.lastTo('POST /api/v1/challenges').body).toEqual({
@@ -325,7 +324,7 @@ describe('profiles', () => {
     expect(screen.getByLabelText('Quick rating 1612')).toBeOnTheScreen();
     expect(screen.getByText('23 games · #3')).toBeOnTheScreen();
     expect(screen.getByLabelText('Standard rating 1500')).toBeOnTheScreen();
-    expect(screen.getByText(/^A provisional rating is still settling/)).toBeOnTheScreen();
+    expect(screen.getByText(/^Provisional ratings move faster/)).toBeOnTheScreen();
     expect(screen.getByText('1 game · provisional')).toBeOnTheScreen();
     await press('Challenge bob');
     expect(await screen.findByRole('heading', { name: 'Challenge bob' })).toBeOnTheScreen();
@@ -388,7 +387,7 @@ describe('leaderboard', () => {
     });
     await screen.findByRole('heading', { name: 'Play' });
     await fireEvent.press(screen.getByRole('button', { name: /^Leaderboard, tab/ }));
-    expect(await screen.findByText(/Nobody is listed yet/)).toBeOnTheScreen();
+    expect(await screen.findByText(/^Nobody yet\. Players show/)).toBeOnTheScreen();
     // The page on top: the leaderboard (the Play tab stays mounted behind it).
     const page = screen.getAllByTestId('page').at(-1)!;
     await act(async () => {
@@ -434,7 +433,7 @@ describe('leaderboard', () => {
     expect(await screen.findByText('You are #4, rated 1650.')).toBeOnTheScreen();
 
     await fireEvent.press(screen.getByRole('radio', { name: 'Standard' }));
-    expect(await screen.findByText(/Nobody is listed yet/)).toBeOnTheScreen();
+    expect(await screen.findByText(/^Nobody yet\. Players show/)).toBeOnTheScreen();
     expect(screen.getByText('No standard rating yet. Play a rated game.')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Play a rated game' })).toBeOnTheScreen();
   });

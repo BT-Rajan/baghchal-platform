@@ -62,7 +62,7 @@ describe("blocking from a player's page", () => {
 
 describe('the list of blocked players', () => {
   test('lists them and unblocks', async () => {
-    const { server } = await signedIn('/settings', {
+    const { server } = await signedIn('/settings/blocked', {
       'GET /api/v1/players/alice': MY_PROFILE,
       'GET /api/v1/blocks': { status: 200, body: [BOB_PLAYER] },
       'DELETE /api/v1/blocks/bob': () => {
@@ -70,18 +70,16 @@ describe('the list of blocked players', () => {
         return { status: 204 };
       },
     });
-    await press('Blocked players');
     expect(await screen.findByText('bob')).toBeOnTheScreen();
     await press('Unblock bob');
     expect(await screen.findByText('You have not blocked anyone.')).toBeOnTheScreen();
   });
 
   test('a failed unblock and a failed list are reported', async () => {
-    const { server } = await signedIn('/settings', {
+    const { server } = await signedIn('/settings/blocked', {
       'GET /api/v1/players/alice': MY_PROFILE,
       'GET /api/v1/blocks': error(400, 'bad_request', 'The list is down.'),
     });
-    await fireEvent.press(await screen.findByRole('button', { name: 'Blocked players' }));
     expect(await screen.findByText('The list is down.')).toBeOnTheScreen();
     server.on('GET /api/v1/blocks', { status: 200, body: [BOB_PLAYER] });
     server.on('DELETE /api/v1/blocks/bob', error(503, 'unavailable', 'Try again later.'));

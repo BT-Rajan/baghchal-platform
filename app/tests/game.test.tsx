@@ -405,7 +405,7 @@ describe('leaving a live game', () => {
         'GET /api/v1/games/g1': { status: 200, body: game({ server_time: now() }) },
       },
     });
-    await screen.findByText('Ready for a game?');
+    await screen.findByRole('button', { name: 'Play now' });
     await act(() => router.push('/game/g1'));
     expect(await screen.findByText('Your move')).toBeOnTheScreen();
 

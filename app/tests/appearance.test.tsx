@@ -46,7 +46,7 @@ describe('board, pieces and sounds', () => {
     await fireEvent.press(radio('Sounds and messages'));
     // A locked sound pack pressed: the upsell beside the packs names it, nothing is chosen.
     await fireEvent.press(radio(/^Temple bells · Plus: /));
-    expect(screen.getByText(/^Use Temple bells and the other sound packs/)).toBeOnTheScreen();
+    expect(screen.getByText(/^Use Temple bells, more boards and pieces/)).toBeOnTheScreen();
     expect(radio(/^Gentle: /)).toBeChecked();
     await fireEvent.press(radio('Board and pieces'));
     expect(radio('Wood')).toBeChecked();
@@ -199,7 +199,7 @@ describe('badges', () => {
   });
 
   test('among players online', async () => {
-    await open('/', {
+    await open('/friends', {
       'GET /api/v1/players/online': {
         status: 200,
         body: [{ ...BOB, badge: 'plus', online: true, playing: false }],

@@ -67,7 +67,7 @@ export function WebTopBar({ playing }: { playing: boolean }) {
                 {t('Sign in')}
               </Link>
               <Link href="/sign-up" style={[styles.place, styles.cta]}>
-                <Text style={styles.ctaText}>{t('Make a free account')}</Text>
+                <Text style={styles.ctaText}>{t('Sign up')}</Text>
               </Link>
             </>
           )}

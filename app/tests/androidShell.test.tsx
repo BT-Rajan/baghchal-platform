@@ -41,7 +41,7 @@ describe('back after a link', () => {
       },
     });
     await waitFor(() => expect(app.getPathname()).toBe('/welcome'));
-    await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
+    await fireEvent.press(screen.getByRole('link', { name: 'I have an account' }));
     await fireEvent.changeText(await screen.findByLabelText('Username or email'), 'alice');
     await fireEvent.changeText(screen.getByLabelText('Password'), 'correct horse battery');
     await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));

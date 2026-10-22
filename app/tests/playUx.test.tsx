@@ -41,8 +41,7 @@ afterEach(() => jest.restoreAllMocks());
 describe('home', () => {
   test('Play now is offered while my games could not be loaded', async () => {
     await open('/', { 'GET /api/v1/games': error(503, 'unavailable', 'Try later.') });
-    expect(await screen.findByText('Ready for a game?')).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Play now' })).toHaveStyle({
+    expect(await screen.findByRole('button', { name: 'Play now' })).toHaveStyle({
       backgroundColor: colors.accent,
     });
   });
@@ -111,7 +110,7 @@ describe('leaderboard', () => {
     });
     expect(
       await screen.findByText(
-        'You are rated 1500. You will be listed after a few more rated games, as long as you have played one in the last 30 days.',
+        'You are rated 1500. You show after a few more rated games, if one was in the last 30 days.',
       ),
     ).toBeOnTheScreen();
     expect(screen.getByRole('radio', { name: 'Standard' })).toBeChecked();
@@ -345,7 +344,7 @@ describe('a tournament', () => {
 describe('puzzles', () => {
   test('the best move is marked from where to where', async () => {
     let answered = false;
-    await open('/', {
+    await open('/puzzle', {
       'GET /api/v1/trainer/daily': () => ({
         status: 200,
         body: answered ? { ...DAILY, answer: { move: 'a2', correct: false, best: 'c3' } } : DAILY,

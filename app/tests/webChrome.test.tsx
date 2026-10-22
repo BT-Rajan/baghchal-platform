@@ -61,7 +61,7 @@ describe('the web’s top bar and footer', () => {
     mockStatus = 'signedOut';
     const app = await renderRouter(ROUTES, { initialUrl: '/sign-in' });
     expect(screen.queryByRole('link', { name: 'Leaderboard' })).toBeNull();
-    await fireEvent.press(screen.getByRole('link', { name: 'Make a free account' }));
+    await fireEvent.press(screen.getByRole('link', { name: 'Sign up' }));
     await waitFor(() => expect(app.getPathname()).toBe('/sign-up'));
   });
 });
