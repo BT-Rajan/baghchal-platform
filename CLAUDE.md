@@ -55,12 +55,14 @@
 
 ## The apps' JavaScript is not the browser's
 
-Android and iOS run the app on Hermes, which lacks parts of what browsers and Node have, so a
-call can pass every test and the web yet crash a phone. Of `Intl` only `Collator`,
-`DateTimeFormat`, `NumberFormat` and `getCanonicalLocales` exist (plural forms come from
-`pluralForm` in `app/src/i18n`). The tests run without the rest (`tests/support/likeHermes.js`),
-lint forbids it in `src`, and the APK build checks the bundle (`scripts/check-hermes-bundle.mjs`).
-Check any newer JavaScript feature against Hermes before using it.
+Android and iOS run the app on Hermes, which lacks parts of what browsers and Node have and
+formats through each phone's own libraries, so a call can pass every test and the web yet crash a
+phone. The app uses no `Intl` and no `toLocale…String`: dates, times and amounts come from
+`app/src/i18n/format.ts` (month names in the catalogs), plural forms from `pluralForm`. Lint
+forbids the rest in `src`, the tests run with only Hermes's Intl (`tests/support/likeHermes.js`),
+`tests/everyScreen.test.tsx` opens every screen in every language as on Android, and the APK
+build checks the bundle (`scripts/check-hermes-bundle.mjs`). A new screen goes into that sweep;
+check any newer JavaScript feature against Hermes before using it.
 
 ## CI is off
 

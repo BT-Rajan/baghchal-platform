@@ -187,11 +187,11 @@ const SIGNED_OUT = [
   '/c/abc123',
 ];
 
-/** Lets the screen's requests answer and its effects run. */
+/** Lets the screen's requests answer and its effects run (renderRouter's timers are fake). */
 async function settle() {
   for (let i = 0; i < 5; i += 1) {
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      await jest.advanceTimersByTimeAsync(50);
     });
   }
 }
