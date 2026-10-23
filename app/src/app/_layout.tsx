@@ -310,6 +310,11 @@ function Screens({
             name="privacy"
             options={{ headerShown: Platform.OS !== 'web', title: t('Privacy policy') }}
           />
+          {/* The Android app's download, for anyone. */}
+          <Stack.Screen
+            name="download"
+            options={{ headerShown: Platform.OS !== 'web', title: t('ClawPlay for Android') }}
+          />
           {/* How to delete an account, for anyone (app stores ask for such a page). */}
           <Stack.Screen
             name="delete-account"

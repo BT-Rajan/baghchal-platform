@@ -17,7 +17,8 @@ on:
     branches: ["android-test-build", "android-test/**"]
 
 permissions:
-  contents: read
+  # Write: the main line's APK is published to the "android-test" release (the download page).
+  contents: write
 
 concurrency:
   group: android-${{ github.ref }}
@@ -76,3 +77,23 @@ jobs:
           path: app/android/app/build/outputs/apk/release/app-release.apk
           retention-days: 14
           if-no-files-found: error
+      # The main line's build is also the one the download page offers (/download in the app):
+      # one fixed release, its file replaced each time, so the link never changes.
+      - name: Publish as the latest test APK
+        if: github.ref == 'refs/heads/android-test-build'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          NOTES: >-
+            The latest ClawPlay test build for Android (build ${{ github.run_number }},
+            commit ${{ github.sha }}). Signed with the debug key: it installs from the file,
+            not from Google Play.
+        run: |
+          cp app/android/app/build/outputs/apk/release/app-release.apk clawplay.apk
+          if ! gh release view android-test >/dev/null 2>&1; then
+            gh release create android-test --prerelease --target "$GITHUB_SHA" \
+              --title "ClawPlay test APK" --notes "$NOTES"
+          fi
+          gh release upload android-test clawplay.apk --clobber
+          gh release edit android-test --notes "$NOTES"

@@ -5,14 +5,17 @@ import { t } from '@/i18n';
 import { colors, spacing, type } from '@/theme';
 
 /**
- * The foot of every web page: the copyright, and the terms and privacy policy. (The apps keep
- * these in Settings, as apps do.)
+ * The foot of every web page: the copyright, the Android app's download, and the terms and
+ * privacy policy. (The apps keep the terms and policy in Settings, as apps do.)
  */
 export function SiteFooter({ year = new Date().getFullYear() }: { year?: number }) {
   return (
     <View role="contentinfo" style={styles.footer}>
       <Text style={styles.text}>{t('© {year} ClawPlay. All rights reserved.', { year })}</Text>
       <View style={styles.links}>
+        <Link href="/download" style={styles.link}>
+          {t('Android app')}
+        </Link>
         <Link href="/terms" style={styles.link}>
           {t('Terms of service')}
         </Link>
@@ -41,7 +44,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   text: { ...type.caption, color: colors.muted },
-  links: { flexDirection: 'row', gap: spacing.lg },
+  links: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },
   // 44 points: the smallest comfortable touch target, the words in its middle.
   link: {
     ...type.caption,
