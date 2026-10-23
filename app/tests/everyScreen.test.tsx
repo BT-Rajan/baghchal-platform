@@ -179,6 +179,7 @@ const SIGNED_IN = [
 
 const SIGNED_OUT = [
   '/start',
+  '/download',
   '/sign-in',
   '/sign-up',
   '/forgot-password',

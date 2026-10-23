@@ -11,6 +11,15 @@ export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000
  */
 export const WEB_URL = (process.env.EXPO_PUBLIC_WEB_URL ?? API_URL).replace(/\/+$/, '');
 
+/**
+ * Where the latest Android test APK is downloaded (the download page links here). Each build of
+ * the main line publishes it to the repository's "android-test" release (android.yml). Set
+ * EXPO_PUBLIC_ANDROID_APK_URL to serve it from elsewhere (the game's own server, a bucket).
+ */
+export const ANDROID_APK_URL =
+  process.env.EXPO_PUBLIC_ANDROID_APK_URL ??
+  'https://github.com/BT-Rajan/baghchal-platform/releases/download/android-test/clawplay.apk';
+
 // Never send credentials over an unencrypted connection from a release build.
 const problem = apiUrlProblem(
   API_URL,

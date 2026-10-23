@@ -272,6 +272,9 @@ function LandingPage() {
               busy={choosing === 'goat'}
               onPress={() => start('goat')}
             />
+            <TextLink href="/download" onDark>
+              {t('Get the Android app')}
+            </TextLink>
           </View>
         </View>
         <SiteFooter />
